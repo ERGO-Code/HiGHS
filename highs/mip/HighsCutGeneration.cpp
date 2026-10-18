@@ -29,9 +29,9 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
   cover.reserve(rowlen);
 
   for (HighsInt j = 0; j != rowlen; ++j) {
-    if (!isintegral[j]) continue;
+    if (!cutVars[j].integral) continue;
 
-    if (lpSol && solval[j] <= feastol) continue;
+    if (lpSol && cutVars[j].solval <= feastol) continue;
 
     cover.push_back(j);
   }
@@ -42,29 +42,31 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
   coverweight = 0.0;
   if (lpSol) {
     // take all variables that sit at their upper bound always into the cover
-    coversize = std::partition(cover.begin(), cover.end(),
-                               [&](HighsInt j) {
-                                 return solval[j] >= upper[j] - feastol;
-                               }) -
-                cover.begin();
+    coversize =
+        std::partition(cover.begin(), cover.end(),
+                       [&](HighsInt j) {
+                         return cutVars[j].solval >= cutVars[j].upper - feastol;
+                       }) -
+        cover.begin();
 
     for (HighsInt i = 0; i != coversize; ++i) {
       HighsInt j = cover[i];
 
-      assert(solval[j] >= upper[j] - feastol);
+      assert(cutVars[j].solval >= cutVars[j].upper - feastol);
 
-      coverweight += vals[j] * upper[j];
+      coverweight += static_cast<HighsCDouble>(cutVars[j].upper) * vals[j];
     }
 
     // sort the remaining variables by the contribution to the rows activity in
     // the current solution
     pdqsort(cover.begin() + coversize, cover.begin() + maxCoverSize,
             [&](HighsInt i, HighsInt j) {
-              if (upper[i] < 1.5 && upper[j] > 1.5) return true;
-              if (upper[i] > 1.5 && upper[j] < 1.5) return false;
+              if (cutVars[i].upper < 1.5 && cutVars[j].upper > 1.5) return true;
+              if (cutVars[i].upper > 1.5 && cutVars[j].upper < 1.5)
+                return false;
 
-              double contributionA = solval[i] * vals[i];
-              double contributionB = solval[j] * vals[j];
+              double contributionA = cutVars[i].solval * vals[i];
+              double contributionB = cutVars[j].solval * vals[j];
 
               if (contributionA > contributionB + feastol) return true;
               if (contributionA < contributionB - feastol) return false;
@@ -85,17 +87,21 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
 
     pdqsort(cover.begin() + coversize, cover.begin() + maxCoverSize,
             [&](HighsInt i, HighsInt j) {
-              if (solval[i] > feastol && solval[j] <= feastol) return true;
-              if (solval[i] <= feastol && solval[j] > feastol) return false;
+              if (cutVars[i].solval > feastol && cutVars[j].solval <= feastol)
+                return true;
+              if (cutVars[i].solval <= feastol && cutVars[j].solval > feastol)
+                return false;
 
               int64_t numNodesA;
               int64_t numNodesB;
 
-              numNodesA = complementation[i] ? nodequeue.numNodesDown(inds[i])
-                                             : nodequeue.numNodesUp(inds[i]);
+              numNodesA = cutVars[i].complemented
+                              ? nodequeue.numNodesDown(inds[i])
+                              : nodequeue.numNodesUp(inds[i]);
 
-              numNodesB = complementation[j] ? nodequeue.numNodesDown(inds[j])
-                                             : nodequeue.numNodesUp(inds[j]);
+              numNodesB = cutVars[j].complemented
+                              ? nodequeue.numNodesDown(inds[j])
+                              : nodequeue.numNodesUp(inds[j]);
 
               if (numNodesA > numNodesB) return true;
               if (numNodesA < numNodesB) return false;
@@ -113,7 +119,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
     if (lambda > minlambda) break;
 
     HighsInt j = cover[coversize];
-    coverweight += vals[j] * upper[j];
+    coverweight += static_cast<HighsCDouble>(cutVars[j].upper) * vals[j];
   }
   if (coversize == 0) return false;
 
@@ -262,7 +268,7 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
   integralCoefficients = false;
   integralSupport = true;
   for (HighsInt i = 0; i != rowlen; ++i) {
-    if (!isintegral[i]) {
+    if (!cutVars[i].integral) {
       if (vals[i] < 0)
         integralSupport = false;
       else
@@ -314,7 +320,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
     u[c] = usum;
     m[c] = msum;
     a[c] = vals[i];
-    double ub = upper[i];
+    double ub = cutVars[i].upper;
     usum += ub;
     msum += ub * a[c];
   }
@@ -333,9 +339,9 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 
   for (HighsInt i = 0; i != coversize; ++i) {
     HighsInt j = cover[i];
-    double ub = upper[j];
+    double ub = cutVars[j].upper;
 
-    bool atUpper = solval[j] >= ub - feastol;
+    bool atUpper = cutVars[j].solval >= ub - feastol;
     if (atUpper && !bestlAtUpper) continue;
 
     double mju = ub * vals[j];
@@ -376,7 +382,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 
   l = cover[lpos];
   HighsCDouble al = vals[l];
-  double upperl = upper[l];
+  double upperl = cutVars[l].upper;
   HighsCDouble mlu = upperl * al;
   HighsCDouble mu = mlu - lambda;
 
@@ -439,7 +445,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   auto gamma_l = [&](double z) {
     assert(z > 0);
     for (HighsInt i = 0; i < cplussize; ++i) {
-      HighsInt upperi = static_cast<HighsInt>(upper[cover[i]]);
+      HighsInt upperi = static_cast<HighsInt>(cutVars[cover[i]].upper);
 
       for (HighsInt h = 0; h <= upperi; ++h) {
         HighsCDouble mih = m[i] + h * a[i];
@@ -492,7 +498,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   integralCoefficients = false;
   for (HighsInt i = 0; i != rowlen; ++i) {
     if (vals[i] == 0.0) continue;
-    if (!isintegral[i]) {
+    if (!cutVars[i].integral) {
       if (vals[i] < 0.0)
         integralSupport = false;
       else
@@ -502,7 +508,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 
     if (coverflag[i]) {
       vals[i] = -phi_l(-vals[i]);
-      rhs += vals[i] * upper[i];
+      rhs += static_cast<HighsCDouble>(cutVars[i].upper) * vals[i];
     } else {
       vals[i] = gamma_l(vals[i]);
     }
@@ -537,24 +543,22 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   constexpr double f0min = 0.005;
   constexpr double f0max = 0.995;
 
-  complementation.resize(rowlen);
-
   for (HighsInt i = 0; i != rowlen; ++i) {
-    if (isintegral[i]) {
+    if (cutVars[i].integral) {
       integerinds.push_back(i);
 
-      if (upper[i] < 2 * solval[i]) flipComplementation(i);
+      if (cutVars[i].upper < 2 * cutVars[i].solval) flipComplementation(i);
 
       if (onlyInitialCMIRScale) continue;
 
-      if (solval[i] > feastol) {
+      if (cutVars[i].solval > feastol) {
         double delta = abs(vals[i]);
         if (delta <= 1e-4 || delta == maxabsdelta) continue;
         maxabsdelta = max(maxabsdelta, delta);
         deltas.push_back(delta);
       }
     } else {
-      updateViolationAndNorm(i, vals[i], continuouscontribution,
+      updateViolationAndNorm(cutVars[i], vals[i], continuouscontribution,
                              continuoussqrnorm);
     }
   }
@@ -627,7 +631,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
     for (HighsInt j : integerinds) {
       updateViolationAndNorm(
-          j, computeIntegralCoef(vals[j], f0, oneoveroneminusf0, scale), viol,
+          cutVars[j],
+          computeIntegralCoef(vals[j], f0, oneoveroneminusf0, scale), viol,
           sqrnorm);
     }
 
@@ -662,8 +667,8 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
 
   // try to flip complementation of integers to increase efficacy
   for (HighsInt k : integerinds) {
-    if (upper[k] == kHighsInf) continue;
-    if (solval[k] <= feastol) continue;
+    if (cutVars[k].upper == kHighsInf) continue;
+    if (cutVars[k].solval <= feastol) continue;
 
     flipComplementation(k);
 
@@ -685,7 +690,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   integralCoefficients = false;
   for (HighsInt j = 0; j != rowlen; ++j) {
     if (vals[j] == 0.0) continue;
-    if (!isintegral[j]) {
+    if (!cutVars[j].integral) {
       if (vals[j] > 0.0)
         vals[j] = 0.0;
       else {
@@ -706,7 +711,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     HighsCDouble checknorm = 0.0;
     for (HighsInt j = 0; j != rowlen; ++j) {
       if (vals[j] == 0.0) continue;
-      updateViolationAndNorm(j, vals[j], checkviol, checknorm);
+      updateViolationAndNorm(cutVars[j], vals[j], checkviol, checknorm);
     }
     if (checknorm != 0.0) {
       double checkefficacy = static_cast<double>(checkviol / sqrt(checknorm));
@@ -776,13 +781,13 @@ bool HighsCutGeneration::postprocessCut(const HighsDomain& globaldom) {
         if (ub == kHighsInf)
           return false;
         else
-          rhs -= ub * vals[i];
+          rhs -= static_cast<HighsCDouble>(ub) * vals[i];
       } else {
         double lb = globaldom.col_lower_[inds[i]];
         if (lb == -kHighsInf)
           return false;
         else
-          rhs -= lb * vals[i];
+          rhs -= static_cast<HighsCDouble>(lb) * vals[i];
       }
 
       vals[i] = 0.0;
@@ -841,12 +846,12 @@ bool HighsCutGeneration::postprocessCut(const HighsDomain& globaldom) {
           double ub = globaldom.col_upper_[inds[i]];
           if (ub == kHighsInf) return false;
 
-          rhs -= delta * ub;
+          rhs -= static_cast<HighsCDouble>(delta) * ub;
         } else {
           double lb = globaldom.col_lower_[inds[i]];
           if (lb == -kHighsInf) return false;
 
-          rhs -= delta * lb;
+          rhs -= static_cast<HighsCDouble>(delta) * lb;
         }
       }
 
@@ -898,14 +903,13 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   hasGeneralInts = false;
   HighsInt numZeros = 0;
 
-  double maxact = -feastol;
+  HighsCDouble maxact = -feastol;
   double maxAbsVal = 0;
   for (HighsInt i = 0; i < rowlen; ++i)
     maxAbsVal = std::max(std::abs(vals[i]), maxAbsVal);
 
   initialScale = scale(maxAbsVal);
 
-  isintegral.resize(rowlen);
   for (HighsInt i = 0; i != rowlen; ++i) {
     // we do not want to have integral variables with small coefficients as this
     // may lead to numerical instabilities during cut generation
@@ -916,24 +920,20 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
     // complemented so that their solution value is closest to zero and then
     // will be relaxed if their value is positive or their maximal contribution
     // is below feasibility tolerance.
-    isintegral[i] =
+    cutVars[i].integral =
         lpRelaxation.isColIntegral(inds[i]) && std::abs(vals[i]) > 10 * feastol;
 
-    if (!isintegral[i]) {
+    if (!cutVars[i].integral) {
       // complement non-integer variable (cmir separation heuristic complements
       // integral variables in the same way)
-      if (upper[i] < 2 * solval[i]) {
-        if (complementation.empty()) complementation.resize(rowlen);
-
-        flipComplementation(i);
-      }
+      if (cutVars[i].upper < 2 * cutVars[i].solval) flipComplementation(i);
 
       // relax positive continuous variables and those with small contributions
-      if (vals[i] > 0 || std::abs(vals[i]) * upper[i] <= 10 * feastol) {
-        // printf("remove: vals[i] = %g  upper[i] = %g\n", vals[i], upper[i]);
+      if (vals[i] > 0 || std::abs(vals[i]) * cutVars[i].upper <= 10 * feastol) {
+        // printf("remove: val = %g  upper = %g\n", vals[i], cutVars[i].upper);
         if (vals[i] < 0) {
-          if (upper[i] == kHighsInf) return false;
-          rhs -= vals[i] * upper[i];
+          if (cutVars[i].upper == kHighsInf) return false;
+          rhs -= static_cast<HighsCDouble>(cutVars[i].upper) * vals[i];
         }
 
         ++numZeros;
@@ -943,14 +943,15 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
       hasContinuous = true;
     } else {
-      if (upper[i] == kHighsInf) {
+      if (cutVars[i].upper == kHighsInf) {
         hasUnboundedInts = true;
         hasGeneralInts = true;
-      } else if (upper[i] != 1.0) {
+      } else if (cutVars[i].upper != 1.0) {
         hasGeneralInts = true;
       }
 
-      if (vals[i] > 0) maxact += vals[i] * upper[i];
+      if (vals[i] > 0)
+        maxact += static_cast<HighsCDouble>(cutVars[i].upper) * vals[i];
     }
   }
 
@@ -961,7 +962,8 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
     std::vector<HighsInt> cancelNzs;
 
     for (HighsInt i = 0; i != rowlen; ++i) {
-      double cancelSlack = vals[i] > 0 ? solval[i] : upper[i] - solval[i];
+      double cancelSlack = vals[i] > 0 ? cutVars[i].solval
+                                       : cutVars[i].upper - cutVars[i].solval;
       if (cancelSlack <= feastol) cancelNzs.push_back(i);
     }
 
@@ -976,9 +978,9 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
       HighsInt j = cancelNzs[i];
 
       if (vals[j] < 0) {
-        rhs -= vals[j] * upper[j];
+        rhs -= static_cast<HighsCDouble>(cutVars[j].upper) * vals[j];
       } else
-        maxact -= vals[j] * upper[j];
+        maxact -= static_cast<HighsCDouble>(cutVars[j].upper) * vals[j];
 
       vals[j] = 0.0;
     }
@@ -988,30 +990,13 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
   if (numZeros != 0) {
     // remove zeros in place
-    if (complementation.empty()) {
-      for (HighsInt i = rowlen - 1; i >= 0; --i) {
-        if (vals[i] == 0.0) {
-          --rowlen;
-          inds[i] = inds[rowlen];
-          vals[i] = vals[rowlen];
-          upper[i] = upper[rowlen];
-          solval[i] = solval[rowlen];
-          isintegral[i] = isintegral[rowlen];
-          if (--numZeros == 0) break;
-        }
-      }
-    } else {
-      for (HighsInt i = rowlen - 1; i >= 0; --i) {
-        if (vals[i] == 0.0) {
-          --rowlen;
-          inds[i] = inds[rowlen];
-          vals[i] = vals[rowlen];
-          upper[i] = upper[rowlen];
-          solval[i] = solval[rowlen];
-          isintegral[i] = isintegral[rowlen];
-          complementation[i] = complementation[rowlen];
-          if (--numZeros == 0) break;
-        }
+    for (HighsInt i = rowlen - 1; i >= 0; --i) {
+      if (vals[i] == 0.0) {
+        --rowlen;
+        inds[i] = inds[rowlen];
+        vals[i] = vals[rowlen];
+        cutVars[i] = cutVars[rowlen];
+        if (--numZeros == 0) break;
       }
     }
   }
@@ -1025,7 +1010,7 @@ static void checkNumerics(const double* vals, HighsInt len, double rhs) {
   double minAbsCoef = kHighsInf;
   HighsCDouble sqrnorm = 0;
   for (HighsInt i = 0; i < len; ++i) {
-    sqrnorm += vals[i] * vals[i];
+    sqrnorm += static_cast<HighsCDouble>(vals[i]) * vals[i];
     maxAbsCoef = std::max(std::abs(vals[i]), maxAbsCoef);
     minAbsCoef = std::min(std::abs(vals[i]), minAbsCoef);
   }
@@ -1048,15 +1033,22 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     std::vector<double> valsCheck_ = vals_;
     double tmprhs_ = rhs_;
     bool intsPositive = true;
-    if (!transLp.transform(valsCheck_, upper, solval, indsCheck_, tmprhs_,
-                           intsPositive))
+    if (!transLp.transform(valsCheck_, transformUpper, transformSolval,
+                           indsCheck_, tmprhs_, intsPositive))
       return false;
 
     rowlen = indsCheck_.size();
     this->inds = indsCheck_.data();
     this->vals = valsCheck_.data();
     this->rhs = tmprhs_;
-    complementation.clear();
+    cutVars.resize(rowlen);
+    for (HighsInt i = 0; i != rowlen; ++i) {
+      cutVars[i].upper = transformUpper[i];
+      cutVars[i].solval = transformSolval[i];
+      cutVars[i].flippedSolval = transformUpper[i] - transformSolval[i];
+      cutVars[i].complemented = false;
+      cutVars[i].integral = false;
+    }
     bool hasUnboundedInts = false;
     bool hasGeneralInts = false;
     bool hasContinuous = false;
@@ -1086,14 +1078,22 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 #endif
 
   bool intsPositive = true;
-  if (!transLp.transform(vals_, upper, solval, inds_, rhs_, intsPositive))
+  if (!transLp.transform(vals_, transformUpper, transformSolval, inds_, rhs_,
+                         intsPositive))
     return false;
 
   rowlen = inds_.size();
   this->inds = inds_.data();
   this->vals = vals_.data();
   this->rhs = rhs_;
-  complementation.clear();
+  cutVars.resize(rowlen);
+  for (HighsInt i = 0; i != rowlen; ++i) {
+    cutVars[i].upper = transformUpper[i];
+    cutVars[i].solval = transformSolval[i];
+    cutVars[i].flippedSolval = transformUpper[i] - transformSolval[i];
+    cutVars[i].complemented = false;
+    cutVars[i].integral = false;
+  }
   bool hasUnboundedInts = false;
   bool hasGeneralInts = false;
   bool hasContinuous = false;
@@ -1109,10 +1109,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // that the cut values are transformed to positive coefficients first, which
   // we do below.
   if (!hasUnboundedInts && !intsPositive) {
-    complementation.resize(rowlen);
-
     for (HighsInt i = 0; i != rowlen; ++i) {
-      if (vals[i] > 0 || !isintegral[i]) continue;
+      if (vals[i] > 0 || !cutVars[i].integral) continue;
 
       flipComplementation(i);
     }
@@ -1162,7 +1160,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // finally determine the violation of the cut in the original space
   HighsCDouble violation = -rhs_;
   const auto& sol = lpRelaxation.getSolution().col_value;
-  for (HighsInt i = 0; i != rowlen; ++i) violation += sol[inds[i]] * vals_[i];
+  for (HighsInt i = 0; i != rowlen; ++i)
+    violation += static_cast<HighsCDouble>(sol[inds[i]]) * vals_[i];
 
   if (violation <= 10 * feastol) return false;
 
@@ -1192,39 +1191,42 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
       inds, vals, rowlen, proofrhs);
 
-  complementation.assign(rowlen, false);
+  cutVars.resize(rowlen);
 
-  upper.resize(rowlen);
-  solval.resize(rowlen);
-
-  double activity = 0.0;
+  HighsCDouble activity = 0.0;
   for (HighsInt i = 0; i != rowlen; ++i) {
     HighsInt col = inds[i];
+    CutVariable& var = cutVars[i];
 
-    upper[i] = globaldom.col_upper_[col] - globaldom.col_lower_[col];
+    var.upper = globaldom.col_upper_[col] - globaldom.col_lower_[col];
+    var.integral = false;
 
-    solval[i] =
+    var.solval =
         vals[i] < 0
             ? std::min(globaldom.col_upper_[col], localdomain.col_upper_[col])
             : std::max(globaldom.col_lower_[col], localdomain.col_lower_[col]);
     if (vals[i] < 0 && globaldom.col_upper_[col] != kHighsInf) {
-      rhs -= globaldom.col_upper_[col] * vals[i];
+      rhs -= static_cast<HighsCDouble>(globaldom.col_upper_[col]) * vals[i];
       vals[i] = -vals[i];
-      complementation[i] = true;
+      var.complemented = true;
 
-      solval[i] = globaldom.col_upper_[col] - solval[i];
+      var.solval = globaldom.col_upper_[col] - var.solval;
     } else {
-      rhs -= globaldom.col_lower_[col] * vals[i];
-      complementation[i] = false;
-      solval[i] = solval[i] - globaldom.col_lower_[col];
+      rhs -= static_cast<HighsCDouble>(globaldom.col_lower_[col]) * vals[i];
+      var.complemented = false;
+      var.solval = var.solval - globaldom.col_lower_[col];
     }
 
-    activity += solval[i] * vals[i];
+    activity += static_cast<HighsCDouble>(var.solval) * vals[i];
+    var.flippedSolval = var.upper - var.solval;
   }
 
   if (activity > rhs) {
     double solScale = static_cast<double>(rhs / activity);
-    for (HighsInt i = 0; i != rowlen; ++i) solval[i] *= solScale;
+    for (CutVariable& var : cutVars) {
+      var.solval *= solScale;
+      var.flippedSolval = var.upper - var.solval;
+    }
   }
 
   bool hasUnboundedInts = false;
@@ -1241,14 +1243,12 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
     return false;
 
   // remove the complementation
-  if (!complementation.empty()) {
-    for (HighsInt i = 0; i != rowlen; ++i) {
-      if (complementation[i]) {
-        rhs -= globaldom.col_upper_[inds[i]] * vals[i];
-        vals[i] = -vals[i];
-      } else
-        rhs += globaldom.col_lower_[inds[i]] * vals[i];
-    }
+  for (HighsInt i = 0; i != rowlen; ++i) {
+    if (cutVars[i].complemented) {
+      rhs -= static_cast<HighsCDouble>(globaldom.col_upper_[inds[i]]) * vals[i];
+      vals[i] = -vals[i];
+    } else
+      rhs += static_cast<HighsCDouble>(globaldom.col_lower_[inds[i]]) * vals[i];
   }
 
   // apply cut postprocessing including scaling and removal of small
@@ -1277,7 +1277,6 @@ bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
                                            std::vector<HighsInt>& inds_,
                                            std::vector<double>& vals_,
                                            double& rhs_) {
-  complementation.clear();
   rowlen = inds_.size();
   inds = inds_.data();
   vals = vals_.data();
@@ -1314,7 +1313,8 @@ bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
   // finally determine the violation of the cut in the original space
   HighsCDouble violation = -rhs_;
   const auto& sol = lpRelaxation.getSolution().col_value;
-  for (HighsInt i = 0; i != rowlen; ++i) violation += sol[inds[i]] * vals_[i];
+  for (HighsInt i = 0; i != rowlen; ++i)
+    violation += static_cast<HighsCDouble>(sol[inds[i]]) * vals_[i];
 
   if (violation <= 10 * feastol) return false;
 
@@ -1332,34 +1332,35 @@ bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
 }
 
 void HighsCutGeneration::flipComplementation(HighsInt index) {
+  CutVariable& var = cutVars[index];
+
   // only variables with finite upper bounds can be complemented
-  assert(upper[index] != kHighsInf);
+  assert(var.upper != kHighsInf);
 
   // flip complementation
-  complementation[index] = !complementation[index];
-  solval[index] = upper[index] - solval[index];
-  rhs -= upper[index] * vals[index];
+  var.complemented = !var.complemented;
+  std::swap(var.solval, var.flippedSolval);
+  rhs -= static_cast<HighsCDouble>(var.upper) * vals[index];
   vals[index] = -vals[index];
 }
 
 void HighsCutGeneration::removeComplementation() {
-  // remove the complementation if it exists
-  if (complementation.empty()) return;
+  // remove the complementation
   for (HighsInt i = 0; i != rowlen; ++i) {
-    if (complementation[i]) flipComplementation(i);
+    if (cutVars[i].complemented) flipComplementation(i);
   }
 }
 
 template <typename T>
-void HighsCutGeneration::updateViolationAndNorm(HighsInt index, T aj,
+void HighsCutGeneration::updateViolationAndNorm(const CutVariable& var, T aj,
                                                 HighsCDouble& violation,
                                                 HighsCDouble& norm) const {
   // update violation
-  violation += static_cast<HighsCDouble>(aj) * solval[index];
+  violation += static_cast<HighsCDouble>(aj) * var.solval;
 
   // update norm
-  if (aj > 0 && solval[index] <= feastol) return;
-  if (aj < 0 && solval[index] >= upper[index] - feastol) return;
+  if (aj > 0 && var.solval <= feastol) return;
+  if (aj < 0 && var.solval >= var.upper - feastol) return;
   norm += static_cast<HighsCDouble>(aj) * static_cast<HighsCDouble>(aj);
 }
 
@@ -1377,8 +1378,7 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
   // 0. Save data before determining cover and applying lifting functions
   tmpVals.assign(vals, vals + rowlen);
   tmpInds.assign(inds, inds + rowlen);
-  tmpComplementation = complementation;
-  tmpSolval = solval;
+  tmpCutVars = cutVars;
   HighsCDouble tmpRhs = rhs;
 
   // 1. Determine a cover, cover does not need to be minimal as neither of
@@ -1417,7 +1417,7 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
     HighsCDouble violation = -rhs;
     HighsCDouble sqrnorm = 0.0;
     for (HighsInt i = 0; i < rowlen; ++i) {
-      updateViolationAndNorm(i, vals[i], violation, sqrnorm);
+      updateViolationAndNorm(cutVars[i], vals[i], violation, sqrnorm);
     }
 
     // compute efficacy (distance cut off)
@@ -1447,13 +1447,12 @@ bool HighsCutGeneration::tryGenerateCut(std::vector<HighsInt>& inds_,
     return true;
   } else if (success) {
     // take the previous lifted cut as cmir could not improve
-    // we restore the old complementation vector, right hand side, and values
+    // we restore the old complementation, right hand side, and values
     rhs = tmpRhs;
-    // note that the solution vector solval also needs to be restored because it
-    // depends on the complementation. it would be OK not to restore solval, if
-    // there would be a guarantee that it is not used from here on.
-    complementation.swap(tmpComplementation);
-    solval.swap(tmpSolval);
+    // note that the solution values also need to be restored because they
+    // depend on the complementation. it would be OK not to restore them, if
+    // there would be a guarantee that they are not used from here on.
+    cutVars.swap(tmpCutVars);
     inds = inds_.data();
     vals = vals_.data();
     // restore indicators

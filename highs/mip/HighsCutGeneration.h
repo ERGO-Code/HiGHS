@@ -30,16 +30,28 @@ class HighsDomain;
 /// relaxation by substituting bounds and aggregating rows
 class HighsCutGeneration {
  private:
+  // data of a variable in the base inequality
+  struct CutVariable {
+    double upper;
+    // solution value in the current complementation
+    double solval;
+    // solution value after flipping the complementation; swapping both
+    // solution values restores them exactly when flipping back
+    double flippedSolval;
+    bool complemented;
+    bool integral;
+  };
+
   const HighsLpRelaxation& lpRelaxation;
   HighsCutPool& cutpool;
   HighsRandom randgen;
   std::vector<HighsInt> cover;
   HighsCDouble coverweight;
   HighsCDouble lambda;
-  std::vector<double> upper;
-  std::vector<double> solval;
-  std::vector<HighsBool> complementation;
-  std::vector<HighsBool> isintegral;
+  std::vector<CutVariable> cutVars;
+  // upper bounds and solution values from HighsTransformedLp::transform
+  std::vector<double> transformUpper;
+  std::vector<double> transformSolval;
   const double feastol;
   const double epsilon;
 
@@ -56,8 +68,7 @@ class HighsCutGeneration {
 
   std::vector<double> tmpVals;
   std::vector<HighsInt> tmpInds;
-  std::vector<HighsBool> tmpComplementation;
-  std::vector<double> tmpSolval;
+  std::vector<CutVariable> tmpCutVars;
 
   bool determineCover(bool lpSol = true);
 
@@ -82,7 +93,8 @@ class HighsCutGeneration {
   void removeComplementation();
 
   template <typename T>
-  void updateViolationAndNorm(HighsInt index, T aj, HighsCDouble& violation,
+  void updateViolationAndNorm(const CutVariable& var, T aj,
+                              HighsCDouble& violation,
                               HighsCDouble& norm) const;
 
   bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
