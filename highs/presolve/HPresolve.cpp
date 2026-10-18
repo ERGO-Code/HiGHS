@@ -1645,7 +1645,9 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
 
   // the row becomes dual implied free if it was not dual implied free before
   // and the new implied bound implies that the row dual is non-positive; then
-  // implied free columns in the row are substitution candidates
+  // implied free columns in the row are substitution candidates. note that
+  // this includes ranged rows, and never holds for free rows, which cannot be
+  // dual implied free
   bool newDualImplied =
       !isDualImpliedFree(row) && isDualImpliedLeq(row, newUpper);
 
@@ -1690,7 +1692,9 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
 
   // the row becomes dual implied free if it was not dual implied free before
   // and the new implied bound implies that the row dual is non-negative; then
-  // implied free columns in the row are substitution candidates
+  // implied free columns in the row are substitution candidates. note that
+  // this includes ranged rows, and never holds for free rows, which cannot be
+  // dual implied free
   bool newDualImplied =
       !isDualImpliedFree(row) && isDualImpliedGeq(row, newLower);
 
