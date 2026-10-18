@@ -26,7 +26,7 @@ set(BUILD_CXX_EXE OFF)
 #     "${CMAKE_CURRENT_LIST_DIR}/../"
 #     "${CMAKE_CURRENT_BINARY_DIR}/highs")
 
-nanobind_add_module(_core highs_bindings.cpp)
+nanobind_add_module(_core FREE_THREADED highs_bindings.cpp)
 target_link_libraries(_core PRIVATE highs ${CMAKE_DL_LIBS})
 
 if (APPLE)
