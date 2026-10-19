@@ -4115,8 +4115,18 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
       1000 + 3 * localdom.mipsolver->mipdata_->integral_cols.size())
     return;
 
-  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
-                            resolvedDomainChanges.end());
+  for (const LocalDomChg& locdomchg : resolvedDomainChanges) {
+    const auto insertedLocdomchg =
+        reasonSideFrontier.insert(reasonSideFrontier.end(), locdomchg);
+    if (insertedLocdomchg->domchg.boundval != locdomchg.domchg.boundval) {
+      double& bound = insertedLocdomchg->domchg.boundval;
+      if (locdomchg.domchg.boundtype == HighsBoundType::kLower) {
+        bound = std::max(bound, locdomchg.domchg.boundval);
+      } else {
+        bound = std::min(bound, locdomchg.domchg.boundval);
+      }
+    }
+  }
 
   localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
       reasonSideFrontier, localdom.domchgstack_);
