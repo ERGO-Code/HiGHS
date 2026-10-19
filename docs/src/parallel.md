@@ -11,14 +11,11 @@ that can exploit the availability of a [GPU](@ref gpu).
 
 The value of the [threads](@ref option-threads) option determines the 
 number of threads used by HiGHS. By default it is zero, in which case 
-HiGHS will use half the available threads on a machine. 
+HiGHS uses one thread per physical core available to your program (see [here](@ref scheduler-details)).
 If it is set to one, then HiGHS will never use more than one thread. 
 The maximum value that is advantageous is machine-dependent, 
 but it is unlikely to be more than eight due to most computation in 
 HiGHS being memory-bound.
-
-Note that since parallelism is controlled by a static scheduler,
-concurrent Highs instances must use the same value of `threads`.
 
 ## Dual simplex
 
@@ -100,7 +97,7 @@ correct, but the options provide ways of overriding them.
 The extent to which parallelism is used in HiPO depends on the value of the
 [threads](@ref option-threads) option (see above).
 
-## MIP
+## [MIP](@id parallel-mip)
 
 If the [parallel](@ref option-parallel) option is not set to "off", the MIP solver
 will explore the branch-and-bound tree using multiple threads.
@@ -133,14 +130,14 @@ solved concurrently.
 
 ## Parallel scheduler: initialization, shutdown and thread safety
 
-### Terminology
+### [Terminology](@id parallel-terminology)
 
 - **Application thread**: a thread you create yourself (with `std::thread`, OpenMP, pthreads, Julia, Python, and so on), or the main thread of your program.
 - **Scheduler**: the pool of threads HiGHS uses to run parallel work.
 - **Worker thread**: a thread created by HiGHS when it creates a scheduler. Worker threads only run HiGHS tasks.
 - **Owning thread**: the application thread that caused a scheduler to be created. It takes part in the parallel work together with the worker threads.
 
-### Each application thread has its own scheduler
+### [Each application thread has its own scheduler](@id scheduler-details)
 
 A scheduler is tied to the application thread that created it, not to a `Highs` instance.
 
