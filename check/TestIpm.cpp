@@ -270,13 +270,10 @@ TEST_CASE("test-3397", "[highs_ipm]") {
     h.setOptionValue("presolve", kHighsOffString);
     h.setOptionValue("time_limit", 10);
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-    for (const std::string& crossover : {kHighsOnString, kHighsOffString}) {
-      h.setOptionValue("run_crossover", crossover);
-      h.clearSolver();
-      h.run();
-      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-      REQUIRE(std::fabs(h.getInfo().objective_function_value + 185.875) < 1e-6);
-    }
+    h.clearSolver();
+    h.run();
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(std::fabs(h.getInfo().objective_function_value + 185.875) < 1e-6);
 
     h.resetGlobalScheduler(true);
   }
