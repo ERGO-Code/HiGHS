@@ -417,6 +417,7 @@ void HPresolve::chooseRules() {
     allow_rule_[kPresolveRuleZeroCostSingleton] = false;
     allow_rule_[kPresolveRuleColStuffing] = false;
     allow_rule_[kPresolveRuleFourierMotzkin] = false;
+    allow_rule_[kPresolveRuleImplAwareConstrPropagation] = false;
   }
 
   if (options->presolve_rule_off) {
