@@ -1072,7 +1072,7 @@ HighsStatus Highs::presolve() {
     model_presolve_status_ = HighsPresolveStatus::kNotReduced;
   } else {
     const bool force_presolve = true;
-    // make sure global scheduler is initialized before calling presolve, since
+    // make sure scheduler is initialized before calling presolve, since
     // MIP presolve may use parallelism
     //
     return_status = this->initializeMultiThreading();
@@ -5003,7 +5003,7 @@ HighsStatus Highs::initializeMultiThreading() {
       this->max_threads_ != this->options_.threads) {
     highsLogUser(
         log_options, HighsLogType::kError,
-        "Option 'threads' is set to %d but global scheduler has already been "
+        "Option 'threads' is set to %d but the scheduler has already been "
         "initialized to use %d threads. The previous scheduler instance can "
         "be destroyed by calling Highs::resetGlobalScheduler().\n",
         int(options_.threads), int(this->max_threads_));
