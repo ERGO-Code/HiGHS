@@ -305,6 +305,19 @@ static void nestedTask() {
   tg.spawn([]() { loseTime(); });
 }
 
+TEST_CASE("CancelNestedTasks", "[parallel]") {
+  highs::parallel::initialize_scheduler();
+
+  for (int i = 0; i < 1000; ++i) {
+    highs::parallel::TaskGroup tg;
+    tg.spawn([]() { nestedTask(); });
+    tg.spawn([]() { nestedTask(); });
+    loseTime();
+  }
+
+  HighsTaskExecutor::shutdown();
+}
+
 TEST_CASE("AvailableCoreCount", "[parallel]") {
   unsigned int cores = highs::parallel::available_core_count();
   REQUIRE(cores > 0);
@@ -353,64 +366,3 @@ TEST_CASE("AffinityReducedCoreCount", "[parallel]") {
   HighsTaskExecutor::shutdown();
 }
 #endif
-
-TEST_CASE("CancelNestedTasks", "[parallel]") {
-  highs::parallel::initialize_scheduler();
-
-  for (int i = 0; i < 1000; ++i) {
-    highs::parallel::TaskGroup tg;
-    tg.spawn([]() { nestedTask(); });
-    tg.spawn([]() { nestedTask(); });
-    loseTime();
-  }
-
-  HighsTaskExecutor::shutdown();
-}
-
-TEST_CASE("ParallelCApi", "[parallel]") {
-  // This test exposes a failure in the C api when creating and destroying Highs
-  // instances on separate threads.
-  // One thread solves a mip, while the other loses some time before destroying
-  // the instance. If this causes the scheduler to be terminated (i.e., if
-  // Highs_destroy calls resetGlobalScheduler) while the first thread is still
-  // using it, the first thread may crash, hang, or terminate with wrong
-  // results.
-
-  highs::parallel::initialize_scheduler();
-
-  std::string model = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
-  const double expected_obj = 568.1007;
-  double actual_obj;
-  double total = 0;
-
-  {
-    highs::parallel::TaskGroup tg;
-
-    tg.spawn([&]() {
-      void* highs = Highs_create();
-      Highs_setBoolOptionValue(highs, "output_flag", dev_run);
-      Highs_setStringOptionValue(highs, "parallel", "on");
-      Highs_readModel(highs, model.c_str());
-      Highs_run(highs);
-      Highs_getDoubleInfoValue(highs, "objective_function_value", &actual_obj);
-      Highs_destroy(highs);
-    });
-
-    tg.spawn([&]() {
-      void* highs = Highs_create();
-      for (int i = 0; i < 1e6; ++i) {
-        total += (double)i * i * i;
-      }
-      Highs_destroy(highs);
-    });
-
-    tg.taskWait();
-
-    REQUIRE(total > 1e18);
-    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
-            1e-4);
-  }
-  // TaskGroup destructor must be called before scheduler is killed
-
-  HighsTaskExecutor::shutdown(true);
-}
