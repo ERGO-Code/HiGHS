@@ -1352,15 +1352,15 @@ class Highs {
    * @brief Releases all resources held by the scheduler owned by the calling
    * thread. It is thread-safe to call this function only from the thread that
    * owns the scheduler (not from a worker thread) and when no run() or
-   * presolve() is in progress on that thread, including from inside a callback.
-   * After this function has terminated it is guaranteed that eventually all
-   * previously created scheduler threads will terminate and allocated memory
-   * will be released. After this function has returned the option value for the
-   * number of threads may be altered to a new value before the next call to
-   * run() or presolve(). If the given bool parameter has value true, then the
-   * function will not return until all memory is freed, which might be
-   * desirable when debugging heap memory but requires the calling thread to
-   * wait for all scheduler threads to wake-up which is usually not necessary.
+   * presolve() is in progress on that thread. After this function has
+   * terminated it is guaranteed that eventually all previously created
+   * scheduler threads will terminate and allocated memory will be released.
+   * After this function has returned the option value for the number of threads
+   * may be altered to a new value before the next call to run() or presolve().
+   * If the given bool parameter has value true, then the function will not
+   * return until all memory is freed, which might be desirable when debugging
+   * heap memory but requires the calling thread to wait for all scheduler
+   * threads to wake-up which is usually not necessary.
    */
   static void resetThreadScheduler(bool blocking = false);
 

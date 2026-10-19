@@ -2594,7 +2594,7 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
  *
  * It is thread-safe to call this function only from the thread that owns the
  * scheduler (not from a worker thread) and when no run() or presolve() is in
- * progress on that thread, including from inside a callback.
+ * progress on that thread.
  *
  * After this function has terminated, it is guaranteed that eventually all
  * previously created scheduler threads will terminate and allocated memory will

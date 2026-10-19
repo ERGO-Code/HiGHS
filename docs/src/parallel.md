@@ -167,7 +167,7 @@ Resetting only affects the scheduler of the calling thread. If the calling threa
 Call `resetThreadScheduler()` only:
 
 - from the thread that owns the scheduler (the one that ran the solve), and
-- when no `run()` or `presolve()` is in progress on that thread, including from inside a callback.
+- when no `run()` or `presolve()` is in progress on that thread. In practice this means you must not call it from a callback.
 
 Do not call it from inside a HiGHS parallel task or from a worker thread. That would stop the whole scheduler while other workers may still be running tasks.
 
@@ -175,5 +175,5 @@ After a reset, the next `run()` or `presolve()` on that thread creates a new sch
 
 ### Using the C API
 
-The C API follows the same rules. Each application thread that calls `Highs_run` (or any other function that solves a model) gets its own scheduler, and `Highs_destroy` does not shut it down. Instances created and used on the same thread share that thread's scheduler. To control the number of threads, set the `threads` option with `Highs_setIntOptionValue(highs, "threads", n)` before the first solve on a thread. To free the scheduler explicitly, call `Highs_resetThreadScheduler(1)` to wait for the worker threads to finish, or `Highs_resetThreadScheduler(0)` to return immediately. The same restrictions as in C++ apply: call it from the thread that ran the solve, when no solve is in progress on that thread (including from inside a callback), and never from a worker thread or a HiGHS task.
+The C API follows the same rules. Each application thread that calls `Highs_run` (or any other function that solves a model) gets its own scheduler, and `Highs_destroy` does not shut it down. Instances created and used on the same thread share that thread's scheduler. To control the number of threads, set the `threads` option with `Highs_setIntOptionValue(highs, "threads", n)` before the first solve on a thread. To free the scheduler explicitly, call `Highs_resetThreadScheduler(1)` to wait for the worker threads to finish, or `Highs_resetThreadScheduler(0)` to return immediately. The same restrictions as in C++ apply: call it from the thread that ran the solve, when no solve is in progress on that thread, and never from a worker thread or a HiGHS task.
 
