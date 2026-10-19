@@ -1027,13 +1027,13 @@ static void checkNumerics(const double* vals, HighsInt len, double rhs) {
 #endif
 
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
-                                     std::vector<HighsInt>& inds_,
-                                     std::vector<double>& vals_, double& rhs_,
+                                     std::vector<HighsInt>& inds,
+                                     std::vector<double>& vals, double& rhs,
                                      bool onlyInitialCMIRScale) {
 #if 0
-  if (vals_.size() > 1) {
+  if (vals.size() > 1) {
     bool intsPositive = true;
-    if (!transLp.transform(Row{inds_, vals_, rhs_}, cut, intsPositive))
+    if (!transLp.transform(Row{inds, vals, rhs}, cut, intsPositive))
       return false;
 
     bool hasUnboundedInts = false;
@@ -1068,7 +1068,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
 #endif
 
   // the base inequality, which is overwritten by the cut
-  Row row{inds_, vals_, rhs_};
+  Row row{inds, vals, rhs};
   bool intsPositive = true;
   if (!transLp.transform(row, cut, intsPositive)) return false;
 
@@ -1111,27 +1111,27 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   if (!transLp.untransform(row)) return false;
 
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      inds_.data(), vals_.data(), inds_.size(), static_cast<double>(row.rhs));
+      inds.data(), vals.data(), inds.size(), static_cast<double>(row.rhs));
   // apply cut postprocessing including scaling and removal of small
   // coefficients
   if (!postprocessCut(row, transLp.getGlobaldom())) return false;
-  rhs_ = static_cast<double>(row.rhs);
+  rhs = static_cast<double>(row.rhs);
 
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      inds_.data(), vals_.data(), inds_.size(), rhs_);
+      inds.data(), vals.data(), inds.size(), rhs);
 
   // finally determine the violation of the cut in the original space
   if (row.violation(lpRelaxation.getSolution().col_value) <= 10 * feastol)
     return false;
 
-  transLp.getGlobaldom().tightenCoefficients(inds_.data(), vals_.data(),
-                                             inds_.size(), rhs_);
+  transLp.getGlobaldom().tightenCoefficients(inds.data(), vals.data(),
+                                             inds.size(), rhs);
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
-  HighsInt cutindex = cutpool.addCut(lpRelaxation.getMipSolver(), inds_.data(),
-                                     vals_.data(), inds_.size(), rhs_,
-                                     integralSupport && integralCoefficients);
+  HighsInt cutindex =
+      cutpool.addCut(lpRelaxation.getMipSolver(), inds.data(), vals.data(),
+                     inds.size(), rhs, integralSupport && integralCoefficients);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
