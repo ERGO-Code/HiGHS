@@ -14,7 +14,9 @@
 #ifndef MIP_HIGHS_TRANSFORMED_LP_H_
 #define MIP_HIGHS_TRANSFORMED_LP_H_
 
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <utility>
 #include <vector>
 
@@ -55,6 +57,20 @@ class HighsTransformedLp {
       }
     }
 
+    // returns the maximal absolute coefficient
+    double maxAbsVal() const {
+      double maxVal = 0.0;
+      for (double val : vals) maxVal = std::max(std::abs(val), maxVal);
+      return maxVal;
+    }
+
+    // returns the minimal absolute coefficient
+    double minAbsVal() const {
+      double minVal = kHighsInf;
+      for (double val : vals) minVal = std::min(std::abs(val), minVal);
+      return minVal;
+    }
+
     // returns the violation of the row by the given solution
     HighsCDouble violation(const std::vector<double>& sol) const {
       HighsCDouble viol = -rhs;
@@ -89,6 +105,25 @@ class HighsTransformedLp {
     void scale(double factor) {
       rhs *= factor;
       for (TransformedVar& var : vars) var.val *= factor;
+    }
+
+    // removes variables with zero coefficients
+    void removeZeros() {
+      // replace zeros by the last element to keep the removal cheap
+      for (HighsInt i = static_cast<HighsInt>(vars.size()) - 1; i >= 0; --i) {
+        if (vars[i].val == 0.0) {
+          vars[i] = vars.back();
+          vars.pop_back();
+        }
+      }
+    }
+
+    // returns the maximal absolute coefficient
+    double maxAbsVal() const {
+      double maxVal = 0.0;
+      for (const TransformedVar& var : vars)
+        maxVal = std::max(std::abs(var.val), maxVal);
+      return maxVal;
     }
 
     // flips the complementation of the given variable of this row

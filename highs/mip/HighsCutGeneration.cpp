@@ -772,8 +772,7 @@ bool HighsCutGeneration::postprocessCut(Row& row,
   }
 
   // determine maximal absolute coefficient
-  double maxAbsValue = 0.0;
-  for (double val : vals) maxAbsValue = std::max(std::abs(val), maxAbsValue);
+  double maxAbsValue = row.maxAbsVal();
 
   // determine minimal allowed coefficient
   double minCoefficientValue = 100 * feastol * std::max(maxAbsValue, 1e-3);
@@ -872,11 +871,7 @@ bool HighsCutGeneration::postprocessCut(Row& row,
       // integral scale lead to very large coefficient values. We now shift the
       // exactly integral values down such that the smallest coefficient is
       // around 1
-      double minAbsValue = kHighsInf;
-      for (double val : vals)
-        minAbsValue = std::min(std::abs(val), minAbsValue);
-
-      row.scale(computeScale(minAbsValue - epsilon));
+      row.scale(computeScale(row.minAbsVal() - epsilon));
     }
   } else {
     // the support is not integral, scale cut to have the largest coefficient
@@ -906,11 +901,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
   const HighsInt numVars = cut.vars.size();
   HighsCDouble maxact = -feastol;
-  double maxAbsVal = 0;
-  for (const TransformedVar& var : cut.vars)
-    maxAbsVal = std::max(std::abs(var.val), maxAbsVal);
-
-  initialScale = computeScale(maxAbsVal);
+  initialScale = computeScale(cut.maxAbsVal());
   cut.scale(initialScale);
 
   for (TransformedVar& var : cut.vars) {
@@ -993,16 +984,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
     numZeros += numCancel;
   }
 
-  if (numZeros != 0) {
-    // remove zeros in place
-    for (HighsInt i = numVars - 1; i >= 0; --i) {
-      if (cut.vars[i].val == 0.0) {
-        cut.vars[i] = cut.vars.back();
-        cut.vars.pop_back();
-        if (--numZeros == 0) break;
-      }
-    }
-  }
+  if (numZeros != 0) cut.removeZeros();
 
   return maxact > cut.rhs;
 }
