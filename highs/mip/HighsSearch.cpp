@@ -1813,8 +1813,6 @@ void HighsSearch::solveDepthFirst(int64_t maxbacktracks, int64_t maxnodes) {
     NodeResult result = dive(maxnodes);
     // if a limit was reached the result might be open
     if (result == NodeResult::kOpen) break;
-    // node limit for the whole search: a dive that moves one bound by a single
-    // unit per node may otherwise never reach a leaf or a backtrack
     if (nnodes >= maxnodes) break;
 
     --maxbacktracks;
