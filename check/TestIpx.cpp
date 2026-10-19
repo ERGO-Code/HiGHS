@@ -91,7 +91,7 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
 
   (void)(info);  // surpress unused variable.
 
-  // hack to reset global scheduler
+  // hack to reset scheduler
   Highs h;
   h.resetThreadScheduler(true);
 }

@@ -151,12 +151,12 @@ Because every scheduler adds worker threads, running HiGHS from many application
 
 ### Shutdown
 
-A scheduler is shut down when its owning thread exits, or when you call `Highs::resetGlobalScheduler(bool blocking)`. Without an explicit call, a scheduler stays alive between solves, so that it can be reused.
+A scheduler is shut down when its owning thread exits, or when you call `Highs::resetThreadScheduler(bool blocking)`. Without an explicit call, a scheduler stays alive between solves, so that it can be reused.
 
 The `blocking` argument controls what happens to the worker threads:
 
-- `resetGlobalScheduler(true)` waits until all worker threads have finished before returning. Use it when you need the threads to be gone, for example before unloading a library or exiting a program that checks for leftover threads.
-- `resetGlobalScheduler(false)` (the default) returns immediately. The worker threads are told to stop and finish on their own shortly afterwards, so a few of them may still be running when the call returns.
+- `resetThreadScheduler(true)` waits until all worker threads have finished before returning. Use it when you need the threads to be gone, for example before unloading a library or exiting a program that checks for leftover threads.
+- `resetThreadScheduler(false)` (the default) returns immediately. The worker threads are told to stop and finish on their own shortly afterwards, so a few of them may still be running when the call returns.
 
 When a scheduler is shut down because its owning thread exits, the workers are stopped without waiting for them, as with `false`.
 
@@ -164,7 +164,7 @@ Resetting only affects the scheduler of the calling thread. If the calling threa
 
 ### Thread safety
 
-Call `resetGlobalScheduler()` only:
+Call `resetThreadScheduler()` only:
 
 - from the thread that owns the scheduler (the one that ran the solve), and
 - when no `run()` or `presolve()` is in progress on that thread, including from inside a callback.
@@ -175,5 +175,5 @@ After a reset, the next `run()` or `presolve()` on that thread creates a new sch
 
 ### Using the C API
 
-The C API follows the same rules. Each application thread that calls `Highs_run` (or any other function that solves a model) gets its own scheduler, and `Highs_destroy` does not shut it down. Instances created and used on the same thread share that thread's scheduler. To control the number of threads, set the `threads` option with `Highs_setIntOptionValue(highs, "threads", n)` before the first solve on a thread. To free the scheduler explicitly, call `Highs_resetGlobalScheduler(1)` to wait for the worker threads to finish, or `Highs_resetGlobalScheduler(0)` to return immediately. The same restrictions as in C++ apply: call it from the thread that ran the solve, when no solve is in progress on that thread (including from inside a callback), and never from a worker thread or a HiGHS task.
+The C API follows the same rules. Each application thread that calls `Highs_run` (or any other function that solves a model) gets its own scheduler, and `Highs_destroy` does not shut it down. Instances created and used on the same thread share that thread's scheduler. To control the number of threads, set the `threads` option with `Highs_setIntOptionValue(highs, "threads", n)` before the first solve on a thread. To free the scheduler explicitly, call `Highs_resetThreadScheduler(1)` to wait for the worker threads to finish, or `Highs_resetThreadScheduler(0)` to return immediately. The same restrictions as in C++ apply: call it from the thread that ran the solve, when no solve is in progress on that thread (including from inside a callback), and never from a worker thread or a HiGHS task.
 
