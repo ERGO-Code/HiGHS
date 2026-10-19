@@ -38,6 +38,11 @@ class HighsTransformedLp {
     std::vector<double> vals;
     HighsCDouble rhs = 0.0;
 
+    Row() = default;
+    Row(std::vector<HighsInt> inds_, std::vector<double> vals_,
+        HighsCDouble rhs_)
+        : inds(std::move(inds_)), vals(std::move(vals_)), rhs(rhs_) {}
+
     // scales the right hand side and all coefficients
     void scale(double factor) {
       rhs *= factor;
