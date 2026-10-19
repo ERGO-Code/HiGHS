@@ -155,7 +155,7 @@ static std::unique_ptr<std::istream> openFile(const std::string& filename) {
 #ifdef ZLIB_FOUND
   try {
     return std::unique_ptr<std::istream>(
-        new zstr::ifstream(filename, std::ios::in));
+        new zstr::ifstream(filename, std::ios::in, 1 << 16));
   } catch (const strict_fstream::Exception&) {
     std::unique_ptr<std::istream> failed(new std::istringstream());
     failed->setstate(std::ios::failbit);
@@ -243,8 +243,9 @@ static std::string renderDiagnostic(const std::string& filename,
 // that they refer to from the file
 static std::vector<std::string> renderDiagnostics(
     const std::string& filename, const std::vector<Diagnostic>& diagnostics) {
-  std::unique_ptr<std::istream> file = openFile(filename);
   std::vector<std::string> rendered;
+  if (diagnostics.empty()) return rendered;
+  std::unique_ptr<std::istream> file = openFile(filename);
   std::string line;
   size_t line_number = 0;
   size_t line_pos = 0;
@@ -324,6 +325,8 @@ class Lexer {
   // needed
   std::string buf_;
   size_t buf_start_ = 0;
+  bool eof_ = false;
+  size_t chunk_ = kChunkSize < (1 << 14) ? kChunkSize : (1 << 14);
   // The bytes before keep_ are no longer needed
   size_t keep_ = 0;
   // The location of the lexer
@@ -339,14 +342,20 @@ class Lexer {
 // Read the file until it contains `pos`, discarding bytes that are no longer
 // needed. Returns the byte at `pos`, or -1 at the end of the file.
 int Lexer::fill(size_t pos) {
+  if (eof_) return -1;
   buf_.erase(0, keep_ - buf_start_);
   buf_start_ = keep_;
   while (pos - buf_start_ >= buf_.size()) {
     const size_t size = buf_.size();
-    buf_.resize(size + kChunkSize);
-    in_.read(&buf_[size], kChunkSize);
-    buf_.resize(size + static_cast<size_t>(in_.gcount()));
-    if (buf_.size() == size) return -1;
+    buf_.resize(size + chunk_);
+    in_.read(&buf_[size], chunk_);
+    const size_t got = static_cast<size_t>(in_.gcount());
+    buf_.resize(size + got);
+    if (got < chunk_) eof_ = true;
+    if (chunk_ < kChunkSize)
+      chunk_ = 2 * chunk_ < kChunkSize ? 2 * chunk_ : kChunkSize;
+    if (got == 0) return -1;
+    if (eof_ && pos - buf_start_ >= buf_.size()) return -1;
   }
   return static_cast<unsigned char>(buf_[pos - buf_start_]);
 }
