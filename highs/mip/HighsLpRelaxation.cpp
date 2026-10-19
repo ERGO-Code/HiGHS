@@ -844,14 +844,14 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
     if (row_dual[i] > 0) {
       if (lp.row_lower_[i] != -kHighsInf)
         // @FlipRowDual += became -=
-        upper -= row_dual[i] * lp.row_lower_[i];
+        upper -= static_cast<HighsCDouble>(row_dual[i]) * lp.row_lower_[i];
       else
         row_dual[i] = 0;
       // @FlipRowDual row_dual[i] > 0 became row_dual[i] < 0
     } else if (row_dual[i] < 0) {
       if (lp.row_upper_[i] != kHighsInf)
         // @FlipRowDual += became -=
-        upper -= row_dual[i] * lp.row_upper_[i];
+        upper -= static_cast<HighsCDouble>(row_dual[i]) * lp.row_upper_[i];
       else
         row_dual[i] = 0;
     }
@@ -870,7 +870,8 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
     for (HighsInt j = start; j != end; ++j) {
       if (row_dual[lp.a_matrix_.index_[j]] == 0) continue;
       // @FlipRowDual += became -=
-      exactVal -= lp.a_matrix_.value_[j] * row_dual[lp.a_matrix_.index_[j]];
+      exactVal -= static_cast<HighsCDouble>(lp.a_matrix_.value_[j]) *
+                  row_dual[lp.a_matrix_.index_[j]];
     }
 
     double val = double(exactVal);
