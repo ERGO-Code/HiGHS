@@ -124,8 +124,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     bool integralPositive = false;
-    if (!transLp.transform(HighsTransformedLp::Row{inds, vals, rhs},
-                           transformedRow, integralPositive, true))
+    if (!transLp.transform(inds, vals, rhs, transformedRow, integralPositive,
+                           true))
       continue;
     rhs = static_cast<double>(transformedRow.rhs);
 

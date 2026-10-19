@@ -129,7 +129,9 @@ HighsTransformedLp::HighsTransformedLp(const HighsLpRelaxation& lprelaxation,
   }
 }
 
-bool HighsTransformedLp::transform(const Row& row,
+bool HighsTransformedLp::transform(const std::vector<HighsInt>& inds,
+                                   const std::vector<double>& vals,
+                                   HighsCDouble rhs,
                                    TransformedRow& transformedRow,
                                    bool& integersPositive, bool preferVbds,
                                    bool enforceSameBds) {
@@ -140,7 +142,7 @@ bool HighsTransformedLp::transform(const Row& row,
   const HighsInt slackOffset = lprelaxation.numCols();
 
   // copy the row into the transformed row
-  transformedRow.load(row);
+  transformedRow.load(inds, vals, rhs);
   std::vector<TransformedVar>& vars = transformedRow.vars;
   HighsInt numNz = vars.size();
   HighsCDouble tmpRhs = transformedRow.rhs;

@@ -418,8 +418,7 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
           bool integralPositive = false;
 
           if (!transLp.transform(
-                  HighsTransformedLp::Row{aggregatedPath[k].first,
-                                          aggregatedPath[k].second, rhs[k]},
+                  aggregatedPath[k].first, aggregatedPath[k].second, rhs[k],
                   transformedPath[k], integralPositive, false, true)) {
             pathLen = k;
             break;
@@ -530,7 +529,8 @@ void HighsPathSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                 cutVals.resize(numInds);
                 inds.resize(numInds);
 
-                HighsTransformedLp::Row cutRow{inds, cutVals, rhs};
+                HighsTransformedLp::Row cutRow{std::move(inds),
+                                               std::move(cutVals), rhs};
                 if (transLp.untransform(cutRow))
                   success |=
                       cutGen.finalizeAndAddCut(transLp.getGlobaldom(), cutRow);

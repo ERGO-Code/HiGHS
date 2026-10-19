@@ -32,11 +32,11 @@ class HighsLpRelaxation;
 /// relaxation by substituting bounds and aggregating rows
 class HighsTransformedLp {
  public:
-  // sparse row; refers to the vectors of the caller
+  // sparse row
   struct Row {
-    std::vector<HighsInt>& inds;
-    std::vector<double>& vals;
-    HighsCDouble rhs;
+    std::vector<HighsInt> inds;
+    std::vector<double> vals;
+    HighsCDouble rhs = 0.0;
 
     // scales the right hand side and all coefficients
     void scale(double factor) {
@@ -145,15 +145,16 @@ class HighsTransformedLp {
       }
     }
 
-    // copies the indices, values, and right hand side of the given row
-    void load(const Row& row) {
-      const HighsInt numVars = row.inds.size();
+    // copies the given indices, values, and right hand side
+    void load(const std::vector<HighsInt>& inds,
+              const std::vector<double>& vals, HighsCDouble rhs_) {
+      const HighsInt numVars = inds.size();
       vars.resize(numVars);
       for (HighsInt i = 0; i != numVars; ++i) {
-        vars[i].col = row.inds[i];
-        vars[i].val = row.vals[i];
+        vars[i].col = inds[i];
+        vars[i].val = vals[i];
       }
-      rhs = row.rhs;
+      rhs = rhs_;
     }
 
     // copies the indices, values, and right hand side to the given row
@@ -198,9 +199,10 @@ class HighsTransformedLp {
   double boundDistance(HighsInt col) const { return boundDist[col]; }
 
   // transforms the given row into the transformed space
-  bool transform(const Row& row, TransformedRow& transformedRow,
-                 bool& integralPositive, bool preferVbds = false,
-                 bool enforceSameBds = false);
+  bool transform(const std::vector<HighsInt>& inds,
+                 const std::vector<double>& vals, HighsCDouble rhs,
+                 TransformedRow& transformedRow, bool& integralPositive,
+                 bool preferVbds = false, bool enforceSameBds = false);
 
   // transforms the given row back into the original space
   bool untransform(Row& row, bool integral = false);

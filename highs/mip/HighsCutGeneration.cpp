@@ -1009,50 +1009,45 @@ static void checkNumerics(const double* vals, HighsInt len, double rhs) {
 #endif
 
 bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
-                                     std::vector<HighsInt>& inds,
-                                     std::vector<double>& vals, double& rhs,
-                                     bool onlyInitialCMIRScale) {
+                                     const std::vector<HighsInt>& inds,
+                                     const std::vector<double>& vals,
+                                     double rhs, bool onlyInitialCMIRScale) {
 #if 0
   if (vals.size() > 1) {
     bool intsPositive = true;
-    if (!transLp.transform(Row{inds, vals, rhs}, cut, intsPositive))
-      return false;
+    if (!transLp.transform(inds, vals, rhs, cut, intsPositive)) return false;
 
     bool hasUnboundedInts = false;
     bool hasGeneralInts = false;
     bool hasContinuous = false;
     // printf("before preprocessing of base inequality:\n");
-    std::vector<HighsInt> indsCheck_;
-    std::vector<double> valsCheck_;
-    Row checkRow{indsCheck_, valsCheck_, 0.0};
+    Row checkRow;
     cut.store(checkRow);
-    checkNumerics(valsCheck_.data(), valsCheck_.size(),
+    checkNumerics(checkRow.vals.data(), checkRow.vals.size(),
                   static_cast<double>(checkRow.rhs));
     if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
                                   hasContinuous))
       return false;
     cut.store(checkRow);
     // printf("after preprocessing of base inequality:\n");
-    checkNumerics(valsCheck_.data(), valsCheck_.size(),
+    checkNumerics(checkRow.vals.data(), checkRow.vals.size(),
                   static_cast<double>(checkRow.rhs));
 
     if (!transLp.untransform(checkRow)) return false;
 
     // printf("after untransform of base inequality:\n");
-    checkNumerics(valsCheck_.data(), valsCheck_.size(),
+    checkNumerics(checkRow.vals.data(), checkRow.vals.size(),
                   static_cast<double>(checkRow.rhs));
 
     // finally check whether the cut is violated
     lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-        indsCheck_.data(), valsCheck_.data(), indsCheck_.size(),
+        checkRow.inds.data(), checkRow.vals.data(), checkRow.inds.size(),
         static_cast<double>(checkRow.rhs));
   }
 #endif
 
-  // the base inequality, which is overwritten by the cut
-  Row row{inds, vals, rhs};
   bool intsPositive = true;
-  if (!transLp.transform(row, cut, intsPositive)) return false;
+  if (!transLp.transform(inds, vals, rhs, cut, intsPositive)) return false;
 
   bool hasUnboundedInts = false;
   bool hasGeneralInts = false;
@@ -1084,29 +1079,25 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // remove the complementation if exists
   cut.removeComplementation();
 
-  // store the cut in the given vectors and remove zeros
-  cut.store(row);
-  row.removeZeros();
+  // store the cut and remove zeros
+  cut.store(cutRow);
+  cutRow.removeZeros();
 
   // transform the cut back into the original space, i.e. remove the bound
   // substitution and replace implicit slack variables
-  if (!transLp.untransform(row)) return false;
+  if (!transLp.untransform(cutRow)) return false;
 
-  return postprocessAndAddCut(row, transLp.getGlobaldom(), rhs);
+  return postprocessAndAddCut(cutRow, transLp.getGlobaldom());
 }
 
-bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
-                                          const HighsDomain& globaldom,
-                                          std::vector<HighsInt>& proofinds,
-                                          std::vector<double>& proofvals,
-                                          double& proofrhs) {
-  // the proof, which is overwritten by the cut
-  Row row{proofinds, proofvals, proofrhs};
-
+bool HighsCutGeneration::generateConflict(
+    const HighsDomain& localdomain, const HighsDomain& globaldom,
+    const std::vector<HighsInt>& proofinds,
+    const std::vector<double>& proofvals, double proofrhs) {
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
       proofinds.data(), proofvals.data(), proofinds.size(), proofrhs);
 
-  cut.load(row);
+  cut.load(proofinds, proofvals, proofrhs);
 
   HighsCDouble activity = 0.0;
   for (TransformedVar& var : cut.vars) {
@@ -1167,10 +1158,10 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
           static_cast<HighsCDouble>(globaldom.col_lower_[var.col]) * var.val;
   }
 
-  // store the cut in the given vectors
-  cut.store(row);
+  // store the cut
+  cut.store(cutRow);
 
-  return postprocessAndAddCut(row, globaldom, proofrhs, false, true);
+  return postprocessAndAddCut(cutRow, globaldom, false, true);
 }
 
 bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
@@ -1182,13 +1173,12 @@ bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
   for (HighsInt col : row.inds)
     integralSupport &= lpRelaxation.isColIntegral(col);
 
-  double rhs;
-  return postprocessAndAddCut(row, globaldom, rhs);
+  return postprocessAndAddCut(row, globaldom);
 }
 
 bool HighsCutGeneration::postprocessAndAddCut(Row& row,
                                               const HighsDomain& globaldom,
-                                              double& rhs, bool checkViolation,
+                                              bool checkViolation,
                                               bool isConflict) {
   // check cut
   if (!isConflict)
@@ -1199,7 +1189,7 @@ bool HighsCutGeneration::postprocessAndAddCut(Row& row,
   // apply cut postprocessing including scaling and removal of small
   // coefficients
   if (!postprocessCut(row, globaldom)) return false;
-  rhs = static_cast<double>(row.rhs);
+  double rhs = static_cast<double>(row.rhs);
 
   // check cut again after post-processing
   if (!isConflict)
@@ -1214,6 +1204,7 @@ bool HighsCutGeneration::postprocessAndAddCut(Row& row,
   // tighten coefficients
   globaldom.tightenCoefficients(row.inds.data(), row.vals.data(),
                                 row.inds.size(), rhs);
+  row.rhs = rhs;
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool

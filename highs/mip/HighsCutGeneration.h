@@ -54,6 +54,9 @@ class HighsCutGeneration {
   TransformedRow cut;
   TransformedRow tmpCut;
 
+  // cut in the original space
+  Row cutRow;
+
   bool determineCover(bool lpSol = true);
 
   void separateLiftedKnapsackCover();
@@ -67,7 +70,7 @@ class HighsCutGeneration {
 
   bool postprocessCut(Row& row, const HighsDomain& globaldom);
 
-  bool postprocessAndAddCut(Row& row, const HighsDomain& globaldom, double& rhs,
+  bool postprocessAndAddCut(Row& row, const HighsDomain& globaldom,
                             bool checkViolation = true,
                             bool isConflict = false);
 
@@ -89,16 +92,17 @@ class HighsCutGeneration {
                      HighsCutPool& cutpool);
 
   /// separates the LP solution for the given single row relaxation
-  bool generateCut(HighsTransformedLp& transLp, std::vector<HighsInt>& inds,
-                   std::vector<double>& vals, double& rhs,
+  bool generateCut(HighsTransformedLp& transLp,
+                   const std::vector<HighsInt>& inds,
+                   const std::vector<double>& vals, double rhs,
                    bool onlyInitialCMIRScale = false);
 
   /// generate a conflict from the given proof constraint which cuts of the
   /// given local domain
   bool generateConflict(const HighsDomain& localdom,
                         const HighsDomain& globaldom,
-                        std::vector<HighsInt>& proofinds,
-                        std::vector<double>& proofvals, double& proofrhs);
+                        const std::vector<HighsInt>& proofinds,
+                        const std::vector<double>& proofvals, double proofrhs);
 
   /// applies postprocessing to an externally generated cut and adds it to the
   /// cutpool if it is violated enough
