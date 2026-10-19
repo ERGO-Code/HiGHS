@@ -20,6 +20,8 @@ HPresolve::Result HPresolve::presolveRuleTest(
     return presolveRuleTestProbing(postsolve_stack);
   } else if (options->presolve_rule_test == kPresolveRuleFourierMotzkin) {
     return presolveRuleTestFourierMotzkin(postsolve_stack);
+  } else if (options->presolve_rule_test == kPresolveRuleAggregator) {
+    return presolveRuleTestAggregator(postsolve_stack);
   } else if (options->presolve_rule_test ==
              kPresolveRuleImplAwareConstrPropagation) {
     return presolveRuleTestImplAwareConstrPropagation(postsolve_stack);
@@ -68,6 +70,17 @@ HPresolve::Result HPresolve::presolveRuleTestFourierMotzkin(
                "HPresolve::presolveRuleTestFourierMotzkin\n");
   HighsInt numColsEliminated;
   return fourierMotzkin(postsolve_stack, numColsEliminated);
+}
+HPresolve::Result HPresolve::presolveRuleTestAggregator(
+    HighsPostsolveStack& postsolve_stack) {
+  assert(options->presolve_rule_test == kPresolveRuleAggregator);
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "HPresolve::presolveRuleTestAggregator\n");
+  // Compute the implied row dual bounds, which may make rows dual implied
+  // free, so that substitution opportunities are identified
+  for (HighsInt col = 0; col < model->num_col_; col++)
+    if (!colDeleted[col]) updateRowDualImpliedBounds(col);
+  return aggregator(postsolve_stack);
 }
 HPresolve::Result HPresolve::presolveRuleTestImplAwareConstrPropagation(
     HighsPostsolveStack& postsolve_stack) {

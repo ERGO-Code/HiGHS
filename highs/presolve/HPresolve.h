@@ -253,7 +253,11 @@ class HPresolve {
 
   bool isDualImpliedLeq(HighsInt row) const;
 
+  bool isDualImpliedLeq(HighsInt row, double implUpper) const;
+
   bool isDualImpliedGeq(HighsInt row) const;
+
+  bool isDualImpliedGeq(HighsInt row, double implLower) const;
 
   void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
                                        HighsPostsolveStack::RowType& rowType,
@@ -295,14 +299,6 @@ class HPresolve {
   bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
   bool isStrictlyImpliedForDual(HighsInt col, bool isLowerBound) const;
-
-  bool isRowDualLowerImplied(HighsInt row) const;
-
-  bool isRowDualLowerImplied(HighsInt row, double implLower) const;
-
-  bool isRowDualUpperImplied(HighsInt row) const;
-
-  bool isRowDualUpperImplied(HighsInt row, double implUpper) const;
 
   HighsInt countFillin(HighsInt row);
 
@@ -606,6 +602,7 @@ class HPresolve {
       HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestAggregator(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestImplAwareConstrPropagation(
       HighsPostsolveStack& postsolve_stack);
 
