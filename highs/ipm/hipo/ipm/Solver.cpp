@@ -1505,6 +1505,7 @@ void Solver::chooseNumberOfCorrectors() {
     double alpha = 1.0 / 112.0;
 
     double ratio = alpha * fact_effort / solv_effort;
+    if (isnan(ratio)) ratio = 0;
 
     // At each ipm iteration, there are up to (1+k) directions computed, where
     // k is the number of correctors. Each direction requires up (1+f) solves,
