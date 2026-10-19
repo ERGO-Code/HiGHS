@@ -1053,9 +1053,10 @@ void HEkkDual::rebuild() {
     // Should only happen when backtracking
     assert(info.backtracking_);
     ekk_instance_.initialisePartitionedRowwiseMatrix();
-    assert(ekk_instance_.ar_matrix_.debugPartitionOk(
-        ekk_instance_.basis_.nonbasicFlag_.data()));
   }
+  assert(ekk_instance_.ar_matrix_.debugPartitionOk(
+      ekk_instance_.basis_.nonbasicFlag_.data()));
+
   // Record whether the update objective value should be tested. If
   // the objective value is known, then the updated objective value
   // should be correct - once the correction due to recomputing the

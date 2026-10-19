@@ -3,12 +3,13 @@
 #include "Highs.h"
 #include "catch.hpp"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsOptions.h"
 
 const bool dev_run = false;
 const double inf = kHighsInf;
 
 // No commas in test case name.
-TEST_CASE("LP-dimension-validation", "[highs_data]") {
+TEST_CASE("LP-dimension-validation", "[highs_test_lp_validation]") {
   // Create an LP with lots of illegal values
   const HighsInt true_num_col = 2;
   const HighsInt true_num_row = 3;
@@ -18,6 +19,7 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   lp.col_cost_.resize(1);
   lp.col_lower_.resize(1);
   lp.col_upper_.resize(1);
+  lp.integrality_ = {HighsVarType::kInteger};
   lp.a_matrix_.format_ = MatrixFormat::kRowwisePartitioned;
   lp.a_matrix_.num_col_ = 1;
   lp.a_matrix_.num_row_ = 1;
@@ -64,6 +66,14 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   lp.col_upper_.resize(true_num_col);
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
 
+  if (dev_run) printf("Give valid col_names.size()\n");
+  lp.col_names_.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid integrality.size()\n");
+  lp.integrality_.resize(true_num_col);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
   if (dev_run) printf("Give valid a_matrix_.format_\n");
   lp.a_matrix_.format_ = MatrixFormat::kRowwise;
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
@@ -78,6 +88,10 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
 
   if (dev_run) printf("Give valid row_upper.size()\n");
   lp.row_upper_.resize(true_num_row);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+
+  if (dev_run) printf("Give valid row_names.size()\n");
+  lp.row_names_.resize(true_num_row);
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
 
   if (dev_run) printf("Give valid a_matrix_.start_[0]\n");
@@ -151,13 +165,13 @@ TEST_CASE("LP-dimension-validation", "[highs_data]") {
   */
 }
 
-TEST_CASE("LP-validation", "[highs_data]") {
+TEST_CASE("LP-validation", "[highs_test_lp_validation]") {
   // Create an empty LP
   HighsLp lp;
   HighsOptions options;
   HighsStatus return_status;
   options.log_dev_level = kHighsLogDevLevelVerbose;
-  if (!dev_run) options.output_flag = false;
+  options.output_flag = dev_run;
 
   Avgas avgas;
   const HighsInt avgas_num_col = 8;
@@ -256,7 +270,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == HighsStatus::kWarning);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Add a column with bound inconsistency due to lower
   XcolLower[0] = 1;
@@ -264,7 +278,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   return_status =
       highs.addCols(XnumNewCol, XcolCost.data(), XcolLower.data(),
                     XcolUpper.data(), XnumNewNZ, XAstart.data(), NULL, NULL);
-  REQUIRE(return_status == HighsStatus::kWarning);
+  REQUIRE(return_status == HighsStatus::kOk);
 
   // Add a column with illegal bound due to lower
   XcolLower[0] = my_infinity;
@@ -363,9 +377,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // for columns 9 and 10.
 
   // LP is found to be unbounded by presolve, but is primal
-  // infeasible. With infeasibleBoundsOk check in solveLp,
-  // infeasiblility is identified before reaching a solver, so
-  // presolve isn't called
+  // infeasible. With processedBoundsFindsInfeasibility check in
+  // Highs::calledOptimizeModel(), infeasiblility is identified before
+  // reaching a solver, so presolve isn't called
   HighsStatus run_status;
   HighsModelStatus model_status;
   run_status = highs.run();
@@ -395,7 +409,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-row-index-duplication", "[highs_data]") {
+TEST_CASE("LP-row-index-duplication", "[highs_test_lp_validation]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsInt num_col = 10;
@@ -410,7 +424,7 @@ TEST_CASE("LP-row-index-duplication", "[highs_data]") {
                         index.data(), value.data()) == HighsStatus::kError);
 }
 
-TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
+TEST_CASE("LP-extreme-coefficient", "[highs_test_lp_validation]") {
   HighsStatus return_status;
   std::string filename;
   Highs highs;
@@ -428,16 +442,15 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   lp.a_matrix_.value_ = {1e300};
   lp.row_lower_ = {1};
   lp.row_upper_ = {inf};
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
   // Reading a model with a large value results in HighsStatus::kError
   return_status = highs.passModel(lp);
   if (dev_run)
     printf("highs.passModel(filename); returns %d\n", (int)return_status);
   REQUIRE(return_status == HighsStatus::kError);
-  // Solving a model with a large value results in HighsStatus::kError
-  return_status = highs.run();
-  if (dev_run) printf("highs.run(); returns %d\n", (int)return_status);
-  REQUIRE(return_status == HighsStatus::kError);
+  // Check that an illegal model is not loaded
+  HighsModel empty_model;
+  REQUIRE((highs.getModel() == empty_model));
   lp.a_matrix_.value_[0] = 1e-300;
   return_status = highs.passModel(lp);
   if (dev_run)
@@ -452,7 +465,7 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-duplicate-small-value", "[highs_data]") {
+TEST_CASE("LP-duplicate-small-value", "[highs_test_lp_validation]") {
   // a column with two entries in the same row is only illegal if both
   // entries are retained: an entry that is ignored because its value is
   // small is not identified as a duplicate. this must not depend on the
@@ -484,7 +497,7 @@ TEST_CASE("LP-duplicate-small-value", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-inf-cost", "[highs_data]") {
+TEST_CASE("LP-inf-cost", "[highs_test_lp_validation]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
@@ -610,7 +623,7 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-change-coefficient", "[highs_data]") {
+TEST_CASE("LP-change-coefficient0", "[highs_test_lp_validation]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   Highs highs;
@@ -629,7 +642,7 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   REQUIRE(original_value == -1);
   // Change coefficient (4, 4) from -1 to a small value - zeroing it
   REQUIRE(highs.changeCoeff(zero_coefficient_row, change_coefficient_col,
-                            zero_coefficient_value) == HighsStatus::kOk);
+                            zero_coefficient_value) == HighsStatus::kWarning);
   required_objective_value = -8.6666666667;
   highs.run();
   delta_objective_value = std::fabs(required_objective_value -
@@ -657,7 +670,119 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
+TEST_CASE("LP-change-coefficient1", "[highs_test_lp_validation]") {
+  const HighsInt nonzero_entry_row = 1;
+  const HighsInt nonzero_entry_col = 1;
+  const double nonzero_entry = 5;
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {1, 2, 3};
+  lp.col_lower_ = {0, 0, 0};
+  lp.col_upper_ = {1, 1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 3, 6, 8};
+  lp.a_matrix_.index_ = {0, 1, 2, 0, nonzero_entry_row, 2, 0, 2};
+  lp.a_matrix_.value_ = {1, 2, 3, 4, nonzero_entry, 6, 7, 9};
+  lp.row_lower_ = {1, 1, 1};
+  lp.row_upper_ = {inf, inf, inf};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  const size_t original_size = h.getLp().numNz();
+
+  const double large_value = 1e1 * h.getOptions().large_matrix_value;
+  const double ok_value = 8;
+  const double small_value = 1e-1 * h.getOptions().small_matrix_value;
+  const HighsInt zero_entry_row = 1;
+  const HighsInt zero_entry_col = 2;
+  double zero_entry;
+  REQUIRE(h.getCoeff(zero_entry_row, zero_entry_col, zero_entry) ==
+          HighsStatus::kOk);
+  REQUIRE(zero_entry == 0);
+  double check_nonzero_entry;
+  REQUIRE(h.getCoeff(nonzero_entry_row, nonzero_entry_col,
+                     check_nonzero_entry) == HighsStatus::kOk);
+  REQUIRE(check_nonzero_entry == nonzero_entry);
+
+  auto checkEntry = [&](const HighsInt row, const HighsInt col,
+                        const double value) {
+    double entry;
+    REQUIRE(h.getCoeff(row, col, entry) == HighsStatus::kOk);
+    REQUIRE(entry == value);
+  };
+
+  auto revertEntry = [&](const HighsInt row, const HighsInt col,
+                         const double value) {
+    REQUIRE(h.changeCoeff(row, col, value) == HighsStatus::kOk);
+    checkEntry(row, col, value);
+  };
+
+  auto checkSize = [&](const size_t change) {
+    const size_t size = original_size + change;
+    REQUIRE(h.getLp().numNz() == static_cast<HighsInt>(size));
+    if (h.getLp().a_matrix_.index_.size() != size) {
+      printf("ERROR\n");
+    }
+
+    REQUIRE(h.getLp().a_matrix_.index_.size() == size);
+    REQUIRE(h.getLp().a_matrix_.value_.size() == size);
+  };
+
+  // Changing a zero entry yields a warning if the new value is zero
+  // or small, since it has no effect
+  REQUIRE(h.changeCoeff(zero_entry_row, zero_entry_col, 0) ==
+          HighsStatus::kWarning);
+  checkEntry(zero_entry_row, zero_entry_col, 0);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(zero_entry_row, zero_entry_col, small_value) ==
+          HighsStatus::kWarning);
+  checkEntry(zero_entry_row, zero_entry_col, 0);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(zero_entry_row, zero_entry_col, large_value) ==
+          HighsStatus::kError);
+  checkEntry(zero_entry_row, zero_entry_col, 0);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(zero_entry_row, zero_entry_col, ok_value) ==
+          HighsStatus::kOk);
+  checkEntry(zero_entry_row, zero_entry_col, ok_value);
+  checkSize(1);
+  revertEntry(zero_entry_row, zero_entry_col, 0);
+  checkSize(0);
+
+  // Changing a nonzero entry yields a warning if the new value is small, since
+  // it is treated as zero
+  REQUIRE(h.changeCoeff(nonzero_entry_row, nonzero_entry_col, 0) ==
+          HighsStatus::kOk);
+  checkEntry(nonzero_entry_row, nonzero_entry_col, 0);
+  checkSize(-1);
+  revertEntry(nonzero_entry_row, nonzero_entry_col, nonzero_entry);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(nonzero_entry_row, nonzero_entry_col, small_value) ==
+          HighsStatus::kWarning);
+  checkEntry(nonzero_entry_row, nonzero_entry_col, 0);
+  checkSize(-1);
+  revertEntry(nonzero_entry_row, nonzero_entry_col, nonzero_entry);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(nonzero_entry_row, nonzero_entry_col, large_value) ==
+          HighsStatus::kError);
+  checkSize(0);
+  checkEntry(nonzero_entry_row, nonzero_entry_col, nonzero_entry);
+  checkSize(0);
+
+  REQUIRE(h.changeCoeff(nonzero_entry_row, nonzero_entry_col, ok_value) ==
+          HighsStatus::kOk);
+  checkSize(0);
+  revertEntry(nonzero_entry_row, nonzero_entry_col, nonzero_entry);
+  checkSize(0);
+}
+
+TEST_CASE("LP-illegal-start", "[highs_test_lp_validation]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
@@ -665,12 +790,75 @@ TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
   lp.num_row_ = 1;
   lp.row_lower_ = {-inf};
   lp.row_upper_ = {1};
+  if (dev_run)
+    printf(
+        "\nIf the LP has no columns or no rows, then the user matrix is "
+        "ignored\n");
   lp.a_matrix_.start_ = {1};
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.getLp().a_matrix_.start_[0] == 0);
+  REQUIRE(highs.getLp().a_matrix_.start_.size() == 1);
+  REQUIRE(highs.getLp().a_matrix_.index_.size() == 0);
+  REQUIRE(highs.getLp().a_matrix_.value_.size() == 0);
+  lp.num_col_ = 1;
+  lp.col_cost_ = {0};
+  lp.col_lower_ = {0};
+  lp.col_upper_ = {inf};
+  lp.a_matrix_.start_ = {1};
+  if (dev_run) printf("\nLP\nIllegal start_.size()\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  lp.a_matrix_.start_ = {1, -1};
+  if (dev_run) printf("\nIllegal start_[1]\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  lp.a_matrix_.start_ = {1, 1};
+  if (dev_run) printf("\nIllegal index size\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  lp.a_matrix_.index_ = {0, 1};
+  if (dev_run) printf("\nIllegal value size\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  lp.a_matrix_.value_ = {1, 2};
+  if (dev_run) printf("\nIllegal start_[0]\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  lp.a_matrix_.start_ = {0, 1};
+  if (dev_run) printf("\nNeed to trim index\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  lp.a_matrix_.index_ = {0};
+  if (dev_run) printf("\nNeed to trim value\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  lp.a_matrix_.value_ = {1};
+  if (dev_run) printf("\nOK!\n");
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+
+  HighsHessian hessian;
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {1};
+  if (dev_run) printf("\nHessian\nIllegal start_.size()\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.start_ = {1, -1};
+  if (dev_run) printf("\nIllegal start_[1]\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.start_ = {1, 1};
+
+  if (dev_run) printf("\nIllegal index size\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.index_ = {0, 1};
+  if (dev_run) printf("\nIllegal value size\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.value_ = {1, 2};
+  if (dev_run) printf("\nIllegal start_[0]\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kError);
+  hessian.start_ = {0, 1};
+  if (dev_run) printf("\nNeed to trim index\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kWarning);
+  hessian.index_ = {0};
+  if (dev_run) printf("\nNeed to trim value\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kWarning);
+  hessian.value_ = {1};
+  if (dev_run) printf("\nOK!\n");
+  REQUIRE(highs.passHessian(hessian) == HighsStatus::kOk);
 }
 
-TEST_CASE("LP-row-wise", "[highs_data]") {
+TEST_CASE("LP-row-wise", "[highs_test_lp_validation]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
@@ -692,7 +880,7 @@ TEST_CASE("LP-row-wise", "[highs_data]") {
   highs.resetGlobalScheduler(true);
 }
 
-TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
+TEST_CASE("LP-infeasible-bounds", "[highs_test_lp_validation]") {
   Highs highs;
   double epsilon = 1e-10;
   highs.setOptionValue("output_flag", dev_run);
@@ -721,4 +909,124 @@ TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
   highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3366", "[highs_test_lp_validation]") {
+  // In HPresolve::shrinkProblem
+  //
+  // assert(model->col_names_.size() == static_cast<size_t>(oldNumCol));
+  //
+  // is triggered if models have excessive numbers of column names -
+  // and the same for row names, so trim (with warning logging) any
+  // excessive HighsLp vectors
+  //
+  // In HighsLp::isMip()
+  //
+  // assert(static_cast<HighsInt>(integrality_size) == this->num_col_)
+  //
+  // is triggered if models have excessive integrality values
+  //
+  // LP is blending with an empty row so that shrinkProblem is called,
+  // plus spurious entries in each vector
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {10, 25, 1};
+  lp.col_lower_ = {0, 0, 2};
+  lp.col_upper_ = {100, 100, 3};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4, 4, 5};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 6};
+  lp.a_matrix_.value_ = {1, 2, 1, 4, 7};
+  lp.row_lower_ = {-inf, -inf, -1, 8};
+  lp.row_upper_ = {80, 120, 1, 9, 10};
+  lp.col_names_ = {"C0", "C1", "CX"};
+  lp.row_names_ = {"R0", "R1", "R2", "RX"};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous,
+                     HighsVarType::kContinuous};
+  HighsInt true_nnz = 4;
+
+  // Have to switch off initial sweep, as it resizes the presolved
+  // model, and there will also be no further reductions, so
+  // shrinkProblem isn't called.
+  HighsOptions options;
+  options.presolve_rule_off = 1 << kPresolveRuleInitialSweep;
+  options.output_flag = dev_run;
+
+  // Test out the class-specific assess methods - that users may run
+  // before passing a HighsLp or HighsSparseMatrix - which require
+  // matrix dimensions
+  lp.a_matrix_.num_col_ = lp.num_col_;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+
+  if (dev_run) printf("For matrix_copy.assess\n");
+  HighsSparseMatrix matrix_copy = lp.a_matrix_;
+  matrix_copy.name_ = "LP matrix A";
+  REQUIRE(matrix_copy.assess(options) == HighsStatus::kWarning);
+
+  if (dev_run) printf("For lp.assess\n");
+  HighsLp lp_copy = lp;
+  lp_copy.a_matrix_.name_ = "LP matrix B";
+  REQUIRE(lp_copy.assess(options) == HighsStatus::kWarning);
+
+  Highs h;
+  h.passOptions(options);
+  lp.a_matrix_.name_ = "LP matrix C";
+  if (dev_run) printf("For h.passModel(lp)\n");
+  REQUIRE(h.passModel(lp) == HighsStatus::kWarning);
+  h.presolve();
+
+  HighsLp highs_lp = h.getLp();
+  highs_lp.ensureRowwise();
+  REQUIRE(highs_lp.col_cost_.size() == static_cast<size_t>(lp.num_col_));
+  REQUIRE(highs_lp.col_lower_.size() == static_cast<size_t>(lp.num_col_));
+  REQUIRE(highs_lp.col_upper_.size() == static_cast<size_t>(lp.num_col_));
+  REQUIRE(highs_lp.row_lower_.size() == static_cast<size_t>(lp.num_row_));
+  REQUIRE(highs_lp.row_upper_.size() == static_cast<size_t>(lp.num_row_));
+  REQUIRE(highs_lp.a_matrix_.start_.size() ==
+          static_cast<size_t>(lp.num_row_ + 1));
+  REQUIRE(highs_lp.a_matrix_.index_.size() == static_cast<size_t>(true_nnz));
+  REQUIRE(highs_lp.a_matrix_.value_.size() == static_cast<size_t>(true_nnz));
+  REQUIRE(highs_lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
+  REQUIRE(highs_lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
+  REQUIRE(highs_lp.integrality_.size() == static_cast<size_t>(lp.num_col_));
+
+  //  lp.integrality_.clear();
+  HighsHessian hessian;
+  hessian.dim_ = lp.num_col_;
+  hessian.start_ = {0, 1, 2, 3};
+  hessian.index_ = {0, 1, 4, 5};
+  hessian.value_ = {1, 1, 6, 7};
+
+  REQUIRE(h.passHessian(hessian) == HighsStatus::kWarning);
+  HighsModel model = h.getModel();
+  REQUIRE(model.hessian_.start_.size() ==
+          static_cast<size_t>(hessian.dim_ + 1));
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("clear-illegal-model", "[highs_test_lp_validation]") {
+  // Ensures that an illegal model is cleared
+  HighsModel illegal_model;
+  std::vector<double> zero_vector(1);
+  illegal_model.lp_.num_col_ = 1;
+  illegal_model.lp_.num_row_ = 1;
+  illegal_model.lp_.col_cost_ = zero_vector;
+  illegal_model.lp_.col_lower_ = zero_vector;
+  illegal_model.lp_.col_upper_ = zero_vector;
+  illegal_model.lp_.row_lower_ = zero_vector;
+  illegal_model.lp_.row_upper_ = zero_vector;
+  illegal_model.lp_.a_matrix_.start_ = {-1, 0};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(illegal_model) == HighsStatus::kError);
+  // Create an empty model, and sure that it's equal to the incumbent
+  // model - implying that the illegal model has not been loaded, so
+  // the incumbent model is empty
+  HighsModel legal_model;
+  REQUIRE((h.getModel() == legal_model));
+
+  h.resetGlobalScheduler(true);
 }

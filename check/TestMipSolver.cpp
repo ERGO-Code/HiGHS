@@ -407,9 +407,9 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
   // Now as a MIP - infeasible
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
-  // With(out) presolve, Highs::infeasibleBoundsOk() performs inward
-  // integer rounding of [0.25, 0.75] to [1, 0] so identifes
-  // infeasiblility. Hence MIP solver returns
+  // With(out) presolve, Highs::processedBoundsFindsInfeasibility()
+  // performs inward integer rounding of [0.25, 0.75] to [1, 0] so
+  // identifes infeasiblility. Hence MIP solver returns
   // HighsModelStatus::kInfeasible
 
   return_status = highs.passModel(lp);
