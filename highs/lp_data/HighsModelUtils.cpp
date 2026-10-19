@@ -571,7 +571,7 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
       ss.str(std::string());
       ss << highsFormatToString("Objective bound: %s\n",
                                 mip_dual_bound_string.data());
-      ss << highsFormatToString("MIP rel gap: %s%\n", mip_gap_string.data());
+      ss << highsFormatToString("MIP rel gap: %s%%\n", mip_gap_string.data());
       highsFprintfString(file, log_options, ss.str());
     }
   } else if (style == kSolutionStyleGlpsolRaw ||
