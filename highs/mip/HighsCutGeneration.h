@@ -38,10 +38,7 @@ class HighsCutGeneration {
   HighsCutPool& cutpool;
   HighsRandom randgen;
   std::vector<HighsInt> cover;
-  HighsCDouble coverweight;
   HighsCDouble lambda;
-  // base inequality and cut in the transformed space
-  TransformedRow cut;
   const double feastol;
   const double epsilon;
 
@@ -52,6 +49,9 @@ class HighsCutGeneration {
   std::vector<HighsInt> integerinds;
   std::vector<double> deltas;
 
+  // base inequality in the transformed space, overwritten in place by the cut,
+  // and a copy used in tryGenerateCut
+  TransformedRow cut;
   TransformedRow tmpCut;
 
   bool determineCover(bool lpSol = true);

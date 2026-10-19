@@ -41,7 +41,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
   HighsInt maxCoverSize = cover.size();
   HighsInt coversize = 0;
   HighsInt r = randgen.integer();
-  coverweight = 0.0;
+  HighsCDouble coverweight = 0.0;
   if (lpSol) {
     // take all variables that sit at their upper bound always into the cover
     coversize = std::partition(cover.begin(), cover.end(),
@@ -117,8 +117,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
       std::max(10 * feastol, feastol * std::abs(static_cast<double>(cut.rhs)));
 
   for (; coversize != maxCoverSize; ++coversize) {
-    double lambda = static_cast<double>(coverweight - cut.rhs);
-    if (lambda > minlambda) break;
+    if (coverweight - cut.rhs > minlambda) break;
 
     const TransformedVar& var = cut.vars[cover[coversize]];
     coverweight += static_cast<HighsCDouble>(var.upper) * var.val;
@@ -163,9 +162,7 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
     }
   }
 
-  if (sigma > 0)
-    abartmp =
-        static_cast<HighsCDouble>(cut.rhs) / static_cast<double>(coversize);
+  if (sigma > 0) abartmp = cut.rhs / static_cast<double>(coversize);
 
   double abar = static_cast<double>(abartmp);
 
@@ -419,7 +416,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
 
   double mudival = static_cast<double>(mu / al);
   double eta = ceil(mudival);
-  HighsCDouble r = mu - floor(mudival) * static_cast<HighsCDouble>(al);
+  HighsCDouble r = mu - floor(mudival) * al;
   // we multiply with r and it is important that it does not flip the sign
   // so we safe guard against tiny numerical errors here
   if (r < 0) r = 0;
