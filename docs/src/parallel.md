@@ -128,3 +128,55 @@ Given the limited scope for parallelisation in HiGHS, if you have
 multiple independent instances to solve, then assign one instance per
 worker (cpu core, thread or machine) so that multiple instances are
 solved concurrently.
+
+
+
+## Parallel scheduler: initialization, shutdown and thread safety
+
+### Terminology
+
+- **Application thread**: a thread you create yourself (with `std::thread`, OpenMP, pthreads, Julia, Python, and so on), or the main thread of your program.
+- **Scheduler**: the pool of threads HiGHS uses to run parallel work.
+- **Worker thread**: a thread created by HiGHS when it creates a scheduler. Worker threads only run HiGHS tasks.
+- **Owning thread**: the application thread that caused a scheduler to be created. It takes part in the parallel work together with the worker threads.
+
+### Each application thread has its own scheduler
+
+A scheduler is tied to the application thread that created it, not to a `Highs` instance.
+
+- The first time an application thread calls `run()` or `presolve()`, HiGHS creates a scheduler for that thread. The thread becomes its owning thread.
+- All `Highs` instances used on the same application thread share that thread's scheduler.
+- Application threads never share a scheduler. If several application threads each use HiGHS, each gets its own scheduler and its own worker threads. They do not interfere with each other.
+- By default, HiGHS uses one thread per physical core that your program is allowed to run on (its CPU affinity). Hyperthreads (extra "virtual" cores on the same physical core) are not counted. The thread that calls HiGHS is included in this number, so a scheduler using `N` threads creates `N - 1` worker threads.
+- The number of worker threads is fixed when the scheduler is created. Changing the `threads` option later does not resize an existing scheduler. To change it, reset the scheduler first (see [Shutdown](#shutdown)).
+
+Because every scheduler adds worker threads, running HiGHS from many application threads with the default thread count can create far more threads than you have cores, which slows everything down. In that case set the `threads` option explicitly.
+
+### Shutdown
+
+A scheduler is shut down when its owning thread exits, or when you call `Highs::resetGlobalScheduler(bool blocking)`. Without an explicit call, a scheduler stays alive between solves, so that it can be reused.
+
+The `blocking` argument controls what happens to the worker threads:
+
+- `resetGlobalScheduler(true)` waits until all worker threads have finished before returning. Use it when you need the threads to be gone, for example before unloading a library or exiting a program that checks for leftover threads.
+- `resetGlobalScheduler(false)` (the default) returns immediately. The worker threads are told to stop and finish on their own shortly afterwards, so a few of them may still be running when the call returns.
+
+When a scheduler is shut down because its owning thread exits, the workers are stopped without waiting for them, as with `false`.
+
+Resetting only affects the scheduler of the calling thread. If the calling thread has no scheduler, the call does nothing. Other threads' schedulers are not affected.
+
+### Thread safety
+
+Call `resetGlobalScheduler()` only:
+
+- from the thread that owns the scheduler (the one that ran the solve), and
+- when no `run()` or `presolve()` is in progress on that thread, including from inside a callback.
+
+Do not call it from inside a HiGHS parallel task or from a worker thread. That would stop the whole scheduler while other workers may still be running tasks.
+
+After a reset, the next `run()` or `presolve()` on that thread creates a new scheduler.
+
+### Using the C API
+
+The C API follows the same rules. Each application thread that calls `Highs_run` (or any other function that solves a model) gets its own scheduler, and `Highs_destroy` does not shut it down. Instances created and used on the same thread share that thread's scheduler. To control the number of threads, set the `threads` option with `Highs_setIntOptionValue(highs, "threads", n)` before the first solve on a thread. To free the scheduler explicitly, call `Highs_resetGlobalScheduler(1)` to wait for the worker threads to finish, or `Highs_resetGlobalScheduler(0)` to return immediately. The same restrictions as in C++ apply: call it from the thread that ran the solve, when no solve is in progress on that thread (including from inside a callback), and never from a worker thread or a HiGHS task.
+
