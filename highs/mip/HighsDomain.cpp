@@ -1031,7 +1031,7 @@ void HighsDomain::ObjectivePropagation::getPropagationConstraint(
       }
     }
 
-    tmpRhs += largest * partitionCliqueData[i].rhs;
+    tmpRhs += static_cast<HighsCDouble>(largest) * partitionCliqueData[i].rhs;
     if (partitionCliqueData[i].multiplier != largest) {
       partitionCliqueData[i].multiplier = largest;
       const auto& packedObjVals = objFunc->getObjectiveValuesPacked();
@@ -1492,13 +1492,19 @@ void HighsDomain::ObjectivePropagation::propagate() {
         if (cost[col] > 0) {
           if (domain->checkChangeBound(
                   HighsBoundType::kUpper, col,
-                  (capacity + domain->col_lower_[col] * cost[col]) / cost[col],
+                  (capacity +
+                   static_cast<HighsCDouble>(domain->col_lower_[col]) *
+                       cost[col]) /
+                      cost[col],
                   Reason::objective()))
             numBoundChanges++;
         } else {
           if (domain->checkChangeBound(
                   HighsBoundType::kLower, col,
-                  (capacity + domain->col_upper_[col] * cost[col]) / cost[col],
+                  (capacity +
+                   static_cast<HighsCDouble>(domain->col_upper_[col]) *
+                       cost[col]) /
+                      cost[col],
                   Reason::objective()))
             numBoundChanges++;
         }
@@ -2949,11 +2955,11 @@ void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
     if (vals[i] > 0) {
       if (col_upper_[inds[i]] == kHighsInf) return;
 
-      maxactivity += col_upper_[inds[i]] * vals[i];
+      maxactivity += static_cast<HighsCDouble>(col_upper_[inds[i]]) * vals[i];
     } else {
       if (col_lower_[inds[i]] == -kHighsInf) return;
 
-      maxactivity += col_lower_[inds[i]] * vals[i];
+      maxactivity += static_cast<HighsCDouble>(col_lower_[inds[i]]) * vals[i];
     }
   }
 
