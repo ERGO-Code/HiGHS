@@ -92,12 +92,6 @@
 #include "../extern/zstr/zstr.hpp"
 #endif
 
-// The number of bytes that the lexer reads at a time. This can be changed
-// for testing.
-#ifndef LP_READER_CHUNK_SIZE
-#define LP_READER_CHUNK_SIZE (1 << 20)
-#endif
-
 namespace lp_reader {
 
 enum class TokenKind {
@@ -149,13 +143,24 @@ struct ParseError {
 // Only this many warnings are printed
 const size_t kMaxWarnings = 10;
 
+// The size of the buffer in zstr::ifstream. 1 << 16 = 64kB.
+const size_t kZlibBufferSize = 1 << 16;
+
+// The size of the initial buffer (in bytes) when reading the lexer.
+// 1 << 14 = 16kB. If the file is larger than this, the buffer is expanded, up
+// to a maximum of kMaximumLexerBufferSize.
+const size_t kInitialLexerBufferSize = 1 << 14;
+
+// The maximum number of bytes that the lexer reads at a time. 1 << 20 = 1MiB.
+const size_t kMaximumLexerBufferSize = 1 << 20;
+
 // Open a file that may be compressed. If the file cannot be opened, the
 // stream is in a failed state.
 static std::unique_ptr<std::istream> openFile(const std::string& filename) {
 #ifdef ZLIB_FOUND
   try {
     return std::unique_ptr<std::istream>(
-        new zstr::ifstream(filename, std::ios::in, 1 << 16));
+        new zstr::ifstream(filename, std::ios::in, kZlibBufferSize));
   } catch (const strict_fstream::Exception&) {
     std::unique_ptr<std::istream> failed(new std::istringstream());
     failed->setstate(std::ios::failbit);
@@ -308,8 +313,6 @@ class Lexer {
   }
 
  private:
-  static const size_t kChunkSize = LP_READER_CHUNK_SIZE;
-
   // The byte at `pos`, or -1 at the end of the file
   int at(size_t pos) {
     const size_t offset = pos - buf_start_;
@@ -326,7 +329,7 @@ class Lexer {
   std::string buf_;
   size_t buf_start_ = 0;
   bool eof_ = false;
-  size_t chunk_ = kChunkSize < (1 << 14) ? kChunkSize : (1 << 14);
+  size_t chunk_ = kInitialLexerBufferSize;
   // The bytes before keep_ are no longer needed
   size_t keep_ = 0;
   // The location of the lexer
@@ -342,20 +345,25 @@ class Lexer {
 // Read the file until it contains `pos`, discarding bytes that are no longer
 // needed. Returns the byte at `pos`, or -1 at the end of the file.
 int Lexer::fill(size_t pos) {
-  if (eof_) return -1;
   buf_.erase(0, keep_ - buf_start_);
   buf_start_ = keep_;
+  // While we have not read the byte in position `pos`...
   while (pos - buf_start_ >= buf_.size()) {
+    // The byte at position `pos` is past the end of the file.
+    if (eof_) return -1;
+    // Read in a new chunk to the buffer, and count how many bytes we read.
     const size_t size = buf_.size();
     buf_.resize(size + chunk_);
     in_.read(&buf_[size], chunk_);
     const size_t got = static_cast<size_t>(in_.gcount());
-    buf_.resize(size + got);
-    if (got < chunk_) eof_ = true;
-    if (chunk_ < kChunkSize)
-      chunk_ = 2 * chunk_ < kChunkSize ? 2 * chunk_ : kChunkSize;
-    if (got == 0) return -1;
-    if (eof_ && pos - buf_start_ >= buf_.size()) return -1;
+    if (got < chunk_) {
+      // We hit the end of the file before we filled the chunk.
+      buf_.resize(size + got);
+      eof_ = true;
+    } else if (chunk_ < kMaximumLexerBufferSize) {
+      // Double the size of the chunk we read in the next round.
+      chunk_ = std::min(2 * chunk_, kMaximumLexerBufferSize);
+    }
   }
   return static_cast<unsigned char>(buf_[pos - buf_start_]);
 }
