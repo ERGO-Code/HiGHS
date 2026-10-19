@@ -416,6 +416,11 @@ static double calcFixVal(double rootchange, double fracval, double cost) {
     return std::floor(fracval + 0.5);
 }
 
+// Node limit for the depth-first search that RENS and RINS run when too few
+// columns are fixed for a sub-MIP. Without it a dive that tightens one general
+// integer bound by a single unit per node can run until the time limit.
+static constexpr int64_t kDepthFirstNodeLimit = 1000;
+
 void HighsPrimalHeuristics::RENS(HighsMipWorker& worker,
                                  const std::vector<double>& tmp) {
   // return if domain is infeasible
@@ -634,7 +639,7 @@ retry:
       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
     // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
-    heur.solveDepthFirst(10);
+    heur.solveDepthFirst(10, kDepthFirstNodeLimit);
     worker.getHeurLpIterations() += heur.getLocalLpIterations();
     if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
     // lpiterations += heur.lpiterations;
@@ -927,7 +932,7 @@ retry:
       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
     // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
-    heur.solveDepthFirst(10);
+    heur.solveDepthFirst(10, kDepthFirstNodeLimit);
     worker.getHeurLpIterations() += heur.getLocalLpIterations();
     if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
     // lpiterations += heur.lpiterations;
