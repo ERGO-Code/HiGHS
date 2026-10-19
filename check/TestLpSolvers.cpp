@@ -25,7 +25,7 @@ void testDualObjective(const std::string model) {
       std::max(1.0, std::fabs(primal_objective));
   REQUIRE(relative_primal_dual_gap < 1e-12);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
@@ -41,7 +41,7 @@ TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
   status = highs.run();
   REQUIRE(status == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
@@ -169,7 +169,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   if (dev_run) printf("\nOptimal objective value error = %g\n", error);
   REQUIRE(error < 1e-10);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
@@ -204,7 +204,7 @@ TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
   }
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-objective-max", "[highs_lp_solver]") {
@@ -234,7 +234,7 @@ TEST_CASE("dual-objective-max", "[highs_lp_solver]") {
       std::max(1.0, std::fabs(primal_objective));
   REQUIRE(relative_primal_dual_gap < 1e-12);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-objective", "[highs_lp_solver]") {
@@ -305,7 +305,7 @@ void testStandardForm(const HighsLp& lp) {
     highs.writeModel("");
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void testStandardFormModel(const std::string model) {
@@ -318,7 +318,7 @@ void testStandardFormModel(const std::string model) {
   HighsLp lp = highs.getLp();
   testStandardForm(lp);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("standard-form-mps", "[highs_lp_solver]") {
@@ -363,7 +363,7 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
         "maximizing\n");
   testStandardForm(highs.getLp());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("simplex-stats", "[highs_lp_solver]") {
@@ -400,7 +400,7 @@ TEST_CASE("simplex-stats", "[highs_lp_solver]") {
   REQUIRE(simplex_stats.row_DSE_density > 0);
   if (dev_run) h.reportSimplexStats(stdout);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("use_warm_start", "[highs_lp_solver]") {
@@ -417,7 +417,7 @@ TEST_CASE("use_warm_start", "[highs_lp_solver]") {
   HighsInt iteration_count = h.getInfo().simplex_iteration_count;
   REQUIRE(iteration_count == required_iteration_count);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 bool fileExists(const std::string& file_name) {
@@ -462,7 +462,7 @@ TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
   std::remove(write_solution_file.c_str());
   std::remove(write_basis_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
@@ -496,7 +496,7 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 /*
@@ -514,7 +514,7 @@ TEST_CASE("highs-debug-level", "[highs_lp_solver]") {
   h.run();
   h.setOptionValue("highs_debug_level",  3);
   h.run();
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
 TEST_CASE("solver-string", "[highs_lp_solver]") {
@@ -551,7 +551,7 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
   h.run();
   REQUIRE(h.getInfo().ipm_iteration_count > 0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("releaseMemory", "[highs_lp_solver]") {
@@ -580,7 +580,7 @@ TEST_CASE("releaseMemory", "[highs_lp_solver]") {
   // Verify objectives are different (different problems)
   REQUIRE(first_objective != second_objective);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2300", "[highs_lp_solver]") {
@@ -600,5 +600,5 @@ TEST_CASE("issue-2300", "[highs_lp_solver]") {
   REQUIRE(std::fabs(h.getInfo().objective_function_value - optimal_objective) <
           1e-12);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

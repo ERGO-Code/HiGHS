@@ -358,7 +358,7 @@ void* Highs_create(void);
  *
  * Since the scheduler is owned by the thread and not by the Highs
  * instances, its memory cannot be freed by `Highs_destroy`. Hence, to free
- * all memory used by HiGHS on this thread, `Highs_resetGlobalScheduler` must
+ * all memory used by HiGHS on this thread, `Highs_resetThreadScheduler` must
  * also be called.
  *
  * To empty a model without invalidating `highs`, see `Highs_clearModel`.
@@ -2589,7 +2589,7 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
  * Although the scheduler instance is created internally by a Highs
  * instance, any subsequent Highs instances on the same thread share the
  * scheduler. Hence, calling `Highs_destroy` does not free the
- * scheduler's memory, so `Highs_resetGlobalScheduler` must also be
+ * scheduler's memory, so `Highs_resetThreadScheduler` must also be
  * called.
  *
  * It is thread-safe to call this function only from the thread that owns the
@@ -2615,7 +2615,7 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
  * function may cause crashes, but cannot be detected and hence is fully in the
  * callers responsibility.
  */
-void Highs_resetGlobalScheduler(const HighsInt blocking);
+void Highs_resetThreadScheduler(const HighsInt blocking);
 
 /**
  * Get a void* pointer to a callback data item
@@ -2759,6 +2759,8 @@ HighsInt Highs_setOptionValue(void* highs, const char* option,
                               const char* value);
 
 HighsInt Highs_getScaledModelStatus(const void* highs);
+
+void Highs_resetGlobalScheduler(const HighsInt blocking);
 
 #ifdef __cplusplus
 }

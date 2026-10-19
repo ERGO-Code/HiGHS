@@ -1362,7 +1362,7 @@ class Highs {
    * desirable when debugging heap memory but requires the calling thread to
    * wait for all scheduler threads to wake-up which is usually not necessary.
    */
-  static void resetGlobalScheduler(bool blocking = false);
+  static void resetThreadScheduler(bool blocking = false);
 
   /**
    * @brief If profiling is not nullptr, sets up profiling and copies
@@ -1620,6 +1620,10 @@ class Highs {
     this->deprecationMessage("frozenBasisAllDataClear", "None");
     return HighsStatus::kError;
   }
+
+  // Deprecated in favour of resetThreadScheduler().
+  // Cannot call deprecationMessage here.
+  static void resetGlobalScheduler(bool blocking = false);
 
   // End of deprecated methods
  private:

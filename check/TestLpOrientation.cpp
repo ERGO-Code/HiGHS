@@ -117,5 +117,5 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
 
   //  return_status = highs.writeModel("");
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

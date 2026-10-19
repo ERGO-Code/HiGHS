@@ -67,7 +67,7 @@ TEST_CASE("LP-717-od", "[highs_data]") {
           HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-717-full0", "[highs_data]") {
@@ -178,7 +178,7 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
     printf("After run() LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-717-full1", "[highs_data]") {
@@ -291,7 +291,7 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
     printf("After run() LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-717-full2", "[highs_data]") {
@@ -419,7 +419,7 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
     printf("After run() LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-modification", "[highs_data]") {
@@ -1076,7 +1076,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   free(col0123_index);
   free(col0123_value);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-getcols", "[highs_data]") {
@@ -1105,7 +1105,7 @@ TEST_CASE("LP-getcols", "[highs_data]") {
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -1.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-getrows", "[highs_data]") {
@@ -1136,7 +1136,7 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -2.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-interval-changes", "[highs_data]") {
@@ -1278,7 +1278,7 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   REQUIRE(optimal_objective_function_value ==
           avgas_optimal_objective_function_value);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-delete", "[highs_data]") {
@@ -1437,7 +1437,7 @@ TEST_CASE("LP-delete", "[highs_data]") {
       std::fabs(objective_function_value - adlittle_objective_function_value) <
       double_equal_tolerance);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-free-row", "[highs_data]") {
@@ -1470,7 +1470,7 @@ TEST_CASE("LP-free-row", "[highs_data]") {
   highs.run();
   REQUIRE(highs.getInfo().objective_function_value == -3);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-delete-ip-var", "[highs_data]") {
@@ -1508,7 +1508,7 @@ TEST_CASE("LP-delete-ip-var", "[highs_data]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
@@ -1896,7 +1896,7 @@ TEST_CASE("mod-duplicate-indices", "[highs_data]") {
   REQUIRE(objective0 < objective1);
   REQUIRE(objective0 == -7.75);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 bool equalSparseVectors(const HighsInt dim, const HighsInt num_nz0,
@@ -2494,7 +2494,7 @@ TEST_CASE("hot-start-after-delete", "[highs_data]") {
         info.objective_function_value);
   //  REQUIRE(info.simplex_iteration_count < ieration_count0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("no-modification-on-error", "[highs_data]") {

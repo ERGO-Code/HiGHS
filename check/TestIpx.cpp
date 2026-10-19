@@ -93,5 +93,5 @@ TEST_CASE("test-ipx", "[highs_ipx]") {
 
   // hack to reset global scheduler
   Highs h;
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

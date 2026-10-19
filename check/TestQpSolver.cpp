@@ -89,7 +89,7 @@ TEST_CASE("qp-unbounded", "[qpsolver]") {
     highs.clearSolver();
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("qp-infeasible", "[qpsolver]") {
@@ -106,7 +106,7 @@ TEST_CASE("qp-infeasible", "[qpsolver]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -229,7 +229,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
     REQUIRE(return_status == HighsStatus::kOk);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {
@@ -382,7 +382,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {
@@ -509,7 +509,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-min-negative-definite", "[qpsolver]") {
@@ -538,7 +538,7 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
     REQUIRE(highs.run() == HighsStatus::kError);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-max-negative-definite", "[qpsolver]") {
@@ -597,7 +597,7 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
     REQUIRE(fabs(solution.col_dual[0] + 1.0) < double_equal_tolerance);
     REQUIRE(fabs(solution.row_dual[0] + 0.5) < double_equal_tolerance);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite0", "[qpsolver]") {
@@ -645,7 +645,7 @@ TEST_CASE("test-semi-definite0", "[qpsolver]") {
     if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite1", "[qpsolver]") {
@@ -695,7 +695,7 @@ TEST_CASE("test-semi-definite1", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1]) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite2", "[qpsolver]") {
@@ -745,7 +745,7 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1] - 2) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-modification", "[qpsolver]") {
@@ -860,7 +860,7 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
     highs.run();
     if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
-    highs.resetGlobalScheduler(true);
+    highs.resetThreadScheduler(true);
   }
 }
 
@@ -1146,7 +1146,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-terminations", "[qpsolver]") {
@@ -1192,7 +1192,7 @@ TEST_CASE("test-qp-terminations", "[qpsolver]") {
   highs.setOptionValue("time_limit", kHighsInf);
 #endif
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("rowless-qp", "[qpsolver]") {
@@ -1239,7 +1239,7 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
     REQUIRE(dl_solution < 1e-6);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2489", "[qpsolver]") {
@@ -1283,7 +1283,7 @@ TEST_CASE("issue-2489", "[qpsolver]") {
     REQUIRE(run_status == expected_status);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2821", "[qpsolver]") {
@@ -1336,7 +1336,7 @@ TEST_CASE("issue-2821", "[qpsolver]") {
                                 optimal_objective_value));
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("pass-square-hessian", "[qpsolver]") {
@@ -1380,7 +1380,7 @@ TEST_CASE("pass-square-hessian", "[qpsolver]") {
   REQUIRE(okValueDifference(info.objective_function_value,
                             optimal_objective_value));
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 /*
@@ -1405,7 +1405,7 @@ TEST_CASE("issue-2894", "[qpsolver]") {
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
 
@@ -1430,7 +1430,7 @@ TEST_CASE("issue-3322", "[qpsolver]") {
     REQUIRE(okValueDifference(h.getInfo().objective_function_value,
                               required_objective_function_value));
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3045", "[qpsolver]") {
@@ -1525,7 +1525,7 @@ TEST_CASE("issue-3045", "[qpsolver]") {
             (solver == kHipoString ? HighsStatus::kOk : HighsStatus::kError));
     //    }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-atwood", "[qpsolver]") {
@@ -1624,5 +1624,5 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
       assert(basis_.valid);
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
