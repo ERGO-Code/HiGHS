@@ -67,6 +67,10 @@ class HighsCutGeneration {
 
   bool postprocessCut(Row& row, const HighsDomain& globaldom);
 
+  bool postprocessAndAddCut(Row& row, const HighsDomain& globaldom, double& rhs,
+                            bool checkViolation = true,
+                            bool isConflict = false);
+
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
                                 bool& hasContinuous);
 

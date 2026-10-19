@@ -1092,32 +1092,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // substitution and replace implicit slack variables
   if (!transLp.untransform(row)) return false;
 
-  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      inds.data(), vals.data(), inds.size(), static_cast<double>(row.rhs));
-  // apply cut postprocessing including scaling and removal of small
-  // coefficients
-  if (!postprocessCut(row, transLp.getGlobaldom())) return false;
-  rhs = static_cast<double>(row.rhs);
-
-  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      inds.data(), vals.data(), inds.size(), rhs);
-
-  // finally determine the violation of the cut in the original space
-  if (row.violation(lpRelaxation.getSolution().col_value) <= 10 * feastol)
-    return false;
-
-  transLp.getGlobaldom().tightenCoefficients(inds.data(), vals.data(),
-                                             inds.size(), rhs);
-
-  // if the cut is violated by a small factor above the feasibility
-  // tolerance, add it to the cutpool
-  HighsInt cutindex =
-      cutpool.addCut(lpRelaxation.getMipSolver(), inds.data(), vals.data(),
-                     inds.size(), rhs, integralSupport && integralCoefficients);
-
-  // only return true if cut was accepted by the cutpool, i.e. not a duplicate
-  // of a cut already in the pool
-  return cutindex != -1;
+  return postprocessAndAddCut(row, transLp.getGlobaldom(), rhs);
 }
 
 bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
@@ -1195,24 +1170,7 @@ bool HighsCutGeneration::generateConflict(const HighsDomain& localdomain,
   // store the cut in the given vectors
   cut.store(row);
 
-  // apply cut postprocessing including scaling and removal of small
-  // coefficients
-  if (!postprocessCut(row, globaldom)) return false;
-
-  proofrhs = static_cast<double>(row.rhs);
-
-  bool cutintegral = integralSupport && integralCoefficients;
-
-  globaldom.tightenCoefficients(proofinds.data(), proofvals.data(),
-                                proofinds.size(), proofrhs);
-
-  HighsInt cutindex = cutpool.addCut(
-      lpRelaxation.getMipSolver(), proofinds.data(), proofvals.data(),
-      proofinds.size(), proofrhs, cutintegral, true, true, true);
-
-  // only return true if cut was accepted by the cutpool, i.e. not a duplicate
-  // of a cut already in the pool
-  return cutindex != -1;
+  return postprocessAndAddCut(row, globaldom, proofrhs, false, true);
 }
 
 bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
@@ -1224,21 +1182,36 @@ bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
   for (HighsInt col : row.inds)
     integralSupport &= lpRelaxation.isColIntegral(col);
 
-  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      row.inds.data(), row.vals.data(), row.inds.size(),
-      static_cast<double>(row.rhs));
+  double rhs;
+  return postprocessAndAddCut(row, globaldom, rhs);
+}
+
+bool HighsCutGeneration::postprocessAndAddCut(Row& row,
+                                              const HighsDomain& globaldom,
+                                              double& rhs, bool checkViolation,
+                                              bool isConflict) {
+  // check cut
+  if (!isConflict)
+    lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
+        row.inds.data(), row.vals.data(), row.inds.size(),
+        static_cast<double>(row.rhs));
+
   // apply cut postprocessing including scaling and removal of small
   // coefficients
   if (!postprocessCut(row, globaldom)) return false;
-  double rhs = static_cast<double>(row.rhs);
+  rhs = static_cast<double>(row.rhs);
 
-  lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      row.inds.data(), row.vals.data(), row.inds.size(), rhs);
+  // check cut again after post-processing
+  if (!isConflict)
+    lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
+        row.inds.data(), row.vals.data(), row.inds.size(), rhs);
 
   // finally determine the violation of the cut in the original space
-  if (row.violation(lpRelaxation.getSolution().col_value) <= 10 * feastol)
+  if (checkViolation &&
+      row.violation(lpRelaxation.getSolution().col_value) <= 10 * feastol)
     return false;
 
+  // tighten coefficients
   globaldom.tightenCoefficients(row.inds.data(), row.vals.data(),
                                 row.inds.size(), rhs);
 
@@ -1246,7 +1219,8 @@ bool HighsCutGeneration::finalizeAndAddCut(const HighsDomain& globaldom,
   // tolerance, add it to the cutpool
   HighsInt cutindex = cutpool.addCut(
       lpRelaxation.getMipSolver(), row.inds.data(), row.vals.data(),
-      row.inds.size(), rhs, integralSupport && integralCoefficients);
+      row.inds.size(), rhs, integralSupport && integralCoefficients, true, true,
+      isConflict);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool
