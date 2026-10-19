@@ -266,28 +266,6 @@ bool HPresolve::isStrictlyImpliedForDual(HighsInt col,
                       : isUpperStrictlyImplied(col, &impliedMargin);
 }
 
-bool HPresolve::isRowDualLowerImplied(HighsInt row) const {
-  return isRowDualLowerImplied(row, implRowDualLower[row]);
-}
-
-bool HPresolve::isRowDualLowerImplied(HighsInt row, double implLower) const {
-  // checks whether the given implied lower bound on the row dual implies the
-  // row dual's lower bound
-  return (rowDualLower[row] == -kHighsInf ||
-          implLower >= rowDualLower[row] - options->dual_feasibility_tolerance);
-}
-
-bool HPresolve::isRowDualUpperImplied(HighsInt row) const {
-  return isRowDualUpperImplied(row, implRowDualUpper[row]);
-}
-
-bool HPresolve::isRowDualUpperImplied(HighsInt row, double implUpper) const {
-  // checks whether the given implied upper bound on the row dual implies the
-  // row dual's upper bound
-  return (rowDualUpper[row] == kHighsInf ||
-          implUpper <= rowDualUpper[row] + options->dual_feasibility_tolerance);
-}
-
 bool HPresolve::isBinary(HighsInt col) const {
   return model->integrality_[col] == HighsVarType::kInteger &&
          model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
@@ -302,17 +280,25 @@ bool HPresolve::isDualImpliedFree(HighsInt row) const {
 }
 
 bool HPresolve::isDualImpliedLeq(HighsInt row) const {
-  // checks whether the row has a finite upper bound and the row dual is
-  // implied to be non-positive
+  return isDualImpliedLeq(row, implRowDualUpper[row]);
+}
+
+bool HPresolve::isDualImpliedLeq(HighsInt row, double implUpper) const {
+  // checks whether the row has a finite upper bound and the given implied
+  // upper bound implies that the row dual is non-positive
   return (model->row_upper_[row] != kHighsInf &&
-          implRowDualUpper[row] <= options->dual_feasibility_tolerance);
+          implUpper <= options->dual_feasibility_tolerance);
 }
 
 bool HPresolve::isDualImpliedGeq(HighsInt row) const {
-  // checks whether the row has a finite lower bound and the row dual is
-  // implied to be non-negative
+  return isDualImpliedGeq(row, implRowDualLower[row]);
+}
+
+bool HPresolve::isDualImpliedGeq(HighsInt row, double implLower) const {
+  // checks whether the row has a finite lower bound and the given implied
+  // lower bound implies that the row dual is non-negative
   return (model->row_lower_[row] != -kHighsInf &&
-          implRowDualLower[row] >= -options->dual_feasibility_tolerance);
+          implLower >= -options->dual_feasibility_tolerance);
 }
 
 void HPresolve::dualImpliedFreeGetRhsAndRowType(
@@ -1658,11 +1644,12 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
     markChangedRow(row);
 
   // the row becomes dual implied free if it was not dual implied free before
-  // and the new implied bound implies the row dual's upper bound (zero for <=
-  // rows); then implied free columns in the row are substitution candidates
-  bool newDualImplied = !isDualImpliedFree(row) &&
-                        !isRowDualUpperImplied(row) &&
-                        isRowDualUpperImplied(row, newUpper);
+  // and the new implied bound implies that the row dual is non-positive; then
+  // implied free columns in the row are substitution candidates. note that
+  // this includes ranged rows, and never holds for free rows, which cannot be
+  // dual implied free
+  bool newDualImplied =
+      !isDualImpliedFree(row) && isDualImpliedLeq(row, newUpper);
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
@@ -1704,11 +1691,12 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
     markChangedRow(row);
 
   // the row becomes dual implied free if it was not dual implied free before
-  // and the new implied bound implies the row dual's lower bound (zero for >=
-  // rows); then implied free columns in the row are substitution candidates
-  bool newDualImplied = !isDualImpliedFree(row) &&
-                        !isRowDualLowerImplied(row) &&
-                        isRowDualLowerImplied(row, newLower);
+  // and the new implied bound implies that the row dual is non-negative; then
+  // implied free columns in the row are substitution candidates. note that
+  // this includes ranged rows, and never holds for free rows, which cannot be
+  // dual implied free
+  bool newDualImplied =
+      !isDualImpliedFree(row) && isDualImpliedGeq(row, newLower);
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
