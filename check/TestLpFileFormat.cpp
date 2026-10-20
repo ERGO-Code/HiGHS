@@ -1857,3 +1857,25 @@ TEST_CASE("lp-file-format-just-over-1mib", "[LpFileFormat]") {
   REQUIRE(sum_lower == double(num_row) * (num_row - 1) / 2);
   REQUIRE(lp.row_names_.back() == "c" + std::to_string(num_row - 1));
 }
+
+TEST_CASE("lp-file-format-corrupt-gzip", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  const std::string content("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03\x07", 11);
+  Highs highs;
+  std::string log;
+  REQUIRE(readLp(highs, filename, content, log) == HighsStatus::kError);
+#ifdef ZLIB_FOUND
+  REQUIRE(log.find("invalid block type") != std::string::npos);
+#endif
+}
+
+TEST_CASE("lp-file-format-long-token-of-utf8-continuation", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  const std::string content = std::string(40, '\x80') + "\n";
+  Highs highs;
+  std::string log;
+  REQUIRE(readLp(highs, filename, content, log) == HighsStatus::kError);
+  REQUIRE(log.find("expected a section keyword") != std::string::npos);
+}

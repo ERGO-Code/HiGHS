@@ -215,12 +215,12 @@ static std::string renderDiagnostic(const std::string& filename,
   size_t begin = 0;
   if (pos > kContext) {
     begin = pos - kContext;
-    while (isUtf8Continuation(line[begin])) begin++;
+    while (begin < pos && isUtf8Continuation(line[begin])) begin++;
   }
   size_t end = line_end;
   if (line_end - caret_end > kContext) {
     end = caret_end + kContext;
-    while (isUtf8Continuation(line[end])) end--;
+    while (end > caret_end && isUtf8Continuation(line[end])) end--;
   }
   std::string excerpt = line.substr(begin, end - begin);
   for (char& c : excerpt)
@@ -724,7 +724,10 @@ std::string Parser::quote(const char* data, size_t len) {
   const size_t kMaxLength = 30;
   if (len <= kMaxLength) return "`" + std::string(data, len) + "`";
   len = kMaxLength;
-  while (isUtf8Continuation(data[len])) len--;
+  // Back up to the start of a UTF-8 character, unless there isn't one (the
+  // token is invalid UTF-8)
+  while (len > 0 && isUtf8Continuation(data[len])) len--;
+  if (len == 0) len = kMaxLength;
   return "`" + std::string(data, len) + "...`";
 }
 
@@ -1298,6 +1301,11 @@ FilereaderRetcode readLpFile(const HighsLogOptions& log_options,
     highsLogUser(
         log_options, HighsLogType::kError, "%s",
         lp_reader::renderDiagnostics(filename, {e.diagnostic})[0].c_str());
+    return FilereaderRetcode::kParserError;
+  } catch (const std::ios_base::failure& e) {
+    // For example, zstr throws if a compressed file is corrupt
+    highsLogUser(log_options, HighsLogType::kError, "Error reading %s: %s\n",
+                 filename.c_str(), e.what());
     return FilereaderRetcode::kParserError;
   }
   file.reset();
