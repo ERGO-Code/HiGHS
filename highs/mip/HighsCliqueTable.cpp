@@ -1187,10 +1187,12 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
 
     if (vals[i] > 0) {
       if (globaldom.col_lower_[inds[i]] == -kHighsInf) return;
-      minact += vals[i] * globaldom.col_lower_[inds[i]];
+      minact +=
+          vals[i] * static_cast<HighsCDouble>(globaldom.col_lower_[inds[i]]);
     } else {
       if (globaldom.col_upper_[inds[i]] == kHighsInf) return;
-      minact += vals[i] * globaldom.col_upper_[inds[i]];
+      minact +=
+          vals[i] * static_cast<HighsCDouble>(globaldom.col_upper_[inds[i]]);
     }
   }
 
@@ -1201,16 +1203,18 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
   for (HighsInt i = 0; i != len; ++i) {
     if (mipsolver.isColContinuous(inds[i])) continue;
 
-    double boundVal = static_cast<double>((rhs - minact) / vals[i]);
+    HighsCDouble impliedBound = (rhs - minact) / vals[i];
+    const double boundTol =
+        std::max(globaldom.feastol(), globaldom.epsilon() / std::abs(vals[i]));
     if (vals[i] > 0) {
-      boundVal = std::floor(boundVal + globaldom.col_lower_[inds[i]] +
-                            globaldom.feastol());
+      const double boundVal = std::floor(static_cast<double>(
+          impliedBound + globaldom.col_lower_[inds[i]] + boundTol));
       globaldom.changeBound(HighsBoundType::kUpper, inds[i], boundVal,
                             HighsDomain::Reason::unspecified());
       if (globaldom.infeasible()) return;
     } else {
-      boundVal = std::ceil(boundVal + globaldom.col_upper_[inds[i]] -
-                           globaldom.feastol());
+      const double boundVal = std::ceil(static_cast<double>(
+          impliedBound + globaldom.col_upper_[inds[i]] - boundTol));
       globaldom.changeBound(HighsBoundType::kLower, inds[i], boundVal,
                             HighsDomain::Reason::unspecified());
       if (globaldom.infeasible()) return;
@@ -1241,10 +1245,11 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
         if (globaldom.isFixed(col)) continue;
 
         if (vals[perm[j]] > 0) {
-          double implcolub =
-              static_cast<double>(impliedActivity +
-                                  vals[perm[j]] * globaldom.col_lower_[col]) /
-              vals[perm[j]];
+          double implcolub = static_cast<double>(
+              (impliedActivity +
+               vals[perm[j]] *
+                   static_cast<HighsCDouble>(globaldom.col_lower_[col])) /
+              vals[perm[j]]);
           if (mipsolver.isColIntegral(col))
             implcolub = std::floor(implcolub + mipsolver.mipdata_->feastol);
 
@@ -1267,10 +1272,11 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
             implics.addVUB(col, bincol, coef, constant);
           }
         } else {
-          double implcollb =
-              static_cast<double>(impliedActivity +
-                                  vals[perm[j]] * globaldom.col_upper_[col]) /
-              vals[perm[j]];
+          double implcollb = static_cast<double>(
+              (impliedActivity +
+               vals[perm[j]] *
+                   static_cast<HighsCDouble>(globaldom.col_upper_[col])) /
+              vals[perm[j]]);
           if (mipsolver.isColIntegral(col))
             implcollb = std::ceil(implcollb - mipsolver.mipdata_->feastol);
 
