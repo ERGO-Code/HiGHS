@@ -122,113 +122,35 @@ void HighsSparseMatrix::setFormat(const MatrixFormat desired_format) {
   assert(this->format_ == desired_format);
 }
 
-void HighsSparseMatrix::ensureColwiseOld() {
-  assert(this->formatOk());
-  if (this->isColwise()) return;
-  HighsInt num_col = this->num_col_;
-  HighsInt num_row = this->num_row_;
-  HighsInt num_nz = this->numNz();
-  assert(num_nz >= 0);
-  assert((HighsInt)this->index_.size() >= num_nz);
-  assert((HighsInt)this->value_.size() >= num_nz);
-  if (num_nz == 0) {
-    // Empty matrix, so just ensure that there are enough zero starts
-    // for the new orientation
-    this->start_.assign(num_col + 1, 0);
-    this->index_.clear();
-    this->value_.clear();
-  } else {
-    // Matrix is non-empty, so transpose it
-    //
-    // Take a copy of the current matrix - that is rowwise - so that
-    // the current matrix is filled colwise
-    std::vector<HighsInt> ARstart = this->start_;
-    std::vector<HighsInt> ARindex = this->index_;
-    std::vector<double> ARvalue = this->value_;
-    this->start_.resize(num_col + 1);
-    this->index_.resize(num_nz);
-    this->value_.resize(num_nz);
-    vector<HighsInt> Alength;
-    Alength.assign(num_col, 0);
-    for (HighsInt iEl = ARstart[0]; iEl < num_nz; iEl++)
-      Alength[ARindex[iEl]]++;
-    this->start_[0] = 0;
-    for (HighsInt iCol = 0; iCol < num_col; iCol++)
-      this->start_[iCol + 1] = this->start_[iCol] + Alength[iCol];
-    for (HighsInt iRow = 0; iRow < num_row; iRow++) {
-      for (HighsInt iEl = ARstart[iRow]; iEl < ARstart[iRow + 1]; iEl++) {
-        HighsInt iCol = ARindex[iEl];
-        HighsInt iCol_el = this->start_[iCol];
-        this->index_[iCol_el] = iRow;
-        this->value_[iCol_el] = ARvalue[iEl];
-        this->start_[iCol]++;
-      }
-    }
-    this->start_[0] = 0;
-    for (HighsInt iCol = 0; iCol < num_col; iCol++)
-      this->start_[iCol + 1] = this->start_[iCol] + Alength[iCol];
-    assert(this->start_[num_col] == num_nz);
-  }
-  this->format_ = MatrixFormat::kColwise;
-  assert((HighsInt)this->start_.size() >= num_col + 1);
-  num_nz = this->numNz();
-  assert(num_nz >= 0);
-  assert((HighsInt)this->index_.size() >= num_nz);
-  assert((HighsInt)this->value_.size() >= num_nz);
-}
+void HighsSparseMatrix::ensureColwise() {
+  // If a change of format is needed, the result of oppositeFormat() is built
+  // in a temporary and move-assigned into *this, so no extra copy is made.
+  assert(formatOk());
 
-void HighsSparseMatrix::ensureRowwiseOld() {
-  assert(this->formatOk());
-  if (this->isRowwise()) return;
-  HighsInt num_col = this->num_col_;
-  HighsInt num_row = this->num_row_;
-  HighsInt num_nz = this->numNz();
-  assert(num_nz >= 0);
-  assert((HighsInt)this->index_.size() >= num_nz);
-  assert((HighsInt)this->value_.size() >= num_nz);
-  if (num_nz == 0) {
-    // Empty matrix, so just ensure that there are enough zero starts
-    // for the new orientation
-    this->start_.assign(num_row + 1, 0);
-    this->index_.clear();
-    this->value_.clear();
-  } else {
-    // Matrix is non-empty, so transpose it
-    //
-    // Take a copy of the current matrix - that is colwise - so that
-    // the current matrix is filled rowwise
-    vector<HighsInt> Astart = this->start_;
-    vector<HighsInt> Aindex = this->index_;
-    vector<double> Avalue = this->value_;
-    this->start_.resize(num_row + 1);
-    this->index_.resize(num_nz);
-    this->value_.resize(num_nz);
-    vector<HighsInt> ARlength;
-    ARlength.assign(num_row, 0);
-    for (HighsInt iEl = Astart[0]; iEl < num_nz; iEl++) ARlength[Aindex[iEl]]++;
-    this->start_[0] = 0;
-    for (HighsInt iRow = 0; iRow < num_row; iRow++)
-      this->start_[iRow + 1] = this->start_[iRow] + ARlength[iRow];
-    for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-      for (HighsInt iEl = Astart[iCol]; iEl < Astart[iCol + 1]; iEl++) {
-        HighsInt iRow = Aindex[iEl];
-        HighsInt iRow_el = this->start_[iRow];
-        this->index_[iRow_el] = iCol;
-        this->value_[iRow_el] = Avalue[iEl];
-        this->start_[iRow]++;
-      }
-    }
-    this->start_[0] = 0;
-    for (HighsInt iRow = 0; iRow < num_row; iRow++)
-      this->start_[iRow + 1] = this->start_[iRow] + ARlength[iRow];
-    assert(this->start_[num_row] == num_nz);
-  }
-  this->format_ = MatrixFormat::kRowwise;
-  assert((HighsInt)this->start_.size() >= num_row + 1);
-  num_nz = this->numNz();
-  assert(num_nz >= 0);
-  assert((HighsInt)this->index_.size() >= num_nz);
-  assert((HighsInt)this->value_.size() >= num_nz);
+  if (isColwise()) return;
+
+  HighsInt num_nz = numNz();
+  *this = oppositeFormat();
+
+  assert(isColwise());
+  assert(numNz() == num_nz);
+  assert(static_cast<HighsInt>(start_.size()) >= num_col_ + 1);
+  assert(static_cast<HighsInt>(index_.size()) >= numNz());
+  assert(static_cast<HighsInt>(value_.size()) >= numNz());
+}
+void HighsSparseMatrix::ensureRowwise() {
+  assert(formatOk());
+
+  if (isRowwise()) return;
+
+  HighsInt num_nz = numNz();
+  *this = oppositeFormat();
+
+  assert(isRowwise());
+  assert(numNz() == num_nz);
+  assert(static_cast<HighsInt>(start_.size()) >= num_row_ + 1);
+  assert(static_cast<HighsInt>(index_.size()) >= numNz());
+  assert(static_cast<HighsInt>(value_.size()) >= numNz());
 }
 
 void HighsSparseMatrix::addVec(const HighsInt num_nz, const HighsInt* index,
@@ -1687,36 +1609,6 @@ HighsSparseMatrix HighsSparseMatrix::getRowwise() const {
 HighsSparseMatrix HighsSparseMatrix::getColwise() const {
   if (isColwise()) return *this;
   return oppositeFormat();
-}
-
-bool HighsSparseMatrix::correctColwise() const {
-  HighsSparseMatrix M1 = *this;
-  M1.ensureColwiseOld();
-  return M1 == oppositeFormat();
-}
-bool HighsSparseMatrix::correctRowwise() const {
-  HighsSparseMatrix M1 = *this;
-  M1.ensureRowwiseOld();
-  return M1 == oppositeFormat();
-}
-
-void HighsSparseMatrix::ensureColwise() {
-  // If a change of format is needed, the result of oppositeFormat() is built
-  // in a temporary and move-assigned into *this, so no extra copy is made.
-  assert(this->formatOk());
-  if (this->isColwise()) return;
-  assert(correctColwise());
-  std::vector<HighsInt> p_end = std::move(this->p_end_);
-  *this = oppositeFormat();
-  this->p_end_ = std::move(p_end);
-}
-void HighsSparseMatrix::ensureRowwise() {
-  assert(this->formatOk());
-  if (this->isRowwise()) return;
-  assert(correctRowwise());
-  std::vector<HighsInt> p_end = std::move(this->p_end_);
-  *this = oppositeFormat();
-  this->p_end_ = std::move(p_end);
 }
 
 void HighsSparseMatrix::priceByRowDenseResult(

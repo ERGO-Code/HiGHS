@@ -60,11 +60,9 @@ class HighsSparseMatrix {
   void setFormat(const MatrixFormat desired_format);
   void ensureColwise();
   void ensureRowwise();
-
-  void ensureColwiseOld();
-  void ensureRowwiseOld();
-  bool correctColwise() const;
-  bool correctRowwise() const;
+  HighsSparseMatrix getRowwise() const;
+  HighsSparseMatrix getColwise() const;
+  HighsSparseMatrix oppositeFormat() const;
 
   void addVec(const HighsInt num_nz, const HighsInt* index, const double* value,
               const double multiple = 1);
@@ -145,10 +143,6 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
-
-  HighsSparseMatrix oppositeFormat() const;
-  HighsSparseMatrix getRowwise() const;
-  HighsSparseMatrix getColwise() const;
 
  private:
   void priceByRowDenseResult(
