@@ -4012,7 +4012,7 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
     ++numResolved;
     frontier.erase(pos);
     for (const LocalDomChg& i : resolvedDomainChanges) {
-      auto insertResult = frontier.insert(i);
+      auto insertResult = insertIntoFrontier(frontier, i);
       if (insertResult.second) {
         if (increaseConflictScore) {
           if (localdom.domchgstack_[i.pos].boundtype == HighsBoundType::kLower)
@@ -4024,32 +4024,27 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
         }
         if (i.pos >= startPos.pos && resolvable(i.pos))
           pushQueue(insertResult.first);
-      } else {
-        if (i.domchg.boundtype == HighsBoundType::kLower) {
-          // if (insertResult.first->domchg.boundval != i.domchg.boundval)
-          //  printf(
-          //      "got different relaxed lower bounds: current=%g, new=%g, "
-          //      "stack=%g\n",
-          //      insertResult.first->domchg.boundval, i.domchg.boundval,
-          //      localdom.domchgstack_[i.pos].boundval);
-          //
-          insertResult.first->domchg.boundval =
-              std::max(insertResult.first->domchg.boundval, i.domchg.boundval);
-        } else {
-          // if (insertResult.first->domchg.boundval != i.domchg.boundval)
-          //   printf(
-          //       "got different relaxed upper bounds: current=%g, new=%g, "
-          //       "stack=%g\n",
-          //       insertResult.first->domchg.boundval, i.domchg.boundval,
-          //       localdom.domchgstack_[i.pos].boundval);
-          insertResult.first->domchg.boundval =
-              std::min(insertResult.first->domchg.boundval, i.domchg.boundval);
-        }
       }
     }
   }
 
   return numResolved;
+}
+
+std::pair<std::set<HighsDomain::ConflictSet::LocalDomChg>::iterator, bool>
+HighsDomain::ConflictSet::insertIntoFrontier(std::set<LocalDomChg>& frontier,
+                                             const LocalDomChg& locdomchg) {
+  // the frontier is ordered by stack position only, so if an entry for the
+  // same position already exists, keep the stronger of the two relaxed bounds
+  auto insertResult = frontier.insert(locdomchg);
+  if (!insertResult.second) {
+    double& bound = insertResult.first->domchg.boundval;
+    if (locdomchg.domchg.boundtype == HighsBoundType::kLower)
+      bound = std::max(bound, locdomchg.domchg.boundval);
+    else
+      bound = std::min(bound, locdomchg.domchg.boundval);
+  }
+  return insertResult;
 }
 
 HighsInt HighsDomain::ConflictSet::computeCuts(HighsInt depthLevel,
@@ -4115,8 +4110,8 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
       1000 + 3 * localdom.mipsolver->mipdata_->integral_cols.size())
     return;
 
-  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
-                            resolvedDomainChanges.end());
+  for (const LocalDomChg& locdomchg : resolvedDomainChanges)
+    insertIntoFrontier(reasonSideFrontier, locdomchg);
 
   localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
       reasonSideFrontier, localdom.domchgstack_);

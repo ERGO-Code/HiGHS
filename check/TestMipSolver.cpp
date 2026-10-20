@@ -2492,6 +2492,29 @@ TEST_CASE("issue-3389-binding-row", "[highs_test_mip_solver]") {
 //   highs.resetGlobalScheduler(true);
 // }
 
+TEST_CASE("issue-3433", "[highs_test_mip_solver]") {
+  // conflict analysis used to keep the weaker of two relaxed bounds for the
+  // same domain change, which led to a wrong optimal objective for some seeds
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3433.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 19;
+  for (HighsInt seed : {11, 15, 124, 127, 267}) {
+    // solve resets the options
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue("random_seed", seed);
+    highs.setOptionValue("parallel", kHighsOffString);
+    highs.setOptionValue("mip_rel_gap", 0);
+    // the mip solver would otherwise start from the previous solution
+    highs.clearSolver();
+    solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  }
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
   // an empty conflict, which can be derived when a proof is violated by the
   // global bounds alone, is stored at the end of the conflict entries and
