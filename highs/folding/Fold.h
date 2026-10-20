@@ -87,7 +87,10 @@ class Folder {
   void findInitialColour();
   void foldModel();
 
+  bool isPartitionCorrect() const;
   bool success() const { return status_ == FoldStatus::kOk; }
+
+  bool checkTimeLimit();
 
  public:
   explicit Folder(const HighsModel& model);
@@ -100,13 +103,12 @@ class Folder {
   Folder(const Folder&) = delete;
   Folder& operator=(const Folder&) = delete;
 
-  void setTimeLimit(const HighsTimer* timer, double time_limit);
+  void setTimeLimit(const HighsTimer& timer, double time_limit);
   FoldStatus run();
   HighsModel getFoldedModel() const;
   HighsSolution unfold(const HighsSolution& folded) const;
 
   void print() const;
-  bool isPartitionCorrect() const;
 
   HighsInt numRowColours() const { return num_row_colours_; }
   HighsInt numColColours() const { return num_col_colours_; }

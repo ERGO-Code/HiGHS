@@ -272,3 +272,11 @@ TEST_CASE("test-folding-qp-groups", "[highs-folding]") {
       std::string(HIGHS_DIR) + "/check/instances/folding_qp_groups.mps";
   runFoldingTest(filename);
 }
+
+TEST_CASE("test-folding-time-limit", "[highs-folding]") {
+  const HighsModel model;
+  highs::folding::Folder lpf(model);
+  HighsTimer timer;
+  lpf.setTimeLimit(timer, 0.0);
+  REQUIRE(lpf.run() == highs::folding::FoldStatus::kTimeLimit);
+}

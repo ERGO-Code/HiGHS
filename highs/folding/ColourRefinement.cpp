@@ -219,7 +219,10 @@ void ColourRefinement::refine(Side& src, Side& dst, const HighsSparseMatrix& M,
 FoldStatus ColourRefinement::run() {
   const HighsHessian* Q_ptr = Q_.empty() ? nullptr : &Q_;
 
+  HighsInt iter = 0;
   while (!rows_.to_refine.empty() || !cols_.to_refine.empty()) {
+    if (iter % 100 == 0 && timeLimitReached()) return FoldStatus::kTimeLimit;
+
     if (rows_.peekLength() < cols_.peekLength())
       refine(rows_, cols_, At_, nullptr);
     else
@@ -229,6 +232,8 @@ FoldStatus ColourRefinement::run() {
         cols_.coloursUsed() > cols_.n * kFractionStop) {
       return FoldStatus::kPartitionTooFine;
     }
+
+    ++iter;
   }
 
   return FoldStatus::kOk;

@@ -225,6 +225,10 @@ class ColourRefinement {
   void moveNodesToNewColours(Side& side, HighsInt colour);
   void prepareNextIter(Side& side);
 
+  bool timeLimitReached() const {
+    return timer_ && timer_->read() >= time_limit_;
+  }
+
  public:
   ColourRefinement(const HighsSparseMatrix& A, const HighsSparseMatrix& At,
                    const HighsHessian& Q, std::vector<HighsInt>& row_colour,

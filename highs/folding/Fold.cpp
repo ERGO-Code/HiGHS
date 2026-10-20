@@ -20,9 +20,17 @@ Folder::Folder(const HighsModel& model)
   assert(Q_.empty() || Q_.dim_ == A_.num_col_);
 }
 
-void Folder::setTimeLimit(const HighsTimer* timer, double time_limit) {
-  timer_ = timer;
+void Folder::setTimeLimit(const HighsTimer& timer, double time_limit) {
+  timer_ = &timer;
   time_limit_ = time_limit;
+}
+
+bool Folder::checkTimeLimit() {
+  if (timer_ && timer_->read() >= time_limit_) {
+    status_ = FoldStatus::kTimeLimit;
+    return true;
+  }
+  return false;
 }
 
 template <typename Data>
@@ -44,9 +52,11 @@ HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
 void Folder::findInitialColour() {
   HighsTimer timer;
 
+  if (checkTimeLimit()) return;
   initial_row_colours_ =
       findInitialColour<RowQuantizedData>(lp_.num_row_, row_colour_.data(), 0);
 
+  if (checkTimeLimit()) return;
   initial_col_colours_ =
       findInitialColour<ColQuantizedData>(lp_.num_col_, col_colour_.data(), 0);
 
@@ -56,9 +66,12 @@ void Folder::findInitialColour() {
 void Folder::foldModel() {
   HighsTimer timer;
 
+  if (checkTimeLimit()) return;
   ColourRefinement CR(A_, At_, Q_, row_colour_, col_colour_);
+  CR.setTimeLimit(timer_, time_limit_);
   ctor_time_ = timer.read();
 
+  if (checkTimeLimit()) return;
   status_ = CR.run();
   run_time_ = timer.read() - ctor_time_;
 
