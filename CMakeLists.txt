@@ -67,14 +67,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   endif()
 
   find_package(IntelSYCL REQUIRED)
-
-  # IntelLLVM defaults to a fast floating-point model that allows
-  # reassociation, which breaks the error terms in HighsCDouble.
-  if (MSVC)
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/fp:precise>")
-  else()
-    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-fp-model=precise>")
-  endif()
 endif()
 
 # MSVC
