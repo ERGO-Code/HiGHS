@@ -75,11 +75,11 @@
 #include "io/LpReader.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
 #include <fstream>
 #include <memory>
 #include <sstream>
@@ -153,6 +153,11 @@ const size_t kInitialLexerBufferSize = 1 << 14;
 
 // The maximum number of bytes that the lexer reads at a time. 1 << 20 = 1MiB.
 const size_t kMaximumLexerBufferSize = 1 << 20;
+
+// The maximum number of tokens that the parser can look ahead. The parser
+// never peeks more than four tokens ahead, so this is generous. It must be a
+// power of two.
+const size_t kMaxLookahead = 8;
 
 // Open a file that may be compressed. If the file cannot be opened, the
 // stream is in a failed state.
@@ -289,13 +294,18 @@ class Lexer {
   // Look at the token n places ahead, without consuming it. References stay
   // valid until the token is consumed.
   const Token& peek(size_t n = 0) {
-    while (tokens_.size() <= n) tokens_.push_back(lex());
-    return tokens_[n];
+    assert(n < kMaxLookahead);
+    while (num_tokens_ <= n) {
+      tokens_[(first_token_ + num_tokens_) % kMaxLookahead] = lex();
+      num_tokens_++;
+    }
+    return tokens_[(first_token_ + n) % kMaxLookahead];
   }
 
   Token next() {
     Token token = peek();
-    tokens_.pop_front();
+    first_token_ = (first_token_ + 1) % kMaxLookahead;
+    num_tokens_--;
     // The text of the most recent token stays available
     keep_ = token.pos;
     return token;
@@ -339,7 +349,11 @@ class Lexer {
   // The end of the most recent token, where the end of the file is reported
   size_t last_end_ = 0;
   size_t last_line_ = 1;
-  std::deque<Token> tokens_;
+  // The tokens that have been lexed but not yet consumed, as a ring buffer of
+  // num_tokens_ tokens starting at first_token_
+  Token tokens_[kMaxLookahead];
+  size_t first_token_ = 0;
+  size_t num_tokens_ = 0;
 };
 
 // Read the file until it contains `pos`, discarding bytes that are no longer
