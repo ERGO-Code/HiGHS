@@ -112,6 +112,9 @@ class HighsDomain {
     HighsInt queueSize() const;
     bool resolvable(HighsInt domChgPos) const;
 
+    static std::pair<std::set<LocalDomChg>::iterator, bool> insertIntoFrontier(
+        std::set<LocalDomChg>& frontier, const LocalDomChg& locdomchg);
+
     HighsInt resolveDepth(std::set<LocalDomChg>& frontier, HighsInt depthLevel,
                           HighsInt stopSize, HighsPseudocost& pseudocost,
                           HighsInt minResolve = 0,
