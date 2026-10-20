@@ -277,6 +277,7 @@ TEST_CASE("test-folding-time-limit", "[highs-folding]") {
   const HighsModel model;
   highs::folding::Folder lpf(model);
   HighsTimer timer;
+  timer.start();
   lpf.setTimeLimit(timer, 0.0);
   REQUIRE(lpf.run() == highs::folding::FoldStatus::kTimeLimit);
 }

@@ -51,6 +51,7 @@ HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
 
 void Folder::findInitialColour() {
   HighsTimer timer;
+  timer.start();
 
   if (checkTimeLimit()) return;
   initial_row_colours_ =
@@ -65,6 +66,7 @@ void Folder::findInitialColour() {
 
 void Folder::foldModel() {
   HighsTimer timer;
+  timer.start();
 
   if (checkTimeLimit()) return;
   ColourRefinement CR(A_, At_, Q_, row_colour_, col_colour_);
@@ -90,6 +92,7 @@ void Folder::foldModel() {
 
 FoldStatus Folder::run() {
   HighsTimer timer;
+  timer.start();
   findInitialColour();
   foldModel();
   assert(!success() || isPartitionCorrect());
@@ -118,6 +121,7 @@ HighsModel Folder::getFoldedModel() const {
   // rows of colour i and columns of colour j.
 
   HighsTimer timer;
+  timer.start();
 
   if (!success()) return HighsModel{};
 
