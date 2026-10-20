@@ -14,6 +14,13 @@ constexpr double kFractionStop = 0.7;
 constexpr size_t kMinTableSize = 16;
 constexpr size_t kSmallClassThreshold = 64;
 
+enum class FoldStatus {
+  kOk = 0,
+  kNotRun,
+  kPartitionTooFine,
+  kTimeLimit,
+};
+
 }  // namespace folding
 }  // namespace highs
 

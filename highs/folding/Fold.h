@@ -3,6 +3,7 @@
 
 #include "ColourRefinement.h"
 #include "model/HighsModel.h"
+#include "util/HighsTimer.h"
 
 namespace highs {
 
@@ -69,7 +70,7 @@ class Folder {
   std::vector<HighsInt> row_colours_size_;
   std::vector<HighsInt> col_colours_size_;
 
-  HighsInt fold_error_ = -1;
+  FoldStatus status_ = FoldStatus::kNotRun;
 
   double initial_time_{};
   double ctor_time_{};
@@ -77,11 +78,16 @@ class Folder {
   double fold_time_{};
   mutable double folded_lp_time_{};
 
+  const HighsTimer* timer_ = nullptr;
+  double time_limit_ = kHighsInf;
+
   template <typename Data>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
 
   void findInitialColour();
   void foldModel();
+
+  bool success() const { return status_ == FoldStatus::kOk; }
 
  public:
   explicit Folder(const HighsModel& model);
@@ -94,12 +100,12 @@ class Folder {
   Folder(const Folder&) = delete;
   Folder& operator=(const Folder&) = delete;
 
-  HighsInt run();
+  void setTimeLimit(const HighsTimer* timer, double time_limit);
+  FoldStatus run();
   HighsModel getFoldedModel() const;
   HighsSolution unfold(const HighsSolution& folded) const;
 
   void print() const;
-
   bool isPartitionCorrect() const;
 
   HighsInt numRowColours() const { return num_row_colours_; }

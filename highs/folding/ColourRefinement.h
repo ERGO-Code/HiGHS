@@ -210,6 +210,9 @@ class ColourRefinement {
   Side cols_;
   SumClassifier classifier_;
 
+  const HighsTimer* timer_ = nullptr;
+  double time_limit_ = kHighsInf;
+
   void refine(Side& src, Side& dst, const HighsSparseMatrix& M,
               const HighsHessian* Q);
   void computeColourSums(HighsInt refining_colour, Side& src, Side& dst,
@@ -226,7 +229,8 @@ class ColourRefinement {
   ColourRefinement(const HighsSparseMatrix& A, const HighsSparseMatrix& At,
                    const HighsHessian& Q, std::vector<HighsInt>& row_colour,
                    std::vector<HighsInt>& col_colour);
-  HighsInt run();
+  void setTimeLimit(const HighsTimer* timer, double time_limit);
+  FoldStatus run();
   HighsInt rowColoursUsed() const { return rows_.coloursUsed(); }
   HighsInt colColoursUsed() const { return cols_.coloursUsed(); }
 };

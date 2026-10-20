@@ -77,6 +77,12 @@ ColourRefinement::ColourRefinement(const HighsSparseMatrix& A,
   assert(Q_.empty() || Q_.dim_ == A.num_col_);
 }
 
+void ColourRefinement::setTimeLimit(const HighsTimer* timer,
+                                    double time_limit) {
+  timer_ = timer;
+  time_limit_ = time_limit;
+}
+
 void ColourRefinement::computeColourSums(HighsInt refining_colour, Side& src,
                                          Side& dst, const HighsSparseMatrix& M,
                                          const HighsHessian* Q) {
@@ -210,7 +216,7 @@ void ColourRefinement::refine(Side& src, Side& dst, const HighsSparseMatrix& M,
   }
 }
 
-HighsInt ColourRefinement::run() {
+FoldStatus ColourRefinement::run() {
   const HighsHessian* Q_ptr = Q_.empty() ? nullptr : &Q_;
 
   while (!rows_.to_refine.empty() || !cols_.to_refine.empty()) {
@@ -221,11 +227,11 @@ HighsInt ColourRefinement::run() {
 
     if (rows_.coloursUsed() > rows_.n * kFractionStop &&
         cols_.coloursUsed() > cols_.n * kFractionStop) {
-      return 1;
+      return FoldStatus::kPartitionTooFine;
     }
   }
 
-  return 0;
+  return FoldStatus::kOk;
 }
 
 }  // namespace folding

@@ -20,6 +20,11 @@ Folder::Folder(const HighsModel& model)
   assert(Q_.empty() || Q_.dim_ == A_.num_col_);
 }
 
+void Folder::setTimeLimit(const HighsTimer* timer, double time_limit) {
+  timer_ = timer;
+  time_limit_ = time_limit;
+}
+
 template <typename Data>
 HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
                                    HighsInt start) {
@@ -54,14 +59,10 @@ void Folder::foldModel() {
   ColourRefinement CR(A_, At_, Q_, row_colour_, col_colour_);
   ctor_time_ = timer.read();
 
-  HighsInt status = CR.run();
+  status_ = CR.run();
   run_time_ = timer.read() - ctor_time_;
 
-  if (status) {
-    fold_error_ = 1;
-  } else {
-    fold_error_ = 0;
-
+  if (status_ == FoldStatus::kOk) {
     num_row_colours_ = CR.rowColoursUsed();
     num_col_colours_ = CR.colColoursUsed();
 
@@ -74,14 +75,14 @@ void Folder::foldModel() {
   }
 }
 
-HighsInt Folder::run() {
+FoldStatus Folder::run() {
   HighsTimer timer;
   findInitialColour();
   foldModel();
-  assert(fold_error_ || isPartitionCorrect());
+  assert(!success() || isPartitionCorrect());
   fold_time_ = timer.read();
 
-  return fold_error_;
+  return status_;
 }
 
 HighsModel Folder::getFoldedModel() const {
@@ -105,7 +106,7 @@ HighsModel Folder::getFoldedModel() const {
 
   HighsTimer timer;
 
-  if (fold_error_) return HighsModel{};
+  if (!success()) return HighsModel{};
 
   // Representative row for each colour:
   // For each colour, find the row with the fewest nonzero entries in A
@@ -332,7 +333,7 @@ class ColourClasses {
 };
 
 bool Folder::isPartitionCorrect() const {
-  if (fold_error_) return false;
+  if (!success()) return false;
 
   for (HighsInt c : row_colour_)
     if (c < 0 || c >= num_row_colours_) return false;
@@ -463,7 +464,7 @@ HighsSolution Folder::unfold(const HighsSolution& folded) const {
   // - row dual :   y  = C^{ST} y'
 
   HighsSolution sol;
-  if (fold_error_) return sol;
+  if (!success()) return sol;
 
   if (folded.value_valid) {
     assert(folded.col_value.size() == static_cast<size_t>(num_col_colours_));
