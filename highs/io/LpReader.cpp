@@ -379,6 +379,13 @@ Token Lexer::lex() {
     if (c == '\n') {
       line_++;
       line_start_ = true;
+    } else if (c == ' ' || c == '\t') {
+      // Performance optimization: special case the most common ASCII whitespace
+      // to avoid calling std::isspace(c)
+    } else if (0x21 <= c && c <= 0x7E) {
+      // Performance optimization: special case ASCII characters that are not
+      // whitespace to avoid calling std::isspace(c)
+      break;
     } else if (!std::isspace(c)) {
       break;
     }
