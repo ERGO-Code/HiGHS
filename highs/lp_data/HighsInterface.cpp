@@ -1699,7 +1699,8 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     this->info_.objective_function_value = 0;
     this->info_.invalidateDualKkt();
     if (has_dual_ray) {
-      assert(this->info_.num_primal_infeasibilities > 0);
+      assert(this->info_.num_primal_infeasibilities > 0 ||
+            this->info_.num_semi_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
     } else {
       // If someone has tried to get a dual ray for a feasible problem

@@ -1042,17 +1042,19 @@ TEST_CASE("issue-3413", "[highs_test_rays]") {
   h.clear();
 
   // A problem with a semi-integer variable
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   index = {0, 1};
   value = {1, -1};
   h.addVar(2.0, 3.0);
   h.addVar(4.0, 4.0);
   h.changeColIntegrality(0, HighsVarType::kSemiInteger);
   h.addRow(0.0, kHighsInf, 2, index.data(), value.data());
+  h.run();
 
   has_dual_ray = false;
   dual_ray_value = {NAN, NAN};
   h.getDualRay(has_dual_ray, dual_ray_value.data());
+  REQUIRE(dual_ray_value[0] == 1);
 
   h.resetGlobalScheduler(true);
 }
