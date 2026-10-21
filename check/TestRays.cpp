@@ -1015,7 +1015,7 @@ TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
 
 TEST_CASE("issue-3413", "[highs_test_rays]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   // An infeasible LP
   std::vector<HighsInt> index = {0};
   std::vector<double> value = {1};
@@ -1029,8 +1029,8 @@ TEST_CASE("issue-3413", "[highs_test_rays]") {
   REQUIRE(dual_ray_value[0] == -1);
   h.clear();
 
-// An unbounded LP
-  //  h.setOptionValue("output_flag", dev_run);
+  // An unbounded LP
+  h.setOptionValue("output_flag", dev_run);
   h.addCol(-1.0, 0.0, kHighsInf, 0, nullptr, nullptr);
   h.addRow(1, kHighsInf, 1, index.data(), value.data());
   h.setOptionValue(kSolverString, kIpmString);
@@ -1041,7 +1041,8 @@ TEST_CASE("issue-3413", "[highs_test_rays]") {
   REQUIRE(primal_ray_value[0] == 1);
   h.clear();
 
-  /*
+  // A problem with a semi-integer variable
+  //  h.setOptionValue("output_flag", dev_run);
   index = {0, 1};
   value = {1, -1};
   h.addVar(2.0, 3.0);
@@ -1052,7 +1053,6 @@ TEST_CASE("issue-3413", "[highs_test_rays]") {
   has_dual_ray = false;
   dual_ray_value = {NAN, NAN};
   h.getDualRay(has_dual_ray, dual_ray_value.data());
-  */
 
   h.resetGlobalScheduler(true);
 }
