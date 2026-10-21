@@ -1029,25 +1029,17 @@ TEST_CASE("issue-3413", "[highs_test_rays]") {
   REQUIRE(dual_ray_value[0] == -1);
   h.clear();
 
-  /*
 // An unbounded LP
   //  h.setOptionValue("output_flag", dev_run);
   h.addCol(-1.0, 0.0, kHighsInf, 0, nullptr, nullptr);
   h.addRow(1, kHighsInf, 1, index.data(), value.data());
   h.setOptionValue(kSolverString, kIpmString);
-  // Have to set simplex_iteration_limit = 0 to prevent primal simplex
-  // from resolving infeasible or unbounded
-  REQUIRE(h.setOptionValue("allow_unbounded_or_infeasible", true) ==
-HighsStatus::kOk); REQUIRE(h.setOptionValue("simplex_iteration_limit", 0) ==
-HighsStatus::kOk);
-
   h.run();
   bool has_primal_ray = false;
   std::vector<double> primal_ray_value = {NAN};
   h.getPrimalRay(has_primal_ray, primal_ray_value.data());
   REQUIRE(primal_ray_value[0] == 1);
   h.clear();
- */
 
   /*
   index = {0, 1};

@@ -1729,9 +1729,9 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
 
-  std::string presolve;
   bool solve_relaxation;
-  bool allow_unbounded_or_infeasible;
+  std::string presolve;
+  std::string solver;
   bool solve_unboundedness_problem = false;
 
   if (primal_ray_value != NULL) {
@@ -1749,15 +1749,19 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Solving LP to try to compute primal ray\n");
-      this->getOptionValue("presolve", presolve);
-      this->getOptionValue("solve_relaxation", solve_relaxation);
-      this->getOptionValue("allow_unbounded_or_infeasible",
-                           allow_unbounded_or_infeasible);
+      // Save the relaxation, presolve and solver settings
+      solve_relaxation = this->options_.solve_relaxation;
+      presolve = this->options_.presolve;
+      solver = this->options_.solver;
       solve_unboundedness_problem = true;
-      this->setOptionValue("presolve", kHighsOffString);
-      this->setOptionValue("solve_relaxation", true);
-      this->setOptionValue("allow_unbounded_or_infeasible", false);
+      this->options_.solve_relaxation = true;
+      this->options_.presolve = kHighsOffString;
+      this->options_.solver = kSimplexString;
       HighsStatus call_status = this->run();
+      // Restore the relaxation, presolve and solver settings
+      this->options_.solve_relaxation = solve_relaxation;
+      this->options_.presolve = presolve;
+      this->options_.solver = solver;
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
@@ -1822,11 +1826,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
       this->info_.invalidateDualKkt();
     }
-    // Restore the option values
-    this->setOptionValue("presolve", presolve);
-    this->setOptionValue("solve_relaxation", solve_relaxation);
-    this->setOptionValue("allow_unbounded_or_infeasible",
-                         allow_unbounded_or_infeasible);
     if (has_primal_ray) {
       assert(is_mip || this->info_.num_dual_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kUnbounded);
