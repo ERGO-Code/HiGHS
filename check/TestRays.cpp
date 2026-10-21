@@ -1041,7 +1041,7 @@ TEST_CASE("issue-3413", "[highs_test_rays]") {
   REQUIRE(primal_ray_value[0] == 1);
   h.clear();
 
-  // A problem with a semi-integer variable
+  // An infeasible problem with a semi-integer variable
   h.setOptionValue("output_flag", dev_run);
   index = {0, 1};
   value = {1, -1};
@@ -1055,6 +1055,24 @@ TEST_CASE("issue-3413", "[highs_test_rays]") {
   dual_ray_value = {NAN, NAN};
   h.getDualRay(has_dual_ray, dual_ray_value.data());
   REQUIRE(dual_ray_value[0] == 1);
+  h.clear();
 
+  // An unbounded problem with a semi-integer variable
+  h.setOptionValue("output_flag", dev_run);
+  index = {1};
+  value = {1};
+  h.addCol(-1.0, 2.0, 3.0, 0, nullptr, nullptr);
+  h.addCol(-1.0, 0.0, kHighsInf, 0, nullptr, nullptr);
+  h.changeColIntegrality(0, HighsVarType::kSemiInteger);
+  h.addRow(1, kHighsInf, 1, index.data(), value.data());
+  h.run();
+
+  has_primal_ray = false;
+  primal_ray_value = {NAN, NAN};
+  h.writeModel("");
+  h.writeSolution("", 1);
+  h.getPrimalRay(has_primal_ray, primal_ray_value.data());
+  REQUIRE(primal_ray_value[0] == 0);
+  REQUIRE(primal_ray_value[1] == 1);
   h.resetGlobalScheduler(true);
 }
