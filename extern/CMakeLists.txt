@@ -114,6 +114,6 @@ install(TARGETS highs_extras
     COMPONENT libs)
 
 if(DEFINED HIGHS_BINARY_DIR)
-  export(TARGETS highs_extras
+  export(TARGETS highs_extras ${HIGHS_BLAS_EXPORT_TARGETS}
     APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 endif()
