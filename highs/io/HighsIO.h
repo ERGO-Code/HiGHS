@@ -70,6 +70,11 @@ std::array<char, 32> highsDoubleToString(const double val,
                                          const double tolerance);
 
 /**
+ * @brief Convert a MIP relative gap number to a string
+ */
+std::array<char, 32> highsGapToString(const double gap);
+
+/**
  * @brief For _single-line_ user logging with message type notification
  */
 // Printing format: must contain exactly one "\n" at end of format
