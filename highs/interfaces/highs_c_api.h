@@ -2612,8 +2612,8 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
  *
  * @returns No status is returned since the function call cannot fail. Calling
  * this function while on a worker thread or during the execution of a Highs
- * function may cause crashes, but cannot be detected and hence is fully in the
- * callers responsibility.
+ * function may cause crashes, but cannot be detected and hence is fully the
+ * caller's responsibility.
  */
 void Highs_resetThreadScheduler(const HighsInt blocking);
 
