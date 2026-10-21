@@ -2360,6 +2360,32 @@ TEST_CASE("implied-row-dual-bound-invalidation", "[highs_test_mip_solver]") {
   }
 }
 
+/*
+TEST_CASE("unresolved-infeasible-or-unbounded", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_.assign(lp.num_col_, 0);
+  lp.col_lower_.assign(lp.num_col_, -kHighsInf);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+  lp.row_lower_ = {0, -19};
+  lp.row_upper_ = lp.row_lower_;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {1, 2, 0, 2};
+  lp.a_matrix_.value_ = {4, -1, 8, 1};
+
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    //    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kInfeasible);
+  }
+}
+*/
+
 TEST_CASE("implied-equation-unbounded", "[highs_test_mip_solver]") {
   // the MIP is unbounded, since x2 can be decreased and x1 increased without
   // bound. with MIP presolve off, the root LP relaxation is still presolved,
