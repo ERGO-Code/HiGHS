@@ -3,6 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
@@ -2471,4 +2472,66 @@ TEST_CASE("issue-3389-binding-row", "[highs_test_mip_solver]") {
              std::fabs(objective - (2 - 0.5 * tol)) < 1e-8));
   }
   highs.resetGlobalScheduler(true);
+}
+
+// unstable: with 64-bit HighsInt, the efficacy check in
+// cmirCutGenerationHeuristic fails in debug builds, since flipping the
+// complementation of integer variables with large bounds does not restore their
+// solution values exactly
+// TEST_CASE("large-int-bounds", "[highs_test_mip_solver]") {
+//   std::string filename =
+//       std::string(HIGHS_DIR) + "/check/instances/large-int-bounds.lp";
+//   Highs highs;
+//   highs.setOptionValue("output_flag", dev_run);
+//   highs.setOptionValue("mip_rel_gap", 0);
+//   highs.setOptionValue("mip_abs_gap", 0);
+//   highs.readModel(filename);
+//   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+//   const double optimal_objective = 9;
+//   solve(highs, kHighsOnString, require_model_status, optimal_objective);
+//   highs.resetGlobalScheduler(true);
+// }
+
+TEST_CASE("issue-3433", "[highs_test_mip_solver]") {
+  // conflict analysis used to keep the weaker of two relaxed bounds for the
+  // same domain change, which led to a wrong optimal objective for some seeds
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3433.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 19;
+  for (HighsInt seed : {11, 15, 124, 127, 267}) {
+    // solve resets the options
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue("random_seed", seed);
+    highs.setOptionValue("parallel", kHighsOffString);
+    highs.setOptionValue("mip_rel_gap", 0);
+    // the mip solver would otherwise start from the previous solution
+    highs.clearSolver();
+    solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  }
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
+  // an empty conflict, which can be derived when a proof is violated by the
+  // global bounds alone, is stored at the end of the conflict entries and
+  // used to be accessed out of range when synchronising the conflict pools of
+  // the parallel mip solver
+  HighsConflictPool workerPool(10, 100);
+  HighsConflictPool globalPool(10, 100);
+  HighsDomainChange domchg{1.0, 0, HighsBoundType::kLower};
+  workerPool.addConflictFromOtherPool(&domchg, 1);
+  workerPool.addConflictFromOtherPool(nullptr, 0);
+  REQUIRE(workerPool.getNumConflicts() == 2);
+
+  workerPool.syncConflictPool(globalPool);
+  REQUIRE(workerPool.getNumConflicts() == 0);
+  REQUIRE(globalPool.getNumConflicts() == 2);
+
+  const auto& ranges = globalPool.getConflictRanges();
+  REQUIRE(ranges[0].second - ranges[0].first == 1);
+  REQUIRE(ranges[1].second - ranges[1].first == 0);
 }

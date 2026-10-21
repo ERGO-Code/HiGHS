@@ -273,8 +273,9 @@ void PDLPSolver::preprocessLp() {
 
   // 7. Build the constraint matrix with proper row ordering
   // First, get the original matrix in column-wise format
-  HighsSparseMatrix original_matrix = original_lp_->a_matrix_;
-  original_matrix.ensureColwise();
+  HighsSparseMatrix original_matrix = original_lp_->a_matrix_.getColwise();
+  assert(original_matrix.isColwise());
+  // original_matrix.ensureColwise(); is now redundant
 
   // Create new matrix
   HighsSparseMatrix& processed_matrix = processed_lp.a_matrix_;
@@ -445,8 +446,9 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   std::vector<double> ax_original(original_lp_->num_row_, 0.0);
 
   // Get original matrix in column-wise format
-  HighsSparseMatrix orig_matrix = original_lp_->a_matrix_;
-  orig_matrix.ensureColwise();
+  HighsSparseMatrix orig_matrix = original_lp_->a_matrix_.getColwise();
+  assert(orig_matrix.isColwise());
+  // orig_matrix.ensureColwise(); is now redundant
 
   // Compute ax using only the original columns (not slack variables)
   for (HighsInt col = 0; col < original_num_col_; ++col) {
@@ -2383,8 +2385,9 @@ void PDLPSolver::setupGpu() {
   a_num_cols_ = lp_.num_col_;
   a_nnz_ = lp_.a_matrix_.numNz();
 
-  HighsSparseMatrix lp_csr = lp_.a_matrix_;
-  lp_csr.ensureRowwise();
+  HighsSparseMatrix lp_csr = lp_.a_matrix_.getRowwise();
+  assert(lp_csr.isRowwise());
+  // lp_csr.ensureRowwise(); is now redundant
 
   const std::vector<HighsInt>& h_a_row_ptr = lp_csr.start_;
   const std::vector<HighsInt>& h_a_col_ind = lp_csr.index_;

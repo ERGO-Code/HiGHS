@@ -26,20 +26,15 @@ std::pair<int64_t, HighsInt> HPresolve::computeProbingScore(
 }
 
 HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
-  mipsolver->profiling_->start(kMipClockProbingPresolve);
+  HighsProfilingScope clock(*mipsolver->profiling_, kMipClockProbingPresolve);
   probingEarlyAbort = false;
 
   HighsInt oldNumProbed = numProbed;
 
   // prepare probing
   bool firstCall = false;
-  mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(true);
-  Result prepareResult = prepareProbing(postsolve_stack, firstCall);
-  if (prepareResult != Result::kOk) {
-    mipsolver->profiling_->stop(kMipClockProbingPresolve);
-    mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
-    return prepareResult;
-  }
+  PresolveProbingScope probingFlag(mipsolver->mipdata_->cliquetable);
+  HPRESOLVE_CHECKED_CALL(prepareProbing(postsolve_stack, firstCall));
 
   HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
@@ -272,11 +267,7 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (numLiftOpps >= maxNumLiftOpps)
         implications.storeLiftingOpportunity = nullptr;
 
-      if (domain.infeasible()) {
-        mipsolver->profiling_->stop(kMipClockProbingPresolve);
-        mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
-        return Result::kPrimalInfeasible;
-      }
+      if (domain.infeasible()) return Result::kPrimalInfeasible;
     }
 
     // finalise probing
@@ -284,14 +275,9 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     HighsInt numBndsTightened = 0;
     HighsInt numVarsSubstituted = 0;
     HighsInt liftedNonzeros = 0;
-    Result finaliseResult =
-        finaliseProbing(postsolve_stack, firstCall, numVarsFixed,
-                        numBndsTightened, numVarsSubstituted, liftedNonzeros);
-    if (finaliseResult != Result::kOk) {
-      mipsolver->profiling_->stop(kMipClockProbingPresolve);
-      mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
-      return finaliseResult;
-    }
+    HPRESOLVE_CHECKED_CALL(finaliseProbing(postsolve_stack, firstCall,
+                                           numVarsFixed, numBndsTightened,
+                                           numVarsSubstituted, liftedNonzeros));
 
     probingNumDelCol += numVarsSubstituted;
 
@@ -314,8 +300,6 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
     }
   }
 
-  mipsolver->profiling_->stop(kMipClockProbingPresolve);
-  mipsolver->mipdata_->cliquetable.setinPresolveProbingFlag(false);
   return checkLimits(postsolve_stack);
 }
 
