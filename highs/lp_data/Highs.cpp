@@ -1151,7 +1151,10 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::fold() {
+  if (!timer_.running()) timer_.start();
+
   folder_.setModel(model_);
+  folder_.setTimeLimit(timer_, options_.time_limit);
   folder_.run();
 
   HighsStatus return_status = HighsStatus::kOk;
