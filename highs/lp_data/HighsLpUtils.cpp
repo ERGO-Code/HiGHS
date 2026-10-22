@@ -333,9 +333,10 @@ HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
     has_infinite_cost = true;
     highsLogUser(options.log_options, HighsLogType::kInfo,
                  "%" HIGHSINT_FORMAT
-                 " |cost| values greater than or equal to %12g are treated as "
+                 " |cost| value%s greater than or equal to %12g %s treated as "
                  "Infinity\n",
-                 num_infinite_cost, infinite_cost);
+                 num_infinite_cost, highsIntToPlural(num_infinite_cost).c_str(),
+                 infinite_cost, highsIntToBe(num_infinite_cost).c_str());
   }
   return return_status;
 }
@@ -1741,7 +1742,7 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
 HighsStatus changeLpIntegrality(HighsLp& lp,
                                 const HighsIndexCollection& index_collection,
                                 const vector<HighsVarType>& new_integrality,
-                                const HighsOptions options) {
+                                const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::kOk;
   assert(ok(index_collection));
   HighsInt from_k;
@@ -2294,19 +2295,31 @@ HighsStatus readSolutionFile(const std::string& filename,
       return readSolutionFileErrorReturn(in_file);  // EOL
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // Objective
-    // Next line should be "Columns", correct number and possibly a
-    // qualifier string, so can't be read (easily) as a std::ifstream
+    // Next line, possibly after ignoring lines giving the
+    // "Objective_bound"and "MIP_rel_gap", should be "# Columns",
+    // correct number and possibly a qualifier string, so can't be
+    // read (easily) as a std::ifstream
     std::string column_section_line;
-    std::getline(in_file, column_section_line);
-    std::stringstream column_section_line_ss(column_section_line);
-    if (column_section_line.empty() ||
-        !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
-                                            num_col, qualifier_string,
-                                            column_section_line_ss)) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Error reading line \"%s\"\n",
-                   column_section_line.c_str());
-      return readSolutionFileErrorReturn(in_file);
+    for (;;) {
+      std::getline(in_file, column_section_line);
+      std::stringstream column_section_line_ss(column_section_line);
+      if (column_section_line.empty() ||
+          !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
+                                              num_col, qualifier_string,
+                                              column_section_line_ss)) {
+        // If # hasn't been read, then it's "Objective_bound" or
+        // "MIP_rel_gap", so look at the next line
+        if (hash != "#") {
+          assert(hash == "Objective_bound" || hash == "MIP_rel_gap");
+          continue;
+        }
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: Error reading line \"%s\"\n",
+                     column_section_line.c_str());
+        return readSolutionFileErrorReturn(in_file);
+      }
+      // "# Columns" has been read correctly, to break
+      break;
     }
     assert(keyword == "Columns");
     // The default style parameter is kSolutionStyleRaw, and this

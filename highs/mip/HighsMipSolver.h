@@ -30,7 +30,7 @@ struct HighsTerminator {
   void terminate();
   bool terminated() const;
   HighsModelStatus terminationStatus() const;
-  void report(const HighsLogOptions log_options) const;
+  void report(const HighsLogOptions& log_options) const;
 };
 
 struct MipViolation {
@@ -175,7 +175,7 @@ class HighsMipSolver {
   void setParallelLock(bool lock) const;
   void setProfiling(HighsProfiling* profiling);
   HighsInt getMaxNumWorkers() const {
-    if (options_mip_->parallel != kHighsOnString || submip) {
+    if (options_mip_->parallel == kHighsOffString || submip) {
       return 1;
     }
     return highs::parallel::num_threads();

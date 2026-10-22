@@ -1426,8 +1426,8 @@ void Model::DualizeBackBasis(const std::vector<Int>& basic_status_solver,
 
 void Model::CorrectScaledBasicSolution(Vector& x, Vector& slack, Vector& y,
                                        Vector& z,
-                                       const std::vector<Int> cbasis,
-                                       const std::vector<Int> vbasis) const {
+                                       const std::vector<Int>& cbasis,
+                                       const std::vector<Int>& vbasis) const {
     for (Int j = 0; j < num_var_; j++) {
         if (vbasis[j] == IPX_nonbasic_lb)
             x[j] = scaled_lbuser_[j];

@@ -33,8 +33,8 @@ class OptionRecord {
   std::string description;
   bool advanced;
 
-  OptionRecord(HighsOptionType Xtype, std::string Xname,
-               std::string Xdescription, bool Xadvanced) {
+  OptionRecord(HighsOptionType Xtype, const std::string& Xname,
+               const std::string& Xdescription, bool Xadvanced) {
     this->type = Xtype;
     this->name = Xname;
     this->description = Xdescription;
@@ -48,8 +48,8 @@ class OptionRecordBool : public OptionRecord {
  public:
   bool* value;
   bool default_value;
-  OptionRecordBool(std::string Xname, std::string Xdescription, bool Xadvanced,
-                   bool* Xvalue_pointer, bool Xdefault_value)
+  OptionRecordBool(const std::string& Xname, const std::string& Xdescription,
+                   bool Xadvanced, bool* Xvalue_pointer, bool Xdefault_value)
       : OptionRecord(HighsOptionType::kBool, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
@@ -67,9 +67,10 @@ class OptionRecordInt : public OptionRecord {
   HighsInt lower_bound;
   HighsInt default_value;
   HighsInt upper_bound;
-  OptionRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                  HighsInt* Xvalue_pointer, HighsInt Xlower_bound,
-                  HighsInt Xdefault_value, HighsInt Xupper_bound)
+  OptionRecordInt(const std::string& Xname, const std::string& Xdescription,
+                  bool Xadvanced, HighsInt* Xvalue_pointer,
+                  HighsInt Xlower_bound, HighsInt Xdefault_value,
+                  HighsInt Xupper_bound)
       : OptionRecord(HighsOptionType::kInt, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
@@ -89,7 +90,7 @@ class OptionRecordDouble : public OptionRecord {
   double lower_bound;
   double upper_bound;
   double default_value;
-  OptionRecordDouble(std::string Xname, std::string Xdescription,
+  OptionRecordDouble(const std::string& Xname, const std::string& Xdescription,
                      bool Xadvanced, double* Xvalue_pointer,
                      double Xlower_bound, double Xdefault_value,
                      double Xupper_bound)
@@ -110,16 +111,16 @@ class OptionRecordString : public OptionRecord {
  public:
   std::string* value;
   std::string default_value;
-  OptionRecordString(std::string Xname, std::string Xdescription,
+  OptionRecordString(const std::string& Xname, const std::string& Xdescription,
                      bool Xadvanced, std::string* Xvalue_pointer,
-                     std::string Xdefault_value)
+                     const std::string& Xdefault_value)
       : OptionRecord(HighsOptionType::kString, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
   }
 
-  void assignvalue(std::string Xvalue) { *value = Xvalue; }
+  void assignvalue(const std::string& Xvalue) { *value = Xvalue; }
 
   virtual ~OptionRecordString() {}
 };
@@ -724,13 +725,6 @@ class HighsOptions : public HighsOptionsStruct {
     setLogOptions();
   }
 
-  HighsOptions(HighsOptions&& options) {
-    records = std::move(options.records);
-    HighsOptionsStruct::operator=(std::move(options));
-    this->log_options.log_stream = options.log_options.log_stream;
-    setLogOptions();
-  }
-
   const HighsOptions& operator=(const HighsOptions& other) {
     if (&other != this) {
       if ((HighsInt)records.size() == 0) initRecords();
@@ -741,15 +735,15 @@ class HighsOptions : public HighsOptionsStruct {
     return *this;
   }
 
-  const HighsOptions& operator=(HighsOptions&& other) {
-    if (&other != this) {
-      if ((HighsInt)records.size() == 0) initRecords();
-      HighsOptionsStruct::operator=(other);
-      this->log_options.log_stream = other.log_options.log_stream;
-      setLogOptions();
-    }
-    return *this;
-  }
+  // there is deliberately no move constructor or move assignment operator.
+  // each option record holds a pointer to the member of the object that
+  // created it, so records cannot be taken over from another object: a move
+  // constructor that steals them leaves the new object's records pointing at
+  // the members of the moved-from object (and dangling once it is destroyed).
+  // without move operations, rvalues bind to the copy constructor and copy
+  // assignment operator above, which give each object its own records. do
+  // not declare the move operations as deleted, since this would make moving
+  // (e.g. via std::move or returning by value) fail to compile.
 
   virtual ~HighsOptions() {
     if (records.size() > 0) deleteRecords();
@@ -1452,8 +1446,8 @@ class HighsOptions : public HighsOptionsStruct {
         "iis_strategy",
         "Strategy for IIS calculation: "
         "0 => Light test; 1 => Try dual ray; "
-        "2 => Try elastic LP; 4 => Prioritise columns; "
-        "8 => Find true IIS; 16 => Find relaxation IIS for MIP",
+        "2 => Try elastic LP; 4 => Find true IIS; "
+        "8 => Prioritise columns; 16 => Find relaxation IIS for MIP",
         advanced, &iis_strategy, kIisStrategyMin, kIisStrategyDefault,
         kIisStrategyMax);
     records.push_back(record_int);
@@ -1789,6 +1783,12 @@ class HighsOptions : public HighsOptionsStruct {
   std::vector<OptionRecord*> records;
   HighsInt num_user_settable_options_;
   void setLogOptions();
+  double getMipPrimalFeasibilityTolerance() const {
+    return this->mip_feasibility_tolerance;
+  }
+  double getMipDualFeasibilityTolerance() const {
+    return this->mip_feasibility_tolerance * 0.1;
+  }
 };
 
 void warnSolverInvalid(const HighsOptions& options,

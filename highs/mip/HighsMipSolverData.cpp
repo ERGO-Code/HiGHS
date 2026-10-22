@@ -506,7 +506,11 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     fflush(stdout);
   }
   analyticCenterComputed = true;
-  if (analyticCenterStatus == HighsModelStatus::kOptimal) {
+  // Disable fixings if presolve=off as it possible to produce valid analytic
+  // centers close to a bound when adding sets of equalities and redundant
+  // constraints
+  if (analyticCenterStatus == HighsModelStatus::kOptimal &&
+      mipsolver.options_mip_->presolve != kHighsOffString) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -514,8 +518,8 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
                           mipsolver.mipdata_->getDomain().col_lower_[i];
       if (boundRange == 0.0) continue;
 
-      double tolerance =
-          mipsolver.mipdata_->feastol * std::min(boundRange, 1.0);
+      const double tolerance =
+          (mipsolver.mipdata_->feastol / 10) * std::min(boundRange, 1.0);
 
       if (analyticCenter[i] <= mipsolver.model_->col_lower_[i] + tolerance) {
         mipsolver.mipdata_->getDomain().changeBound(
@@ -1103,19 +1107,19 @@ void HighsMipSolverData::runSetup() {
 		 "%" HIGHSINT_FORMAT " continuous, "
 		 "%" HIGHSINT_FORMAT " domain fixed)\n"
 		 "   %" HIGHSINT_FORMAT " nonzero%s\n"
-		 "   Thread count %" HIGHSINT_FORMAT " (of "
-		 "%" HIGHSINT_FORMAT " threads). "
-		 "Using %" HIGHSINT_FORMAT " max workers. "
-		 "Parallel search %s\n",
+		 "   Thread count: "
+		 "%" HIGHSINT_FORMAT " available cores, "
+		 "%" HIGHSINT_FORMAT " logical processors, "
+		 "using up to %" HIGHSINT_FORMAT " workers "
+		 "across %" HIGHSINT_FORMAT " threads.\n",
         // clang-format on
         mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s", num_col,
         num_col == 1 ? "" : "s", num_binary, num_general_integer,
         num_implied_integer, num_continuous, num_domain_fixed,
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
-        HighsInt{highs::parallel::num_threads()},
         HighsInt{static_cast<int>(highs::parallel::available_core_count())},
-        mipsolver.getMaxNumWorkers(),
-        mipsolver.getMaxNumWorkers() > 1 ? "on" : "off");
+        HighsInt{static_cast<int>(std::thread::hardware_concurrency())},
+        mipsolver.getMaxNumWorkers(), HighsInt{highs::parallel::num_threads()});
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has "
@@ -2760,7 +2764,7 @@ void HighsMipSolverData::setCallbackDataOut(
 
 bool HighsMipSolverData::interruptFromCallbackWithData(
     const int callback_type, const double mipsolver_objective_value,
-    const std::string message) const {
+    const std::string& message) const {
   if (!mipsolver.callback_->callbackActive(callback_type)) return false;
   assert(!mipsolver.submip);
   setCallbackDataOut(mipsolver_objective_value);
@@ -2855,7 +2859,8 @@ void HighsMipSolverData::terminatorReport() const {
 }
 
 void HighsMipSolverData::reportOriginalPresolvedCol(
-    const HighsInt original_col, const std::vector<double> presolved_solution) {
+    const HighsInt original_col,
+    const std::vector<double>& presolved_solution) {
   if (original_col < 0 || original_col >= mipsolver.orig_model_->num_col_)
     return;
   // Find this column in the presolved model
@@ -3051,7 +3056,7 @@ HighsModelStatus HighsTerminator::terminationStatus() const {
   return HighsModelStatus::kNotset;
 }
 
-void HighsTerminator::report(const HighsLogOptions log_options) const {
+void HighsTerminator::report(const HighsLogOptions& log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminator:        ");
   for (HighsInt instance = 0; instance < this->num_instance; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",

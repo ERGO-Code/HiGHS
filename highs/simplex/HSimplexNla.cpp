@@ -319,12 +319,12 @@ bool HSimplexNla::sparseLoopStyle(const HighsInt count, const HighsInt dim,
   return use_indices;
 }
 
-void HSimplexNla::reportArray(const std::string message, const HVector* vector,
+void HSimplexNla::reportArray(const std::string& message, const HVector* vector,
                               const bool force) const {
   reportArray(message, 0, vector, force);
 }
 
-void HSimplexNla::reportArray(const std::string message, const HighsInt offset,
+void HSimplexNla::reportArray(const std::string& message, const HighsInt offset,
                               const HVector* vector, const bool force) const {
   if (!report_ && !force) return;
   const HighsInt num_row = lp_->num_row_;
@@ -341,10 +341,10 @@ void HSimplexNla::reportArray(const std::string message, const HighsInt offset,
   }
 }
 
-void HSimplexNla::reportVector(const std::string message,
+void HSimplexNla::reportVector(const std::string& message,
                                const HighsInt num_index,
-                               const vector<double> vector_value,
-                               const vector<HighsInt> vector_index,
+                               const vector<double>& vector_value,
+                               const vector<HighsInt>& vector_index,
                                const bool force) const {
   if (!report_ && !force) return;
   assert((int)vector_value.size() >= num_index);
@@ -362,13 +362,13 @@ void HSimplexNla::reportVector(const std::string message,
   }
 }
 
-void HSimplexNla::reportArraySparse(const std::string message,
+void HSimplexNla::reportArraySparse(const std::string& message,
                                     const HVector* vector,
                                     const bool force) const {
   reportArraySparse(message, 0, vector, force);
 }
 
-void HSimplexNla::reportArraySparse(const std::string message,
+void HSimplexNla::reportArraySparse(const std::string& message,
                                     const HighsInt offset,
                                     const HVector* vector,
                                     const bool force) const {
@@ -401,7 +401,7 @@ void HSimplexNla::reportArraySparse(const std::string message,
   printf("\n");
 }
 
-void HSimplexNla::reportPackValue(const std::string message,
+void HSimplexNla::reportPackValue(const std::string& message,
                                   const HVector* vector,
                                   const bool force) const {
   if (!report_ && !force) return;
@@ -421,7 +421,7 @@ void HSimplexNla::reportPackValue(const std::string message,
   printf("\n");
 }
 
-HighsDebugStatus HSimplexNla::debugCheckData(const std::string message) const {
+HighsDebugStatus HSimplexNla::debugCheckData(const std::string& message) const {
   std::string scale_status;
   if (scale_ == NULL) {
     scale_status = "NULL";

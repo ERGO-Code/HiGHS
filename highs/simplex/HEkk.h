@@ -155,7 +155,7 @@ class HEkk {
 
   const HighsSimplexStats& getSimplexStats() const { return simplex_stats_; }
   void initialiseSimplexStats() { simplex_stats_.initialise(iteration_count_); }
-  void reportSimplexStats(FILE* file, const std::string message = "") const {
+  void reportSimplexStats(FILE* file, const std::string& message = "") const {
     simplex_stats_.report(file, message);
   }
 
@@ -171,7 +171,7 @@ class HEkk {
   void timeReporting(const HighsInt save_mod_recover);
   HighsDebugStatus debugRetainedDataOk(const HighsLp& lp) const;
   HighsDebugStatus debugNlaCheckInvert(
-      const std::string message, const HighsInt alt_debug_level = -1) const;
+      const std::string& message, const HighsInt alt_debug_level = -1) const;
   bool debugNlaScalingOk(const HighsLp& lp) const;
 
   // Data members
@@ -314,7 +314,7 @@ class HEkk {
   void computeDual();
   double computeDualForTableauColumn(const HighsInt iVar,
                                      const HVector& tableau_column) const;
-  bool reinvertOnNumericalTrouble(const std::string method_name,
+  bool reinvertOnNumericalTrouble(const std::string& method_name,
                                   double& numerical_trouble_measure,
                                   const double alpha_from_col,
                                   const double alpha_from_row,
@@ -379,12 +379,12 @@ class HEkk {
   bool switchToDevex();
 
   // private debug methods
-  HighsDebugStatus debugSimplex(const std::string message,
+  HighsDebugStatus debugSimplex(const std::string& message,
                                 const SimplexAlgorithm algorithm,
                                 const HighsInt phase,
                                 const bool initialise = false) const;
   void debugReportReinvertOnNumericalTrouble(
-      const std::string method_name, const double numerical_trouble_measure,
+      const std::string& method_name, const double numerical_trouble_measure,
       const double alpha_from_col, const double alpha_from_row,
       const double numerical_trouble_tolerance, const bool reinvert) const;
 
@@ -402,12 +402,12 @@ class HEkk {
   bool debugOneNonbasicMoveVsWorkArraysOk(const HighsInt var) const;
 
   HighsDebugStatus debugNonbasicFreeColumnSet(
-      const HighsInt num_free_col, const HSet nonbasic_free_col_set) const;
+      const HighsInt num_free_col, const HSet& nonbasic_free_col_set) const;
   HighsDebugStatus debugRowMatrix() const;
-  HighsDebugStatus devDebugDualSteepestEdgeWeights(const std::string message);
+  HighsDebugStatus devDebugDualSteepestEdgeWeights(const std::string& message);
   HighsDebugStatus debugDualSteepestEdgeWeights(
       const HighsInt alt_debug_level = -1);
-  HighsDebugStatus debugSimplexDualInfeasible(const std::string message,
+  HighsDebugStatus debugSimplexDualInfeasible(const std::string& message,
                                               const bool force_report = false);
   HighsDebugStatus debugComputeDual(const bool initialise = false) const;
   bool debugNoShiftsOrPerturbations() const;

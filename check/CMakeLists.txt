@@ -57,7 +57,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestIpm.cpp
       TestIpx.cpp
       TestLogging.cpp
-      TestLPFileFormat.cpp
+      TestLpFileFormat.cpp
       TestLpModification.cpp
       TestLpOrientation.cpp
       TestLpSolvers.cpp

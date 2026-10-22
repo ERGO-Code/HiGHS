@@ -1813,6 +1813,55 @@ TEST_CASE("issue-3342", "[highs_test_presolve]") {
   debugPrimalDualPresolve(lp, reduces_to_empty, options);
 }
 
+TEST_CASE("issue-3359", "[highs_test_presolve]") {
+  const std::string model = "3359";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3391", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.model_name_ = "issue-3391";
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {0, 1, 0};
+  lp.col_lower_.assign(lp.num_col_, -kHighsInf);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+  lp.row_lower_.assign(lp.num_row_, -kHighsInf);
+  lp.row_upper_.assign(lp.num_row_, 0);
+  lp.a_matrix_.start_ = {0, 2, 3, 5};
+  lp.a_matrix_.index_ = {0, 1, 1, 0, 1};
+  lp.a_matrix_.value_ = {-1, -1, 1, -1, -2};
+  // Second variable is free column singleton with cost 1 in the first
+  // row, so dual for the column must be 1-mu = 0, where mu is the
+  // dual for the first row. Hence mu = 1. However, the first row has
+  // no lower bound, so cannot have a positive dual. Hence the problem
+  // is dual infeasible. It is trivially unbounded since the second
+  // variable can be arbitrarily negative
+  //
+  // IPM without crossover is used, since this switches off dual
+  // fixing, which may well lead to correct presolve
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  h.setOptionValue(kSolverString, kIpmString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  h.resetGlobalScheduler(true);
+}
+
 void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
                              HighsOptions& options) {
   const bool debugging = dev_run;  // true;  //
@@ -1900,6 +1949,35 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
   if (strict_test) {
     REQUIRE(h.getRunData().num_simplex_iterations_after_postsolve == 0);
   }
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("initial-sweep-empty-fixed-col", "[highs_test_presolve]") {
+  // with the empty column rule switched off, the fixed column rule removes
+  // the last column, which is fixed and empty, so that its matrix entries
+  // start at the end of the matrix, which used to be accessed out of range
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 3};
+  lp.col_lower_ = {0, 2};
+  lp.col_upper_ = {10, 2};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleEmptyCol) ==
+          HighsStatus::kOk);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 7);
+  REQUIRE(h.getSolution().col_value[1] == 2);
 
   h.resetGlobalScheduler(true);
 }

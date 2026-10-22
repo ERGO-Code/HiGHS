@@ -46,6 +46,9 @@ void writeModelObjective(FILE* file, const HighsLogOptions& log_options,
                          const HighsModel& model,
                          const std::vector<double>& primal_solution);
 
+void writeMipBoundGap(FILE* file, const HighsLogOptions& log_options,
+                      const double mip_dual_bound, const double mip_gap);
+
 void writeLpObjective(FILE* file, const HighsLogOptions& log_options,
                       const HighsLp& lp,
                       const std::vector<double>& primal_solution);
@@ -59,9 +62,10 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
                          const bool sparse, const bool partial = false);
 
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
-                        const HighsModel& model, const HighsSolution& solution,
-                        const HighsInfo& info, const bool sparse,
-                        const bool partial);
+                        const HighsModel& model,
+                        const HighsModelStatus model_status,
+                        const HighsSolution& solution, const HighsInfo& info,
+                        const bool sparse, const bool partial);
 
 bool replaceSpacesByUnderscores(std::string& name);
 
@@ -78,7 +82,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsNameHash& name_hash,
                            HighsFileType type = HighsFileType::kMps);
 
-HighsFileType getFileType(const std::string filename);
+HighsFileType getFileType(const std::string& filename);
 
 void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,

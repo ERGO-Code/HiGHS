@@ -19,6 +19,9 @@ struct KktMatrix {
   std::vector<Int> corr_A;
   std::atomic<Int64> NE_nz_limit{kHighsIInf};
 
+  bool NE_ready = false;
+  bool AS_ready = false;
+
   std::vector<Int> ptrAS;
   std::vector<Int> rowsAS;
   std::vector<double> valAS;

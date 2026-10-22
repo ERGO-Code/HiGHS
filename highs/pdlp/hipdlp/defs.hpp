@@ -185,7 +185,7 @@ struct DetailedTimings {
   double other_time = 0.0;
 
   void print(const std::string& solver_name,
-             const HighsLogOptions log_options) const {
+             const HighsLogOptions& log_options) const {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "\n=== %s Detailed Timings ===\n", solver_name.c_str());
     highsLogUser(log_options, HighsLogType::kInfo,
