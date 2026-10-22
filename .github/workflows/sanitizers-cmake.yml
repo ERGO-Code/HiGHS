@@ -6,6 +6,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # GCC's ASan reports a false positive odr-violation for libstdc++ inline
+  # globals (e.g. shared_ptr's __tag) present in both unit_tests and
+  # libhighs.so; level 1 still reports globals whose sizes differ
+  ASAN_OPTIONS: detect_odr_violation=1
+
 jobs:
   gcc:
     runs-on: ${{ matrix.os }}
