@@ -54,13 +54,24 @@ namespace folding {
 // problem has a unique optimal solution (for LPs).
 
 class Folder {
+  struct Data {
+    const HighsSparseMatrix At;
+    const HighsHessian Q;
+    std::vector<HighsInt> row_colour;
+    std::vector<HighsInt> col_colour;
+
+    Data(const HighsLp& lp, const HighsHessian& hessian)
+        : At(lp.a_matrix_.buildOppositeFormat()),
+          Q(hessian.toSquare()),
+          row_colour(lp.num_row_),
+          col_colour(lp.num_col_) {}
+  };
+
   const HighsLp& lp_;
   const HighsSparseMatrix& A_;
-  const HighsSparseMatrix At_;
-  const HighsHessian Q_;
+  const HighsHessian& hessian_;
 
-  std::vector<HighsInt> row_colour_;
-  std::vector<HighsInt> col_colour_;
+  std::unique_ptr<Data> data_;
 
   HighsInt initial_row_colours_{};
   HighsInt initial_col_colours_{};
@@ -81,19 +92,17 @@ class Folder {
   const HighsTimer* timer_ = nullptr;
   double time_limit_ = kHighsInf;
 
-  template <typename Data>
+  template <typename T>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
-
   void findInitialColour();
   void foldModel();
-
   bool isPartitionCorrect() const;
   bool success() const { return status_ == FoldStatus::kOk; }
-
   bool checkTimeLimit();
 
  public:
-  explicit Folder(const HighsModel& model);
+  explicit Folder(const HighsModel& model)
+      : lp_{model.lp_}, A_{model.lp_.a_matrix_}, hessian_{model.hessian_} {}
 
   // Folder holds references to the lp, so it cannot bind to a temporary
   // HighsModel
