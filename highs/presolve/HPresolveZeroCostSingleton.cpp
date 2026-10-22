@@ -17,7 +17,7 @@ HPresolve::Result HPresolve::zeroCostSingleton(
   // relax s out as its value can be determined in postsolve.
   // The row may now admit additional reductions afterwards.
   // Dual fixing already handles single-sided row case with fixings.
-  if (model->integrality_[col] != HighsVarType::kContinuous ||
+  if (model->integrality_[col] == HighsVarType::kInteger ||
       model->col_cost_[col] != 0.0 || colsize[col] != 1) {
     return Result::kOk;
   }
