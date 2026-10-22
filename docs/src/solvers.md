@@ -84,9 +84,6 @@ HiGHS has two interior point (IPM) solvers:
   * Reverse Cuthill-McKee, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "rcm".
 
-  HiPO performs best when the BLAS library it uses runs in serial. With
-  OpenBLAS, HiPO sets this up itself. Since this is a process-wide setting,
-  it can be disabled with the
   [__hipo\_serial\_blas__](@ref option-hipo-serial-blas) option. See
   [BLAS threads](@ref parallel-blas-threads) for details.
 

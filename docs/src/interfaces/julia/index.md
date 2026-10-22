@@ -48,9 +48,9 @@ The HiGHS binaries used by HiGHS.jl access BLAS through
 [libblastrampoline](https://github.com/JuliaLinearAlgebra/libblastrampoline),
 which by default forwards to the OpenBLAS shipped with Julia. In this case
 HiPO does not change the number of BLAS threads, and Julia runs OpenBLAS with
-multiple threads by default. Since HiPO performs best when BLAS runs in serial
-(see [BLAS threads](@ref parallel-blas-threads)), set the number of BLAS
-threads to one before solving with HiPO:
+multiple threads by default. Since HiPO performs best when OpenBLAS runs in
+serial (see [BLAS threads](@ref parallel-blas-threads)), set the number of
+BLAS threads to one before solving with HiPO:
 
 ```julia
 using JuMP

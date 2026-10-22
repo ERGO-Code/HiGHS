@@ -105,10 +105,10 @@ The extent to which parallelism is used in HiPO depends on the value of the
 HiPO calls BLAS routines for the dense linear algebra in the factorisation
 and solves. Many BLAS libraries are multi-threaded, and their threads are
 independent of the HiGHS [threads](@ref option-threads) option. Since HiPO
-already exploits parallelism at a higher level, also running BLAS with
+already exploits parallelism at a higher level, also running OpenBLAS with
 multiple threads oversubscribes the cores and can slow HiPO down
 considerably, as well as making its behaviour non-deterministic. HiPO
-performs best when BLAS runs in serial.
+performs best when OpenBLAS runs in serial.
 
 When HiGHS is built with OpenBLAS, HiPO therefore sets the number of OpenBLAS
 threads to one before solving, and stops with an error if OpenBLAS does not
@@ -134,7 +134,7 @@ For other BLAS libraries, HiPO does not change the number of threads:
 
 - Apple Accelerate: HiPO adjusts its own parallelism to suit Accelerate, so no
   action is needed.
-- libblastrampoline (used by HiGHS.jl, see [HiGHS.jl](@ref HiGHS.jl)): call
+- libblastrampoline (used by HiGHS.jl, see [HiGHS.jl](@ref HiGHS.jl)): if using OpenBLAS, call
   `BLAS.set_num_threads(1)` in Julia before solving with HiPO.
 
 ## MIP
