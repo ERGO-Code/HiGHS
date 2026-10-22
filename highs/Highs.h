@@ -1349,6 +1349,7 @@ class Highs {
    * @brief Interpret common qualifiers to string values
    */
   std::string highsStatusToString(const HighsStatus status) const;
+  std::string foldingStatusToString(const highs::folding::Status status) const;
   std::string presolveStatusToString(
       const HighsPresolveStatus presolve_status) const;
   std::string modelStatusToString(const HighsModelStatus model_status) const;
@@ -1701,6 +1702,9 @@ class Highs {
                                const HighsBasis& basis);
 
   highs::folding::Folder folder_;
+  highs::folding::Status runFolding();
+  void runUnfolding(const HighsSolution& solution);
+
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve(const bool force_lp_presolve,
                                   const bool force_presolve = false);

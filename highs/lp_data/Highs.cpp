@@ -1151,27 +1151,54 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::fold() {
-  if (!timer_.running()) timer_.start();
-
-  folder_.setModel(model_);
-  folder_.setTimeLimit(timer_, options_.time_limit);
-  folder_.run();
+  this->reportModelStats();
+  highs::folding::Status folding_status = runFolding();
 
   HighsStatus return_status = HighsStatus::kOk;
-  if (folder_.getInfo().status == highs::folding::Status::kOk) {
+  if (folding_status == highs::folding::Status::kOk) {
     return_status = HighsStatus::kOk;
     folded_model_ = folder_.getFoldedModel();
 
-  } else if (folder_.getInfo().status == highs::folding::Status::kNotReduced) {
+  } else if (folding_status == highs::folding::Status::kNotReduced) {
     return_status = HighsStatus::kWarning;
     folded_model_ = model_;
 
   } else {
     return_status = HighsStatus::kError;
     folded_model_.clear();
+    setHighsModelStatusAndClearSolutionAndBasis(
+        HighsModelStatus::kPresolveError);
   }
 
-  return return_status;
+  reportFoldingReductions(options_.log_options, folding_status, model_,
+                          folded_model_);
+
+  return returnFromHighs(return_status);
+}
+
+highs::folding::Status Highs::runFolding() {
+  if (!timer_.running()) timer_.start();
+
+  folder_.setModel(model_);
+  folder_.setTimeLimit(timer_, options_.time_limit);
+  folder_.run();
+
+  return folder_.getInfo().status;
+}
+
+void Highs::runUnfolding(const HighsSolution& sol) {
+  const HighsSolution unfolded_sol = folder_.unfold(sol);
+
+  if (unfolded_sol.value_valid && unfolded_sol.dual_valid) {
+    solution_.clear();
+    solution_ = unfolded_sol;
+    solution_.value_valid = true;
+    solution_.dual_valid = true;
+    info_.objective_function_value = model_.objectiveValue(solution_.col_value);
+    invalidateBasis();
+  } else
+    setHighsModelStatusAndClearSolutionAndBasis(
+        HighsModelStatus::kPostsolveError);
 }
 
 HighsStatus Highs::run() {
@@ -3747,6 +3774,21 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
   return returnFromHighs(return_status);
 }
 
+HighsStatus Highs::unfold(const HighsSolution& solution) {
+  if (folder_.getInfo().status != highs::folding::Status::kOk &&
+      folder_.getInfo().status != highs::folding::Status::kNotReduced) {
+    highsLogUser(options_.log_options, HighsLogType::kWarning,
+                 "Cannot unfold with folding status: %s\n",
+                 foldingStatusToString(folder_.getInfo().status).c_str());
+    return HighsStatus::kWarning;
+  }
+
+  if (folder_.getInfo().status == highs::folding::Status::kOk)
+    runUnfolding(solution);
+
+  return HighsStatus::kOk;
+}
+
 HighsStatus Highs::postsolve(const HighsSolution& solution) {
   HighsBasis basis;
   return this->postsolve(solution, basis);
@@ -3870,6 +3912,29 @@ std::string Highs::presolveStatusToString(
     default:
       assert(1 == 0);
       return "Unrecognised presolve status";
+  }
+}
+
+std::string Highs::foldingStatusToString(
+    const highs::folding::Status status) const {
+  switch (status) {
+    case highs::folding::Status::kOk:
+      return "Reduced";
+    case highs::folding::Status::kNotRun:
+      return "Not run";
+    case highs::folding::Status::kNotReduced:
+      return "Not reduced";
+    case highs::folding::Status::kTimeLimit:
+      return "Timeout";
+    case highs::folding::Status::kOutOfMemory:
+      return "Memory allocation error";
+    case highs::folding::Status::kInvalidModel:
+      return "Invalid model";
+    case highs::folding::Status::kGenericError:
+      return "Error";
+    default:
+      assert(1 == 0);
+      return "Unrecognised folding status";
   }
 }
 

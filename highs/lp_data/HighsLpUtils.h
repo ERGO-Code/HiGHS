@@ -18,6 +18,7 @@
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsUtils.h"
+#include "folding/Fold.h"
 
 // class HighsLp;
 struct SimplexScale;
@@ -286,6 +287,10 @@ bool isMatrixDataNull(const HighsLogOptions& log_options,
 void reportPresolveReductions(const HighsLogOptions& log_options,
                               HighsPresolveStatus presolve_status,
                               const HighsLp& lp, const HighsLp& presolved_lp);
+
+void reportFoldingReductions(const HighsLogOptions& log_options,
+                             highs::folding::Status stauts,
+                             const HighsModel& model, const HighsModel& folded_model);
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);

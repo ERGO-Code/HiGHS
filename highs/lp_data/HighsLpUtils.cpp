@@ -3338,6 +3338,58 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
                message.c_str());
 }
 
+void reportFoldingReductions(const HighsLogOptions& log_options,
+                             highs::folding::Status status,
+                             const HighsModel& model,
+                             const HighsModel& folded_model) {
+  const HighsInt num_col_from = model.lp_.num_col_;
+  const HighsInt num_row_from = model.lp_.num_row_;
+  const HighsInt num_A_nz_from = model.lp_.numNz();
+  const HighsInt hessian_nz = model.hessian_.numNz();
+  const HighsInt num_Q_nz_from =
+      model.hessian_.format_ == HessianFormat::kTriangular
+          ? hessian_nz
+          : (hessian_nz - num_col_from) / 2 + num_col_from;
+  HighsInt num_col_to = 0;
+  HighsInt num_row_to = 0;
+  HighsInt num_A_nz_to = 0;
+  HighsInt num_Q_nz_to = 0;
+
+  if (status == highs::folding::Status::kOk) {
+    num_col_to = folded_model.lp_.num_col_;
+    num_row_to = folded_model.lp_.num_row_;
+    num_A_nz_to = folded_model.lp_.numNz();
+    num_Q_nz_to = folded_model.hessian_.numNz();
+
+  } else if (status == highs::folding::Status::kNotReduced) {
+    num_col_to = num_col_from;
+    num_row_to = num_row_from;
+    num_A_nz_to = num_A_nz_from;
+    num_Q_nz_to = num_Q_nz_from;
+
+  } else
+    return;
+
+  if (model.hessian_.empty())
+    highsLogUser(
+        log_options, HighsLogType::kInfo,
+        "Folding reductions: rows %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
+        "); columns %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
+        "); A nz %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT ")\n",
+        num_row_to, num_row_from - num_row_to, num_col_to,
+        num_col_from - num_col_to, num_A_nz_to, num_A_nz_from - num_A_nz_to);
+  else
+    highsLogUser(
+        log_options, HighsLogType::kInfo,
+        "Folding reductions: rows %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
+        "); columns %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
+        "); A nz %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT
+        "); Q nz %" HIGHSINT_FORMAT "(-%" HIGHSINT_FORMAT ")\n",
+        num_row_to, num_row_from - num_row_to, num_col_to,
+        num_col_from - num_col_to, num_A_nz_to, num_A_nz_from - num_A_nz_to,
+        num_Q_nz_to, num_Q_nz_from - num_Q_nz_to);
+}
+
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp) {
   HighsInt max_col_num_en = -1;

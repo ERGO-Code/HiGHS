@@ -8,7 +8,7 @@
 #include "folding/Fold.h"
 #include "lp_data/HighsSolution.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 HighsModel getPaperLp() {
   // Define the LP from "Dimension Reduction via Colour Refinement"
@@ -159,6 +159,25 @@ void runFoldingTest(const std::string& filename) {
   highs.resetGlobalScheduler();
 }
 
+void runFoldingTestFromHighs(const std::string& filename) {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  HighsStatus status = highs.fold();
+  REQUIRE(status == HighsStatus::kOk);
+
+  Highs highs2;
+  REQUIRE(highs2.passModel(highs.getFoldedModel()) == HighsStatus::kOk);
+  REQUIRE(highs2.run() == HighsStatus::kOk);
+  REQUIRE(highs2.getModelStatus() == HighsModelStatus::kOptimal);
+
+  const HighsSolution folded_sol = highs2.getSolution();
+  highs.unfold(folded_sol);
+  REQUIRE(isOptimal(highs, highs.getModel(), highs.getSolution()));
+
+  highs.resetGlobalScheduler();
+}
+
 TEST_CASE("test-folding-paper", "[highs-folding]") {
   HighsModel model = getPaperLp();
 
@@ -266,18 +285,21 @@ TEST_CASE("test-folding", "[highs-folding]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/folding_lp.mps";
   runFoldingTest(filename);
+  runFoldingTestFromHighs(filename);
 }
 
 TEST_CASE("test-folding-qp", "[highs-folding]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/folding_qp.mps";
   runFoldingTest(filename);
+  runFoldingTestFromHighs(filename);
 }
 
 TEST_CASE("test-folding-qp-groups", "[highs-folding]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/folding_qp_groups.mps";
   runFoldingTest(filename);
+  runFoldingTestFromHighs(filename);
 }
 
 TEST_CASE("test-folding-time-limit", "[highs-folding]") {
