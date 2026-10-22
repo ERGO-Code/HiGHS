@@ -1215,13 +1215,13 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
 
-  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
   // Zero the QP regularization so "true" solution is obtained
   REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
           HighsStatus::kOk);
 
   for (auto& solver : solvers) {
     highs.setOptionValue("solver", solver);
+    REQUIRE(highs.passModel(model) == HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.writeSolution("", kSolutionStylePretty) ==
             HighsStatus::kWarning);
