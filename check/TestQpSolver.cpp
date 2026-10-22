@@ -1626,3 +1626,29 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
   }
   h.resetGlobalScheduler(true);
 }
+
+// Native replay of the exact model/initial point captured at the Python API.
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <numeric>
+
+#include "/home/jajhall/HiGHS/build/3453/highs_case_data.h"
+#include "Highs.h"
+
+TEST_CASE("issue-3453", "[qpsolver]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("primal_feasibility_tolerance", 1e-9);
+  highs.setOptionValue("dual_feasibility_tolerance", 1e-8);
+  highs.setOptionValue("small_matrix_value", 1e-12);
+  HighsModel model = frozen_model();
+  const auto passed = highs.passModel(model);
+  highs.writeModel("3453.mps");
+  std::vector<HighsInt> indices(frozen_initial.size());
+  std::iota(indices.begin(), indices.end(), 0);
+  const auto initialized = highs.setSolution(
+      HighsInt(indices.size()), indices.data(), frozen_initial.data());
+  const auto ran = highs.run();
+  highs.resetGlobalScheduler(true);
+}
