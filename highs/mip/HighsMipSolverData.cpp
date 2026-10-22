@@ -486,6 +486,12 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
+    // The model status only indicates that the LP is solved, which is
+    // true for any feasible point since the costs are zero. Fixing
+    // variables in finishAnalyticCenterComputation requires the point to
+    // be centred, so only accept an optimal status if centring succeeded
+    if (ipm.getInfo().centring_status != kCentringStatusSuccess)
+      analyticCenterStatus = HighsModelStatus::kUnknown;
     analyticCenter = sol;
   });
 }

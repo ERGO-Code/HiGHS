@@ -198,6 +198,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (report_solve_data) reportSolveData(options.log_options, ipx_info);
   highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
   highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+  // Record the outcome of any centring, since the model status only
+  // indicates whether the LP is solved. Centring is not tried if the
+  // IPM stops before reaching optimality
+  highs_info.centring_status =
+      !ipx_info.centring_tried    ? kCentringStatusNone
+      : ipx_info.centring_success ? kCentringStatusSuccess
+                                  : kCentringStatusFailed;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {

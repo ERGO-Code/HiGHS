@@ -198,6 +198,7 @@ class HighsIisInfo:
 
 class HighsInfo:
     basis_validity: int
+    centring_status: int
     crossover_iteration_count: int
     dual_solution_status: int
     ipm_iteration_count: int
