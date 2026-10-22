@@ -13,6 +13,7 @@
 
 #include <sstream>
 
+#include "folding/Fold.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsIis.h"
 #include "lp_data/HighsLpUtils.h"
@@ -1699,6 +1700,7 @@ class Highs {
   HighsStatus callRunPostsolve(const HighsSolution& solution,
                                const HighsBasis& basis);
 
+  highs::folding::Folder folder_;
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve(const bool force_lp_presolve,
                                   const bool force_presolve = false);

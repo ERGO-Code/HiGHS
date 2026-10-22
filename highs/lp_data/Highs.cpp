@@ -19,7 +19,6 @@
 #include <sstream>
 
 #include "HighsExternalApi.h"
-#include "folding/Fold.h"
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
 #include "ipm/IpxWrapper.h"
@@ -1152,14 +1151,18 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::fold() {
-  highs::folding::Folder folder;
-  folder.setModel(model_);
-  folder.run();
+  folder_.setModel(model_);
+  folder_.run();
 
   HighsStatus return_status = HighsStatus::kOk;
-  if (folder.getInfo().status == highs::folding::Status::kOk) {
+  if (folder_.getInfo().status == highs::folding::Status::kOk) {
     return_status = HighsStatus::kOk;
-    folded_model_ = folder.getFoldedModel();
+    folded_model_ = folder_.getFoldedModel();
+
+  } else if (folder_.getInfo().status == highs::folding::Status::kNotReduced) {
+    return_status = HighsStatus::kWarning;
+    folded_model_ = model_;
+
   } else {
     return_status = HighsStatus::kError;
     folded_model_.clear();
