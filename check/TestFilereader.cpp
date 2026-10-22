@@ -747,3 +747,23 @@ TEST_CASE("write-semiinteger-variable", "[highs_filereader]") {
   REQUIRE(model2.lp_.integrality_[0] == HighsVarType::kSemiInteger);
   std::remove(filename.c_str());
 }
+
+TEST_CASE("issue-3457", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 0;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {2};
+  lp.col_upper_ = {2};
+  lp.col_names_ = {"x"};
+  lp.integrality_ = {HighsVarType::kInteger};
+  highs.passModel(lp);
+  // Row names are trivially absent, but not needed, so make sure that
+  // an unnecessary warning isn't issued
+  REQUIRE(highs.writeModel(filename) == HighsStatus::kOk);
+  std::remove(filename.c_str());
+}
