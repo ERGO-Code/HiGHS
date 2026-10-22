@@ -1824,6 +1824,7 @@ HighsStatus Highs::calledOptimizeModel() {
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
         // can't return this. Use primal simplex solver on the original
         // LP
+        HighsStatus save_return_status = return_status;
         HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
@@ -1833,11 +1834,30 @@ HighsStatus Highs::calledOptimizeModel() {
                      this_solve_original_lp_time);
         // Recover the options
         options_ = save_options;
-        if (return_status == HighsStatus::kError)
-          return returnFromOptimizeModel(return_status, undo_mods);
-        info_.valid = true;
+        // Primal simplex doesn't necessarily resolve the
+        // kUnboundedOrInfeasible case, as it may time out or reach
+        // the iteration count (#3383), or even fail
         assert(model_status_ == HighsModelStatus::kInfeasible ||
-               model_status_ == HighsModelStatus::kUnbounded);
+               model_status_ == HighsModelStatus::kUnbounded ||
+               model_status_ == HighsModelStatus::kTimeLimit ||
+               model_status_ == HighsModelStatus::kIterationLimit ||
+               model_status_ == HighsModelStatus::kInterrupt);
+        const bool resolved = model_status_ == HighsModelStatus::kInfeasible ||
+                              model_status_ == HighsModelStatus::kUnbounded;
+        if (resolved) {
+          info_.valid = true;
+        } else {
+          // Unresolved, so return with result from presolve
+          highsLogUser(log_options, HighsLogType::kInfo,
+                       "Unable to resolve whether LP is unbounded or "
+                       "infeasible: primal simplex yields model status of %s\n",
+                       modelStatusToString(model_status_).c_str());
+
+          model_status_ = HighsModelStatus::kUnboundedOrInfeasible;
+          return_status = save_return_status;
+          setHighsModelStatusAndClearSolutionAndBasis(
+              HighsModelStatus::kUnboundedOrInfeasible);
+        }
         return returnFromOptimizeModel(return_status, undo_mods);
       }
       case HighsPresolveStatus::kTimeout: {
@@ -4724,8 +4744,14 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
           (options_.solver == kPdlpString) || model_.isMip()) {
         assert(return_status == HighsStatus::kOk);
       } else {
-        // This model status is not permitted unless IPM is run without
-        // crossover, or if PDLP is used
+        // This model status is not permitted unless IPM is run
+        // without crossover, if PDLP is used, or if the problem is a
+        // MIP. This latter qualification was introduced in the case
+        // where MIP presolve identifies kUnboundedOrInfeasible and
+        // the problem is not then solved to resolve the model
+        // status. However, as exposed by #3383, it's possible that a
+        // LP relaxation yields kUnboundedOrInfeasible because the
+        // simplex iteration limit is zero.
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "returnFromHighs: HighsModelStatus::kUnboundedOrInfeasible is not "

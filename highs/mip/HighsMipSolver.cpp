@@ -401,6 +401,9 @@ restart:
          mipdata_->getDomain().getDomainChangeStack()) {
       worker.getGlobalDomain().changeBound(domchg,
                                            HighsDomain::Reason::unspecified());
+      if (worker.getGlobalDomain().infeasible()) {
+        return;
+      }
     }
 #ifndef NDEBUG
     for (HighsInt col = 0; col < numCol(); ++col) {
@@ -474,7 +477,7 @@ restart:
   // Maximum node processing budget for each worker in a batch during parallel
   constexpr HighsInt kMaxNodesPerWorker = 100;
   HighsInt maxNodesPerWorkerLim =
-      max_num_workers > 1 ? kMaxNodesPerWorker : kHighsIInf;
+      max_num_workers > 1 ? kMaxNodesPerWorker : 10000;
   int64_t numStallNodes = 0;
   int64_t lastLbLeave = 0;
   int64_t numQueueLeaves = 0;
@@ -1136,9 +1139,24 @@ restart:
     if (mipdata_->nodequeue.empty()) break;
 
     // Reset global domain and sync worker's global domains.
-    bool spawn_more_workers = num_workers < max_num_workers &&
-                              mipdata_->nodequeue.numNodes() > num_workers;
+    const bool spawn_more_workers =
+        num_workers < max_num_workers &&
+        mipdata_->nodequeue.numNodes() > num_workers;
     resetGlobalDomain(spawn_more_workers, mipdata_->hasMultipleWorkers());
+
+    for (HighsMipWorker& worker : mipdata_->workers) {
+      if (worker.getGlobalDomain().infeasible()) {
+        infeasible = true;
+        break;
+      }
+    }
+    if (infeasible) {
+      mipdata_->nodequeue.clear();
+      mipdata_->pruned_treeweight = 1.0;
+      mipdata_->updateLowerBound(std::min(kHighsInf, mipdata_->upper_bound));
+      mipdata_->printDisplayLine();
+      break;
+    }
 
     if (nodeLim == maxNodesPerWorkerLim &&
         checkWorkerRestartVotes(workerRestartVotes))
@@ -1416,8 +1434,7 @@ std::array<char, 128> getGapString(const double gap_,
   if (gap_ == kHighsInf)
     std::strcpy(gapString.data(), "inf");
   else {
-    double printTol = std::max(std::min(1e-2, 1e-1 * gap_), 1e-6);
-    auto gapValString = highsDoubleToString(100.0 * gap_, printTol);
+    auto gapValString = highsGapToString(gap_);
     double gapTol = options_mip_->mip_rel_gap;
 
     if (options_mip_->mip_abs_gap > options_mip_->mip_feasibility_tolerance) {
@@ -1431,8 +1448,7 @@ std::array<char, 128> getGapString(const double gap_,
       std::snprintf(gapString.data(), gapString.size(), "%s%%",
                     gapValString.data());
     else if (gapTol != kHighsInf) {
-      printTol = std::max(std::min(1e-2, 1e-1 * gapTol), 1e-6);
-      auto gapTolString = highsDoubleToString(100.0 * gapTol, printTol);
+      auto gapTolString = highsGapToString(gapTol);
       std::snprintf(gapString.data(), gapString.size(),
                     "%s%% (tolerance: %s%%)", gapValString.data(),
                     gapTolString.data());

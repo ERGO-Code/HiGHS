@@ -197,10 +197,12 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::run(
       num_deleted_cols_++;
     } else if (allow_rule_[kPresolveRuleFixedCol] && isFixed) {
       // Remove fixed column
+      // use pointer arithmetic since iEl equals the number of nonzeros if
+      // this column and all remaining columns are empty
       HighsInt iEl = lp_.a_matrix_.start_[iCol];
       postsolve_stack.removedModelFixedCol(
           iCol, lp_.col_lower_[iCol], lp_.col_cost_[iCol], col_nnz,
-          &lp_.a_matrix_.index_[iEl], &lp_.a_matrix_.value_[iEl]);
+          lp_.a_matrix_.index_.data() + iEl, lp_.a_matrix_.value_.data() + iEl);
       removeFixedCol(iCol);
       newColIndex[iCol] = -1;
       num_fixed_col++;

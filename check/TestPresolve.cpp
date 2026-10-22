@@ -1952,3 +1952,32 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("initial-sweep-empty-fixed-col", "[highs_test_presolve]") {
+  // with the empty column rule switched off, the fixed column rule removes
+  // the last column, which is fixed and empty, so that its matrix entries
+  // start at the end of the matrix, which used to be accessed out of range
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 3};
+  lp.col_lower_ = {0, 2};
+  lp.col_upper_ = {10, 2};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleEmptyCol) ==
+          HighsStatus::kOk);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 7);
+  REQUIRE(h.getSolution().col_value[1] == 2);
+
+  h.resetGlobalScheduler(true);
+}
