@@ -250,10 +250,20 @@ class Highs {
   HighsStatus presolve();
 
   /**
+   * @brief Apply LP or QP folding to the incumbent model.
+   */
+  HighsStatus fold();
+
+  /**
    * @brief Run the solver, applying file-based options and user
    * scaling before optimization
    */
   HighsStatus run();
+
+  /**
+   * @brief Unfold the given solution.
+   */
+  HighsStatus unfold(const HighsSolution& solution);
 
   /**
    * @brief Postsolve the incumbent model using a solution
@@ -512,6 +522,12 @@ class Highs {
                                 HighsInt* start = nullptr,
                                 HighsInt* index = nullptr,
                                 double* value = nullptr);
+
+  /**
+   * @brief Return a const reference to the internal folded
+   * HighsModel instance
+   */
+  const HighsModel& getFoldedModel() const { return folded_model_; }
 
   /**
    * @brief Return a const reference to the internal presolved HighsLp
@@ -1629,6 +1645,7 @@ class Highs {
   HighsModel model_;
   std::vector<HighsLinearObjective> multi_linear_objective_;
 
+  HighsModel folded_model_;
   HighsModel presolved_model_;
   HighsTimer timer_;
 

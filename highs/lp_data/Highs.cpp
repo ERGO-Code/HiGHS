@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include "HighsExternalApi.h"
+#include "folding/Fold.h"
 #include "io/Filereader.h"
 #include "io/LoadOptions.h"
 #include "ipm/IpxWrapper.h"
@@ -1148,6 +1149,22 @@ HighsStatus Highs::presolve() {
   highsLogUser(log_options, HighsLogType::kInfo, "Presolve status: %s\n",
                presolveStatusToString(model_presolve_status_).c_str());
   return returnFromHighs(return_status);
+}
+
+HighsStatus Highs::fold() {
+  highs::folding::Folder folder(model_);
+  folder.run();
+
+  HighsStatus return_status = HighsStatus::kOk;
+  if (folder.getInfo().status == highs::folding::Status::kOk) {
+    return_status = HighsStatus::kOk;
+    folded_model_ = folder.getFoldedModel();
+  } else {
+    return_status = HighsStatus::kError;
+    folded_model_.clear();
+  }
+
+  return return_status;
 }
 
 HighsStatus Highs::run() {
