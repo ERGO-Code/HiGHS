@@ -602,3 +602,115 @@ TEST_CASE("issue-2300", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+/*
+TEST_CASE("issue-3454", "[highs_lp_solver]") {
+   std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/3454.mps";
+   HighsSolution solution;
+   solution.col_value = {105.55381035692943,
+     0.0,
+     1.0,
+     92.79399825832972,
+     0.13020216427142767,
+     1.0,
+     105.55381035692943,
+     46.83896683673469,
+     1.0,
+     67.03287124115117,
+     34.38350448077325,
+     1.0,
+     17.09375,
+     45.40625,
+     1.0,
+     50.615779489633276,
+     34.28125,
+     1.0,
+     69.69593776501044,
+     34.28125,
+     1.0,
+     25.467586016316208,
+     7.305119601580743,
+     1.0,
+     26.237749387741413,
+     4.6966026656718896,
+     1.0,
+     45.18268371329744,
+     49.3700150027673,
+     1.0,
+     45.14966800807311,
+     46.67612751910601,
+     1.0,
+     45.63792304163015,
+     31.519877519106117,
+     1.0,
+     13.786722013612957,
+     38.29035266567189,
+     1.0,
+     32.25547201361296,
+     39.68251500276731,
+     1.0,
+     9.133002863338533,
+     32.95297840904961,
+     1.0,
+     7.875,
+     23.654854266571288,
+     1.0,
+     1.1963805853893439,
+     28.35138433040431,
+     1.0,
+     13.928086876521897,
+     38.2903526656736,
+     1.0,
+     9.221510443489308,
+     40.75068054640359,
+     1.0};
+  solution.value_valid = true;
+
+  Highs h;
+
+  //  h.setOptionValue("output_flag", dev_run);
+
+  double tolerance = 1e-6;
+
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.setOptionValue("primal_feasibility_tolerance", tolerance);
+  h.setOptionValue("parallel", "off");
+
+  REQUIRE(h.setSolution(solution) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+
+  if (dev_run) {
+    HighsInfo info = h.getInfo();
+    printf("model status: %s\n",
+h.modelStatusToString(h.getModelStatus()).c_str());
+    printf("max_primal_infeasibility (reported by HiGHS): %g\n",
+info.max_primal_infeasibility); printf("num_primal_infeasibilities (reported by
+HiGHS): %d\n", int(info.num_primal_infeasibilities));
+  }
+
+  HighsLp lp = h.getLp();
+  solution = h.getSolution();
+  HighsBasis basis = h.getBasis();
+  std::vector<double> local_row_value( lp.num_row_);
+  lp.a_matrix_.product(local_row_value, solution.col_value);
+
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    double lower = lp.row_lower_[iRow];
+    double upper = lp.row_upper_[iRow];
+    double value = solution.row_value[iRow];
+    double local_value = local_row_value[iRow];
+    double residual = std::max(lower - value, value - upper);
+    double local_residual = std::max(lower - local_value, local_value - upper);
+    REQUIRE(local_residual <= tolerance);
+    if (dev_run && (residual >= -tolerance || local_residual >= -tolerance))
+    printf("Row %3d %11.4g %11.4g %11.4g %11.4g %11.4g %11.4g: %s (%s)\n",
+           int(iRow), lower, upper, value, residual, local_value,
+local_residual, lp.row_names_[iRow].c_str(),
+           h.basisStatusToString(basis.row_status[iRow]).c_str());
+  }
+
+  h.resetGlobalScheduler(true);
+}
+*/
