@@ -145,6 +145,7 @@ HPresolve::Result HPresolve::dominatedColumns(
 
   // perform predictive bound analysis?
   bool allowPredBndAnalysis = true;
+  std::vector<HighsInt> check_rowpositions;
 
   for (HighsInt j = 0; j < model->num_col_; ++j) {
     // skip deleted columns
@@ -349,16 +350,19 @@ HPresolve::Result HPresolve::dominatedColumns(
     // lambda for finding a domination relationship in the given row
     auto checkRow = [&](HighsInt row, HighsInt col, HighsInt direction,
                         double bestVal, bool hasCliques) {
-      storeRow(row);
-      for (const HighsSliceNonzero& nonz : getStoredRow()) {
+      if (rowDeleted[row]) return Result::kOk;
+      getRowPositions(row, check_rowpositions);
+      for (HighsInt pos : check_rowpositions) {
+        if (Avalue[pos] == 0.0 || Arow[pos] != row) continue;
+
         // get column index
-        HighsInt k = nonz.index();
+        HighsInt k = Acol[pos];
 
         // skip column 'col' and deleted columns
         if (k == col || colDeleted[k]) continue;
 
         // get coefficient
-        double ak = nonz.value();
+        double ak = Avalue[pos];
 
         // check if variables have the same type
         bool sameVarType = varsHaveSameType(col, k);
@@ -377,15 +381,15 @@ HPresolve::Result HPresolve::dominatedColumns(
           HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, direction, HighsInt{1},
                                            boundImplied, hasCliques,
                                            sameVarType));
-          if (colDeleted[col]) break;
+          if (colDeleted[col] || rowDeleted[row]) break;
         }
 
-        if (!colDeleted[k] &&
+        if (!colDeleted[k] && Avalue[pos] != 0.0 && Arow[pos] == row &&
             checkDominationNonZero(row, direction * bestVal, -direction * ak)) {
           HPRESOLVE_CHECKED_CALL(checkCols(row, col, k, direction, HighsInt{-1},
                                            boundImplied, hasCliques,
                                            sameVarType));
-          if (colDeleted[col]) break;
+          if (colDeleted[col] || rowDeleted[row]) break;
         }
       }
       return Result::kOk;
