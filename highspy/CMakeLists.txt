@@ -10,7 +10,7 @@ project(_core LANGUAGES CXX)
 
 # Find Python 3
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-find_package(pybind11 CONFIG)
+find_package(nanobind CONFIG REQUIRED)
 
 # static link to libhighs
 set(BUILD_SHARED_EXTRAS_LIB ON)
@@ -26,8 +26,8 @@ set(BUILD_CXX_EXE OFF)
 #     "${CMAKE_CURRENT_LIST_DIR}/../"
 #     "${CMAKE_CURRENT_BINARY_DIR}/highs")
 
-python_add_library(_core MODULE highs_bindings.cpp WITH_SOABI)
-target_link_libraries(_core PRIVATE pybind11::headers highs ${CMAKE_DL_LIBS})
+nanobind_add_module(_core FREE_THREADED highs_bindings.cpp)
+target_link_libraries(_core PRIVATE highs ${CMAKE_DL_LIBS})
 
 if (APPLE)
   set_target_properties(_core PROPERTIES INSTALL_RPATH "@loader_path")

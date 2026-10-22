@@ -3,13 +3,13 @@
 "Bug Tracker" = "https://github.com/ERGO-Code/HiGHS/issues"
 
 [build-system]
-requires = ["scikit-build-core>=0.3.3", "pybind11", "numpy"]
+requires = ["scikit-build-core>=0.3.3", "nanobind", "numpy"]
 build-backend = "scikit_build_core.build"
 
 [project]
 name = "highspy"
 version = "1.15.1"
-description = "A thin set of pybind11 wrappers to HiGHS"
+description = "A thin set of nanobind wrappers to HiGHS"
 authors = [{ name = "HiGHS developers", email = "highsopt@gmail.com" }]
 readme = "README.md"
 license = "MIT"

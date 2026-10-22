@@ -46,7 +46,7 @@
         nativeBuildInputs = with pkgs.python3Packages; [
           numpy
           pathspec
-          pybind11
+          nanobind
           pyproject-metadata
           scikit-build-core
           pkgs.cmake

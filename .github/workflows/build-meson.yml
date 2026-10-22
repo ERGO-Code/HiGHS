@@ -47,7 +47,7 @@ jobs:
       # - name: Test compiled highspy
       #   shell: bash -l {0}
       #   run: |
-      #     meson configure bbdir -Dwith_pybind11=True
+      #     meson configure bbdir -Dwith_nanobind=True
       #     meson compile -C bbdir
       #     LD_LIBRARY_PATH=$(pwd)/bbdir/highs \
       #     PYTHONPATH=$(pwd)/bbdir \
