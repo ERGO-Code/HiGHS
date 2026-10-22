@@ -1152,7 +1152,8 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::fold() {
-  highs::folding::Folder folder(model_);
+  highs::folding::Folder folder;
+  folder.setModel(model_);
   folder.run();
 
   HighsStatus return_status = HighsStatus::kOk;

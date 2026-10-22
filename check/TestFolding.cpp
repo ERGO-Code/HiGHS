@@ -141,7 +141,8 @@ void runFoldingTest(const std::string& filename) {
   highs.readModel(filename);
   const HighsModel model = highs.getModel();
 
-  highs::folding::Folder lpf(model);
+  highs::folding::Folder lpf;
+  lpf.setModel(model);
   lpf.run();
   if (lpf.getInfo().status != highs::folding::Status::kOk) return;
   HighsModel folded_model = lpf.getFoldedModel();
@@ -162,14 +163,16 @@ TEST_CASE("test-folding-paper", "[highs-folding]") {
   HighsModel model = getPaperLp();
 
   // Fold
-  highs::folding::Folder lpf(model);
+  highs::folding::Folder lpf;
+  lpf.setModel(model);
   lpf.run();
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kOk);
   HighsModel folded_model = lpf.getFoldedModel();
   REQUIRE(folded_model == getPaperFoldedLp());
 
   // Fold again
-  highs::folding::Folder lpf_2(folded_model);
+  highs::folding::Folder lpf_2;
+  lpf_2.setModel(folded_model);
   lpf_2.run();
   REQUIRE(lpf_2.getInfo().status == highs::folding::Status::kOk);
   HighsModel folded_model_2 = lpf_2.getFoldedModel();
@@ -225,7 +228,8 @@ TEST_CASE("test-folding-paper-qp", "[highs-folding]") {
   HighsModel model = getPaperQp();
 
   // Fold
-  highs::folding::Folder lpf(model);
+  highs::folding::Folder lpf;
+  lpf.setModel(model);
   lpf.run();
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kOk);
   HighsModel folded_model = lpf.getFoldedModel();
@@ -278,7 +282,8 @@ TEST_CASE("test-folding-qp-groups", "[highs-folding]") {
 
 TEST_CASE("test-folding-time-limit", "[highs-folding]") {
   const HighsModel model;
-  highs::folding::Folder lpf(model);
+  highs::folding::Folder lpf;
+  lpf.setModel(model);
   HighsTimer timer;
   timer.start();
   lpf.setTimeLimit(timer, 0.0);
@@ -288,7 +293,12 @@ TEST_CASE("test-folding-time-limit", "[highs-folding]") {
 
 TEST_CASE("test-folding-invalid-model", "[highs-folding]") {
   HighsModel model;
-  highs::folding::Folder lpf(model);
+  highs::folding::Folder lpf;
+
+  lpf.run();
+  REQUIRE(lpf.getInfo().status == highs::folding::Status::kInvalidModel);
+
+  lpf.setModel(model);
 
   model.lp_.num_row_ = -1;
   lpf.run();

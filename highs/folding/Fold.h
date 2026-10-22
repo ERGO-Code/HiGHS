@@ -69,9 +69,7 @@ struct FoldInfo {
 };
 
 class Folder {
-  const HighsLp& lp_;
-  const HighsSparseMatrix& A_;
-  const HighsHessian& hessian_;
+  const HighsModel* model_;
 
   struct Data {
     const HighsSparseMatrix At;
@@ -104,8 +102,7 @@ class Folder {
   bool checkTimeLimit();
 
  public:
-  explicit Folder(const HighsModel& model)
-      : lp_{model.lp_}, A_{model.lp_.a_matrix_}, hessian_{model.hessian_} {}
+  Folder() = default;
 
   // Folder holds references to the lp, so it cannot bind to a temporary
   // HighsModel
@@ -115,6 +112,7 @@ class Folder {
   Folder(const Folder&) = delete;
   Folder& operator=(const Folder&) = delete;
 
+  void setModel(const HighsModel& model) { model_ = &model; }
   void setTimeLimit(const HighsTimer& timer, double time_limit);
   void run();
   HighsModel getFoldedModel() const;
