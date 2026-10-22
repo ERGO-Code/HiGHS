@@ -19,7 +19,8 @@ namespace folding {
 //
 // Usage:
 //    Folder F(model);
-//    if (F.run() == FoldStatus::kOk) {
+//    F.run();
+//    if (F.getInfo().status == Status::kOk) {
 //      HighsModel folded_model = F.getFoldedModel();
 //      ...   // solve the folded model
 //      HighsSolution unfolded_sol = F.unfold(folded_sol);
@@ -52,7 +53,26 @@ namespace folding {
 // guaranteed to lie on the optimal face and it is a vertex if the original
 // problem has a unique optimal solution (for LPs).
 
+struct FoldInfo {
+  HighsInt initial_row_colours{};
+  HighsInt initial_col_colours{};
+  HighsInt num_row_colours{};
+  HighsInt num_col_colours{};
+
+  Status status = Status::kNotRun;
+
+  double initial_time{};
+  double ctor_time{};
+  double run_time{};
+  double fold_time{};
+  mutable double folded_lp_time{};
+};
+
 class Folder {
+  const HighsLp& lp_;
+  const HighsSparseMatrix& A_;
+  const HighsHessian& hessian_;
+
   struct Data {
     const HighsSparseMatrix At;
     const HighsHessian Q;
@@ -65,38 +85,22 @@ class Folder {
           row_colour(lp.num_row_),
           col_colour(lp.num_col_) {}
   };
-
-  const HighsLp& lp_;
-  const HighsSparseMatrix& A_;
-  const HighsHessian& hessian_;
-
   std::unique_ptr<Data> data_;
-
-  HighsInt initial_row_colours_{};
-  HighsInt initial_col_colours_{};
-  HighsInt num_row_colours_{};
-  HighsInt num_col_colours_{};
 
   std::vector<HighsInt> row_colours_size_;
   std::vector<HighsInt> col_colours_size_;
 
-  FoldStatus status_ = FoldStatus::kNotRun;
-
-  double initial_time_{};
-  double ctor_time_{};
-  double run_time_{};
-  double fold_time_{};
-  mutable double folded_lp_time_{};
-
   const HighsTimer* timer_ = nullptr;
   double time_limit_ = kHighsInf;
+
+  FoldInfo info_;
 
   template <typename T>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
   void findInitialColour();
   void foldModel();
   bool isPartitionCorrect() const;
-  bool success() const { return status_ == FoldStatus::kOk; }
+  bool success() const { return info_.status == Status::kOk; }
   bool checkTimeLimit();
 
  public:
@@ -112,14 +116,12 @@ class Folder {
   Folder& operator=(const Folder&) = delete;
 
   void setTimeLimit(const HighsTimer& timer, double time_limit);
-  FoldStatus run();
+  void run();
   HighsModel getFoldedModel() const;
   HighsSolution unfold(const HighsSolution& folded) const;
+  const FoldInfo& getInfo() const { return info_; }
 
   void print() const;
-
-  HighsInt numRowColours() const { return num_row_colours_; }
-  HighsInt numColColours() const { return num_col_colours_; }
 };
 
 }  // namespace folding

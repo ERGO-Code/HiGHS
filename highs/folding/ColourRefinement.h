@@ -234,7 +234,7 @@ class ColourRefinement {
                    const HighsHessian& Q, std::vector<HighsInt>& row_colour,
                    std::vector<HighsInt>& col_colour);
   void setTimeLimit(const HighsTimer* timer, double time_limit);
-  FoldStatus run();
+  Status run();
   HighsInt rowColoursUsed() const { return rows_.coloursUsed(); }
   HighsInt colColoursUsed() const { return cols_.coloursUsed(); }
 };
