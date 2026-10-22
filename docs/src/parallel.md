@@ -152,7 +152,7 @@ You only need the advanced section below if you run HiGHS from several threads o
 
 - An **application thread** is any thread not created by HiGHS. A **worker thread** is created by HiGHS as part of a scheduler. The **owning thread** is the application thread that created a scheduler, and it participates in the parallel work.
 - The scheduler is `thread_local`. It is created lazily by the first `run()` or `presolve()` on an application thread, and is shared by all `Highs` instances used on that thread. It is never visible to other application threads.
-- A scheduler of size `N` consists of the owning thread and `N - 1` workers. `N` is fixed at creation, so later changes to the `threads` option have no effect until the scheduler is reset. The default is the number of physical cores in the process's CPU affinity mask.
+- A scheduler of size `N` consists of the owning thread and `N - 1` workers. `N` is fixed at creation: `run()` and `presolve()` return an error if the `threads` option is nonzero and differs from `N`, so all `Highs` instances on a thread must use the same value (or the default). To change `N`, reset the scheduler first. The default is the number of physical cores in the process's CPU affinity mask.
 - Running HiGHS from many application threads with the default thread count can create far more threads than you have cores and oversubscribe the machine. Set `threads` explicitly in that case.
 
 
