@@ -1,6 +1,8 @@
 #ifndef HIGHS_FOLDING_H
 #define HIGHS_FOLDING_H
 
+#include <memory>
+
 #include "ColourRefinement.h"
 #include "model/HighsModel.h"
 #include "util/HighsTimer.h"
@@ -17,25 +19,22 @@ namespace folding {
 //
 // Usage:
 //    Folder F(model);
-//    if (F.run() == 0) {
+//    if (F.run() == FoldStatus::kOk) {
 //      HighsModel folded_model = F.getFoldedModel();
 //      ...   // solve the folded model
 //      HighsSolution unfolded_sol = F.unfold(folded_sol);
 //    }
 //
 // Requirements:
-//  - the model is a minimization problem with continuous variables (integrality
-//    is not supported) and, if it has a Hessian, a symmetric positive
-//    semidefinite one (not checked);
+//  - the model has only continuous variables (integrality is not supported)
+//    and, if it has a Hessian, a symmetric positive semidefinite one (not
+//    checked);
 //  - the matrix of the model is col-wise;
 //  - the Hessian can be either square or triangular;
 //  - the model must outlive the Folder and must not be modified meanwhile. The
 //    Folder cannot be copied, moved, or constructed from a temporary.
 //
 // Result:
-//  - run() returns 0 on success, and nonzero if folding was abandoned because
-//    the partition was too fine to be worthwhile. In that case, the folded
-//    model and the unfolded solution are empty.
 //  - the folded model has one row per row class and one column per column
 //    class. A folded variable stands for the common value of its class. Bounds
 //    come from a representative of the class, costs and Hessian entries are

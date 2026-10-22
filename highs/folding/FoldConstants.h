@@ -20,6 +20,8 @@ enum class FoldStatus {
   kPartitionTooFine,
   kTimeLimit,
   kOutOfMemory,
+  kInvalidModel,
+  kGenericError,
 };
 
 }  // namespace folding
