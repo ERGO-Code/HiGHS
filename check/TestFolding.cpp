@@ -138,7 +138,6 @@ bool isOptimal(const Highs& highs, const HighsModel& model,
 void runFoldingTest(const std::string& filename) {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("presolve", "off");
   highs.readModel(filename);
   const HighsModel model = highs.getModel();
 
@@ -280,4 +279,23 @@ TEST_CASE("test-folding-time-limit", "[highs-folding]") {
   timer.start();
   lpf.setTimeLimit(timer, 0.0);
   REQUIRE(lpf.run() == highs::folding::FoldStatus::kTimeLimit);
+}
+
+TEST_CASE("test-folding-invalid-model", "[highs-folding]") {
+  HighsModel model;
+  highs::folding::Folder lpf(model);
+
+  model.lp_.num_row_ = -1;
+  REQUIRE(lpf.run() == highs::folding::FoldStatus::kInvalidModel);
+
+  model.lp_.num_row_ = 0;
+  model.lp_.integrality_.push_back(HighsVarType::kInteger);
+  REQUIRE(lpf.run() == highs::folding::FoldStatus::kInvalidModel);
+
+  model.lp_.integrality_.clear();
+  model.hessian_.dim_ = 1;
+  REQUIRE(lpf.run() == highs::folding::FoldStatus::kInvalidModel);
+
+  model.hessian_.clear();
+  REQUIRE(lpf.run() == highs::folding::FoldStatus::kOk);
 }
