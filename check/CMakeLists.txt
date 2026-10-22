@@ -49,17 +49,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestHighsRbTree.cpp
       TestHighsSparseMatrix.cpp
       TestHighsVersion.cpp
-      TestHiPdlpAveraging.cpp
-      TestHiPdlpBackend.cpp
-      TestHiPdlpCertificates.cpp
-      TestHiPdlpConvergence.cpp
-      TestHiPdlpFixedPointError.cpp
-      TestHiPdlpModel.cpp
-      TestHiPdlpOperatorNorm.cpp
-      TestHiPdlpRestart.cpp
-      TestHiPdlpSolver.cpp
-      TestHiPdlpStepSize.cpp
-      TestHiPdlpTrace.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
@@ -80,7 +69,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestNames.cpp
       TestOptions.cpp
       TestPdlp.cpp
-      TestPdlpHi.cpp
       TestPresolve.cpp
       TestPresolveRules.cpp
       TestQpOracle.cpp
@@ -96,8 +84,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestThrow.cpp
       TestTspSolver.cpp
       TestUserScale.cpp
-      Avgas.cpp
-      hipdlp/fixed_trace.cc)
+      Avgas.cpp)
 
 
   if (HIPO)
@@ -121,10 +108,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
   add_executable(unit_tests ${TEST_SOURCES})
-
-  if(HIGHS_HIPDLP_CUDA_DETECTED)
-    target_compile_definitions(unit_tests PRIVATE HIGHS_HIPDLP_TESTING)
-  endif()
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
 
@@ -168,35 +151,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       INSTALL_RPATH "$ORIGIN/${libdir_relative_path}")
   endif()
 
-
-  # Migration/benchmark adapter. Deliberately not installed and not part of any
-  # public interface: explicitly build this target to compare the legacy and
-  # rewrite cores without HiGHS presolve/postsolve. Production uses bin/highs.
-  add_executable(hipdlp_migration_adapter EXCLUDE_FROM_ALL HiPdlpMigrationAdapter.cpp)
-  if (FAST_BUILD)
-    target_link_libraries(hipdlp_migration_adapter highs)
-  else()
-    target_link_libraries(hipdlp_migration_adapter libhighs)
-  endif()
-
-  if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    include(CheckSymbolExists)
-    check_symbol_exists(__GLIBC__ "features.h" HIPDLP_SOLVE_AUDIT_GLIBC)
-    if (HIPDLP_SOLVE_AUDIT_GLIBC)
-      find_package(Threads REQUIRED)
-      add_executable(hipdlp_solve_audit EXCLUDE_FROM_ALL HiPdlpSolveAudit.cpp)
-      set_target_properties(hipdlp_solve_audit PROPERTIES ENABLE_EXPORTS ON)
-      target_link_libraries(hipdlp_solve_audit Threads::Threads)
-      if (FAST_BUILD)
-        target_link_libraries(hipdlp_solve_audit highs)
-      else()
-        target_link_libraries(hipdlp_solve_audit libhighs)
-      endif()
-      if (HIGHS_HIPDLP_CUDA_DETECTED)
-        target_compile_definitions(hipdlp_solve_audit PRIVATE HIGHS_HIPDLP_TESTING)
-      endif()
-    endif()
-  endif()
 
   add_executable(lp_solver_validation_adapter EXCLUDE_FROM_ALL LpSolverValidationAdapter.cpp)
   if (FAST_BUILD)

@@ -28,9 +28,6 @@ if(NOT FAST_BUILD)
       CUDA_STANDARD 11
       CUDA_STANDARD_REQUIRED ON)
     target_link_libraries(libhighs ${HIGHS_HIPDLP_CUDA_LIBRARIES})
-    if(BUILD_TESTING)
-      target_compile_definitions(libhighs PRIVATE HIGHS_HIPDLP_TESTING)
-    endif()
   endif()
 
   if(APPLE)
@@ -209,9 +206,6 @@ else()
       CUDA_STANDARD 11
       CUDA_STANDARD_REQUIRED ON)
     target_link_libraries(highs PRIVATE ${HIGHS_HIPDLP_CUDA_LIBRARIES})
-    if(BUILD_TESTING)
-      target_compile_definitions(highs PRIVATE HIGHS_HIPDLP_TESTING)
-    endif()
   endif()
 
   # Optional Cuda
@@ -243,8 +237,7 @@ else()
         pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
         pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
         pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu
-        pdlp/cupdlp/cupdlp_cs.c
-        pdlp/hipdlp/pdhg.cu)
+        pdlp/cupdlp/cupdlp_cs.c)
 
       set_target_properties(highs PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON
