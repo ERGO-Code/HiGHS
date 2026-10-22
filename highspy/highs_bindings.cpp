@@ -1187,6 +1187,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsInfo::primal_solution_status)
       .def_readwrite("dual_solution_status", &HighsInfo::dual_solution_status)
       .def_readwrite("basis_validity", &HighsInfo::basis_validity)
+      .def_readwrite("centring_status", &HighsInfo::centring_status)
       .def_readwrite("objective_function_value",
                      &HighsInfo::objective_function_value)
       .def_readwrite("mip_dual_bound", &HighsInfo::mip_dual_bound)
