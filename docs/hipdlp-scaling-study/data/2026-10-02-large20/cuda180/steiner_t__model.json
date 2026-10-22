@@ -1,7 +1,0 @@
-{
-  "name": "steiner_t",
-  "rows": 7695,
-  "cols": 71450,
-  "nnz": 2428993,
-  "read_wall_sec": 2.605287096
-}

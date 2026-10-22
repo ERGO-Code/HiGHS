@@ -1,6 +1,0 @@
-{
-  "instance": "watson_1",
-  "primary_records_from": "cuda180-watson-repeat",
-  "superseded_records": "watson-initial-partial",
-  "reason": "Complete four-configuration batch replaces an interrupted initial batch."
-}

@@ -1,8 +1,0 @@
-[
-  "/tmp/neso-gpu-comparison/neso-kkt",
-  "/tmp/neso-gpu-comparison/canonical-checked/neso-2245-canonical.mps",
-  "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/hpr-no-cr/solution.primal.txt",
-  "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/hpr-no-cr/solution.dual.txt",
-  "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/hpr-no-cr/solution.reduced_cost.txt",
-  "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/hpr-no-cr/verification-reported.json"
-]

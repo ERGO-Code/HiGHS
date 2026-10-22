@@ -1,7 +1,0 @@
-{
-  "name": "pypsa-eur-240t5n",
-  "rows": 119299,
-  "cols": 56899,
-  "nnz": 237928,
-  "read_wall_sec": 0.569964131
-}

@@ -1,8 +1,0 @@
-[
-  "/tmp/neso-gpu-comparison/neso-kkt",
-  "/tmp/neso-gpu-comparison/canonical-checked/neso-2245-canonical.mps",
-  "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/cupdlpx-no-gm-tight/neso-2245-canonical_primal_solution.txt",
-  "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/cupdlpx-no-gm-tight/neso-2245-canonical_dual_solution.txt",
-  "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/cupdlpx-no-gm-tight/neso-2245-canonical_reduced_cost.txt",
-  "/tmp/neso-gpu-comparison/runs/neso-2245-canonical/cupdlpx-no-gm-tight/verification-reported.json"
-]
