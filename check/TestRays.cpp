@@ -701,7 +701,7 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   vector<double> primal_ray_value;
   vector<double> primal_unboundedness_direction_value;
   Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   highs.addCol(-1.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
   highs.addCol(-1.0, -kHighsInf, kHighsInf, 0, nullptr, nullptr);
   HighsInt aindex[2] = {0, 1};
@@ -716,7 +716,6 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   REQUIRE(highs.setOptionValue("allow_unbounded_or_infeasible",
                                allow_unbounded_or_infeasible) ==
           HighsStatus::kOk);
-
   REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
           HighsStatus::kOk);
   std::string presolve_status = "off";

@@ -1591,6 +1591,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   bool solve_relaxation;
   std::string presolve;
   std::string solver;
+  bool allow_unbounded_or_infeasible;
   bool solve_feasibility_problem = false;
   const bool is_qp = model_.isQp();
 
@@ -1616,6 +1617,8 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       solve_relaxation = this->options_.solve_relaxation;
       presolve = this->options_.presolve;
       solver = this->options_.solver;
+      allow_unbounded_or_infeasible =
+          this->options_.allow_unbounded_or_infeasible;
       solve_feasibility_problem = true;
       // Zero the costs and Hessian
       std::vector<double> zero_costs;
@@ -1637,12 +1640,16 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       this->options_.solve_relaxation = true;
       this->options_.presolve = kHighsOffString;
       this->options_.solver = kSimplexString;
+      this->options_.allow_unbounded_or_infeasible = false;
       HighsStatus call_status = this->run();
       // Restore the column costs, any Hessian, the relaxation,
       // presolve and solver settings
       this->options_.solve_relaxation = solve_relaxation;
       this->options_.presolve = presolve;
       this->options_.solver = solver;
+      this->options_.allow_unbounded_or_infeasible =
+          allow_unbounded_or_infeasible;
+
       lp.col_cost_ = col_cost;
       if (is_qp) model_.hessian_ = hessian;
       if (call_status != HighsStatus::kOk) return_status = call_status;
@@ -1733,6 +1740,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   bool solve_relaxation;
   std::string presolve;
   std::string solver;
+  bool allow_unbounded_or_infeasible;
   bool solve_unboundedness_problem = false;
 
   if (primal_ray_value != NULL) {
@@ -1754,15 +1762,20 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       solve_relaxation = this->options_.solve_relaxation;
       presolve = this->options_.presolve;
       solver = this->options_.solver;
+      allow_unbounded_or_infeasible =
+          this->options_.allow_unbounded_or_infeasible;
       solve_unboundedness_problem = true;
       this->options_.solve_relaxation = true;
       this->options_.presolve = kHighsOffString;
       this->options_.solver = kSimplexString;
+      this->options_.allow_unbounded_or_infeasible = false;
       HighsStatus call_status = this->run();
       // Restore the relaxation, presolve and solver settings
       this->options_.solve_relaxation = solve_relaxation;
       this->options_.presolve = presolve;
       this->options_.solver = solver;
+      this->options_.allow_unbounded_or_infeasible =
+          allow_unbounded_or_infeasible;
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
