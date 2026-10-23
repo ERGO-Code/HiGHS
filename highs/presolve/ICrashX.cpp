@@ -68,18 +68,20 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   // IPX's columns are the LP's plus one slack per row with two
   // finite, distinct bounds (fillInIpxData; coefficient -1, the row
   // becomes '='), and its rows are the LP's less any free rows.
-  const bool use_duals = highs_solution.dual_valid &&
-    (HighsInt)highs_solution.col_dual.size() == lp.num_col_ &&
-    (HighsInt)highs_solution.row_dual.size() == lp.num_row_ &&
-    num_row == lp.num_row_;
+  const bool use_duals =
+      highs_solution.dual_valid &&
+      (HighsInt)highs_solution.col_dual.size() == lp.num_col_ &&
+      (HighsInt)highs_solution.row_dual.size() == lp.num_row_ &&
+      num_row == lp.num_row_;
   std::vector<double> x(num_col, 0.0), y, z;
   for (HighsInt i = 0; i < lp.num_col_; i++)
-    x[i] = std::min(std::max(highs_solution.col_value[i], col_lb[i]),
-                    col_ub[i]);
+    x[i] =
+        std::min(std::max(highs_solution.col_value[i], col_lb[i]), col_ub[i]);
   if (use_duals) {
     y = highs_solution.row_dual;
     z.assign(num_col, 0.0);
-    for (HighsInt i = 0; i < lp.num_col_; i++) z[i] = highs_solution.col_dual[i];
+    for (HighsInt i = 0; i < lp.num_col_; i++)
+      z[i] = highs_solution.col_dual[i];
     for (HighsInt i = lp.num_col_; i < num_col; i++)
       z[i] = -Av[Ap[i]] * y[Ai[Ap[i]]];
   }
@@ -91,37 +93,39 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   // the primal onto the bound or zero the dual, whichever is the
   // smaller relative change.
   double cost_scale = 1.0;
-  for (const double c : objective) cost_scale = std::max(cost_scale, std::fabs(c));
+  for (const double c : objective)
+    cost_scale = std::max(cost_scale, std::fabs(c));
   HighsInt num_snapped = 0;
   HighsInt num_dual_zeroed = 0;
   double sum_snapped = 0;
   double sum_dual_zeroed = 0;
-  const double use_primal_tolerance = 0;//options.primal_feasibility_tolerance;
-  const double use_dual_tolerance = 0;//options.dual_feasibility_tolerance;
+  const double use_primal_tolerance =
+      0;                                // options.primal_feasibility_tolerance;
+  const double use_dual_tolerance = 0;  // options.dual_feasibility_tolerance;
 
   auto complement = [&](double& value, double& dual, const double lower,
                         const double upper) {
     if (dual > use_dual_tolerance) {
       if (value == lower) return;
-      if (std::isfinite(lower) && (value - lower) / (1 + std::fabs(lower)) <=
-                                      dual / cost_scale) {
-	sum_snapped += std::fabs(value - lower);
+      if (std::isfinite(lower) &&
+          (value - lower) / (1 + std::fabs(lower)) <= dual / cost_scale) {
+        sum_snapped += std::fabs(value - lower);
         num_snapped++;
         value = lower;
       } else {
-	sum_dual_zeroed += std::fabs(dual);
+        sum_dual_zeroed += std::fabs(dual);
         num_dual_zeroed++;
         dual = 0;
       }
     } else if (dual < -use_dual_tolerance) {
       if (value == upper) return;
-      if (std::isfinite(upper) && (upper - value) / (1 + std::fabs(upper)) <=
-                                      -dual / cost_scale) {
-	sum_snapped += std::fabs(value - upper);
+      if (std::isfinite(upper) &&
+          (upper - value) / (1 + std::fabs(upper)) <= -dual / cost_scale) {
+        sum_snapped += std::fabs(value - upper);
         num_snapped++;
         value = upper;
       } else {
-	sum_dual_zeroed += std::fabs(dual);
+        sum_dual_zeroed += std::fabs(dual);
         num_dual_zeroed++;
         dual = 0;
       }
@@ -146,7 +150,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
         y[row] = -z[i] / Av[Ap[i]];
       }
     }
-   }
+  }
 
   // Build slack variables from rhs-A*x but subject to sign conditions.
   std::vector<double> slack(rhs);
@@ -185,20 +189,24 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
                  "Calling IPX crossover with primal and dual values");
     if (num_snapped || num_dual_zeroed) {
       highsLogUser(log_options, HighsLogType::kInfo,
-		   ": made complementary with\n");
-      if (num_snapped) 
-	highsLogUser(log_options, HighsLogType::kInfo,
-		     "   %" HIGHSINT_FORMAT " primal value%s moved to a bound (total changes = %g)\n",
-		     num_snapped, highsIntToPlural(num_snapped).c_str(), sum_snapped);
-      if (num_dual_zeroed) 
-	highsLogUser(log_options, HighsLogType::kInfo,
-		     "   %" HIGHSINT_FORMAT " dual%s zeroed (total changes = %g)\n",
-		     num_dual_zeroed, highsIntToPlural(num_dual_zeroed).c_str(), sum_dual_zeroed);
+                   ": made complementary with\n");
+      if (num_snapped)
+        highsLogUser(log_options, HighsLogType::kInfo,
+                     "   %" HIGHSINT_FORMAT
+                     " primal value%s moved to a bound (total changes = %g)\n",
+                     num_snapped, highsIntToPlural(num_snapped).c_str(),
+                     sum_snapped);
+      if (num_dual_zeroed)
+        highsLogUser(log_options, HighsLogType::kInfo,
+                     "   %" HIGHSINT_FORMAT
+                     " dual%s zeroed (total changes = %g)\n",
+                     num_dual_zeroed, highsIntToPlural(num_dual_zeroed).c_str(),
+                     sum_dual_zeroed);
     } else {
       highsLogUser(log_options, HighsLogType::kInfo, "\n");
     }
-    crossover_status = lps.CrossoverFromStartingPoint(
-        x.data(), slack.data(), y.data(), z.data());
+    crossover_status = lps.CrossoverFromStartingPoint(x.data(), slack.data(),
+                                                      y.data(), z.data());
   } else {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Calling IPX crossover with only primal values\n");

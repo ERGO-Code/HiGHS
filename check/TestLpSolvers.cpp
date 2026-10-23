@@ -602,4 +602,3 @@ TEST_CASE("issue-2300", "[highs_lp_solver]") {
 
   h.resetGlobalScheduler(true);
 }
-

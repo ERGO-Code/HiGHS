@@ -111,7 +111,7 @@ void report(const std::string message, const HighsLp& lp,
   printf(" Obj %11.4g\n", objective);
 }
 
-const std::vector<std::string> solvers{kPdlpString, kIpxString
+const std::vector<std::string> solvers{kPdlpString, kHiPdlpString, kIpxString
 #ifdef HIPO
                                        ,
                                        kHipoString
@@ -120,11 +120,11 @@ const std::vector<std::string> solvers{kPdlpString, kIpxString
 
 TEST_CASE("issue-3459", "[highs_lp_solver]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   const bool use_3459_model = true;
   if (use_3459_model) {
     std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/3459.mps";
+        std::string(HIGHS_DIR) + "/check/instances/3459.mps";
     h.readModel(model_file);
   } else {
     HighsLp lp;
@@ -133,14 +133,14 @@ TEST_CASE("issue-3459", "[highs_lp_solver]") {
     lp.col_cost_ = {1, -1};
     lp.col_lower_ = {0, 0};
     lp.col_upper_ = {kHighsInf, kHighsInf};
-    lp.row_lower_ = {1, 2, 3}; // Infeasible or unbounded
-    lp.row_upper_ = {2, 3, 4}; // Infeasible or unbounded
+    lp.row_lower_ = {1, 2, 3};  // Infeasible or unbounded
+    lp.row_upper_ = {2, 3, 4};  // Infeasible or unbounded
     lp.row_lower_ = {2, 0, 0};
     lp.row_upper_ = {3, 1, 1};
     lp.a_matrix_.start_ = {0, 3, 6};
     lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
     lp.a_matrix_.value_ = {1, -1, 2, 2, 1, -1};
-    h.passModel(lp);    
+    h.passModel(lp);
   }
 
   HighsStatus return_status;
@@ -148,22 +148,40 @@ TEST_CASE("issue-3459", "[highs_lp_solver]") {
   h.setOptionValue(kPresolveString, kHighsOffString);
   h.setOptionValue("run_crossover", kHighsOffString);
   const double objective_value = 17.555148585;
-  for (auto& solver : solvers) {
-    printf("====================\n%s\n====================\n", solver.c_str());
-    h.setOptionValue(kSolverString, solver);
-    return_status = h.run();
-    REQUIRE(return_status == HighsStatus::kOk);
-    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-    REQUIRE(std::fabs(h.getObjectiveValue()-objective_value) < 1e-6);
-    
-    solution = h.getSolution();
 
-    return_status = h.crossover(solution);
-    REQUIRE(return_status == HighsStatus::kOk);
-    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-    REQUIRE(std::fabs(h.getObjectiveValue()-objective_value) < 1e-6);
-  }
+  auto testSolvers = [&](const char* type) {
+    for (auto& solver : solvers) {
+      if (dev_run)
+        printf("====================\n%s (%s)\n====================\n",
+               solver.c_str(), type);
+      h.setOptionValue(kSolverString, solver);
+      return_status = h.run();
+      REQUIRE(return_status == HighsStatus::kOk);
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+      REQUIRE(std::fabs(h.getObjectiveValue() - objective_value) < 1e-6);
+
+      solution = h.getSolution();
+
+      return_status = h.crossover(solution);
+      REQUIRE(return_status == HighsStatus::kOk);
+      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+      REQUIRE(std::fabs(h.getObjectiveValue() - objective_value) < 1e-6);
+    }
+  };
+
+  testSolvers("original");
+
+  HighsInt free_row0 = 10;
+  HighsInt free_row1 = 14;
+  REQUIRE(std::fabs(h.getSolution().row_dual[free_row0]) <
+          h.getOptions().dual_feasibility_tolerance);
+  REQUIRE(std::fabs(h.getSolution().row_dual[free_row1]) <
+          h.getOptions().dual_feasibility_tolerance);
+
+  h.changeRowBounds(free_row0, -kHighsInf, kHighsInf);
+  h.changeRowBounds(free_row1, -kHighsInf, kHighsInf);
+
+  testSolvers("with two free rows");
 
   h.resetGlobalScheduler(true);
 }
-

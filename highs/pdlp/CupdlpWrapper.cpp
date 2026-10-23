@@ -335,7 +335,8 @@ int formulateLP_highs(const cupdlp_int local_log_level, const HighsLp& lp,
       // goto exit_cleanup;
 
       // what if regard free as bounded
-      printf("Warning: constraint %d has no lower and upper bound\n", i);
+      //      highsLogUser(options.log_options, HighsLogType::kWarning,
+      printf("Constraint %d has no lower and upper bound\n", i);
       (*constraint_type)[i] = BOUND;
       (*nCols)++;
       (*nnz)++;
