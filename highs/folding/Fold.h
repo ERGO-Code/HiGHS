@@ -69,7 +69,7 @@ struct FoldInfo {
 };
 
 class Folder {
-  const HighsModel* model_;
+  const HighsModel* model_ = nullptr;
 
   struct Data {
     const HighsSparseMatrix At;

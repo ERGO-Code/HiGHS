@@ -8,7 +8,7 @@
 #include "folding/Fold.h"
 #include "lp_data/HighsSolution.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 HighsModel getPaperLp() {
   // Define the LP from "Dimension Reduction via Colour Refinement"
@@ -167,6 +167,8 @@ void runFoldingTestFromHighs(const std::string& filename) {
   REQUIRE(status == HighsStatus::kOk);
 
   Highs highs2;
+  highs2.setOptionValue("output_flag", dev_run);
+
   REQUIRE(highs2.passModel(highs.getFoldedModel()) == HighsStatus::kOk);
   REQUIRE(highs2.run() == HighsStatus::kOk);
   REQUIRE(highs2.getModelStatus() == HighsModelStatus::kOptimal);
