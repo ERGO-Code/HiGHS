@@ -305,6 +305,19 @@ static void nestedTask() {
   tg.spawn([]() { loseTime(); });
 }
 
+TEST_CASE("CancelNestedTasks", "[parallel]") {
+  highs::parallel::initialize_scheduler();
+
+  for (int i = 0; i < 1000; ++i) {
+    highs::parallel::TaskGroup tg;
+    tg.spawn([]() { nestedTask(); });
+    tg.spawn([]() { nestedTask(); });
+    loseTime();
+  }
+
+  HighsTaskExecutor::shutdown();
+}
+
 TEST_CASE("AvailableCoreCount", "[parallel]") {
   unsigned int cores = highs::parallel::available_core_count();
   REQUIRE(cores > 0);
@@ -354,63 +367,97 @@ TEST_CASE("AffinityReducedCoreCount", "[parallel]") {
 }
 #endif
 
-TEST_CASE("CancelNestedTasks", "[parallel]") {
-  highs::parallel::initialize_scheduler();
-
-  for (int i = 0; i < 1000; ++i) {
-    highs::parallel::TaskGroup tg;
-    tg.spawn([]() { nestedTask(); });
-    tg.spawn([]() { nestedTask(); });
-    loseTime();
+// Spin until flag >= value. Returns false on timeout so a bug can't hang CI.
+bool waitFor(const std::atomic<int>& flag, int value) {
+  const auto start = std::chrono::steady_clock::now();
+  while (flag.load() < value) {
+    if (std::chrono::steady_clock::now() - start > std::chrono::seconds(1))
+      return false;
+    std::this_thread::yield();
   }
-
-  HighsTaskExecutor::shutdown();
+  return true;
 }
 
-TEST_CASE("ParallelCApi", "[parallel]") {
-  // This test exposes a failure in the C api when creating and destroying Highs
-  // instances on separate threads.
-  // One thread solves a mip, while the other loses some time before destroying
-  // the instance. If this causes the scheduler to be terminated (i.e., if
-  // Highs_destroy calls resetGlobalScheduler) while the first thread is still
-  // using it, the first thread may crash, hang, or terminate with wrong
-  // results.
+long long parallelSum(HighsInt n) {
+  std::atomic<long long> sum{0};
+  highs::parallel::for_each(
+      0, n,
+      [&](HighsInt start, HighsInt end) {
+        long long local = 0;
+        for (HighsInt i = start; i < end; ++i) local += i;
+        sum += local;
+      },
+      16);
+  return sum.load();
+}
 
-  highs::parallel::initialize_scheduler();
+struct ThreadResult {
+  int threads_after_init = -1;
+  long long sum_after_init = -1;
+  int threads_after_reset = -1;
+  long long sum_after_reset = -1;
+  bool synced = true;
+};
 
-  std::string model = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
-  const double expected_obj = 568.1007;
-  double actual_obj;
-  double total = 0;
+TEST_CASE("ParallelSchedulerIsPerThread", "[parallel]") {
+  const int num_threads_A_first = 2;
+  const int num_threads_A_second = 4;
 
-  {
-    highs::parallel::TaskGroup tg;
+  const int num_threads_B = 3;
+  const HighsInt n = 1000;
+  const long long expected_sum = (long long)n * (n - 1) / 2;
 
-    tg.spawn([&]() {
-      void* highs = Highs_create();
-      Highs_setBoolOptionValue(highs, "output_flag", dev_run);
-      Highs_setStringOptionValue(highs, "parallel", "on");
-      Highs_readModel(highs, model.c_str());
-      Highs_run(highs);
-      Highs_getDoubleInfoValue(highs, "objective_function_value", &actual_obj);
-      Highs_destroy(highs);
-    });
+  std::atomic<int> init_done{0};
+  std::atomic<int> reset_done{0};
+  ThreadResult a, b;
 
-    tg.spawn([&]() {
-      void* highs = Highs_create();
-      for (int i = 0; i < 1e6; ++i) {
-        total += (double)i * i * i;
-      }
-      Highs_destroy(highs);
-    });
+  std::thread threadA([&]() {
+    highs::parallel::initialize_scheduler(num_threads_A_first);
+    a.threads_after_init = highs::parallel::num_threads();
+    a.sum_after_init = parallelSum(n);
+    init_done++;
+    a.synced = waitFor(init_done, 2);
 
-    tg.taskWait();
+    HighsTaskExecutor::shutdown(true);
+    reset_done++;
 
-    REQUIRE(total > 1e18);
-    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
-            1e-4);
-  }
-  // TaskGroup destructor must be called before scheduler is killed
+    highs::parallel::initialize_scheduler(num_threads_A_second);
+    a.threads_after_reset = highs::parallel::num_threads();
+    a.sum_after_reset = parallelSum(n);
 
-  HighsTaskExecutor::shutdown(true);
+    HighsTaskExecutor::shutdown(true);
+  });
+
+  std::thread threadB([&]() {
+    highs::parallel::initialize_scheduler(num_threads_B);
+    b.threads_after_init = highs::parallel::num_threads();
+    b.sum_after_init = parallelSum(n);
+    init_done++;
+
+    b.synced = waitFor(reset_done, 1);
+    b.threads_after_reset = highs::parallel::num_threads();
+    b.sum_after_reset = parallelSum(n);
+
+    HighsTaskExecutor::shutdown(true);
+  });
+
+  threadA.join();
+  threadB.join();
+
+  REQUIRE(a.synced);
+  REQUIRE(b.synced);
+
+  // Both threads got their own scheduler, with the correct sizes
+  REQUIRE(a.threads_after_init == num_threads_A_first);
+  REQUIRE(b.threads_after_init == num_threads_B);
+  REQUIRE(a.sum_after_init == expected_sum);
+  REQUIRE(b.sum_after_init == expected_sum);
+
+  // A's reset did not affect B
+  REQUIRE(b.threads_after_reset == num_threads_B);
+  REQUIRE(b.sum_after_reset == expected_sum);
+
+  // A really was reset
+  REQUIRE(a.threads_after_reset == num_threads_A_second);
+  REQUIRE(a.sum_after_reset == expected_sum);
 }

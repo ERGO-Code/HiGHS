@@ -1072,7 +1072,7 @@ HighsStatus Highs::presolve() {
     model_presolve_status_ = HighsPresolveStatus::kNotReduced;
   } else {
     const bool force_presolve = true;
-    // make sure global scheduler is initialized before calling presolve, since
+    // make sure scheduler is initialized before calling presolve, since
     // MIP presolve may use parallelism
     //
     return_status = this->initializeMultiThreading();
@@ -5022,16 +5022,16 @@ HighsStatus Highs::initializeMultiThreading() {
     highsLogDev(
         log_options, HighsLogType::kWarning,
         "Thread count (%d) exceeds physical cores (%d); consider reducing "
-        "threads or calling Highs::resetGlobalScheduler()\n",
+        "threads or calling Highs::resetThreadScheduler()\n",
         static_cast<int>(this->max_threads_),
         static_cast<int>(available_cores));
   if (this->options_.threads != 0 &&
       this->max_threads_ != this->options_.threads) {
     highsLogUser(
         log_options, HighsLogType::kError,
-        "Option 'threads' is set to %d but global scheduler has already been "
+        "Option 'threads' is set to %d but the scheduler has already been "
         "initialized to use %d threads. The previous scheduler instance can "
-        "be destroyed by calling Highs::resetGlobalScheduler().\n",
+        "be destroyed by calling Highs::resetThreadScheduler().\n",
         int(options_.threads), int(this->max_threads_));
     return HighsStatus::kError;
   }
@@ -5047,8 +5047,14 @@ HighsStatus Highs::initializeMultiThreading() {
   return HighsStatus::kOk;
 }
 
-void Highs::resetGlobalScheduler(bool blocking) {
+void Highs::resetThreadScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
+}
+
+void Highs::resetGlobalScheduler(bool blocking) {
+  // Deprecated in favour of resetThreadScheduler().
+  // Cannot call deprecationMessage here.
+  resetThreadScheduler(blocking);
 }
 
 void Highs::initializeSingleThreadedProfiling(HighsProfiling* profiling) {

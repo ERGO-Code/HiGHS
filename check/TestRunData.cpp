@@ -56,7 +56,7 @@ TEST_CASE("highs-run-data", "[highs_run_data]") {
   }
   if (!dev_run) std::remove(run_data_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-run-data-presolve", "[highs_run_data]") {
@@ -88,7 +88,7 @@ TEST_CASE("highs-run-data-presolve", "[highs_run_data]") {
   }
   std::remove(run_data_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 void testRunData(Highs& h, const bool irreducible, const bool reduces_to_empty,

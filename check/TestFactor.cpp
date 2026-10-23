@@ -46,7 +46,7 @@ TEST_CASE("Factor-dense-tran", "[highs_test_factor]") {
   rhs.setup(num_row);
   REQUIRE(testSolveDense());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
@@ -109,7 +109,7 @@ TEST_CASE("Factor-put-get-iterate", "[highs_test_factor]") {
     highs.changeColBounds(iCol, save_lower, save_upper);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("Factor-get-set-invert", "[highs_test_factor]") {
@@ -209,7 +209,7 @@ TEST_CASE("Factor-zero-col-pivot-tolerance", "[highs_test_factor]") {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 HighsInt rowOut(const HighsInt variable_out) {

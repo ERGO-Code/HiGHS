@@ -98,6 +98,6 @@ int main() {
   }
 
   std::cout << "PASS: HiPDLP solved the LP to optimality" << std::endl;
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
   return EXIT_SUCCESS;
 }
