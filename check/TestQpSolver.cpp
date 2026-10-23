@@ -9,7 +9,7 @@ const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
-const std::vector<std::string> solvers{kQpAsmString, kQpAsmString
+const std::vector<std::string> solvers{kQpAsmString
 #ifdef HIPO
                                        ,
                                        kHipoString
