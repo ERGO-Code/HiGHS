@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <cuda_runtime.h>
+#include <vector>
 
 namespace hipdlp {
   enum class Status {
@@ -144,6 +145,96 @@ struct Combine {
     a.bad |= b.bad;
     return a;
   }
+};
+
+struct Resources {
+ public:
+  Resources() {
+    try {
+      allocations.reserve(80);
+      dense.reserve(18);
+      matrices.reserve(9);
+      Cuda(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+      Sparse(cusparseCreate(&sparse));
+      Sparse(cusparseSetStream(sparse, stream));
+      Sparse(cusparseSetPointerMode(sparse, CUSPARSE_POINTER_MODE_DEVICE));
+    } catch (...) {
+      if (sparse) cusparseDestroy(sparse);
+      if (stream) cudaStreamDestroy(stream);
+      throw;
+    }
+  }
+  Resources(const Resources&) = delete;
+  Resources& operator=(const Resources&) = delete;
+  ~Resources() {
+    cudaStreamCaptureStatus capture;
+    if (stream && cudaStreamIsCapturing(stream, &capture) == cudaSuccess &&
+        capture != cudaStreamCaptureStatusNone) {
+      cudaGraph_t abandoned;
+      cudaStreamEndCapture(stream, &abandoned);
+    }
+    if (event_start) cudaEventDestroy(event_start);
+    if (event_end) cudaEventDestroy(event_end);
+    if (exec) cudaGraphExecDestroy(exec);
+    if (graph) cudaGraphDestroy(graph);
+    for (auto p : dense) cusparseDestroyDnVec(p);
+    for (auto p : matrices) cusparseDestroySpMat(p);
+    if (sparse) cusparseDestroy(sparse);
+    for (void* p : allocations) cudaFree(p);
+    if (stream) cudaStreamDestroy(stream);
+  }
+  // Uninitialized: only for arrays that a copy or kernel overwrites completely before anything
+  // reads them. Everything else uses AllocateZero.
+  template <typename T>
+  T* Allocate(size_t count) {
+    T* p;
+    size_t bytes = std::max(size_t(1), count) * sizeof(T);
+    Cuda(cudaMalloc(&p, bytes));
+    try {
+      allocations.push_back(p);
+    } catch (...) {
+      cudaFree(p);
+      throw;
+    }
+    allocated_bytes += bytes;
+    return p;
+  }
+  template <typename T>
+  T* AllocateZero(size_t count) {
+    T* p = Allocate<T>(count);
+    Cuda(cudaMemsetAsync(p, 0, std::max(size_t(1), count) * sizeof(T), stream));
+    return p;
+  }
+  template <typename T>
+  T* Upload(const std::vector<T>& values) {
+    T* p = Allocate<T>(values.size());
+    if (!values.empty()) {
+      Cuda(cudaMemcpyAsync(p, values.data(), values.size() * sizeof(T), cudaMemcpyHostToDevice,
+                           stream));
+      h2d_bytes += values.size() * sizeof(T);
+    }
+    return p;
+  }
+  size_t Bytes() const { return allocated_bytes; }
+  uint64_t h2d_bytes = 0, d2h_bytes = 0, d2d_bytes = 0;
+  cudaStream_t stream = nullptr;
+  cusparseHandle_t sparse = nullptr;
+  cudaGraph_t graph = nullptr;
+  cudaGraphExec_t exec = nullptr;
+  cudaEvent_t event_start = nullptr, event_end = nullptr;
+  std::vector<cusparseDnVecDescr_t> dense;
+  std::vector<cusparseSpMatDescr_t> matrices;
+
+ private:
+  std::vector<void*> allocations;
+  size_t allocated_bytes = 0;
+};
+struct Spmv {
+  cusparseSpMatDescr_t matrix = nullptr;
+  cusparseDnVecDescr_t input = nullptr, output = nullptr;
+  void* workspace = nullptr;
+  int rows;
+  double* empty_output;
 };
 
 }  // namespace hipdlp

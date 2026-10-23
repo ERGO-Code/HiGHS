@@ -445,3 +445,379 @@ __global__ void CertificateStats(DeviceLp lp, Vectors v, Stats* partial, bool fa
     a.bad = 1;
   StoreStats(a, partial);
 }
+
+__global__ void SaveCertificate(DeviceLp lp, Vectors v, DeviceState* s, bool farkas) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (farkas && s->cert_source) {
+    if (i < lp.m) v.saved_f[i] = v.f[i];
+    if (i < lp.n) v.saved_g[i] = v.g[i];
+  } else if (!farkas && s->cert_source && i < lp.n)
+    v.saved_ray[i] = v.ray[i];
+}
+
+// mode: 0 KKT pass 1, 1 trial FPE, 2 reference FPE, 3 direction norm, 4 Farkas, 5 ray,
+// 6 KKT pass 2 (decides optimality).
+__global__ void ReduceStats(const Stats* partial, int size, DeviceState* s, int mode) {
+  Stats a;
+  for (int i = threadIdx.x; i < size; i += blockDim.x) a = Combine{}(a, partial[i]);
+  __shared__ typename cub::BlockReduce<Stats, kBlock>::TempStorage storage;
+  a = cub::BlockReduce<Stats, kBlock>(storage).Reduce(a, Combine{});
+  if (threadIdx.x != 0) return;
+  if (a.bad) s->bad = 1;
+  if (mode == 0) {
+    ++s->kkt_checks;
+    s->spmv_count += 2;
+    double denom = 1 + fabs(a.p) + fabs(a.d);
+    s->metrics.primal = a.primal;
+    s->metrics.dual = a.dual / (1 + s->cost_scale);
+    s->metrics.gap = fabs(a.p - a.d) / denom;
+    s->metrics.complementarity = a.comp / denom;
+    s->metrics.primal_raw = a.raw;
+    s->metrics.dual_raw = a.dual;
+    s->metrics.complementarity_raw = a.comp;
+    s->metrics.primal_objective = a.p;
+    s->metrics.dual_objective = a.d;
+    s->metrics.primal_index = a.primal_index;
+    s->metrics.primal_raw_index = a.raw_index;
+    s->metrics.dual_index = a.dual_index;
+    s->metrics.complementarity_index = a.comp_index;
+    if (!isfinite(denom) || !isfinite(s->metrics.gap) || !isfinite(s->metrics.dual) ||
+        !isfinite(a.primal) || !isfinite(a.raw) || !isfinite(a.comp))
+      s->bad = 1;
+    if (!s->bad && a.primal <= s->tolerance) {
+      s->feasible_valid = 1;
+      s->feasible_iteration = s->iterations;
+    }
+    // lpKktCheck's objective error, on the objectives WITHOUT the constant term: the offset
+    // cancels in p - d and would only enlarge the denominator (a huge constant would make any
+    // gap pass). Sense does not matter: |p - d| and |p| + |d| are sign-free.
+    double gap_model = 1 + fabs(a.p) + fabs(a.dual_pos);
+    s->active_bound_norm = s->metrics.active_bound_norm = a.active_bound;
+    s->active_cost_norm = s->metrics.active_cost_norm = a.active_cost;
+    s->metrics.kkt_gap = fabs(a.p - a.dual_pos) / gap_model;
+    s->metrics.l2_primal = sqrt(a.l2_primal_sq) / (1 + sqrt(a.b_sq));
+    s->metrics.l2_dual = sqrt(a.l2_dual_sq) / (1 + sqrt(a.c_sq));
+    // As cuPDLPx: the column part of the dual objective is z'x, not z times the bound chosen by
+    // the sign of z, so a noise-level z on a huge bound does not dominate it.
+    s->metrics.l2_gap = fabs(a.p - a.cross) / (1 + fabs(a.p) + fabs(a.cross));
+    if (!isfinite(s->metrics.l2_gap)) s->bad = 1;
+    if (!isfinite(s->metrics.kkt_gap) || !isfinite(a.dual_pos)) s->bad = 1;
+    // The switch to the deviation form uses the strict per-row/column measures above.
+    s->deviation_next |= !s->bad && a.primal <= kDeviationLevel &&
+                         s->metrics.dual <= kDeviationLevel && s->metrics.gap <= kDeviationLevel &&
+                         s->metrics.complementarity <= kDeviationLevel;
+  } else if (mode == 6) {
+    s->metrics.kkt_primal = a.rel_primal;
+    s->metrics.kkt_dual = fmax(a.rel_dual, a.rel_residual);
+    if (!isfinite(a.rel_primal) || !isfinite(s->metrics.kkt_dual)) s->bad = 1;
+    const Metrics& k = s->metrics;
+    s->optimal = !s->bad && (s->stop_strict ? k.primal <= s->tolerance &&
+                                                  k.dual <= s->tolerance &&
+                                                  k.gap <= s->tolerance &&
+                                                  k.complementarity <= s->tolerance
+                             : s->stop_l2   ? k.l2_primal <= s->tolerance &&
+                                                  k.l2_dual <= s->tolerance &&
+                                                  k.l2_gap <= s->tolerance
+                                            : k.kkt_primal <= s->tolerance &&
+                                                  k.kkt_dual <= s->tolerance &&
+                                                  k.kkt_gap <= s->tolerance);
+  } else if (mode == 1 || mode == 2) {
+    ++s->spmv_count;
+    double energy = s->omega * a.dx2 + a.dy2 / s->omega + 2 * kEta * a.cross;
+    double roundoff =
+        64 * 2.220446049250313e-16 * (s->omega * a.dx2 + a.dy2 / s->omega + 2 * kEta * a.absolute);
+    if (!isfinite(energy) || energy < -roundoff) s->bad = 1;
+    s->fpe = sqrt(fmax(energy, 0.0));
+    if (mode == 2) {
+      s->reference_fpe = s->fpe;
+      s->previous_fpe = INFINITY;
+    }
+  } else if (mode == 3)
+    s->normalization = a.norm;
+  else {
+    ++s->certificate_checks;
+    if (!isfinite(a.d) || !isfinite(a.p) || !isfinite(a.absolute) || !isfinite(a.dual) ||
+        !isfinite(a.cone))
+      s->bad = 1;
+    bool valid = !s->bad && s->normalization > 0;
+    if (mode == 4) {
+      s->spmv_count += 2;
+      // A certificate of the original model must keep its margin after the stationarity
+      // exposure at the current iterate; otherwise it does not even exclude points of the size
+      // the iterates have. A reduced model's candidate only stops the reduced session.
+      valid = valid && a.dual <= kCertificateTolerance &&
+              a.d > 100 * kCertificateTolerance * fmax(1.0, a.absolute) &&
+              (!s->exposure_check ||
+               a.d - a.exposure > 100 * kCertificateTolerance * fmax(1.0, a.absolute));
+      s->cert_source = valid && !s->farkas_valid;
+      if (s->cert_source) {
+        s->margin = a.d;
+        s->stationarity = a.dual;
+        s->cert_scale = s->normalization;
+        s->farkas_info = CertificateInfo{s->direction_source, s->direction_sign,
+                                         s->direction_iteration, s->normalization};
+      }
+      s->farkas_valid |= valid;
+    } else {
+      ++s->spmv_count;
+      valid = valid && a.dual <= kCertificateTolerance &&
+              a.cone <= kCertificateTolerance &&
+              -a.p > 100 * kCertificateTolerance * fmax(1.0, a.absolute);
+      s->cert_source = valid && !s->ray_valid;
+      if (s->cert_source) {
+        s->ray_margin = -a.p;
+        s->ray_info = CertificateInfo{s->direction_source, s->direction_sign,
+                                      s->direction_iteration, s->normalization};
+        s->ray_row_violation = a.cone;
+        s->ray_column_violation = a.dual;
+      }
+      s->ray_valid |= valid;
+    }
+  }
+}
+
+__global__ void WeightStats(DeviceLp lp, Vectors v, Stats* partial, const DeviceState* s) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  Stats a;
+  if (i < lp.n) {
+    double d = s->deviation ? v.xp[i] : v.xp[i] - v.xa[i];
+    a.dx2 = d * d;
+  }
+  if (i < lp.m) {
+    double d = s->deviation ? v.yp[i] : v.yp[i] - v.ya[i];
+    a.dy2 = d * d;
+  }
+  StoreStats(a, partial);
+}
+
+__global__ void UpdateWeight(const Stats* partial, int size, DeviceState* s) {
+  Stats a;
+  for (int i = threadIdx.x; i < size; i += blockDim.x) a = Combine{}(a, partial[i]);
+  __shared__ typename cub::BlockReduce<Stats, kBlock>::TempStorage storage;
+  a = cub::BlockReduce<Stats, kBlock>(storage).Reduce(a, Combine{});
+  if (threadIdx.x != 0 || s->fixed_weight) return;
+  s->balance_epoch_limit = 0;
+  if (a.dx2 > 0 && a.dy2 > 0 && isfinite(a.dx2) && isfinite(a.dy2)) {
+    double e = 0.5 * (log(a.dy2) - log(a.dx2)) - log(s->omega);
+    s->integral = 0.3 * s->integral + e;
+    double requested = 0.99 * e + 0.01 * s->integral;
+    double change = Project(requested, -log(10.0), log(10.0));
+    double next_log = Project(log(s->omega) + change, log(1e-8), log(1e8));
+    // Hold the epoch length after one clipped update; shorten only when the next update is
+    // clipped in the same direction. This distinguishes persistent imbalance from a transient
+    // correction. The global weight bound and an unsaturated update clear this history.
+    int direction =
+        fabs(requested) >= log(10.0) && fabs(next_log - log(s->omega)) >= 0.99 * log(10.0)
+            ? (requested > 0 ? 1 : -1)
+            : 0;
+    if (direction) {
+      int64_t length = direction == s->balance_direction ? s->epoch / 2 : s->epoch;
+      s->balance_epoch_limit = length > kMinBalanceEpoch ? length : kMinBalanceEpoch;
+    }
+    s->balance_direction = direction;
+    s->omega = exp(next_log);
+    s->best_omega = s->omega;
+  } else {
+    s->omega = s->best_omega;
+    s->integral = 0;
+    s->balance_direction = 0;
+  }
+}
+
+// The new anchor is T(z); in the deviation form (from now on when requested) the deviation
+// restarts at 0.
+__global__ void RestartVectors(DeviceLp lp, Vectors v, const DeviceState* s) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (s->deviation) {
+    if (i < lp.n) {
+      v.epoch_dx[i] = v.x[i];
+      v.xa[i] += v.xp[i];
+      v.x[i] = 0;
+    }
+    if (i < lp.m) {
+      v.epoch_dy[i] = v.y[i];
+      v.ya[i] += v.yp[i];
+      v.y[i] = 0;
+    }
+    return;
+  }
+  if (i < lp.n) {
+    v.epoch_dx[i] = v.x[i] - v.xa[i];
+    v.x[i] = v.xa[i] = v.xp[i];
+    if (s->deviation_next) v.x[i] = 0;
+  }
+  if (i < lp.m) {
+    v.epoch_dy[i] = v.y[i] - v.ya[i];
+    v.y[i] = v.ya[i] = v.yp[i];
+    if (s->deviation_next) v.y[i] = 0;
+  }
+}
+
+// The anchor terms from A'ya and A xa (`aty_anchor`, `ax_anchor`: scratch arrays).
+__global__ void AnchorTerms(DeviceLp lp, Vectors v, const double* aty_anchor,
+                            const double* ax_anchor, DeviceState* s) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i == 0) s->spmv_count += 2;  // the products run at every restart; used once requested
+  if (!s->deviation_next) return;
+  if (i < lp.n) {
+    v.ga[i] = lp.cs[i] - aty_anchor[i];
+    if (!isfinite(v.ga[i])) atomicOr(&s->bad, 1);
+  }
+  if (i < lp.m) {
+    v.lower[i] = ax_anchor[i] - lp.lrs[i];
+    v.upper[i] = ax_anchor[i] - lp.urs[i];
+    if (!isfinite(ax_anchor[i])) atomicOr(&s->bad, 1);
+  }
+}
+
+__global__ void RestartState(DeviceState* s) {
+  s->deviation |= s->deviation_next;
+  ++s->restarts;
+  s->epoch_iteration = s->iterations;
+  s->epoch = 0;
+}
+
+__global__ void ReferenceCount(DeviceState* s) { s->spmv_count += 2; }
+__global__ void Decide(DeviceState* s, cudaGraphConditionalHandle restart,
+                       cudaGraphConditionalHandle cert, bool initial, bool after_cert) {
+  if (!after_cert) {
+    bool do_cert =
+        initial || s->iterations % 200 == 0 || s->iterations >= s->iteration_limit || Expired(s);
+    cudaGraphSetConditional(cert, do_cert);
+    return;
+  }
+  // Contradictions are an error, never resolved by enumeration order.
+  int conclusions = int(s->optimal) + int(s->farkas_valid) + int(s->ray_valid && s->feasible_valid);
+  if (s->bad || conclusions > 1)
+    s->status = Status::kNumericalError;
+  else if (s->optimal)
+    s->status = Status::kOptimal;
+  else if (s->farkas_valid)
+    s->status = Status::kInfeasible;
+  else if (s->ray_valid && s->feasible_valid)
+    s->status = Status::kUnbounded;
+  else if (s->status == Status::kTimeLimit || Expired(s))
+    s->status = Status::kTimeLimit;
+  else if (s->iterations >= s->iteration_limit)
+    s->status = Status::kIterationLimit;
+  // A balance deadline only interrupts an epoch whose FPE has not fallen by half.
+  bool trigger = !initial && s->status == Status::kRunning && s->epoch > 0 &&
+                 s->iterations % 40 == 0 && s->reference_fpe > 0 &&
+                 (s->iterations == 40 || s->fpe <= 0.2 * s->reference_fpe ||
+                  (s->fpe <= 0.5 * s->reference_fpe && s->fpe > s->previous_fpe) ||
+                  double(s->epoch) >= 0.36 * double(s->iterations) ||
+                  (s->balance_epoch_limit > 0 && s->epoch >= s->balance_epoch_limit &&
+                   s->fpe > 0.5 * s->reference_fpe));
+  s->previous_fpe = s->fpe;
+  s->restart = trigger;
+  if (s->decisions && s->decision_count < kDecisionCapacity &&
+      (s->iterations <= 20000 || trigger || s->iterations % 100000 == 0 ||
+       s->status != Status::kRunning)) {
+    s->decisions[s->decision_count++] =
+        Decision{s->iterations,     s->epoch,        s->status,        trigger,
+                 s->omega,          s->fpe,          s->reference_fpe, s->balance_epoch_limit,
+                 s->metrics.primal, s->metrics.dual, s->metrics.gap};
+  }
+  cudaGraphSetConditional(restart, trigger);
+}
+__global__ void LoopCondition(DeviceState* s, cudaGraphConditionalHandle loop) {
+  if (s->status == Status::kRunning && s->bad) s->status = Status::kNumericalError;
+  if (s->status == Status::kRunning && Expired(s)) s->status = Status::kTimeLimit;
+  cudaGraphSetConditional(loop, s->status == Status::kRunning);
+}
+__global__ void Mark(DeviceState* s, int phase) {
+  auto now = DeviceTime();
+  if (phase == 0)
+    s->scaling_end = now;
+  else if (phase == 1)
+    s->loop_begin = now;
+  else if (phase == 2)
+    s->end = now;
+  else if (phase == 3)
+    s->validation_ns -= now;
+  else
+    s->validation_ns += now;
+}
+// out[i] = 1-norm of line i (row of A, or row of A^T = column of A) of the unscaled matrix.
+__global__ void LineNorms(int size, const int* start, const double* values, double* out,
+                          DeviceState* s) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= size) return;
+  double norm = 0;
+  for (int k = start[i]; k < start[i + 1]; ++k) norm += fabs(values[k]);
+  if (!isfinite(norm)) atomicOr(&s->bad, 1);
+  out[i] = norm;
+}
+__global__ void FillOne(double* values, int size) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i < size) values[i] = 1;
+}
+__global__ void EmptyProduct(double* output, int size) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i < size) output[i] = 0;
+}
+
+// The matrix arrays are read only (cuSPARSE takes non-const pointers). `iterative` is for
+// operators executed inside the captured graph: they are preprocessed and run once before
+// capture; a one-shot product needs neither.
+static Spmv PrepareSpmv(Resources& r, int rows, int cols, int nnz, const int* start,
+                        const int* index, const double* values, double* input, double* output,
+                        double* ab, bool iterative = true) {
+  Spmv op;
+  op.rows = rows;
+  op.empty_output = output;
+  if (!nnz || !rows || !cols) return op;
+  Sparse(cusparseCreateCsr(&op.matrix, rows, cols, nnz, const_cast<int*>(start),
+                           const_cast<int*>(index), const_cast<double*>(values), CUSPARSE_INDEX_32I,
+                           CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_64F));
+  r.matrices.push_back(op.matrix);
+  Sparse(cusparseCreateDnVec(&op.input, cols, input, CUDA_R_64F));
+  r.dense.push_back(op.input);
+  Sparse(cusparseCreateDnVec(&op.output, rows, output, CUDA_R_64F));
+  r.dense.push_back(op.output);
+  size_t bytes;
+  Sparse(cusparseSpMV_bufferSize(r.sparse, CUSPARSE_OPERATION_NON_TRANSPOSE, ab, op.matrix,
+                                 op.input, ab + 1, op.output, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
+                                 &bytes));
+  op.workspace = r.AllocateZero<char>(bytes);
+  if (!iterative) return op;
+  Sparse(cusparseSpMV_preprocess(r.sparse, CUSPARSE_OPERATION_NON_TRANSPOSE, ab, op.matrix,
+                                 op.input, ab + 1, op.output, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
+                                 op.workspace));
+  Sparse(cusparseSpMV(r.sparse, CUSPARSE_OPERATION_NON_TRANSPOSE, ab, op.matrix, op.input, ab + 1,
+                      op.output, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2, op.workspace));
+  return op;
+}
+
+static void Multiply(Resources& r, const Spmv& op, double* ab) {
+  if (op.matrix)
+    Sparse(cusparseSpMV(r.sparse, CUSPARSE_OPERATION_NON_TRANSPOSE, ab, op.matrix, op.input, ab + 1,
+                        op.output, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2, op.workspace));
+  else
+    EmptyProduct<<<Blocks(op.rows), kBlock, 0, r.stream>>>(op.empty_output, op.rows);
+}
+
+static std::vector<cudaGraphNode_t> FinishCapture(Resources& r) {
+  const cudaGraphNode_t* deps;
+  size_t size;
+  cudaGraph_t graph;
+  cudaStreamCaptureStatus status;
+#if CUDART_VERSION >= 13000  // v2 was removed; the edge-data argument is unused here
+  Cuda(cudaStreamGetCaptureInfo(r.stream, &status, nullptr, nullptr, &deps, nullptr, &size));
+#else
+  Cuda(cudaStreamGetCaptureInfo_v2(r.stream, &status, nullptr, nullptr, &deps, &size));
+#endif
+  std::vector<cudaGraphNode_t> result(deps, deps + size);
+  Cuda(cudaGetLastError());
+  Cuda(cudaStreamEndCapture(r.stream, &graph));
+  return result;
+}
+
+static void StartCapture(Resources& r, cudaGraph_t graph,
+                         const std::vector<cudaGraphNode_t>& deps = {}) {
+  Cuda(cudaStreamBeginCaptureToGraph(r.stream, graph, deps.data(), nullptr, deps.size(),
+                                     cudaStreamCaptureModeGlobal));
+}
+
+
+}
