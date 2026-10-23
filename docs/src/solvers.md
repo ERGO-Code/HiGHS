@@ -84,6 +84,9 @@ HiGHS has two interior point (IPM) solvers:
   * Reverse Cuthill-McKee, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "rcm".
 
+  [__hipo\_serial\_blas__](@ref option-hipo-serial-blas) option. See
+  [BLAS threads](@ref parallel-blas-threads) for details.
+
 For small LPs, IPX is often faster than HiPO. However, as problem size
 grows, HiPO becomes more efficient, and its advantage can be more
 than an order of magnitude.
