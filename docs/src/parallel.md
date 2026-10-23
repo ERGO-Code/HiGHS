@@ -144,7 +144,7 @@ HiGHS can use several threads to solve a model faster. If you call `run()` on a 
 
 All of this applies to the C API and to other languages as well.
 
-You only need the advanced section below if you run HiGHS from several threads of your own, or if you need to stop HiGHS's threads explicitly, for example before unloading a library.
+You only need the advanced section below if you run HiGHS from several threads of your own, or if you need to stop HiGHS' threads explicitly, for example before unloading a library.
 
 ### Advanced
 
