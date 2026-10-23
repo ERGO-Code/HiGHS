@@ -189,11 +189,11 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
       if (num_snapped) 
 	highsLogUser(log_options, HighsLogType::kInfo,
 		     "   %" HIGHSINT_FORMAT " primal value%s moved to a bound (total changes = %g)\n",
-		     num_snapped, highsIntToPlural(num_snapped), sum_snapped);
+		     num_snapped, highsIntToPlural(num_snapped).c_str(), sum_snapped);
       if (num_dual_zeroed) 
 	highsLogUser(log_options, HighsLogType::kInfo,
 		     "   %" HIGHSINT_FORMAT " dual%s zeroed (total changes = %g)\n",
-		     num_dual_zeroed, highsIntToPlural(num_dual_zeroed), sum_dual_zeroed);
+		     num_dual_zeroed, highsIntToPlural(num_dual_zeroed).c_str(), sum_dual_zeroed);
     } else {
       highsLogUser(log_options, HighsLogType::kInfo, "\n");
     }

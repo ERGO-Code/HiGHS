@@ -111,11 +111,16 @@ void report(const std::string message, const HighsLp& lp,
   printf(" Obj %11.4g\n", objective);
 }
 
+const std::vector<std::string> solvers{kPdlpString, kIpxString
+#ifdef HIPO
+                                       ,
+                                       kHipoString
+#endif
+};
+
 TEST_CASE("issue-3459", "[highs_lp_solver]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
-  h.setOptionValue(kSolverString, kPdlpString);
-  h.setOptionValue(kPresolveString, kHighsOffString);
   const bool use_3459_model = true;
   if (use_3459_model) {
     std::string model_file =
@@ -137,14 +142,27 @@ TEST_CASE("issue-3459", "[highs_lp_solver]") {
     lp.a_matrix_.value_ = {1, -1, 2, 2, 1, -1};
     h.passModel(lp);    
   }
-  HighsStatus return_status = h.run();
-  h.writeSolution("", 1);
-  REQUIRE(return_status == HighsStatus::kOk);
 
-  HighsSolution solution = h.getSolution();
+  HighsStatus return_status;
+  HighsSolution solution;
+  h.setOptionValue(kPresolveString, kHighsOffString);
+  h.setOptionValue("run_crossover", kHighsOffString);
+  const double objective_value = 17.555148585;
+  for (auto& solver : solvers) {
+    printf("====================\n%s\n====================\n", solver.c_str());
+    h.setOptionValue(kSolverString, solver);
+    return_status = h.run();
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(std::fabs(h.getObjectiveValue()-objective_value) < 1e-6);
+    
+    solution = h.getSolution();
 
-  h.crossover(solution);
-  h.writeSolution("", 1);
+    return_status = h.crossover(solution);
+    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(std::fabs(h.getObjectiveValue()-objective_value) < 1e-6);
+  }
 
   h.resetGlobalScheduler(true);
 }
