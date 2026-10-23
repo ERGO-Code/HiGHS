@@ -75,11 +75,11 @@
 #include "io/LpReader.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
 #include <fstream>
 #include <memory>
 #include <sstream>
@@ -90,12 +90,6 @@
 #include "HConfig.h"  // for ZLIB_FOUND
 #ifdef ZLIB_FOUND
 #include "../extern/zstr/zstr.hpp"
-#endif
-
-// The number of bytes that the lexer reads at a time. This can be changed
-// for testing.
-#ifndef LP_READER_CHUNK_SIZE
-#define LP_READER_CHUNK_SIZE (1 << 20)
 #endif
 
 namespace lp_reader {
@@ -149,13 +143,29 @@ struct ParseError {
 // Only this many warnings are printed
 const size_t kMaxWarnings = 10;
 
+// The size of the buffer in zstr::ifstream. 1 << 16 = 64kB.
+const size_t kZlibBufferSize = 1 << 16;
+
+// The size of the initial buffer (in bytes) when reading the lexer.
+// 1 << 14 = 16kB. If the file is larger than this, the buffer is expanded, up
+// to a maximum of kMaximumLexerBufferSize.
+const size_t kInitialLexerBufferSize = 1 << 14;
+
+// The maximum number of bytes that the lexer reads at a time. 1 << 20 = 1MiB.
+const size_t kMaximumLexerBufferSize = 1 << 20;
+
+// The maximum number of tokens that the parser can look ahead. The parser
+// never peeks more than four tokens ahead, so this is generous. It must be a
+// power of two.
+const size_t kMaxLookahead = 8;
+
 // Open a file that may be compressed. If the file cannot be opened, the
 // stream is in a failed state.
 static std::unique_ptr<std::istream> openFile(const std::string& filename) {
 #ifdef ZLIB_FOUND
   try {
     return std::unique_ptr<std::istream>(
-        new zstr::ifstream(filename, std::ios::in));
+        new zstr::ifstream(filename, std::ios::in, kZlibBufferSize));
   } catch (const strict_fstream::Exception&) {
     std::unique_ptr<std::istream> failed(new std::istringstream());
     failed->setstate(std::ios::failbit);
@@ -205,12 +215,12 @@ static std::string renderDiagnostic(const std::string& filename,
   size_t begin = 0;
   if (pos > kContext) {
     begin = pos - kContext;
-    while (isUtf8Continuation(line[begin])) begin++;
+    while (begin < pos && isUtf8Continuation(line[begin])) begin++;
   }
   size_t end = line_end;
   if (line_end - caret_end > kContext) {
     end = caret_end + kContext;
-    while (isUtf8Continuation(line[end])) end--;
+    while (end > caret_end && isUtf8Continuation(line[end])) end--;
   }
   std::string excerpt = line.substr(begin, end - begin);
   for (char& c : excerpt)
@@ -243,8 +253,9 @@ static std::string renderDiagnostic(const std::string& filename,
 // that they refer to from the file
 static std::vector<std::string> renderDiagnostics(
     const std::string& filename, const std::vector<Diagnostic>& diagnostics) {
-  std::unique_ptr<std::istream> file = openFile(filename);
   std::vector<std::string> rendered;
+  if (diagnostics.empty()) return rendered;
+  std::unique_ptr<std::istream> file = openFile(filename);
   std::string line;
   size_t line_number = 0;
   size_t line_pos = 0;
@@ -283,13 +294,18 @@ class Lexer {
   // Look at the token n places ahead, without consuming it. References stay
   // valid until the token is consumed.
   const Token& peek(size_t n = 0) {
-    while (tokens_.size() <= n) tokens_.push_back(lex());
-    return tokens_[n];
+    assert(n < kMaxLookahead);
+    while (num_tokens_ <= n) {
+      tokens_[(first_token_ + num_tokens_) % kMaxLookahead] = lex();
+      num_tokens_++;
+    }
+    return tokens_[(first_token_ + n) % kMaxLookahead];
   }
 
   Token next() {
     Token token = peek();
-    tokens_.pop_front();
+    first_token_ = (first_token_ + 1) % kMaxLookahead;
+    num_tokens_--;
     // The text of the most recent token stays available
     keep_ = token.pos;
     return token;
@@ -307,8 +323,6 @@ class Lexer {
   }
 
  private:
-  static const size_t kChunkSize = LP_READER_CHUNK_SIZE;
-
   // The byte at `pos`, or -1 at the end of the file
   int at(size_t pos) {
     const size_t offset = pos - buf_start_;
@@ -324,6 +338,8 @@ class Lexer {
   // needed
   std::string buf_;
   size_t buf_start_ = 0;
+  bool eof_ = false;
+  size_t chunk_ = kInitialLexerBufferSize;
   // The bytes before keep_ are no longer needed
   size_t keep_ = 0;
   // The location of the lexer
@@ -333,7 +349,11 @@ class Lexer {
   // The end of the most recent token, where the end of the file is reported
   size_t last_end_ = 0;
   size_t last_line_ = 1;
-  std::deque<Token> tokens_;
+  // The tokens that have been lexed but not yet consumed, as a ring buffer of
+  // num_tokens_ tokens starting at first_token_
+  Token tokens_[kMaxLookahead];
+  size_t first_token_ = 0;
+  size_t num_tokens_ = 0;
 };
 
 // Read the file until it contains `pos`, discarding bytes that are no longer
@@ -341,12 +361,23 @@ class Lexer {
 int Lexer::fill(size_t pos) {
   buf_.erase(0, keep_ - buf_start_);
   buf_start_ = keep_;
+  // While we have not read the byte in position `pos`...
   while (pos - buf_start_ >= buf_.size()) {
+    // The byte at position `pos` is past the end of the file.
+    if (eof_) return -1;
+    // Read in a new chunk to the buffer, and count how many bytes we read.
     const size_t size = buf_.size();
-    buf_.resize(size + kChunkSize);
-    in_.read(&buf_[size], kChunkSize);
-    buf_.resize(size + static_cast<size_t>(in_.gcount()));
-    if (buf_.size() == size) return -1;
+    buf_.resize(size + chunk_);
+    in_.read(&buf_[size], chunk_);
+    const size_t got = static_cast<size_t>(in_.gcount());
+    if (got < chunk_) {
+      // We hit the end of the file before we filled the chunk.
+      buf_.resize(size + got);
+      eof_ = true;
+    } else if (chunk_ < kMaximumLexerBufferSize) {
+      // Double the size of the chunk we read in the next round.
+      chunk_ = std::min(2 * chunk_, kMaximumLexerBufferSize);
+    }
   }
   return static_cast<unsigned char>(buf_[pos - buf_start_]);
 }
@@ -362,6 +393,13 @@ Token Lexer::lex() {
     if (c == '\n') {
       line_++;
       line_start_ = true;
+    } else if (c == ' ' || c == '\t') {
+      // Performance optimization: special case the most common ASCII whitespace
+      // to avoid calling std::isspace(c)
+    } else if (0x21 <= c && c <= 0x7E) {
+      // Performance optimization: special case ASCII characters that are not
+      // whitespace to avoid calling std::isspace(c)
+      break;
     } else if (!std::isspace(c)) {
       break;
     }
@@ -686,7 +724,10 @@ std::string Parser::quote(const char* data, size_t len) {
   const size_t kMaxLength = 30;
   if (len <= kMaxLength) return "`" + std::string(data, len) + "`";
   len = kMaxLength;
-  while (isUtf8Continuation(data[len])) len--;
+  // Back up to the start of a UTF-8 character, unless there isn't one (the
+  // token is invalid UTF-8)
+  while (len > 0 && isUtf8Continuation(data[len])) len--;
+  if (len == 0) len = kMaxLength;
   return "`" + std::string(data, len) + "...`";
 }
 
@@ -1260,6 +1301,11 @@ FilereaderRetcode readLpFile(const HighsLogOptions& log_options,
     highsLogUser(
         log_options, HighsLogType::kError, "%s",
         lp_reader::renderDiagnostics(filename, {e.diagnostic})[0].c_str());
+    return FilereaderRetcode::kParserError;
+  } catch (const std::ios_base::failure& e) {
+    // For example, zstr throws if a compressed file is corrupt
+    highsLogUser(log_options, HighsLogType::kError, "Error reading %s: %s\n",
+                 filename.c_str(), e.what());
     return FilereaderRetcode::kParserError;
   }
   file.reset();
