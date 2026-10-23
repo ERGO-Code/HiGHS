@@ -23,6 +23,7 @@ void HighsInfo::invalidate() {
   pdlp_iteration_count = -1;
   qp_iteration_count = -1;
   basis_validity = kBasisValidityInvalid;
+  centring_status = kCentringStatusNone;
   objective_function_value = 0;
   mip_dual_bound = 0;
   mip_gap = kHighsInf;
@@ -87,6 +88,7 @@ bool HighsInfo::equal(const HighsInfo& info_) const {
     return false;
   if (info_.dual_solution_status != this->dual_solution_status) return false;
   if (info_.basis_validity != this->basis_validity) return false;
+  if (info_.centring_status != this->centring_status) return false;
   if (info_.objective_function_value != this->objective_function_value)
     return false;
   if (info_.mip_dual_bound != this->mip_dual_bound) return false;

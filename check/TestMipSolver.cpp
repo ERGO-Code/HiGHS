@@ -2541,6 +2541,24 @@ TEST_CASE("issue-3433", "[highs_test_mip_solver]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("issue-3451", "[highs_test_mip_solver]") {
+  // reduced version of the model in issue 3451. IPX stops with "no progress"
+  // before centring when computing the analytic centre, but the KKT check
+  // reports the solution as optimal. Fixing columns at bounds of this
+  // uncentred point used to make the feasible model infeasible. The same
+  // cause led to a wrong optimal objective in issue 3452
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3451.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -135.865250363;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
   // an empty conflict, which can be derived when a proof is violated by the
   // global bounds alone, is stored at the end of the conflict entries and
