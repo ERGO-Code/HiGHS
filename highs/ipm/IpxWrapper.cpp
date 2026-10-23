@@ -201,10 +201,10 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   // Record the outcome of any centring, since the model status only
   // indicates whether the LP is solved. Centring is not tried if the
   // IPM stops before reaching optimality
-  highs_info.centring_status =
-      !ipx_info.centring_tried    ? kCentringStatusNone
-      : ipx_info.centring_success ? kCentringStatusSuccess
-                                  : kCentringStatusFailed;
+  highs_info.centring_status = !ipx_info.centring_tried ? kCentringStatusNone
+                               : ipx_info.centring_success
+                                   ? kCentringStatusSuccess
+                                   : kCentringStatusFailed;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {

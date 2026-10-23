@@ -9,7 +9,7 @@ const bool dev_run = false;
 const double inf = kHighsInf;
 const double double_equal_tolerance = 1e-5;
 
-const std::vector<std::string> solvers{kQpAsmString
+const std::vector<std::string> solvers{kQpAsmString, kQpAsmString
 #ifdef HIPO
                                        ,
                                        kHipoString
@@ -1219,12 +1219,14 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
   REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
           HighsStatus::kOk);
 
+  REQUIRE(highs.passModel(model) == HighsStatus::kOk);
+
+  HighsStatus require_write_solution_status = HighsStatus::kWarning;
   for (auto& solver : solvers) {
     highs.setOptionValue("solver", solver);
-    REQUIRE(highs.passModel(model) == HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.writeSolution("", kSolutionStylePretty) ==
-            HighsStatus::kWarning);
+            require_write_solution_status);
 
     const double required_objective_function_value = -2.25;
 
@@ -1237,6 +1239,10 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
     REQUIRE(dl_solution < 1e-6);
     dl_solution = std::fabs(col_value[1] - 1.5);
     REQUIRE(dl_solution < 1e-6);
+    // If there is more than one solver, writeSolution returns
+    // HighsStatus::kOk, since column names exist for the model and
+    // the absence of row names no longer yields a warning
+    require_write_solution_status = HighsStatus::kOk;
   }
 
   highs.resetGlobalScheduler(true);
