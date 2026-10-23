@@ -2365,3 +2365,89 @@ void HighsBasis::clear() {
   this->row_status.clear();
   this->col_status.clear();
 }
+
+double primalDualCentringRatio(const HighsLp& lp,
+                               const HighsSolution& solution) {
+  // Compute max_j p_j / min_j p_j, where p_j is the product of slack and dual
+  // for variable j. Rows are treated as variables with value row_value[i] and
+  // bounds [row_lower, row_upper]. Free and fixed variables are skipped.
+  // The ratio is 1 for a perfectly centred point and kHighsInf if any product
+  // is zero.
+
+  const double sense = lp.sense_ == ObjSense::kMaximize ? -1.0 : 1.0;
+  double minxz = kHighsInf;
+  double maxxz = 0.0;
+
+  auto addProduct = [&](double x, double lb, double ub, double z) {
+    const bool has_lb = lb > -kHighsInf;
+    const bool has_ub = ub < kHighsInf;
+    if ((!has_lb && !has_ub) || lb == ub) return;
+    double p;
+    if (z > 0)
+      p = has_lb ? (x - lb) * z : 0.0;
+    else if (z < 0)
+      p = has_ub ? (ub - x) * (-z) : 0.0;
+    else
+      p = 0.0;
+    minxz = std::min(minxz, p);
+    maxxz = std::max(maxxz, p);
+  };
+
+  for (HighsInt j = 0; j < lp.num_col_; j++)
+    addProduct(solution.col_value[j], lp.col_lower_[j], lp.col_upper_[j],
+               sense * solution.col_dual[j]);
+  for (HighsInt i = 0; i < lp.num_row_; i++)
+    addProduct(solution.row_value[i], lp.row_lower_[i], lp.row_upper_[i],
+               sense * solution.row_dual[i]);
+
+  const double ratio = (minxz == kHighsInf) ? 1.0  // no bounded variables
+                       : (minxz > 0.0)      ? maxxz / minxz
+                                            : kHighsInf;
+
+  return ratio;
+}
+
+HighsInt numNearlyActiveBounds(const HighsLp& lp, const HighsSolution& sol,
+                               double tol, bool include_rows) {
+  // Returns the number of columns (and optionally rows) whose nearer finite
+  // bound is nearly active: slack <= tol * min(width, 1 + |bound|).
+  // Free and fixed variables/rows are skipped.
+
+  HighsInt count = 0;
+
+  auto check = [&](double x, double lb, double ub) {
+    const bool has_lb = lb > -kHighsInf;
+    const bool has_ub = ub < kHighsInf;
+    if ((!has_lb && !has_ub) || lb == ub) return;
+    double s, bound;
+    double width = kHighsInf;
+    if (has_lb && has_ub) {
+      const double s_lb = x - lb;
+      const double s_ub = ub - x;
+      if (s_lb <= s_ub) {
+        s = s_lb;
+        bound = lb;
+      } else {
+        s = s_ub;
+        bound = ub;
+      }
+      width = ub - lb;
+    } else if (has_lb) {
+      s = x - lb;
+      bound = lb;
+    } else {
+      s = ub - x;
+      bound = ub;
+    }
+    const double ref = std::min(width, 1.0 + std::abs(bound));
+    if (s <= tol * ref) ++count;
+  };
+
+  for (HighsInt j = 0; j < lp.num_col_; j++)
+    check(sol.col_value[j], lp.col_lower_[j], lp.col_upper_[j]);
+  if (include_rows)
+    for (HighsInt i = 0; i < lp.num_row_; i++)
+      check(sol.row_value[i], lp.row_lower_[i], lp.row_upper_[i]);
+
+  return count;
+}
