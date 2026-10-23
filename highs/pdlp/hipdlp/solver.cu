@@ -305,14 +305,6 @@ __global__ void Unscale(DeviceLp lp, Vectors v, DeviceState* s) {
   }
 }
 
-__global__ void ProjectDual(DeviceLp lp, Vectors v, DeviceState* s) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < lp.m) {
-    if (!isfinite(v.out_y[i])) atomicOr(&s->bad, 1);
-    v.out_y[i] = Multiplier(v.out_y[i], lp.lr[i], lp.ur[i]);
-  }
-}
-
 __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   Stats a;
@@ -326,7 +318,6 @@ __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
     if (!isfinite(raw_z) || !isfinite(a.p)) a.bad = 1;
     BoundMetrics(a, v.out_x[i], z, lp.lx[i], lp.ux[i], lp.m + i);
     KktBounds(a, v.out_x[i], z, lp.lx[i], lp.ux[i], tol);
-    if (isfinite(z) && z * z < tol) a.active_cost = fabs(lp.c[i]);
     double violation = fmax(fmax(lp.lx[i] - v.out_x[i], v.out_x[i] - lp.ux[i]), 0.0);
     a.l2_primal_sq = violation * violation;
     // L2 measures as cuPDLPx: its reduced cost is the primal projection's slack, i.e. nonzero only
@@ -352,5 +343,105 @@ __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
     if (isfinite(lp.ur[i])) a.b_sq += lp.ur[i] * lp.ur[i];
     a.cross += BoundProduct(v.out_y[i], lp.lr[i], lp.ur[i]);
   }
+  StoreStats(a, partial);
+}
+
+__global__ void SaveFeasible(DeviceLp lp, Vectors v, DeviceState* s) {
+  int j = blockIdx.x * blockDim.x + threadIdx.x;
+  if (j < lp.n && s->metrics.primal <= s->tolerance && !s->bad) v.feasible[j] = v.out_x[j];
+}
+
+__global__ void CertificateDirection(DeviceLp lp, Vectors v, DeviceState* s, int source, int sign) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i == 0) {
+    s->direction_source = s->iterations == 0 && source != 2 ? 3 : source;
+    s->direction_sign = sign;
+    s->direction_iteration = source == 2 ? s->epoch_iteration : s->iterations;
+  }
+  if (i < lp.n) {
+    double d = source == 2 ? v.epoch_dx[i]
+                           : (source == 0 ? (s->deviation ? v.x[i] : v.x[i] - v.xa[i])
+                                          : v.x[i] - v.xr[i]);
+    d *= sign * lp.dc[i];
+    if (!isfinite(d)) atomicOr(&s->bad, 1);
+    v.ray[i] = Recession(d, lp.lx[i], lp.ux[i]);
+  }
+  if (i < lp.m) {
+    double f = source == 2 ? v.epoch_dy[i]
+                           : (source == 0 ? (s->deviation ? v.y[i] : v.y[i] - v.ya[i])
+                                          : v.y[i] - v.yr[i]);
+    // Empty-row contradiction can be certified before the first operator evaluation.
+    if (s->iterations == 0 && source != 2)
+      f = v.out_ax[i] < lp.lr[i] ? 1 : (v.out_ax[i] > lp.ur[i] ? -1 : 0);
+    else
+      f *= lp.dr[i];
+    f *= sign;
+    if (!isfinite(f)) atomicOr(&s->bad, 1);
+    v.f[i] = Multiplier(f, lp.lr[i], lp.ur[i]);
+  }
+}
+
+__global__ void CertificateNorm(DeviceLp lp, Vectors v, Stats* partial, bool farkas) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  Stats a;
+  if (farkas) {
+    if (i < lp.m) a.norm = fabs(v.f[i]);
+    if (i < lp.n) {
+      if (!isfinite(v.atf[i])) a.bad = 1;
+      v.g[i] = Multiplier(-v.atf[i], lp.lx[i], lp.ux[i]);
+      a.norm = fmax(a.norm, fabs(v.g[i]));
+    }
+  } else if (i < lp.n)
+    a.norm = fabs(v.ray[i]);
+  if (!isfinite(a.norm)) a.bad = 1;
+  StoreStats(a, partial);
+}
+
+__global__ void NormalizeCertificate(DeviceLp lp, Vectors v, DeviceState* s, bool farkas) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  double norm = s->normalization;
+  if (!(norm > 0) || !isfinite(norm)) return;
+  if (farkas) {
+    if (i < lp.m) v.f[i] /= norm;
+    if (i < lp.n) v.g[i] /= norm;
+  } else if (i < lp.n)
+    v.ray[i] /= norm;
+}
+
+__global__ void CertificateStats(DeviceLp lp, Vectors v, Stats* partial, bool farkas) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  Stats a;
+  if (farkas) {
+    if (i < lp.m) {
+      double b = BoundProduct(v.f[i], lp.lr[i], lp.ur[i]);
+      a.d += b;
+      a.absolute += fabs(b);
+    }
+    if (i < lp.n) {
+      double b = BoundProduct(v.g[i], lp.lx[i], lp.ux[i]);
+      a.d += b;
+      a.absolute += fabs(b);
+      double residual = fabs(v.atf[i] + v.g[i]);
+      // Judged against column j's own 1-norm (|A'f|_j <= ||A_j||_1 for ||f||_inf <= 1), so one
+      // huge column cannot widen the tolerance of every other.
+      a.dual = residual / fmax(1.0, lp.column_norm[i]);
+      // A'f+g is left only where g was cut by an infinite bound (plus rounding). B does not
+      // cover it: a feasible x needs (A'f+g)'x >= B, which large |x_j| can supply. Charge it at
+      // the size of the current iterate (finite or not, it never marks the state bad).
+      a.exposure = residual * fmax(1.0, fabs(v.out_x[i]));
+    }
+  } else {
+    if (i < lp.n) {
+      a.p = lp.c[i] * v.ray[i];
+      a.absolute = fabs(a.p);
+      a.dual = ConeViolation(v.ray[i], lp.lx[i], lp.ux[i]);
+    }
+    // Likewise per row: |A d|_i <= ||A_i||_1 for ||d||_inf <= 1.
+    if (i < lp.m) 
+      a.cone = ConeViolation(v.ad[i], lp.lr[i], lp.ur[i]) / fmax(1.0, lp.row_norm[i]);
+  }
+  if (!isfinite(a.d) || !isfinite(a.p) || !isfinite(a.dual) || !isfinite(a.cone) ||
+      !isfinite(a.absolute))
+    a.bad = 1;
   StoreStats(a, partial);
 }
