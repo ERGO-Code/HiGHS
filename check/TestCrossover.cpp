@@ -110,3 +110,42 @@ void report(const std::string message, const HighsLp& lp,
   }
   printf(" Obj %11.4g\n", objective);
 }
+
+TEST_CASE("issue-3459", "[highs_lp_solver]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue(kSolverString, kPdlpString);
+  h.setOptionValue(kPresolveString, kHighsOffString);
+  const bool use_3459_model = true;
+  if (use_3459_model) {
+    std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/3459.mps";
+    h.readModel(model_file);
+  } else {
+    HighsLp lp;
+    lp.num_col_ = 2;
+    lp.num_row_ = 3;
+    lp.col_cost_ = {1, -1};
+    lp.col_lower_ = {0, 0};
+    lp.col_upper_ = {kHighsInf, kHighsInf};
+    lp.row_lower_ = {1, 2, 3}; // Infeasible or unbounded
+    lp.row_upper_ = {2, 3, 4}; // Infeasible or unbounded
+    lp.row_lower_ = {2, 0, 0};
+    lp.row_upper_ = {3, 1, 1};
+    lp.a_matrix_.start_ = {0, 3, 6};
+    lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2};
+    lp.a_matrix_.value_ = {1, -1, 2, 2, 1, -1};
+    h.passModel(lp);    
+  }
+  HighsStatus return_status = h.run();
+  h.writeSolution("", 1);
+  REQUIRE(return_status == HighsStatus::kOk);
+
+  HighsSolution solution = h.getSolution();
+
+  h.crossover(solution);
+  h.writeSolution("", 1);
+
+  h.resetGlobalScheduler(true);
+}
+
