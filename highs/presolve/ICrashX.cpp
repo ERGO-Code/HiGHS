@@ -99,7 +99,8 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   // Boxed rows l <= a^Tx <= u are converted using explicit slack s to
   // a^Tx - s = 0; l <= s <= u
   // 
-  // Hence Av[Ap[i]] = -1 and rhs[row] = 0
+  // Hence, i \in [lp.num_col_, num_col), Ap[i + 1] == Ap[i] + 1,
+  // Av[Ap[i]] = -1 and rhs[Ai[Ap[i]]] = 0
   //
   // Since IPX excludes any free rows, skip them in mapping the LP's
   // row duals onto y
@@ -165,11 +166,15 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
     for (HighsInt i = 0; i < lp.num_col_; i++)
       complement(x[i], z[i], col_lb[i], col_ub[i]);
   }
+
+  // Compute the row activites for the original LP
+  std::vector<HighsCDouble> activity(num_row, HighsCDouble(0.0));
+  for (HighsInt i = 0; i < lp.num_col_; i++) {
+    for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p)
+      activity[Ai[p]] += Av[p] * x[i];
+  }
+
   if (num_col > lp.num_col_) {
-    std::vector<double> activity(num_row, 0.0);
-    for (HighsInt i = 0; i < lp.num_col_; i++)
-      for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p)
-        activity[Ai[p]] += Av[p] * x[i];
     for (HighsInt i = lp.num_col_; i < num_col; i++) {
       assert(Ap[i + 1] - Ap[i] == 1);
       const HighsInt row = Ai[Ap[i]];
@@ -177,7 +182,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
       assert(Av[Ap[i]] == -1);
       assert(rhs[row] == 0);
       //      const double value = (rhs[row] - activity[row]) / Av[Ap[i]];
-      const double value = activity[row];
+      const double value = double(activity[row]);
       x[i] = std::min(std::max(value, col_lb[i]), col_ub[i]);
       if (use_duals) {
         complement(x[i], z[i], col_lb[i], col_ub[i]);
@@ -188,11 +193,17 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   }
 
   // Build slack variables from rhs-A*x but subject to sign conditions.
-  std::vector<double> slack(rhs);
-  for (HighsInt i = 0; i < num_col; i++) {
-    for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p) slack[Ai[p]] -= Av[p] * x[i];
+  // Complete the calculation of the activities for IPX
+  for (HighsInt i = lp.num_col_; i < num_col; i++) {
+    assert(Ap[i + 1] - Ap[i] == 1);
+    // Hence Av[Ap[i]] = -1 
+    //    for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p) activity[Ai[p]] += Av[p] * x[i];
+    activity[Ai[Ap[i]]] -= x[i];
   }
+  
+  std::vector<double> slack(num_row);
   for (HighsInt i = 0; i < num_row; i++) {
+    slack[i] = double(HighsCDouble(rhs[i]) - activity[i]);
     switch (constraint_type[i]) {
       case '=':
         slack[i] = 0.0;

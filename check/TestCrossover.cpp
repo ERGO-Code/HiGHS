@@ -111,19 +111,17 @@ void report(const std::string message, const HighsLp& lp,
   printf(" Obj %11.4g\n", objective);
 }
 
-const std::vector<std::string> solvers{//kPdlpString,
-  kHiPdlpString
-  //, kIpxString
+const std::vector<std::string> solvers{kPdlpString, kHiPdlpString, kIpxString
 #ifdef HIPO
                                        ,
                                        kHipoString
 #endif
 };
 
-TEST_CASE("issue-3459", "[highs_lp_solver]") {
+TEST_CASE("issue-3459", "[highs_crossover]") {
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
-  const bool use_3459_model = true;
+  // h.setOptionValue("output_flag", dev_run);
+  const bool use_3459_model = false;
   double objective_value;
   HighsInt free_row0;
   HighsInt free_row1;
@@ -155,7 +153,7 @@ TEST_CASE("issue-3459", "[highs_lp_solver]") {
     // free, so testing the handling of free rows - which are omitted
     // from IPX
     HighsLp lp;
-    //    lp.sense_ = 
+    lp.sense_ = ObjSense::kMaximize;
     lp.num_col_ = 3;
     lp.num_row_ = 3;
     lp.col_cost_ = {-10, -16, -24};
@@ -168,8 +166,12 @@ TEST_CASE("issue-3459", "[highs_lp_solver]") {
     lp.a_matrix_.value_ = {1, 1, 1, 1.25, 2.25, 3, 2, 3, 4};
     lp.col_names_ = {"Tables", "Seats", "Sets_of_chairs"};
     lp.row_names_ = {"Assembly", "Redundant", "Finishing"};
-    h.passModel(lp);
     objective_value = -980;
+    if (lp.sense_ == ObjSense::kMaximize) {
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) lp.col_cost_[iCol] *= -1;
+      objective_value *= -1;;
+    }
+    h.passModel(lp);
     free_row0 = 0;
     free_row1 = 1;
   }
@@ -194,12 +196,16 @@ TEST_CASE("issue-3459", "[highs_lp_solver]") {
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
       REQUIRE(objectiveError() < 1e-6);
 
+      h.writeSolution("", 1);
+
       solution = h.getSolution();
 
       return_status = h.crossover(solution);
       REQUIRE(return_status == HighsStatus::kOk);
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
       REQUIRE(objectiveError() < 1e-6);
+
+      h.writeSolution("", 1);
     }
   };
 
