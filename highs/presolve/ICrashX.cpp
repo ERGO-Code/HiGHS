@@ -71,20 +71,8 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   const bool use_duals =
       highs_solution.dual_valid &&
       (HighsInt)highs_solution.col_dual.size() == lp.num_col_ &&
-      (HighsInt)highs_solution.row_dual.size() == lp.num_row_ &&
-      num_row == lp.num_row_;
-  std::vector<double> x(num_col, 0.0), y, z;
-  for (HighsInt i = 0; i < lp.num_col_; i++)
-    x[i] =
-        std::min(std::max(highs_solution.col_value[i], col_lb[i]), col_ub[i]);
-  if (use_duals) {
-    y = highs_solution.row_dual;
-    z.assign(num_col, 0.0);
-    for (HighsInt i = 0; i < lp.num_col_; i++)
-      z[i] = highs_solution.col_dual[i];
-    for (HighsInt i = lp.num_col_; i < num_col; i++)
-      z[i] = -Av[Ap[i]] * y[Ai[Ap[i]]];
-  }
+      (HighsInt)highs_solution.row_dual.size() == lp.num_row_;
+
   // IPX accepts only an exactly complementary start: a column with z
   // > 0 must sit at its lower bound, z < 0 at its upper; a row's
   // slack must be at its bound wherever its dual is nonzero. An
@@ -102,6 +90,44 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   const double use_primal_tolerance =
       0;                                // options.primal_feasibility_tolerance;
   const double use_dual_tolerance = 0;  // options.dual_feasibility_tolerance;
+
+
+  std::vector<double> x(num_col, 0.0);
+  std::vector<double> y;
+  std::vector<double> z;
+
+  // Since IPX excludes any free rows, determine the row number in IPX
+  // for each row in the LP in mapping the LPs row duals onto y
+  std::vector<HighsInt> row_map(lp.num_row_);
+  HighsInt ipx_num_row = 0;
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    if (lp.row_lower_[iRow] <= -kHighsInf && lp.row_upper_[iRow] >= kHighsInf) {
+      // Free row not in IPX: any dual it has should be small, but is ignored
+      row_map[iRow] = -1;
+      double dual = highs_solution.row_dual[iRow];
+      if (dual) {
+	num_dual_zeroed++;
+	sum_dual_zeroed += std::fabs(dual);
+      }
+    } else {
+      row_map[iRow] = ipx_num_row;
+      if (use_duals) y.push_back(highs_solution.row_dual[iRow]);
+      ipx_num_row++;
+    }
+  }
+  assert(ipx_num_row == num_row);      
+
+  for (HighsInt i = 0; i < lp.num_col_; i++)
+    x[i] =
+        std::min(std::max(highs_solution.col_value[i], col_lb[i]), col_ub[i]);
+  if (use_duals) {
+    z.assign(num_col, 0.0);
+    for (HighsInt i = 0; i < lp.num_col_; i++)
+      z[i] = highs_solution.col_dual[i];
+    for (HighsInt i = lp.num_col_; i < num_col; i++)
+      z[i] = -Av[Ap[i]] * y[Ai[Ap[i]]];
+  }
+
 
   auto complement = [&](double& value, double& dual, const double lower,
                         const double upper) {
