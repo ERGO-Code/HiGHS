@@ -564,7 +564,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs.run();
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("Kappa", "[highs_basis_solves]") {
@@ -613,7 +613,7 @@ TEST_CASE("Kappa", "[highs_basis_solves]") {
     REQUIRE(highs.getKappa(kappa) == HighsStatus::kError);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("2913", "[highs_basis_solves]") {
@@ -665,5 +665,5 @@ TEST_CASE("2913", "[highs_basis_solves]") {
   }
 
   std::remove(basis_file.c_str());
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

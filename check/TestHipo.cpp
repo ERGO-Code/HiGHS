@@ -40,7 +40,7 @@ void runHipoTest(
 TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
   Highs highs;
   runHipoTest(highs, "afiro.mps", -464.753);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
@@ -102,7 +102,7 @@ TEST_CASE("test-hipo-options", "[highs_hipo]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-qp", "[highs_hipo]") {
@@ -110,7 +110,7 @@ TEST_CASE("test-hipo-qp", "[highs_hipo]") {
   runHipoTest(highs, "qptestnw.lp", -6.4500);
   runHipoTest(highs, "qjh.lp", -5.2500);
   runHipoTest(highs, "primal1.mps", -3.501296e-2);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
@@ -119,7 +119,7 @@ TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
   runHipoTest(highs, "bgetam.mps", 0, expected_status, "off");
   runHipoTest(highs, "forest6.mps", 0, expected_status, "off");
   runHipoTest(highs, "klein1.mps", 0, expected_status, "off");
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
@@ -127,7 +127,7 @@ TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
   Highs highs;
   runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "on");
   runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "off");
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3369", "[highs_hipo]") {
