@@ -96,21 +96,23 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   std::vector<double> y;
   std::vector<double> z;
 
-  // Since IPX excludes any free rows, determine the row number in IPX
-  // for each row in the LP in mapping the LPs row duals onto y
-  std::vector<HighsInt> row_map(lp.num_row_);
+  // Boxed rows l <= a^Tx <= u are converted using explicit slack s to
+  // a^Tx - s = 0; l <= s <= u
+  // 
+  // Hence Av[Ap[i]] = -1 and rhs[row] = 0
+  //
+  // Since IPX excludes any free rows, skip them in mapping the LP's
+  // row duals onto y
   HighsInt ipx_num_row = 0;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] <= -kHighsInf && lp.row_upper_[iRow] >= kHighsInf) {
       // Free row not in IPX: any dual it has should be small, but is ignored
-      row_map[iRow] = -1;
       double dual = highs_solution.row_dual[iRow];
       if (dual) {
 	num_dual_zeroed++;
 	sum_dual_zeroed += std::fabs(dual);
       }
     } else {
-      row_map[iRow] = ipx_num_row;
       if (use_duals) y.push_back(highs_solution.row_dual[iRow]);
       ipx_num_row++;
     }
@@ -124,8 +126,10 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
     z.assign(num_col, 0.0);
     for (HighsInt i = 0; i < lp.num_col_; i++)
       z[i] = highs_solution.col_dual[i];
+    // Hence Av[Ap[i]] = -1
     for (HighsInt i = lp.num_col_; i < num_col; i++)
-      z[i] = -Av[Ap[i]] * y[Ai[Ap[i]]];
+      //      z[i] = -Av[Ap[i]] * y[Ai[Ap[i]]];
+      z[i] = y[Ai[Ap[i]]];
   }
 
 
@@ -164,26 +168,31 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   if (num_col > lp.num_col_) {
     std::vector<double> activity(num_row, 0.0);
     for (HighsInt i = 0; i < lp.num_col_; i++)
-      for (ipx::Int p = Ap[i]; p < Ap[i + 1]; ++p)
+      for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p)
         activity[Ai[p]] += Av[p] * x[i];
     for (HighsInt i = lp.num_col_; i < num_col; i++) {
       assert(Ap[i + 1] - Ap[i] == 1);
-      const ipx::Int row = Ai[Ap[i]];
-      const double value = (rhs[row] - activity[row]) / Av[Ap[i]];
+      const HighsInt row = Ai[Ap[i]];
+      // Hence Av[Ap[i]] = -1 and rhs[row] = 0
+      assert(Av[Ap[i]] == -1);
+      assert(rhs[row] == 0);
+      //      const double value = (rhs[row] - activity[row]) / Av[Ap[i]];
+      const double value = activity[row];
       x[i] = std::min(std::max(value, col_lb[i]), col_ub[i]);
       if (use_duals) {
         complement(x[i], z[i], col_lb[i], col_ub[i]);
-        y[row] = -z[i] / Av[Ap[i]];
+	//        y[row] = -z[i] / Av[Ap[i]];
+        y[row] = z[i];
       }
     }
   }
 
   // Build slack variables from rhs-A*x but subject to sign conditions.
   std::vector<double> slack(rhs);
-  for (int i = 0; i < num_col; i++) {
-    for (int p = Ap[i]; p < Ap[i + 1]; ++p) slack[Ai[p]] -= Av[p] * x[i];
+  for (HighsInt i = 0; i < num_col; i++) {
+    for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p) slack[Ai[p]] -= Av[p] * x[i];
   }
-  for (int i = 0; i < num_row; i++) {
+  for (HighsInt i = 0; i < num_row; i++) {
     switch (constraint_type[i]) {
       case '=':
         slack[i] = 0.0;
@@ -209,7 +218,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
     }
   }
 
-  ipx::Int crossover_status;
+  HighsInt crossover_status;
   if (use_duals) {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Calling IPX crossover with primal and dual values");
@@ -246,7 +255,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
     return HighsStatus::kError;
   }
   ipx::Info ipx_info = lps.GetInfo();
-  highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+  highs_info.crossover_iteration_count += ipx_info.updates_crossover;
   const bool imprecise_solution =
       ipx_info.status_crossover == IPX_STATUS_imprecise;
   if (ipx_info.status_crossover != IPX_STATUS_optimal &&
@@ -254,7 +263,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
       ipx_info.status_crossover != IPX_STATUS_time_limit) {
     highsLogUser(log_options, HighsLogType::kError,
                  "IPX crossover failed: status = %d\n",
-                 (int)ipx_info.status_crossover);
+                 int(ipx_info.status_crossover));
     return HighsStatus::kError;
   }
   if (ipx_info.status_crossover == IPX_STATUS_time_limit) {
@@ -272,7 +281,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   ipx_solution.ipx_row_dual.resize(num_row);
   ipx_solution.ipx_row_status.resize(num_row);
   ipx_solution.ipx_col_status.resize(num_col);
-  ipx::Int errflag = lps.GetBasicSolution(
+  HighsInt errflag = lps.GetBasicSolution(
       ipx_solution.ipx_col_value.data(), ipx_solution.ipx_row_value.data(),
       ipx_solution.ipx_row_dual.data(), ipx_solution.ipx_col_dual.data(),
       ipx_solution.ipx_row_status.data(), ipx_solution.ipx_col_status.data());
