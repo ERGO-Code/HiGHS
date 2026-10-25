@@ -263,7 +263,12 @@ static std::vector<std::string> renderDiagnostics(
   for (const Diagnostic& d : diagnostics) {
     while (line_number < d.line) {
       line.clear();
-      std::getline(*file, line);
+      try {
+        std::getline(*file, line);
+      } catch (const std::ios_base::failure&) {
+        // For example, zstr throws if a compressed file is corrupt. The
+        // diagnostic is rendered with the part of the line that was read.
+      }
       line_pos = next_line_pos;
       next_line_pos += line.size() + 1;
       line_number++;

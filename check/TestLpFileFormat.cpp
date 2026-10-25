@@ -1879,3 +1879,36 @@ TEST_CASE("lp-file-format-long-token-of-utf8-continuation", "[LpFileFormat]") {
   REQUIRE(readLp(highs, filename, content, log) == HighsStatus::kError);
   REQUIRE(log.find("expected a section keyword") != std::string::npos);
 }
+
+TEST_CASE("lp-file-format-corrupt-gzip-after-parse-error", "[LpFileFormat]") {
+  // A parse error at the start of a long line, in a gzip file whose checksum
+  // is wrong. The parser stops before the end of the stream, but rendering
+  // the error reads the rest of the line, which reaches the bad checksum.
+  // The tokens are short, so the parser stops reading early. The data is in
+  // stored (uncompressed) deflate blocks of 60000 bytes.
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  std::string content("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03", 10);
+  const size_t kBlock = 60000;
+  const size_t kNumBlock = 4;
+  for (size_t b = 0; b < kNumBlock; b++) {
+    std::string data;
+    while (data.size() < kBlock) data += "x ";
+    if (b == 0) data.replace(0, 4, "bad ");
+    if (b + 1 == kNumBlock) data.back() = '\n';
+    content += char(b + 1 == kNumBlock ? 1 : 0);  // BFINAL, BTYPE = stored
+    content += char(kBlock & 0xFF);
+    content += char(kBlock >> 8);
+    content += char(~kBlock & 0xFF);
+    content += char((~kBlock >> 8) & 0xFF);
+    content += data;
+  }
+  content += std::string(8, '\0');  // wrong CRC32 and length
+  Highs highs;
+  std::string log;
+  REQUIRE(readLp(highs, filename, content, log) == HighsStatus::kError);
+#ifdef ZLIB_FOUND
+  REQUIRE(log.find("expected a section keyword, found `bad`") !=
+          std::string::npos);
+#endif
+}
