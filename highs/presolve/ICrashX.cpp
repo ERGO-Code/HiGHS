@@ -120,7 +120,6 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
       ipx_num_row++;
     }
   }
-  assert(ipx_num_row == num_row);
 
   for (HighsInt i = 0; i < lp.num_col_; i++)
     x[i] =
@@ -129,10 +128,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
     z.assign(num_col, 0.0);
     for (HighsInt i = 0; i < lp.num_col_; i++)
       z[i] = sense * highs_solution.col_dual[i];
-    // Hence Av[Ap[i]] = -1
-    for (HighsInt i = lp.num_col_; i < num_col; i++)
-      //      z[i] = -Av[Ap[i]] * y[Ai[Ap[i]]];
-      z[i] = y[Ai[Ap[i]]];
+    for (HighsInt i = lp.num_col_; i < num_col; i++) z[i] = y[Ai[Ap[i]]];
   }
 
   auto complement = [&](double& value, double& dual, const double lower,
@@ -177,17 +173,11 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
 
   if (num_col > lp.num_col_) {
     for (HighsInt i = lp.num_col_; i < num_col; i++) {
-      assert(Ap[i + 1] - Ap[i] == 1);
       const HighsInt row = Ai[Ap[i]];
-      // Hence Av[Ap[i]] = -1 and rhs[row] = 0
-      assert(Av[Ap[i]] == -1);
-      assert(rhs[row] == 0);
-      //      const double value = (rhs[row] - activity[row]) / Av[Ap[i]];
       const double value = double(activity[row]);
       x[i] = std::min(std::max(value, col_lb[i]), col_ub[i]);
       if (use_duals) {
         complement(x[i], z[i], col_lb[i], col_ub[i]);
-        //        y[row] = -z[i] / Av[Ap[i]];
         y[row] = z[i];
       }
     }
@@ -195,13 +185,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
 
   // Build slack variables from rhs-A*x but subject to sign conditions.
   // Complete the calculation of the activities for IPX
-  for (HighsInt i = lp.num_col_; i < num_col; i++) {
-    assert(Ap[i + 1] - Ap[i] == 1);
-    // Hence Av[Ap[i]] = -1
-    //    for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p) activity[Ai[p]] += Av[p]
-    //    * x[i];
-    activity[Ai[Ap[i]]] -= x[i];
-  }
+  for (HighsInt i = lp.num_col_; i < num_col; i++) activity[Ai[Ap[i]]] -= x[i];
 
   std::vector<double> slack(num_row);
   for (HighsInt i = 0; i < num_row; i++) {

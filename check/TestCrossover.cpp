@@ -123,106 +123,109 @@ const std::vector<std::string> solvers{kPdlpString,
 TEST_CASE("issue-3459", "[highs_crossover]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
-  const bool use_3459_model = false;
   double objective_value;
   HighsInt free_row0;
   HighsInt free_row1;
-  if (use_3459_model) {
-    std::string model_file =
-        std::string(HIGHS_DIR) + "/check/instances/3459.mps";
-    h.readModel(model_file);
-    objective_value = 17.555148585;
-    free_row0 = 10;
-    free_row1 = 14;
-  } else {
-    // This LP has optimal solution
-    //
-    // Columns
-    // Ix St  Lo  Up    Pr  Du  Name
-    //  0 UB  20  30    30  -4  Tables
-    //  1 LB   5   7     5   2  Seats
-    //  2 BS  20  40    25   0  Sets_of_chairs
-    //
-    // Rows
-    // Ix St  Lo  Up     Pr Du  Name
-    //  0 BS  70  90  86.25  0  Assembly
-    //  1 BS 100 120 116.25  0  Redundant
-    //  2 UB 125 145 145    -6  Finishing
-    //
-    // So, in setting up for crossover there are boxed variables at
-    // both lower and upper bounds, and boxed constraints testing the
-    // addition of explicit slacks. Also, row 0 and row 1 can be made
-    // free, so testing the handling of free rows - which are omitted
-    // from IPX
-    HighsLp lp;
-    lp.sense_ = ObjSense::kMaximize;
-    lp.num_col_ = 3;
-    lp.num_row_ = 3;
-    lp.col_cost_ = {-10, -16, -24};
-    lp.col_lower_ = {20, 5, 20};
-    lp.col_upper_ = {30, 7, 40};
-    lp.row_lower_ = {70, 100, 125};
-    lp.row_upper_ = {90, 120, 145};
-    lp.a_matrix_.start_ = {0, 3, 6, 9};
-    lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 0, 1, 2};
-    lp.a_matrix_.value_ = {1, 1, 1, 1.25, 2.25, 3, 2, 3, 4};
-    lp.col_names_ = {"Tables", "Seats", "Sets_of_chairs"};
-    lp.row_names_ = {"Assembly", "Redundant", "Finishing"};
-    objective_value = -980;
-    if (lp.sense_ == ObjSense::kMaximize) {
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-        lp.col_cost_[iCol] *= -1;
-      objective_value *= -1;
-      ;
+
+  for (HighsInt k = 0; k < 2; k++) {
+    if (k == 0) {
+      std::string model_file =
+          std::string(HIGHS_DIR) + "/check/instances/3459.mps";
+      h.readModel(model_file);
+      objective_value = 17.555148585;
+      free_row0 = 10;
+      free_row1 = 14;
+    } else {
+      // This LP has optimal solution
+      //
+      // Columns
+      // Ix St  Lo  Up    Pr  Du  Name
+      //  0 UB  20  30    30  -4  Tables
+      //  1 LB   5   7     5   2  Seats
+      //  2 BS  20  40    25   0  Sets_of_chairs
+      //
+      // Rows
+      // Ix St  Lo  Up     Pr Du  Name
+      //  0 BS  70  90  86.25  0  Assembly
+      //  1 BS 100 120 116.25  0  Redundant
+      //  2 UB 125 145 145    -6  Finishing
+      //
+      // So, in setting up for crossover there are boxed variables at
+      // both lower and upper bounds, and boxed constraints testing
+      // the addition of explicit slacks. Also, row 0 and row 1 can be
+      // made free, so testing the handling of free rows - which are
+      // omitted from IPX
+      HighsLp lp;
+      lp.sense_ = ObjSense::kMaximize;
+      lp.num_col_ = 3;
+      lp.num_row_ = 3;
+      lp.col_cost_ = {-10, -16, -24};
+      lp.col_lower_ = {20, 5, 20};
+      lp.col_upper_ = {30, 7, 40};
+      lp.row_lower_ = {70, 100, 125};
+      lp.row_upper_ = {90, 120, 145};
+      lp.a_matrix_.start_ = {0, 3, 6, 9};
+      lp.a_matrix_.index_ = {0, 1, 2, 0, 1, 2, 0, 1, 2};
+      lp.a_matrix_.value_ = {1, 1, 1, 1.25, 2.25, 3, 2, 3, 4};
+      lp.col_names_ = {"Tables", "Seats", "Sets_of_chairs"};
+      lp.row_names_ = {"Assembly", "Redundant", "Finishing"};
+      objective_value = -980;
+      if (lp.sense_ == ObjSense::kMaximize) {
+        for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+          lp.col_cost_[iCol] *= -1;
+        objective_value *= -1;
+      }
+      h.passModel(lp);
+      free_row0 = 0;
+      free_row1 = 1;
     }
-    h.passModel(lp);
-    free_row0 = 0;
-    free_row1 = 1;
+
+    HighsStatus return_status;
+    HighsSolution solution;
+    h.setOptionValue(kPresolveString, kHighsOffString);
+    h.setOptionValue("run_crossover", kHighsOffString);
+
+    auto objectiveError = [&]() {
+      return std::fabs(h.getObjectiveValue() - objective_value) /
+             (1.0 + std::fabs(objective_value));
+    };
+
+    auto testSolvers = [&](const char* type) {
+      for (auto& solver : solvers) {
+        if (dev_run)
+          printf("====================\n%s (%s)\n====================\n",
+                 solver.c_str(), type);
+        h.setOptionValue(kSolverString, solver);
+        return_status = h.run();
+        REQUIRE(return_status == HighsStatus::kOk);
+        REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+        REQUIRE(objectiveError() < 1e-6);
+        //      h.writeSolution("", 1);
+        solution = h.getSolution();
+        return_status = h.crossover(solution);
+        REQUIRE(return_status == HighsStatus::kOk);
+        REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+        REQUIRE(objectiveError() < 1e-6);
+        //      h.writeSolution("", 1);
+      }
+    };
+
+    testSolvers("original");
+
+    // Now free two of the rows to test the ability to handle them in
+    // Highs::crossover
+    REQUIRE(std::fabs(h.getSolution().row_dual[free_row0]) <
+            h.getOptions().dual_feasibility_tolerance);
+    REQUIRE(std::fabs(h.getSolution().row_dual[free_row1]) <
+            h.getOptions().dual_feasibility_tolerance);
+
+    REQUIRE(h.changeRowBounds(free_row0, -kHighsInf, kHighsInf) ==
+            HighsStatus::kOk);
+    REQUIRE(h.changeRowBounds(free_row1, -kHighsInf, kHighsInf) ==
+            HighsStatus::kOk);
+
+    testSolvers("with free row");
   }
-
-  HighsStatus return_status;
-  HighsSolution solution;
-  h.setOptionValue(kPresolveString, kHighsOffString);
-  h.setOptionValue("run_crossover", kHighsOffString);
-
-  auto objectiveError = [&]() {
-    return std::fabs(h.getObjectiveValue() - objective_value) /
-           (1.0 + std::fabs(objective_value));
-  };
-
-  auto testSolvers = [&](const char* type) {
-    for (auto& solver : solvers) {
-      if (dev_run)
-        printf("====================\n%s (%s)\n====================\n",
-               solver.c_str(), type);
-      h.setOptionValue(kSolverString, solver);
-      return_status = h.run();
-      REQUIRE(return_status == HighsStatus::kOk);
-      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-      REQUIRE(objectiveError() < 1e-6);
-      //      h.writeSolution("", 1);
-      solution = h.getSolution();
-      return_status = h.crossover(solution);
-      REQUIRE(return_status == HighsStatus::kOk);
-      REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-      REQUIRE(objectiveError() < 1e-6);
-      //      h.writeSolution("", 1);
-    }
-  };
-
-  testSolvers("original");
-
-  REQUIRE(std::fabs(h.getSolution().row_dual[free_row0]) <
-          h.getOptions().dual_feasibility_tolerance);
-  REQUIRE(std::fabs(h.getSolution().row_dual[free_row1]) <
-          h.getOptions().dual_feasibility_tolerance);
-
-  REQUIRE(h.changeRowBounds(free_row0, -kHighsInf, kHighsInf) ==
-          HighsStatus::kOk);
-  REQUIRE(h.changeRowBounds(free_row1, -kHighsInf, kHighsInf) ==
-          HighsStatus::kOk);
-
-  testSolvers("with free row");
 
   h.resetGlobalScheduler(true);
 }
