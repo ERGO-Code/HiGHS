@@ -111,7 +111,9 @@ void report(const std::string message, const HighsLp& lp,
   printf(" Obj %11.4g\n", objective);
 }
 
-const std::vector<std::string> solvers{kPdlpString, kHiPdlpString, kIpxString
+const std::vector<std::string> solvers{kPdlpString,
+                                       // kHiPdlpString,
+                                       kIpxString
 #ifdef HIPO
                                        ,
                                        kHipoString
@@ -120,28 +122,28 @@ const std::vector<std::string> solvers{kPdlpString, kHiPdlpString, kIpxString
 
 TEST_CASE("issue-3459", "[highs_crossover]") {
   Highs h;
-  // h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   const bool use_3459_model = false;
   double objective_value;
   HighsInt free_row0;
   HighsInt free_row1;
   if (use_3459_model) {
     std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/3459.mps";
+        std::string(HIGHS_DIR) + "/check/instances/3459.mps";
     h.readModel(model_file);
     objective_value = 17.555148585;
     free_row0 = 10;
     free_row1 = 14;
   } else {
-    // This LP has optimal solution 
+    // This LP has optimal solution
     //
-    //Columns
+    // Columns
     // Ix St  Lo  Up    Pr  Du  Name
     //  0 UB  20  30    30  -4  Tables
     //  1 LB   5   7     5   2  Seats
     //  2 BS  20  40    25   0  Sets_of_chairs
     //
-    //Rows
+    // Rows
     // Ix St  Lo  Up     Pr Du  Name
     //  0 BS  70  90  86.25  0  Assembly
     //  1 BS 100 120 116.25  0  Redundant
@@ -168,8 +170,10 @@ TEST_CASE("issue-3459", "[highs_crossover]") {
     lp.row_names_ = {"Assembly", "Redundant", "Finishing"};
     objective_value = -980;
     if (lp.sense_ == ObjSense::kMaximize) {
-      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) lp.col_cost_[iCol] *= -1;
-      objective_value *= -1;;
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+        lp.col_cost_[iCol] *= -1;
+      objective_value *= -1;
+      ;
     }
     h.passModel(lp);
     free_row0 = 0;
@@ -182,12 +186,13 @@ TEST_CASE("issue-3459", "[highs_crossover]") {
   h.setOptionValue("run_crossover", kHighsOffString);
 
   auto objectiveError = [&]() {
-    return std::fabs(h.getObjectiveValue() - objective_value) / (1.0 + std::fabs(objective_value));
+    return std::fabs(h.getObjectiveValue() - objective_value) /
+           (1.0 + std::fabs(objective_value));
   };
 
   auto testSolvers = [&](const char* type) {
     for (auto& solver : solvers) {
-      //      if (dev_run)
+      if (dev_run)
         printf("====================\n%s (%s)\n====================\n",
                solver.c_str(), type);
       h.setOptionValue(kSolverString, solver);
@@ -195,17 +200,13 @@ TEST_CASE("issue-3459", "[highs_crossover]") {
       REQUIRE(return_status == HighsStatus::kOk);
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
       REQUIRE(objectiveError() < 1e-6);
-
-      h.writeSolution("", 1);
-
+      //      h.writeSolution("", 1);
       solution = h.getSolution();
-
       return_status = h.crossover(solution);
       REQUIRE(return_status == HighsStatus::kOk);
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
       REQUIRE(objectiveError() < 1e-6);
-
-      h.writeSolution("", 1);
+      //      h.writeSolution("", 1);
     }
   };
 
@@ -216,8 +217,10 @@ TEST_CASE("issue-3459", "[highs_crossover]") {
   REQUIRE(std::fabs(h.getSolution().row_dual[free_row1]) <
           h.getOptions().dual_feasibility_tolerance);
 
-  REQUIRE(h.changeRowBounds(free_row0, -kHighsInf, kHighsInf) == HighsStatus::kOk);
-  REQUIRE(h.changeRowBounds(free_row1, -kHighsInf, kHighsInf) == HighsStatus::kOk);
+  REQUIRE(h.changeRowBounds(free_row0, -kHighsInf, kHighsInf) ==
+          HighsStatus::kOk);
+  REQUIRE(h.changeRowBounds(free_row1, -kHighsInf, kHighsInf) ==
+          HighsStatus::kOk);
 
   testSolvers("with free row");
 

@@ -91,14 +91,16 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
       0;                                // options.primal_feasibility_tolerance;
   const double use_dual_tolerance = 0;  // options.dual_feasibility_tolerance;
 
-
   std::vector<double> x(num_col, 0.0);
   std::vector<double> y;
   std::vector<double> z;
 
+  // Duals of maximizations must be negated
+  const HighsInt sense = lp.sense_ == ObjSense::kMinimize ? 1 : -1;
+
   // Boxed rows l <= a^Tx <= u are converted using explicit slack s to
   // a^Tx - s = 0; l <= s <= u
-  // 
+  //
   // Hence, i \in [lp.num_col_, num_col), Ap[i + 1] == Ap[i] + 1,
   // Av[Ap[i]] = -1 and rhs[Ai[Ap[i]]] = 0
   //
@@ -108,17 +110,17 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] <= -kHighsInf && lp.row_upper_[iRow] >= kHighsInf) {
       // Free row not in IPX: any dual it has should be small, but is ignored
-      double dual = highs_solution.row_dual[iRow];
+      double dual = sense * highs_solution.row_dual[iRow];
       if (dual) {
-	num_dual_zeroed++;
-	sum_dual_zeroed += std::fabs(dual);
+        num_dual_zeroed++;
+        sum_dual_zeroed += std::fabs(dual);
       }
     } else {
-      if (use_duals) y.push_back(highs_solution.row_dual[iRow]);
+      if (use_duals) y.push_back(sense * highs_solution.row_dual[iRow]);
       ipx_num_row++;
     }
   }
-  assert(ipx_num_row == num_row);      
+  assert(ipx_num_row == num_row);
 
   for (HighsInt i = 0; i < lp.num_col_; i++)
     x[i] =
@@ -126,13 +128,12 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   if (use_duals) {
     z.assign(num_col, 0.0);
     for (HighsInt i = 0; i < lp.num_col_; i++)
-      z[i] = highs_solution.col_dual[i];
+      z[i] = sense * highs_solution.col_dual[i];
     // Hence Av[Ap[i]] = -1
     for (HighsInt i = lp.num_col_; i < num_col; i++)
       //      z[i] = -Av[Ap[i]] * y[Ai[Ap[i]]];
       z[i] = y[Ai[Ap[i]]];
   }
-
 
   auto complement = [&](double& value, double& dual, const double lower,
                         const double upper) {
@@ -186,7 +187,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
       x[i] = std::min(std::max(value, col_lb[i]), col_ub[i]);
       if (use_duals) {
         complement(x[i], z[i], col_lb[i], col_ub[i]);
-	//        y[row] = -z[i] / Av[Ap[i]];
+        //        y[row] = -z[i] / Av[Ap[i]];
         y[row] = z[i];
       }
     }
@@ -196,11 +197,12 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   // Complete the calculation of the activities for IPX
   for (HighsInt i = lp.num_col_; i < num_col; i++) {
     assert(Ap[i + 1] - Ap[i] == 1);
-    // Hence Av[Ap[i]] = -1 
-    //    for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p) activity[Ai[p]] += Av[p] * x[i];
+    // Hence Av[Ap[i]] = -1
+    //    for (HighsInt p = Ap[i]; p < Ap[i + 1]; ++p) activity[Ai[p]] += Av[p]
+    //    * x[i];
     activity[Ai[Ap[i]]] -= x[i];
   }
-  
+
   std::vector<double> slack(num_row);
   for (HighsInt i = 0; i < num_row; i++) {
     slack[i] = double(HighsCDouble(rhs[i]) - activity[i]);
