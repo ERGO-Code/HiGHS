@@ -1703,7 +1703,7 @@ class Highs {
 
   highs::folding::Folder folder_;
   highs::folding::Status runFolding();
-  void runUnfolding(const HighsSolution& solution);
+  HighsStatus runUnfolding(const HighsSolution& solution);
 
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve(const bool force_lp_presolve,

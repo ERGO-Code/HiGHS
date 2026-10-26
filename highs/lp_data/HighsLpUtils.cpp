@@ -3361,7 +3361,7 @@ void reportFoldingReductions(const HighsLogOptions& log_options,
     num_A_nz_to = folded_model.lp_.numNz();
     num_Q_nz_to = folded_model.hessian_.numNz();
 
-  } else if (status == highs::folding::Status::kNotReduced) {
+  } else if (status == highs::folding::Status::kNotFolded) {
     num_col_to = num_col_from;
     num_row_to = num_row_from;
     num_A_nz_to = num_A_nz_from;

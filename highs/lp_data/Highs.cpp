@@ -1177,7 +1177,7 @@ HighsStatus Highs::fold() {
           HighsModelStatus::kMemoryLimit);
       break;
 
-    case highs::folding::Status::kNotReduced:
+    case highs::folding::Status::kNotFolded:
       return_status = HighsStatus::kWarning;
       folded_model_ = model_;
       break;
@@ -1199,28 +1199,94 @@ HighsStatus Highs::fold() {
 }
 
 highs::folding::Status Highs::runFolding() {
+  model_.lp_.ensureColwise();
+
   if (!timer_.running()) timer_.start();
+  double start_folding = timer_.read();
+
+  if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
+    double left = options_.time_limit - start_folding;
+    if (left <= 0) {
+      highsLogDev(options_.log_options, HighsLogType::kError,
+                  "Time limit reached while reading in matrix\n");
+      return highs::folding::Status::kTimeLimit;
+    }
+
+    highsLogDev(options_.log_options, HighsLogType::kVerbose,
+                "Time limit set: reading matrix took %.2g, folding "
+                "time left: %.2g\n",
+                start_folding, left);
+  }
 
   folder_.setModel(model_);
   folder_.setTimeLimit(timer_, options_.time_limit);
   folder_.run();
 
+  highsLogDev(options_.log_options, HighsLogType::kVerbose,
+              "folding returns status: %s\n",
+              foldingStatusToString(folder_.getInfo().status).c_str());
+
   return folder_.getInfo().status;
 }
 
-void Highs::runUnfolding(const HighsSolution& sol) {
+HighsStatus Highs::runUnfolding(const HighsSolution& sol) {
+  const bool primal_supplied =
+      sol.col_value.size() > 0 || sol.row_value.size() > 0 || sol.value_valid;
+  const bool dual_supplied =
+      sol.col_dual.size() > 0 || sol.row_dual.size() > 0 || sol.dual_valid;
+
+  if (!primal_supplied && !dual_supplied) return HighsStatus::kOk;
+
+  if (primal_supplied &&
+      HighsInt(sol.col_value.size()) != folder_.getInfo().num_col_colours) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Col primal solution provided to unfold is of size %d rather than %d\n",
+        int(sol.col_value.size()), int(folder_.getInfo().num_col_colours));
+    return HighsStatus::kError;
+  } else if (primal_supplied && HighsInt(sol.row_value.size()) !=
+                                    folder_.getInfo().num_row_colours) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Row primal solution provided to unfold is of size %d rather than %d\n",
+        int(sol.row_value.size()), int(folder_.getInfo().num_row_colours));
+    return HighsStatus::kError;
+  } else if (dual_supplied && HighsInt(sol.col_dual.size()) !=
+                                  folder_.getInfo().num_col_colours) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Column dual solution provided to unfold is of size %d rather "
+                 "than %d\n",
+                 int(sol.col_dual.size()),
+                 int(folder_.getInfo().num_col_colours));
+    return HighsStatus::kError;
+  } else if (dual_supplied && HighsInt(sol.row_dual.size()) !=
+                                  folder_.getInfo().num_row_colours) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Row dual solution provided to unfold is of size %d rather "
+                 "than %d\n",
+                 int(sol.row_dual.size()),
+                 int(folder_.getInfo().num_row_colours));
+    return HighsStatus::kError;
+  }
+
   const HighsSolution unfolded_sol = folder_.unfold(sol);
 
-  if (unfolded_sol.value_valid && unfolded_sol.dual_valid) {
-    solution_.clear();
-    solution_ = unfolded_sol;
-    solution_.value_valid = true;
-    solution_.dual_valid = true;
-    info_.objective_function_value = model_.objectiveValue(solution_.col_value);
-    invalidateBasis();
-  } else
+  if ((primal_supplied && !unfolded_sol.value_valid) ||
+      (dual_supplied && !unfolded_sol.dual_valid)) {
     setHighsModelStatusAndClearSolutionAndBasis(
-        HighsModelStatus::kPostsolveError);
+        HighsModelStatus::kFoldingError);
+    return HighsStatus::kError;
+  }
+
+  solution_.clear();
+  solution_ = unfolded_sol;
+  info_.objective_function_value = model_.objectiveValue(solution_.col_value);
+
+  // Unfolding does not produce a vertex in general.
+  // Crossover will be needed.
+  invalidateBasis();
+
+  return HighsStatus::kOk;
 }
 
 HighsStatus Highs::run() {
@@ -3798,7 +3864,7 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
 
 HighsStatus Highs::unfold(const HighsSolution& solution) {
   if (folder_.getInfo().status != highs::folding::Status::kOk &&
-      folder_.getInfo().status != highs::folding::Status::kNotReduced) {
+      folder_.getInfo().status != highs::folding::Status::kNotFolded) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Cannot unfold with folding status: %s\n",
                  foldingStatusToString(folder_.getInfo().status).c_str());
@@ -3941,11 +4007,11 @@ std::string Highs::foldingStatusToString(
     const highs::folding::Status status) const {
   switch (status) {
     case highs::folding::Status::kOk:
-      return "Reduced";
+      return "Folded";
     case highs::folding::Status::kNotRun:
       return "Not run";
-    case highs::folding::Status::kNotReduced:
-      return "Not reduced";
+    case highs::folding::Status::kNotFolded:
+      return "Not folded";
     case highs::folding::Status::kTimeLimit:
       return "Timeout";
     case highs::folding::Status::kOutOfMemory:

@@ -230,7 +230,7 @@ Status ColourRefinement::run() {
 
     if (rows_.coloursUsed() > rows_.n * kFractionStop &&
         cols_.coloursUsed() > cols_.n * kFractionStop) {
-      return Status::kNotReduced;
+      return Status::kNotFolded;
     }
 
     ++iter;

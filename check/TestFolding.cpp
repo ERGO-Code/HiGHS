@@ -286,7 +286,7 @@ void runFoldingTestFromHighs(const std::string& filename,
   REQUIRE(highs_folded.getModelStatus() == HighsModelStatus::kOptimal);
 
   const HighsSolution folded_sol = highs_folded.getSolution();
-  highs.unfold(folded_sol);
+  REQUIRE(highs.unfold(folded_sol) == HighsStatus::kOk);
   REQUIRE(isOptimal(highs, highs.getModel(), highs.getSolution()));
 
   highs.resetGlobalScheduler();

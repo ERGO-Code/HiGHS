@@ -17,7 +17,7 @@ constexpr size_t kSmallClassThreshold = 64;
 enum class Status {
   kOk = 0,
   kNotRun,
-  kNotReduced,
+  kNotFolded,
   kTimeLimit,
   kOutOfMemory,
   kInvalidModel,
