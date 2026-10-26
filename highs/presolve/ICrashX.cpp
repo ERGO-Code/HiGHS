@@ -128,7 +128,10 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
     z.assign(num_col, 0.0);
     for (HighsInt i = 0; i < lp.num_col_; i++)
       z[i] = sense * highs_solution.col_dual[i];
-    for (HighsInt i = lp.num_col_; i < num_col; i++) z[i] = y[Ai[Ap[i]]];
+    for (HighsInt i = lp.num_col_; i < num_col; i++) {
+      assert(Av[Ap[i]] == -1);
+      z[i] = y[Ai[Ap[i]]];
+    }
   }
 
   auto complement = [&](double& value, double& dual, const double lower,
@@ -178,6 +181,7 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
       x[i] = std::min(std::max(value, col_lb[i]), col_ub[i]);
       if (use_duals) {
         complement(x[i], z[i], col_lb[i], col_ub[i]);
+        assert(rhs[row] == 0);
         y[row] = z[i];
       }
     }
@@ -278,14 +282,14 @@ HighsStatus callCrossover(const HighsOptions& options, const HighsLp& lp,
   ipx_solution.ipx_row_dual.resize(num_row);
   ipx_solution.ipx_row_status.resize(num_row);
   ipx_solution.ipx_col_status.resize(num_col);
-  HighsInt errflag = lps.GetBasicSolution(
+  ipx::Int errflag = lps.GetBasicSolution(
       ipx_solution.ipx_col_value.data(), ipx_solution.ipx_row_value.data(),
       ipx_solution.ipx_row_dual.data(), ipx_solution.ipx_col_dual.data(),
       ipx_solution.ipx_row_status.data(), ipx_solution.ipx_col_status.data());
   if (errflag != 0) {
     highsLogUser(log_options, HighsLogType::kError,
                  "IPX crossover getting basic solution: flag = %d\n",
-                 (int)errflag);
+                 int(errflag));
     return HighsStatus::kError;
   }
 
