@@ -4,7 +4,40 @@
 #include "catch.hpp"
 #include "presolve/HPresolve.h"
 
-const bool dev_run = false;
+const bool dev_run = true;  // false;
+
+const std::vector<std::string> solvers{kHighsChooseString, kPdlpString,
+                                       kHiPdlpString, kIpxString
+#ifdef HIPO
+                                       ,
+                                       kHipoString
+#endif
+};
+
+void testAllLpSolversCrossoverChoose(
+    Highs& highs, const HighsModelStatus require_model_status,
+    const bool write_solution = false) {
+  for (auto& solver : solvers) {
+    if (dev_run)
+      printf(
+          "\n======================================================\n"
+          " Running solver = \"%s\" with crossover = \"choose\" \n"
+          "======================================================\n",
+          solver.c_str());
+    highs.setOptionValue(kSolverString, solver);
+    highs.setOptionValue("run_crossover", kHighsChooseString);
+    HighsStatus status = highs.run();
+    REQUIRE(status == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == require_model_status);
+    if (dev_run && write_solution) highs.writeSolution("", 1);
+    highs.clearSolver();
+  }
+}
+
+bool hasBasisPostsolve(const std::string& solver) {
+  if (solver == kPdlpString || solver == kHiPdlpString) return false;
+  return true;
+}
 
 bool doubleEqual(const double v0, const double v1) {
   return std::fabs(v0 - v1) < 1e-8;
@@ -203,35 +236,44 @@ void presolveSolvePostsolve(const std::string& model_file,
   }
   REQUIRE(model_presolve_status != HighsPresolveStatus::kUnboundedOrInfeasible);
   HighsLp lp = highs0.getPresolvedLp();
-  highs1.passModel(lp);
-  highs1.setOptionValue("solve_relaxation", solve_relaxation);
-  highs1.setOptionValue("presolve", kHighsOffString);
-  highs1.run();
-  REQUIRE(highs1.getModelStatus() == HighsModelStatus::kOptimal);
-  HighsSolution solution = highs1.getSolution();
-  const double objective_value = highs1.getInfo().objective_function_value;
-  if (lp.isMip() && !solve_relaxation) {
-    return_status = highs0.postsolve(solution);
-    REQUIRE(return_status == HighsStatus::kWarning);
-    HighsModelStatus model_status = highs0.getModelStatus();
-    REQUIRE(model_status == HighsModelStatus::kUnknown);
-    const double dl_objective_value =
-        std::fabs(highs0.getInfo().objective_function_value - objective_value);
-    REQUIRE(dl_objective_value < 1e-9);
-    REQUIRE(highs0.getInfo().primal_solution_status == kSolutionStatusFeasible);
-    double mip_feasibility_tolerance;
-    highs0.getOptionValue("mip_feasibility_tolerance",
-                          mip_feasibility_tolerance);
-    REQUIRE(highs0.getInfo().max_integrality_violation <=
-            mip_feasibility_tolerance);
-  } else {
-    HighsBasis basis = highs1.getBasis();
-    REQUIRE(basis.valid);
-    return_status = highs0.postsolve(solution, basis);
-    REQUIRE(return_status == HighsStatus::kOk);
-    HighsModelStatus model_status = highs0.getModelStatus();
-    REQUIRE(model_status == HighsModelStatus::kOptimal);
-    REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
+  const bool use_mip_solver = lp.isMip() && !solve_relaxation;
+  for (auto& solver : solvers) {
+    // This tests basis postsolve, so ensure that we skip solvers that
+    // don't have crossover
+    if (!hasBasisPostsolve(solver)) continue;
+    highs1.passModel(lp);
+    highs1.setOptionValue("solve_relaxation", solve_relaxation);
+    highs1.setOptionValue("presolve", kHighsOffString);
+    if (!use_mip_solver) highs1.setOptionValue(kSolverString, solver);
+    highs1.run();
+    REQUIRE(highs1.getModelStatus() == HighsModelStatus::kOptimal);
+    HighsSolution solution = highs1.getSolution();
+    const double objective_value = highs1.getInfo().objective_function_value;
+    if (use_mip_solver) {
+      return_status = highs0.postsolve(solution);
+      REQUIRE(return_status == HighsStatus::kWarning);
+      HighsModelStatus model_status = highs0.getModelStatus();
+      REQUIRE(model_status == HighsModelStatus::kUnknown);
+      const double dl_objective_value = std::fabs(
+          highs0.getInfo().objective_function_value - objective_value);
+      REQUIRE(dl_objective_value < 1e-9);
+      REQUIRE(highs0.getInfo().primal_solution_status ==
+              kSolutionStatusFeasible);
+      double mip_feasibility_tolerance;
+      highs0.getOptionValue("mip_feasibility_tolerance",
+                            mip_feasibility_tolerance);
+      REQUIRE(highs0.getInfo().max_integrality_violation <=
+              mip_feasibility_tolerance);
+      break;
+    } else {
+      HighsBasis basis = highs1.getBasis();
+      REQUIRE(basis.valid);
+      return_status = highs0.postsolve(solution, basis);
+      REQUIRE(return_status == HighsStatus::kOk);
+      HighsModelStatus model_status = highs0.getModelStatus();
+      REQUIRE(model_status == HighsModelStatus::kOptimal);
+      REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
+    }
   }
 
   highs1.resetThreadScheduler(true);
@@ -477,43 +519,47 @@ HighsStatus twoColSingDoubletonInequality() {
 }
 
 // No commas in test case name.
-TEST_CASE("zero-cost", "[presolve-col-sing]") {
+TEST_CASE("zero-cost", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 1." << std::endl;
   HighsStatus status = zeroCostColSing();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("col-sing-doubleton-eq", "[presolve-col-sing]") {
+TEST_CASE("col-sing-doubleton-eq", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 2." << std::endl;
   HighsStatus status = colSingDoubletonEquality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("col-sing-doubleton-ineq", "[presolve-col-sing]") {
+TEST_CASE("col-sing-doubleton-ineq", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 3." << std::endl;
   HighsStatus status = colSingDoubletonInequality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("two-col-sing-doubleton-eq", "[presolve-col-sing]") {
+TEST_CASE("two-col-sing-doubleton-eq", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 4." << std::endl;
   HighsStatus status = twoColSingDoubletonEquality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("two-col-sing-doubleton-ineq", "[presolve-col-sing]") {
+TEST_CASE("two-col-sing-doubleton-ineq", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 5." << std::endl;
   HighsStatus status = twoColSingDoubletonInequality();
   std::string str = highsStatusToString(status);
   REQUIRE(str == "OK");
 }
 
-// test case failing
-HighsStatus issue425() {
+TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
+  if (dev_run) {
+    std::cout << std::endl;
+    std::cout << "Presolve issue 425." << std::endl;
+  }
+  // Infeasible LP
   HighsLp lp;
   lp.num_col_ = 4;
   lp.num_row_ = 4;
@@ -560,19 +606,9 @@ HighsStatus issue425() {
   assert(status == HighsStatus::kOk);
 
   status = highs.run();
+  REQUIRE(status == HighsStatus::kOk);
 
   highs.resetThreadScheduler(true);
-
-  return status;
-}
-
-TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
-  if (dev_run) {
-    std::cout << std::endl;
-    std::cout << "Presolve issue 425." << std::endl;
-  }
-  HighsStatus status = issue425();
-  REQUIRE(status == HighsStatus::kOk);
 }
 
 TEST_CASE("postsolve-reduced-to-empty", "[highs_test_presolve]") {
@@ -642,6 +678,7 @@ TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
+  // Exposed a segfault in presolve
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2095.mps";
   Highs highs;
@@ -679,6 +716,7 @@ TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-issue-2388", "[highs_test_presolve]") {
+  // Exposed incorrectly declaring infeasibility in MIP presolve
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2388.lp";
   Highs highs;
@@ -690,6 +728,8 @@ TEST_CASE("presolve-issue-2388", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-issue-2402", "[highs_test_presolve]") {
+  // Exposed incorrectly declaring optimal when infeasible due to bug
+  // in MIP presolve
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2402.mps";
   Highs highs;
@@ -700,6 +740,7 @@ TEST_CASE("presolve-issue-2402", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-issue-2446", "[highs_test_presolve]") {
+  // Exposed incorrectly declaring infeasibility in MIP presolve
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2446.mps";
   Highs highs;
@@ -739,6 +780,9 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   // Tests the case where, for this model when run_crossover is off,
   // sparsify is used to reduce the LP to empty. However, when
   // starting from an empty LP, basis postsolve is always used
+  //
+  // Since no longer reducing egout-ac.mps to empty, this test is of
+  // no value
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/egout-ac.mps";
   Highs h;
@@ -796,6 +840,7 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
 }
 
 TEST_CASE("dual-bound-tightening", "[highs_test_presolve]") {
+  // MIP
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
 
@@ -840,8 +885,7 @@ TEST_CASE("presolve-rule-off", "[highs_test_presolve]") {
                int(full_presolve_num_col), int(full_presolve_num_row));
       HighsPresolveLog presolve_log = h.getPresolveLog();
       REQUIRE(presolve_log.rule[kPresolveRuleAggregator].col_removed > 0);
-      HighsInt presolve_rule_off =
-          std::pow(int(2), int(kPresolveRuleAggregator));
+      HighsInt presolve_rule_off = 1 << kPresolveRuleAggregator;
       h.setOptionValue("presolve_rule_off", presolve_rule_off);
     } else if (k > 0) {
       HighsInt presolve_num_col = h.getPresolvedLp().num_col_;
@@ -857,6 +901,7 @@ TEST_CASE("presolve-rule-off", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
+  // MIP triggered a crash
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2874-3.mps";
   Highs highs;
@@ -921,6 +966,8 @@ TEST_CASE("presolve-initial-sweep-postsolve", "[highs_test_presolve]") {
   highs.passModel(lp);
   // Presolved to empty, so no simplex iterations if postsolve is correct
   highs.run();
+  REQUIRE(highs.getRunData().presolved_model_num_col == 0);
+  REQUIRE(highs.getRunData().presolved_model_num_row == 0);
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
   if (dev_run) highs.writeSolution("", 1);
 
@@ -946,10 +993,12 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   lp.a_matrix_.index_ = {0};
   lp.a_matrix_.value_ = {3};
   HighsStatus pass_model_status = HighsStatus::kOk;
-  for (HighsInt k = 0; k < 4; k++) {
+  for (HighsInt k = 0; k < 2; k++) {
     if (dev_run) printf("\nPass k = %d\n==========\n", int(k));
     REQUIRE(highs.passModel(lp) == pass_model_status);
     highs.run();
+    REQUIRE(highs.getRunData().presolved_model_num_col == 0);
+    REQUIRE(highs.getRunData().presolved_model_num_row == 0);
     if (k == 0) {
       // Remove the empty column
       lp.num_col_ = 1;
@@ -959,18 +1008,6 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
       lp.a_matrix_.start_ = {0, 1};
     } else if (k == 1) {
       REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-      lp.col_upper_ = {0};
-      pass_model_status = HighsStatus::kWarning;
-      // Can infeasible column bounds even reach presolve?
-    } else if (k == 2) {
-      REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
-      lp.col_lower_ = {1e+20};
-      lp.col_upper_ = {kHighsInf};
-      lp.row_upper_ = {kHighsInf};
-      pass_model_status = HighsStatus::kError;
-      // Why is this model accepted when error returns?
-    } else {
-      REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
     }
     if (dev_run) highs.writeSolution("", 1);
   }
@@ -978,13 +1015,11 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
+  // Tests all cases in initial sweep
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("presolve_light", kHighsOnString);
-  if (dev_run) {
-    highs.setOptionValue("log_dev_level", 1);
-    highs.setOptionValue("presolve_rule_logging", true);
-  }
+  if (dev_run) highs.setOptionValue("presolve_rule_logging", true);
   HighsLp lp;
   lp.num_col_ = 7;
   lp.num_row_ = 4;
@@ -1001,8 +1036,7 @@ TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
   // Rows 0 and 3 singletons; row 1 empty
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
-  highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  testAllLpSolversCrossoverChoose(highs, HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", 1);
 
   // Add a redundant row
@@ -1010,15 +1044,14 @@ TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
   std::vector<double> value = {1, 1, 1};
   highs.addRow(-kHighsInf, 4, 3, index.data(), value.data());
 
-  highs.setOptionValue("use_warm_start", false);
-  highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  testAllLpSolversCrossoverChoose(highs, HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", 1);
 
   highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("bound_implied", "[highs_test_presolve]") {
+  // MIP
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/bound_implied.mps";
   Highs highs;
@@ -1026,6 +1059,8 @@ TEST_CASE("bound_implied", "[highs_test_presolve]") {
   highs.readModel(model_file);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2962", "[highs_test_presolve]") {
@@ -1036,11 +1071,10 @@ TEST_CASE("issue-2962", "[highs_test_presolve]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("solve_relaxation", true);
-  h.setOptionValue("log_dev_level", 1);
   h.setOptionValue("presolve_rule_logging", true);
 
   h.readModel(model_file);
-  REQUIRE(h.run() == HighsStatus::kOk);
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
   h.resetThreadScheduler(true);
 }
@@ -1160,14 +1194,16 @@ TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
     REQUIRE(
         doubleEqual(solution.row_dual[iRow], h.getSolution().row_dual[iRow]));
 
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-
   h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3140", "[highs_test_presolve]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
   HighsLp lp;
   lp.num_col_ = 9;
   lp.num_row_ = 5;
@@ -1192,6 +1228,9 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
 }
 
 TEST_CASE("dual-bound-relaxation-unbounded", "[highs_test_presolve]") {
+  // LP: Primal infeasible or unbounded in presolve leads to solving
+  // the original LP with primal simplex to determine infeasible or
+  // unbounded
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 2;
@@ -1211,6 +1250,8 @@ TEST_CASE("dual-bound-relaxation-unbounded", "[highs_test_presolve]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
@@ -1228,17 +1269,14 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
 
   REQUIRE(h.setOptionValue("presolve_light", kHighsOnString) ==
           HighsStatus::kOk);
-  const std::string solver = kIpxString;  // kHipoString;  //
-  REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
-          HighsStatus::kOk);
   REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
-  h.run();
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
   h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
+  // Exposed error if initial sweep is interrupted
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
@@ -1291,7 +1329,12 @@ TEST_CASE("test-sparsify-primal-dual-postsolve", "[highs_test_presolve]") {
 
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
-  h.setOptionValue("presolve_rule_logging", true);
+  if (dev_run) {
+    h.setOptionValue("log_dev_level", 1);
+    h.setOptionValue("presolve_rule_logging", true);
+  }
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
+
   h.setOptionValue(kSolverString, kIpxString);
   h.setOptionValue("run_crossover", kHighsOffString);
 

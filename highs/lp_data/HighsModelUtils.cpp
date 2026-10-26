@@ -1529,13 +1529,13 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
   } else if (rule_type == kPresolveRuleFixedCol) {
     return "Fixed column";
   } else if (rule_type == kPresolveRuleDominatedCol) {
-    return "Dominated col";
+    return "Dominated column";
   } else if (rule_type == kPresolveRuleForcingRow) {
     return "Forcing row";
   } else if (rule_type == kPresolveRuleForcingCol) {
-    return "Forcing col";
+    return "Forcing column";
   } else if (rule_type == kPresolveRuleFreeColSubstitution) {
-    return "Free col substitution";
+    return "Free column substitution";
   } else if (rule_type == kPresolveRuleDoubletonEquation) {
     return "Doubleton equation";
   } else if (rule_type == kPresolveRuleDependentEquations) {
@@ -1557,7 +1557,7 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
   } else if (rule_type == kPresolveRuleZeroCostSingleton) {
     return "Zero cost singleton";
   } else if (rule_type == kPresolveRuleColStuffing) {
-    return "Col stuffing";
+    return "Column stuffing";
   } else if (rule_type == kPresolveRuleDualFixProbing) {
     return "Dual-fixing probing";
   } else if (rule_type == kPresolveRuleInitialSweep) {
@@ -1565,7 +1565,7 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
   } else if (rule_type == kPresolveRuleFourierMotzkin) {
     return "Fourier-Motzkin";
   } else if (rule_type == kPresolveRuleWeaklyDominatedCol) {
-    return "Weakly dominated col";
+    return "Weakly dominated column";
   }
   assert(1 == 0);
   return "????";
