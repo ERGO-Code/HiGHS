@@ -230,8 +230,9 @@ enum class HighsModelStatus {
   kInterrupt,
   kMemoryLimit,
   kHighsInterrupt,
+  kFoldingError,
   kMin = kNotset,
-  kMax = kHighsInterrupt
+  kMax = kFoldingError
 };
 
 enum HighsCallbackType : int {

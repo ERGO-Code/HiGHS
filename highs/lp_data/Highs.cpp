@@ -1155,23 +1155,45 @@ HighsStatus Highs::fold() {
   highs::folding::Status folding_status = runFolding();
 
   HighsStatus return_status = HighsStatus::kOk;
-  if (folding_status == highs::folding::Status::kOk) {
-    return_status = HighsStatus::kOk;
-    folded_model_ = folder_.getFoldedModel();
 
-  } else if (folding_status == highs::folding::Status::kNotReduced) {
-    return_status = HighsStatus::kWarning;
-    folded_model_ = model_;
+  switch (folding_status) {
+    case highs::folding::Status::kNotRun:
+    case highs::folding::Status::kInvalidModel:
+    case highs::folding::Status::kGenericError:
+      return_status = HighsStatus::kError;
+      folded_model_.clear();
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kFoldingError);
+      break;
 
-  } else {
-    return_status = HighsStatus::kError;
-    folded_model_.clear();
-    setHighsModelStatusAndClearSolutionAndBasis(
-        HighsModelStatus::kPresolveError);
+    case highs::folding::Status::kTimeLimit:
+      return_status = HighsStatus::kWarning;
+      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kTimeLimit);
+      break;
+
+    case highs::folding::Status::kOutOfMemory:
+      return_status = HighsStatus::kError;
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kMemoryLimit);
+      break;
+
+    case highs::folding::Status::kNotReduced:
+      return_status = HighsStatus::kWarning;
+      folded_model_ = model_;
+      break;
+
+    case highs::folding::Status::kOk:
+      return_status = HighsStatus::kOk;
+      folded_model_ = folder_.getFoldedModel();
+      break;
   }
 
   reportFoldingReductions(options_.log_options, folding_status, model_,
                           folded_model_);
+
+  highsLogUser(options_.log_options, HighsLogType::kInfo,
+               "Folding status: %s\n",
+               foldingStatusToString(folding_status).c_str());
 
   return returnFromHighs(return_status);
 }
