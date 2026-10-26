@@ -135,51 +135,6 @@ bool isOptimal(const Highs& highs, const HighsModel& model,
          info.primal_dual_objective_error < options.optimality_tolerance;
 }
 
-void runFoldingTest(const std::string& filename) {
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.readModel(filename);
-  const HighsModel model = highs.getModel();
-
-  highs::folding::Folder lpf;
-  lpf.setModel(model);
-  lpf.run();
-  if (lpf.getInfo().status != highs::folding::Status::kOk) return;
-  HighsModel folded_model = lpf.getFoldedModel();
-  if (dev_run) lpf.print();
-
-  REQUIRE(highs.passModel(folded_model) == HighsStatus::kOk);
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-
-  const HighsSolution folded_sol = highs.getSolution();
-  const HighsSolution unfolded_sol = lpf.unfold(folded_sol);
-  REQUIRE(isOptimal(highs, model, unfolded_sol));
-
-  highs.resetGlobalScheduler();
-}
-
-void runFoldingTestFromHighs(const std::string& filename) {
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.readModel(filename);
-  HighsStatus status = highs.fold();
-  REQUIRE(status == HighsStatus::kOk);
-
-  Highs highs2;
-  highs2.setOptionValue("output_flag", dev_run);
-
-  REQUIRE(highs2.passModel(highs.getFoldedModel()) == HighsStatus::kOk);
-  REQUIRE(highs2.run() == HighsStatus::kOk);
-  REQUIRE(highs2.getModelStatus() == HighsModelStatus::kOptimal);
-
-  const HighsSolution folded_sol = highs2.getSolution();
-  highs.unfold(folded_sol);
-  REQUIRE(isOptimal(highs, highs.getModel(), highs.getSolution()));
-
-  highs.resetGlobalScheduler();
-}
-
 TEST_CASE("test-folding-paper", "[highs-folding]") {
   HighsModel model = getPaperLp();
 
@@ -283,25 +238,79 @@ TEST_CASE("test-folding-paper-qp", "[highs-folding]") {
   REQUIRE(std::abs(folded_obj - obj) < 1e-6);
 }
 
+void runFoldingTest(const std::string& filename, HighsInt expected_rows,
+                    HighsInt expected_cols) {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  const HighsModel model = highs.getModel();
+
+  highs::folding::Folder lpf;
+  lpf.setModel(model);
+  lpf.run();
+  if (lpf.getInfo().status != highs::folding::Status::kOk) return;
+  HighsModel folded_model = lpf.getFoldedModel();
+  if (dev_run) lpf.print();
+
+  REQUIRE(folded_model.lp_.num_col_ == expected_cols);
+  REQUIRE(folded_model.lp_.num_row_ == expected_rows);
+
+  REQUIRE(highs.passModel(folded_model) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  const HighsSolution folded_sol = highs.getSolution();
+  const HighsSolution unfolded_sol = lpf.unfold(folded_sol);
+  REQUIRE(isOptimal(highs, model, unfolded_sol));
+
+  highs.resetGlobalScheduler();
+}
+
+void runFoldingTestFromHighs(const std::string& filename,
+                             HighsInt expected_rows, HighsInt expected_cols) {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  HighsStatus status = highs.fold();
+  REQUIRE(status == HighsStatus::kOk);
+  HighsModel folded_model = highs.getFoldedModel();
+
+  REQUIRE(folded_model.lp_.num_col_ == expected_cols);
+  REQUIRE(folded_model.lp_.num_row_ == expected_rows);
+
+  Highs highs_folded;
+  highs_folded.setOptionValue("output_flag", dev_run);
+
+  REQUIRE(highs_folded.passModel(folded_model) == HighsStatus::kOk);
+  REQUIRE(highs_folded.run() == HighsStatus::kOk);
+  REQUIRE(highs_folded.getModelStatus() == HighsModelStatus::kOptimal);
+
+  const HighsSolution folded_sol = highs_folded.getSolution();
+  highs.unfold(folded_sol);
+  REQUIRE(isOptimal(highs, highs.getModel(), highs.getSolution()));
+
+  highs.resetGlobalScheduler();
+}
+
 TEST_CASE("test-folding", "[highs-folding]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/folding_lp.mps";
-  runFoldingTest(filename);
-  runFoldingTestFromHighs(filename);
+  runFoldingTest(filename, 6, 9);
+  runFoldingTestFromHighs(filename, 6, 9);
 }
 
 TEST_CASE("test-folding-qp", "[highs-folding]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/folding_qp.mps";
-  runFoldingTest(filename);
-  runFoldingTestFromHighs(filename);
+  runFoldingTest(filename, 6, 9);
+  runFoldingTestFromHighs(filename, 6, 9);
 }
 
 TEST_CASE("test-folding-qp-groups", "[highs-folding]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/folding_qp_groups.mps";
-  runFoldingTest(filename);
-  runFoldingTestFromHighs(filename);
+  runFoldingTest(filename, 7, 12);
+  runFoldingTestFromHighs(filename, 7, 12);
 }
 
 TEST_CASE("test-folding-time-limit", "[highs-folding]") {
