@@ -132,3 +132,39 @@ TEST_CASE("hi-pdlp-free-rows", "[pdlp]") {
     h.resetGlobalScheduler(true);
   }
 }
+
+TEST_CASE("hi-pdlp-all-free-rows", "[pdlp]") {
+  // min x0 + 2 x1
+  // 0 <= x0 <= 3, 1 <= x1 <= 2
+  // two free rows, so there are no constraints left after they are removed:
+  // the optimum is x = (0, 1), objective 2
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1.0, 2.0};
+  lp.col_lower_ = {0.0, 1.0};
+  lp.col_upper_ = {3.0, 2.0};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1.0, 1.0, 1.0, -1.0};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", kHiPdlpString);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("kkt_tolerance", kkt_tolerance);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(std::fabs(h.getInfo().objective_function_value - 2.0) < 1e-3);
+
+  const HighsSolution& solution = h.getSolution();
+  REQUIRE(solution.row_dual.size() == 2);
+  REQUIRE(solution.row_dual[0] == 0.0);
+  REQUIRE(solution.row_dual[1] == 0.0);
+
+  h.resetGlobalScheduler(true);
+}
