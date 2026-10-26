@@ -206,7 +206,8 @@ void PDLPSolver::preprocessLp() {
   processed_lp.row_lower_.resize(processed_lp.num_row_);
   processed_lp.row_upper_.resize(processed_lp.num_row_);
 
-  // 3. Determine row permutation: EQ/BOUND/FREE first, then LEQ/GEQ
+  // 3. Determine row permutation: EQ/BOUND first, then LEQ/GEQ； free rows are
+  // removed
   HighsInt eq_idx = 0;
   HighsInt ineq_idx = nEqs;
   for (HighsInt i = 0; i < nRows_orig; ++i) {
@@ -373,7 +374,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
     return PostSolveRetcode::DIMENSION_MISMATCH;
   }
 
-  if (x_current_.empty() || y_current_.empty()) {
+  if (x_current_.empty() || (y_current_.empty() && lp_.num_row_ > 0)) {
     return PostSolveRetcode::INVALID_SOLUTION;
   }
 
