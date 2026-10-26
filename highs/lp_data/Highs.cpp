@@ -1269,7 +1269,7 @@ HighsStatus Highs::runUnfolding(const HighsSolution& sol) {
     return HighsStatus::kError;
   }
 
-  const HighsSolution unfolded_sol = folder_.unfold(sol);
+  HighsSolution unfolded_sol = folder_.unfold(sol);
 
   if ((primal_supplied && !unfolded_sol.value_valid) ||
       (dual_supplied && !unfolded_sol.dual_valid)) {
@@ -1277,6 +1277,9 @@ HighsStatus Highs::runUnfolding(const HighsSolution& sol) {
         HighsModelStatus::kFoldingError);
     return HighsStatus::kError;
   }
+
+  assert(model_.lp_.a_matrix_.isColwise());
+  calculateRowValuesQuad(model_.lp_, unfolded_sol);
 
   solution_.clear();
   solution_ = unfolded_sol;
