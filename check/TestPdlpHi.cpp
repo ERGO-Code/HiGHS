@@ -83,3 +83,52 @@ TEST_CASE("hi-pdlp-maximize", "[pdlp]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("hi-pdlp-free-rows", "[pdlp]") {
+  // min x0 + 2 x1 + 3 x2
+  // row 0:  x0 + x1       >= 1
+  // row 1:  free (x0 - x2)
+  // row 2:  x1 + x2       >= 2
+  // row 3:  x0 + x1 + x2  =  4
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 4;
+  lp.col_cost_ = {1.0, 2.0, 3.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {kHighsInf, kHighsInf, kHighsInf};
+  lp.row_lower_ = {1.0, -kHighsInf, 2.0, 4.0};
+  lp.row_upper_ = {kHighsInf, kHighsInf, kHighsInf, 4.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 3, 6, 9};
+  lp.a_matrix_.index_ = {0, 1, 3, 0, 2, 3, 1, 2, 3};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 1, 1, -1, 1, 1};
+
+  for (const ObjSense sense : {ObjSense::kMinimize, ObjSense::kMaximize}) {
+    lp.sense_ = sense;
+
+    Highs ref;
+    ref.setOptionValue("output_flag", dev_run);
+    REQUIRE(ref.passModel(lp) == HighsStatus::kOk);
+    ref.setOptionValue("solver", kSimplexString);
+    ref.setOptionValue("presolve", kHighsOffString);
+    REQUIRE(ref.run() == HighsStatus::kOk);
+    const double ref_objective = ref.getInfo().objective_function_value;
+
+    Highs h;
+    h.setOptionValue("output_flag", dev_run);
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    h.setOptionValue("solver", kHiPdlpString);
+    h.setOptionValue("presolve", kHighsOffString);
+    h.setOptionValue("kkt_tolerance", kkt_tolerance);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(std::fabs(h.getInfo().objective_function_value - ref_objective) <
+            1e-3 * (1.0 + std::fabs(ref_objective)));
+
+    const HighsSolution& solution = h.getSolution();
+    REQUIRE(solution.row_dual.size() == 4);
+    REQUIRE(solution.row_value.size() == 4);
+    REQUIRE(solution.row_dual[1] == 0.0);  // free row
+    h.resetGlobalScheduler(true);
+  }
+}
