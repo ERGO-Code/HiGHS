@@ -13,12 +13,12 @@
 
 #include <vector>
 
+#include "folding/Fold.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 #include "util/HighsUtils.h"
-#include "folding/Fold.h"
 
 // class HighsLp;
 struct SimplexScale;
@@ -289,8 +289,9 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
                               const HighsLp& lp, const HighsLp& presolved_lp);
 
 void reportFoldingReductions(const HighsLogOptions& log_options,
-                             highs::folding::Status stauts,
-                             const HighsModel& model, const HighsModel& folded_model);
+                             highs::folding::Status status,
+                             const HighsModel& model,
+                             const HighsModel& folded_model);
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
                                   const HighsLp& lp);
