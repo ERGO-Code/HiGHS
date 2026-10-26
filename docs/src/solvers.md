@@ -155,10 +155,9 @@ add a test of Hessian convexity.
 
 ## MIP
 
-MIPs are solved using a sophisticated branch-and-cut solver. This is
-largely single-threaded, although a prototype multithreaded solver was
-completed in February 2026, and is expected to be released by
-June. Users can choose the solver for LP sub-problems as follows
+MIPs are solved using a sophisticated branch-and-cut solver that exploits 
+multi-threading (see [here](@ref parallel-mip)).
+Users can choose the solver for LP sub-problems as follows
 
 * LPs where an advanced basis is not known. This is generally the case
   at the root node of the branch-and-bound tree, but can occur at

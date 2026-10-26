@@ -42,5 +42,5 @@ TEST_CASE("icrash-qap04", "[highs_presolve]") {
   REQUIRE(info.final_residual_norm_2 >= -1e08);
   REQUIRE(info.final_residual_norm_2 < 1e08);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

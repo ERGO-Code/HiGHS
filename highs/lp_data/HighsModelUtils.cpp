@@ -441,6 +441,8 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsInt& name_suffix,
                            std::vector<std::string>& names,
                            HighsNameHash& name_hash, HighsFileType type) {
+  // First look for no names being required
+  if (num_name_required <= 0) return HighsStatus::kOk;
   // First look for there being no names
   HighsInt max_name_length = maxNameLength(names);
   // Keep track of whether the names are invalid

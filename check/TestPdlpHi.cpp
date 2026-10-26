@@ -36,5 +36,5 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
     REQUIRE(run_status == HighsStatus::kOk);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
