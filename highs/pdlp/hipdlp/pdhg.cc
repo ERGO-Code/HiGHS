@@ -162,11 +162,10 @@ void PDLPSolver::preprocessLp() {
     logger_.info("Original LP matrix must be in column-wise format,");
   }
 
-  lp_.offset_ = original_lp_->offset_;
-
   HighsInt num_new_cols = 0;
   HighsInt nEqs = 0;
   sense_origin_ = (original_lp_->sense_ == ObjSense::kMinimize) ? 1 : -1;
+  lp_.offset_ = original_lp_->offset_ * sense_origin_;
   constraint_types_.resize(nRows_orig);
 
   // 1. First pass: Classify constraints and count slack variables needed
@@ -230,7 +229,7 @@ void PDLPSolver::preprocessLp() {
 
   // 5. Populate costs and bounds for original and new slack variables
   for (HighsInt i = 0; i < nCols_orig; ++i) {
-    processed_lp.col_cost_[i] = original_lp_->col_cost_[i];
+    processed_lp.col_cost_[i] = original_lp_->col_cost_[i] * sense_origin_;
     processed_lp.col_lower_[i] = original_lp_->col_lower_[i];
     processed_lp.col_upper_[i] = original_lp_->col_upper_[i];
   }
@@ -421,9 +420,9 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
 
     // Apply sign correction for LEQ constraints
     if (constraint_types_[orig_row] == LEQ) {
-      solution.row_dual[orig_row] = -dual_value;
+      solution.row_dual[orig_row] = -dual_value * sense_origin_;
     } else {
-      solution.row_dual[orig_row] = dual_value;
+      solution.row_dual[orig_row] = dual_value * sense_origin_;
     }
   }
 
