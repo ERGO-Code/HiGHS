@@ -864,5 +864,34 @@ std::string CheckVectors(const HostLp& lp, const SolveOptions& options) {
   return "";
 }
 
+std::string CheckMatrix(const HostLp& lp) {
+  if (lp.rows < 0 || lp.columns < 0 || lp.value.size() > INT_MAX ||
+      lp.row_start.size() != size_t(lp.rows) + 1 || lp.column_index.size() != lp.value.size())
+    return "Invalid dimensions, objective sense, or offset";
+  if (lp.row_start.front() != 0 || lp.row_start.back() != int(lp.value.size()))
+    return "Invalid CSR offsets";
+  for (int i = 0; i < lp.rows; ++i) {
+    if (lp.row_start[i] < 0 || lp.row_start[i] > lp.row_start[i + 1] ||
+        lp.row_start[i + 1] > int(lp.value.size()))
+      return "Invalid CSR ordering or extent";
+    int previous = -1;
+    for (int k = lp.row_start[i]; k < lp.row_start[i + 1]; ++k) {
+      if (lp.column_index[k] <= previous || lp.column_index[k] >= lp.columns)
+        return "CSR indices must be sorted and unique";
+      previous = lp.column_index[k];
+    }
+  }
+  for (double a : lp.value)
+    if (!std::isfinite(a)) return "Nonfinite matrix entry";
+  return "";
+}
+
+std::string CheckInput(const HostLp& lp, const SolveOptions& options) {
+  std::string message = CheckOptions(options);
+  if (message.empty()) message = CheckMatrix(lp);
+  if (message.empty()) message = CheckVectors(lp, options);
+  return message;
+}
+
 
 }
