@@ -1,12 +1,13 @@
 #pragma once
 
 #include <cstdint>
-
-#include <cuda_runtime.h>
+#include <limits>
+#include <string>
 #include <vector>
 
 namespace hipdlp {
-  enum class Status {
+
+enum class Status {
   kRunning,
   kOptimal,
   kInfeasible,
@@ -19,6 +20,65 @@ namespace hipdlp {
   kNumericalError,
   kDeviceError
 };
+const char* StatusName(Status status);
+
+// Immutable input to Solve: CSR with explicit IEEE infinities for absent bounds.
+// Duplicate entries must be combined by the caller. sense is +1 (min), -1 (max).
+struct HostLp {
+  int rows = 0, columns = 0;
+  std::vector<int> row_start, column_index;
+  std::vector<double> value, cost, row_lower, row_upper, column_lower, column_upper;
+  int sense = 1;
+  double offset = 0;
+};
+struct SolveOptions {
+  double tolerance = 1e-4;
+  double time_limit_seconds = std::numeric_limits<double>::infinity();
+  int64_t iteration_limit = std::numeric_limits<int64_t>::max();
+  bool presolve = true;         // The in-tree CPU/GPU hybrid presolve (SolveHybrid, SolveMps).
+  bool snapshot_input = false;  // SolveMps: the file is a binary snapshot of the original model.
+  std::string cache_directory;  // SolveMps: derived snapshot cache of the MPS file.
+  std::string snapshot_output;  // SolveMps: also write the explicit snapshot here.
+  bool fingerprint = false;     // SolveMps: report a hash of the original model.
+};
+struct Metrics {
+  double primal = 0, dual = 0, gap = 0, complementarity = 0;
+  double primal_raw = 0, dual_raw = 0, complementarity_raw = 0;
+  double primal_objective = 0, dual_objective = 0;
+  int primal_index = -1, primal_raw_index = -1, dual_index = -1, complementarity_index = -1;
+  // primal/complementarity: rows first, then columns. dual: column index.
+};
+struct Timings {
+  double read = 0, presolve = 0, setup = 0, scaling = 0, loop = 0;
+  double validation = 0, download = 0, postsolve = 0, total = 0, overshoot = 0;
+  double gpu = 0, device = 0;
+  // Input work after `read` that is charged to the solve budget and included in `total`.
+  double pack = 0;
+  // Wall clock of the dedicated original-model KKT check of a hybrid solve (setup + one bounded
+  // GPU execution + download); 0 when no check ran. Included in `total`, not added to another
+  // field.
+  double final_check = 0;
+};
+
+// Where the GPU preparation time went and what crossed the PCIe bus or was copied on the
+// device. Times are wall clocks of stream-synchronized phases (they do not add up to `total`:
+// presolve scans, solve sessions and validation are reported elsewhere). Bytes count every
+// copy made by the solver, including presolve batches and the final downloads.
+struct Profile {
+  double upload = 0;      // H2D of matrices and vectors, including device allocation
+  double transpose = 0;   // CSR -> CSC on the device (cusparseCsr2cscEx2)
+  double scale_copy = 0;  // D2D work copies of the unscaled matrices and zero fills
+  double prepare = 0;     // cuSPARSE buffers/preprocess and CUDA graph construction
+  double pack = 0;        // reduced CSR construction on the device
+  uint64_t h2d_bytes = 0, d2h_bytes = 0, d2d_bytes = 0;
+  // Reduced matrices built on the CPU and uploaded because the device had no staging memory for
+  // the device construction (never for device faults, which are reported as errors).
+  int pack_cpu_fallbacks = 0;
+  size_t transpose_workspace_bytes = 0;  // largest cusparseCsr2cscEx2 workspace queried
+  // Device memory in use by this process (cudaMemGetInfo) above the level at entry, sampled
+  // at the end of every setup step; allocations of all stages that were alive together.
+  size_t peak_live_bytes = 0;
+};
 
 struct CertificateInfo {
   // 0: current-anchor; 1: current-reflected; 2: saved epoch displacement;
@@ -26,14 +86,6 @@ struct CertificateInfo {
   int source = -1, sign = 0;
   int64_t iteration = 0;  // Local to the GPU session that generated it.
   double scale = 0;       // Original-coordinate infinity norm before normalization.
-};
-
-struct Metrics {
-  double primal = 0, dual = 0, gap = 0, complementarity = 0;
-  double primal_raw = 0, dual_raw = 0, complementarity_raw = 0;
-  double primal_objective = 0, dual_objective = 0;
-  int primal_index = -1, primal_raw_index = -1, dual_index = -1, complementarity_index = -1;
-  // primal/complementarity: rows first, then columns. dual: column index.
 };
 
 struct DeviceLp {

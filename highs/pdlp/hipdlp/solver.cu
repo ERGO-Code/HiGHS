@@ -819,5 +819,50 @@ static void StartCapture(Resources& r, cudaGraph_t graph,
                                      cudaStreamCaptureModeGlobal));
 }
 
+static cudaGraph_t AddConditional(Resources& r, cudaGraph_t graph,
+                                  const std::vector<cudaGraphNode_t>& deps,
+                                  cudaGraphConditionalHandle h, cudaGraphConditionalNodeType type,
+                                  cudaGraphNode_t* node) {
+  cudaGraphNodeParams p{};
+  p.type = cudaGraphNodeTypeConditional;
+  p.conditional.handle = h;
+  p.conditional.type = type;
+  p.conditional.size = 1;
+#if CUDART_VERSION >= 13000
+  Cuda(cudaGraphAddNode(node, graph, deps.data(), nullptr, deps.size(), &p));
+#else
+  Cuda(cudaGraphAddNode(node, graph, deps.data(), deps.size(), &p));
+#endif
+  return p.conditional.phGraph_out[0];
+}
+
+static std::string CheckOptions(const SolveOptions& options) {
+  if (!std::isfinite(options.tolerance) || options.tolerance <= 0 ||
+      std::isnan(options.time_limit_seconds) || options.time_limit_seconds < 0 ||
+      options.iteration_limit < 0)
+    return "Invalid tolerance or budget";
+  return "";
+}
+
+std::string CheckVectors(const HostLp& lp, const SolveOptions& options) {
+  std::string message = CheckOptions(options);
+  if (!message.empty()) return message;
+  if (lp.rows < 0 || lp.columns < 0 || lp.cost.size() != size_t(lp.columns) ||
+      lp.column_lower.size() != size_t(lp.columns) ||
+      lp.column_upper.size() != size_t(lp.columns) || lp.row_lower.size() != size_t(lp.rows) ||
+      lp.row_upper.size() != size_t(lp.rows) || (lp.sense != 1 && lp.sense != -1) ||
+      !std::isfinite(lp.offset))
+    return "Invalid dimensions, objective sense, or offset";
+  for (double c : lp.cost)
+    if (!std::isfinite(c)) return "Nonfinite cost";
+  for (int64_t i = 0; i < lp.rows + int64_t(lp.columns); ++i) {
+    double l = i < lp.rows ? lp.row_lower[i] : lp.column_lower[i - lp.rows];
+    double u = i < lp.rows ? lp.row_upper[i] : lp.column_upper[i - lp.rows];
+    if (std::isnan(l) || std::isnan(u) || l == INFINITY || u == -INFINITY || l > u)
+      return "Invalid bound interval";
+  }
+  return "";
+}
+
 
 }
