@@ -351,3 +351,11 @@ TEST_CASE("test-folding-invalid-model", "[highs-folding]") {
   lpf.run();
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kOk);
 }
+
+TEST_CASE("test-folding-max", "[highs-folding]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/folding_max.mps";
+
+  runFoldingTest(filename, 2, 3);
+  runFoldingTestFromHighs(filename, 2, 3);
+}
