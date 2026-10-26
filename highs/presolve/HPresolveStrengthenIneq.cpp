@@ -40,13 +40,9 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
     HighsCDouble maxviolation;
     HighsCDouble continuouscontribution = 0.0;
-    // maximum contribution of negligible terms not used in covers
+    // maximum contribution of negligible terms not used in covers; a term is
+    // negligible if its maximum contribution is at most primal_feastol
     HighsCDouble smallcontribution = 0.0;
-    // a term is negligible if its maximum contribution is at most the
-    // feasibility tolerance
-    auto isSmall = [&](const HighsCDouble& coef, const HighsCDouble& range) {
-      return coef * range <= primal_feastol;
-    };
     double scale;
 
     if (model->row_lower_[row] != -kHighsInf) {
@@ -117,7 +113,7 @@ HPresolve::Result HPresolve::strengthenInequalities(
         continue;
       }
 
-      if (isSmall(static_cast<HighsCDouble>(weight), ub)) {
+      if (weight * ub <= primal_feastol) {
         smallcontribution += weight * ub;
         continue;
       }
@@ -204,17 +200,13 @@ HPresolve::Result HPresolve::strengthenInequalities(
       step = min(step, maxviolation / coverrhs);
       maxviolation -= step * coverrhs;
 
-      HighsInt slackind = static_cast<HighsInt>(reducedcost.size());
-      reducedcost.push_back(step);
-      upper.push_back(slackupper);
-
       // only the cover members' reduced costs change, so only they can become
       // negligible; move their maximum contribution to smallcontribution and
       // set their reduced cost to zero, so that they are removed below
       for (size_t i = 0; i != cover.size(); ++i) {
         HighsInt index = cover[i];
         reducedcost[index] -= step * coefs[i];
-        if (isSmall(reducedcost[index], upper[index])) {
+        if (reducedcost[index] * upper[index] <= primal_feastol) {
           if (reducedcost[index] > 0.0)
             smallcontribution += reducedcost[index] * upper[index];
           reducedcost[index] = 0.0;
@@ -226,10 +218,13 @@ HPresolve::Result HPresolve::strengthenInequalities(
           std::remove_if(indices.begin(), indices.end(),
                          [&](HighsInt i) { return reducedcost[i] <= 0.0; }),
           indices.end());
-      if (isSmall(step, slackupper))
+      if (step * slackupper <= primal_feastol) {
         smallcontribution += step * slackupper;
-      else
-        indices.push_back(slackind);
+      } else {
+        indices.push_back(static_cast<HighsInt>(reducedcost.size()));
+        reducedcost.push_back(step);
+        upper.push_back(slackupper);
+      }
     }
 
     double threshold = static_cast<double>(maxviolation + primal_feastol);
