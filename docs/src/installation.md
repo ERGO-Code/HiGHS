@@ -60,7 +60,7 @@ cmake -S. -B build -DHIPO=ON
 cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON
 ```
 
-On Windows ARM64, MSVC cannot assemble OpenBLAS's optimised kernels. When building natively on an ARM64 machine, HiGHS therefore builds OpenBLAS separately with `clang-cl` and Ninja (HiGHS itself is still compiled with MSVC). `clang-cl` is found in the Visual Studio "C++ Clang Compiler for Windows" component or an LLVM installation, or can be set explicitly with `-DHIGHS_OPENBLAS_C_COMPILER=<path to clang-cl>`. If `clang-cl` or Ninja is not available, OpenBLAS falls back to generic C kernels, which are several times slower; add `-DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON` to make this a configure error instead.
+On Windows x64 and ARM64, MSVC cannot build OpenBLAS's optimised kernels. When building natively on such a machine, HiGHS therefore builds OpenBLAS separately with `clang-cl` and Ninja (HiGHS itself is still compiled with MSVC). On x64 this makes HiPO several times faster, and OpenBLAS selects the kernels for the CPU at runtime. Pass `-DBUILD_OPENBLAS_CLANG_CL=OFF` to build OpenBLAS with MSVC instead. `clang-cl` is found in the Visual Studio "C++ Clang Compiler for Windows" component or an LLVM installation, or can be set explicitly with `-DHIGHS_OPENBLAS_C_COMPILER=<path to clang-cl>`. If `clang-cl` or Ninja is not available, OpenBLAS falls back to generic C kernels, which are several times slower; add `-DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON` to make this a configure error instead.
 
 #### Linux and Windows: Link with BLAS installatied on your machine
 

@@ -313,7 +313,8 @@ jobs:
           -A ${{ matrix.arch }} `
           -DHIPO=ON `
           -DALL_TESTS=${{ matrix.all_tests }} `
-          -DBUILD_OPENBLAS=ON
+          -DBUILD_OPENBLAS=ON `
+          -DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON
 
       - name: Build
         shell: pwsh
@@ -399,7 +400,8 @@ jobs:
           -B "${{ github.workspace }}/build" `
           -DHIPO=ON `
           -DBUILD_OPENBLAS=ON `
-          -DBUILD_SHARED_LIBS=ON
+          -DBUILD_SHARED_LIBS=ON `
+          -DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON
 
       - name: Build
         shell: pwsh
