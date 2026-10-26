@@ -78,7 +78,7 @@ class Folder {
     std::vector<HighsInt> col_colour;
 
     Data(const HighsLp& lp, const HighsHessian& hessian)
-        : At(lp.a_matrix_.buildOppositeFormat()),
+        : At(lp.a_matrix_.getRowwise()),
           Q(hessian.toSquare()),
           row_colour(lp.num_row_),
           col_colour(lp.num_col_) {}

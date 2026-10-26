@@ -342,9 +342,6 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/Logger.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
-# redefinition of 'kHighsInf'
-set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
-
 set(highs_sources
     folding/ColourRefinement.cpp
     folding/DoubleQuantizer.cpp
@@ -358,7 +355,7 @@ set(highs_sources
     io/HMpsFF.cpp
     io/HMPSIO.cpp
     io/LoadOptions.cpp
-    io/filereaderlp/reader.cpp
+    io/LpReader.cpp
     ipm/IpxWrapper.cpp
     lp_data/Highs.cpp
     lp_data/HighsCallback.cpp
@@ -420,10 +417,25 @@ set(highs_sources
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
+    presolve/HPresolveAggregator.cpp
     presolve/HPresolveAnalysis.cpp
     presolve/HPresolveCliqueTable.cpp
+    presolve/HPresolveColStuffing.cpp
+    presolve/HPresolveDependent.cpp
+    presolve/HPresolveDominatedCols.cpp
+    presolve/HPresolveDualFixing.cpp
+    presolve/HPresolveEnumeration.cpp
+    presolve/HPresolveFourierMotzkin.cpp
+    presolve/HPresolveImpliedInts.cpp
     presolve/HPresolveInitialSweep.cpp
+    presolve/HPresolveParallelRowsAndCols.cpp
+    presolve/HPresolveProbing.cpp
+    presolve/HPresolveProbingUtil.cpp
+    presolve/HPresolveSparsify.cpp
+    presolve/HPresolveStrengthenIneq.cpp
     presolve/HPresolveUtils.cpp
+    presolve/HPresolveVarBndAggregation.cpp
+    presolve/HPresolveZeroCostSingleton.cpp
     presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
@@ -491,10 +503,7 @@ set(highs_headers
     io/HMpsFF.h
     io/HMPSIO.h
     io/LoadOptions.h
-    io/filereaderlp/builder.hpp
-    io/filereaderlp/def.hpp
-    io/filereaderlp/model.hpp
-    io/filereaderlp/reader.hpp
+    io/LpReader.h
     ipm/IpxSolution.h
     ipm/IpxWrapper.h
     lp_data/HConst.h

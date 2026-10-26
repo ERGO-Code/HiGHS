@@ -334,7 +334,7 @@ HighsModel Folder::getFoldedModel() const {
       Aft.start_.push_back(static_cast<HighsInt>(Aft.index_.size()));
     }
 
-    folded_lp.a_matrix_ = Aft.buildOppositeFormat();
+    folded_lp.a_matrix_ = Aft.getColwise();
 
     // Build the folded Hessian
     if (!data_->Q.empty()) {

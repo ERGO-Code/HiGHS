@@ -41,11 +41,15 @@ bool HighsSparseMatrix::equivalent(const HighsSparseMatrix& matrix) const {
   if (*this == matrix) return true;
   // Creat a local copy in of matrix in the same format as this and
   // test for it being equal to this
-  HighsSparseMatrix lc_matrix = matrix;
+  HighsSparseMatrix lc_matrix;
   if (this->isColwise()) {
-    lc_matrix.ensureColwise();
+    lc_matrix = matrix.getColwise();
+    assert(lc_matrix.isColwise());
+    // lc_matrix.ensureColwise(); is now redundant
   } else {
-    lc_matrix.ensureRowwise();
+    lc_matrix = matrix.getRowwise();
+    assert(lc_matrix.isRowwise());
+    // lc_matrix.ensureRowwise(); is now redundant
   }
   return *this == lc_matrix;
 }
@@ -1640,6 +1644,51 @@ void HighsSparseMatrix::collectAj(HVector& column, const HighsInt use_col,
   }
 }
 
+HighsSparseMatrix HighsSparseMatrix::oppositeFormat() const {
+  // Given a matrix A, doing
+  //    HighsSparseMatrix B = A.oppositeFormat();
+  // is more efficient than doing
+  //    HighsSparseMatrix B = A;
+  //    B.ensureRowwise();
+  // because the latter requires a copy (B = A) and an internal copy in
+  // ensureRowWise(). Similarly for ensureColwise.
+
+  HighsSparseMatrix T;
+
+  const bool colwise = isColwise();
+  const HighsInt num_major = colwise ? num_col_ : num_row_;
+  const HighsInt num_minor = colwise ? num_row_ : num_col_;
+
+  T.format_ = colwise ? MatrixFormat::kRowwise : MatrixFormat::kColwise;
+  T.num_row_ = num_row_;
+  T.num_col_ = num_col_;
+  T.p_end_ = p_end_;
+
+  highsSparseTranspose(num_minor, num_major, start_, index_, value_, T.start_,
+                       T.index_, T.value_);
+
+  return T;
+}
+
+HighsSparseMatrix HighsSparseMatrix::getRowwise() const {
+  // To get a row-wise copy B of A, calling
+  //    HighsSparseMatrix B = A;
+  //    B.ensureRowwise();
+  // makes one copy if A is already rowwise and two otherwise (one is hidden
+  // inside ensureRowwise).
+  // Calling
+  //    HighsSparseMatrix B = A.getRowwise();
+  // makes one copy if A is already rowwise; otherwise the rowwise matrix is
+  // built by oppositeFormat() directly into B, with no additional copy (the
+  // return value is elided, or at worst moved).
+  if (isRowwise()) return *this;
+  return oppositeFormat();
+}
+HighsSparseMatrix HighsSparseMatrix::getColwise() const {
+  if (isColwise()) return *this;
+  return oppositeFormat();
+}
+
 void HighsSparseMatrix::priceByRowDenseResult(
     std::vector<double>& result, const HVector& column,
     const HighsInt from_index, const HighsInt debug_report) const {
@@ -1746,50 +1795,4 @@ void HighsSparseMatrix::debugReportRowPrice(const HighsInt iRow,
     num_print++;
   }
   printf("\n");
-}
-
-HighsSparseMatrix HighsSparseMatrix::buildOppositeFormat() const {
-  // Popoulate other with the transpose of this matrix.
-  // Given a matrix A, doing
-  //    B = A.buildOppositeFormat();
-  // is more efficient than doing
-  //    B = A;
-  //    B.ensureRowWise();
-  // because the latter requires a copy (B = A) and an internal copy in
-  // ensureRowWise().
-
-  HighsSparseMatrix other;
-
-  const bool colwise = isColwise();
-  const HighsInt num_major = colwise ? num_col_ : num_row_;
-  const HighsInt num_minor = colwise ? num_row_ : num_col_;
-  const HighsInt nnz = start_[num_major];
-
-  other.format_ = colwise ? MatrixFormat::kRowwise : MatrixFormat::kColwise;
-  other.num_row_ = num_row_;
-  other.num_col_ = num_col_;
-  other.start_.assign(num_minor + 1, 0);
-  other.index_.resize(nnz);
-  other.value_.resize(nnz);
-
-  // compute number of entries per column (or row)
-  for (HighsInt k = 0; k < nnz; ++k) ++other.start_[index_[k] + 1];
-
-  // compute column (or row) pointers from number of entries
-  for (HighsInt i = 0; i < num_minor; ++i)
-    other.start_[i + 1] += other.start_[i];
-
-  // keep track of next available position in index and value
-  std::vector<HighsInt> next(other.start_.begin(), other.start_.end() - 1);
-
-  for (HighsInt major = 0; major < num_major; ++major) {
-    for (HighsInt el = start_[major]; el < start_[major + 1]; ++el) {
-      const HighsInt minor = index_[el];
-      const HighsInt pos = next[minor]++;
-      other.index_[pos] = major;
-      other.value_[pos] = value_[el];
-    }
-  }
-
-  return other;
 }

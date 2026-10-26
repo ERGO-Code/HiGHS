@@ -265,6 +265,8 @@ void processEdge(Int j, Int i, const std::vector<Int>& first,
 Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
                    std::vector<Int64>& start, bool triang) {
   // start position of diagonal blocks for blocked dense formats
+  if (n_blocks == 0) return 0;
+
   start.assign(n_blocks, 0);
   for (Int i = 1; i < n_blocks; ++i) {
     start[i] = start[i - 1] + nb * (n - (i - 1) * nb);

@@ -66,6 +66,13 @@ static inline double boundRange(double upper_bound, double lower_bound,
                       : tolerance);
 }
 
+bool HighsDomain::termIsZero(double val, double lb, double ub, double epsilon) {
+  const double absVal = std::abs(val);
+  if (absVal <= std::numeric_limits<double>::min()) return true;
+  return absVal <= epsilon &&
+         absVal * std::max(std::abs(lb), std::abs(ub)) <= epsilon;
+}
+
 HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {
   col_lower_ = mipsolver.model_->col_lower_;
   col_upper_ = mipsolver.model_->col_upper_;
@@ -1024,7 +1031,7 @@ void HighsDomain::ObjectivePropagation::getPropagationConstraint(
       }
     }
 
-    tmpRhs += largest * partitionCliqueData[i].rhs;
+    tmpRhs += static_cast<HighsCDouble>(largest) * partitionCliqueData[i].rhs;
     if (partitionCliqueData[i].multiplier != largest) {
       partitionCliqueData[i].multiplier = largest;
       const auto& packedObjVals = objFunc->getObjectiveValuesPacked();
@@ -1485,13 +1492,19 @@ void HighsDomain::ObjectivePropagation::propagate() {
         if (cost[col] > 0) {
           if (domain->checkChangeBound(
                   HighsBoundType::kUpper, col,
-                  (capacity + domain->col_lower_[col] * cost[col]) / cost[col],
+                  (capacity +
+                   static_cast<HighsCDouble>(domain->col_lower_[col]) *
+                       cost[col]) /
+                      cost[col],
                   Reason::objective()))
             numBoundChanges++;
         } else {
           if (domain->checkChangeBound(
                   HighsBoundType::kLower, col,
-                  (capacity + domain->col_upper_[col] * cost[col]) / cost[col],
+                  (capacity +
+                   static_cast<HighsCDouble>(domain->col_upper_[col]) *
+                       cost[col]) /
+                      cost[col],
                   Reason::objective()))
             numBoundChanges++;
         }
@@ -2416,6 +2429,7 @@ void HighsDomain::setDomainChangeStack(
     const std::vector<HighsInt>& branchingPositions) {
   infeasible_ = false;
   mipsolver->mipdata_->debugSolution.resetDomain(*this);
+  const bool noSymmetry = !mipsolver->mipdata_->detectSymmetries;
 
   if (!domchgstack_.empty()) {
     for (const HighsDomainChange& domchg : domchgstack_) {
@@ -2448,25 +2462,20 @@ void HighsDomain::setDomainChangeStack(
 
     if (k == stacksize) return;
 
-    // For redundant branching bound changes we need to be more careful due to
-    // symmetry handling. If these bound changes are redundant simply because
-    // the corresponding subtree was enumerated and hence the global bound
-    // updated, then we still need to keep their status as branching variables
-    // for computing correct stabilizers. They can, however, be safely dropped
-    // if they are either strictly redundant in the global domain, or if there
-    // is already a local bound change that makes the branching change
-    // redundant.
-    if (domchgstack[k].boundtype == HighsBoundType::kLower) {
-      if (domchgstack[k].boundval <= col_lower_[domchgstack[k].column]) {
-        if (domchgstack[k].boundval < col_lower_[domchgstack[k].column])
-          continue;
-        if (colLowerPos_[domchgstack[k].column] != -1) continue;
-      }
-    } else {
-      if (domchgstack[k].boundval >= col_upper_[domchgstack[k].column]) {
-        if (domchgstack[k].boundval > col_upper_[domchgstack[k].column])
-          continue;
-        if (colUpperPos_[domchgstack[k].column] != -1) continue;
+    // Remove redundant branching changes unless symmetry is active
+    if (noSymmetry) {
+      if (domchgstack[k].boundtype == HighsBoundType::kLower) {
+        if (domchgstack[k].boundval <= col_lower_[domchgstack[k].column]) {
+          if (domchgstack[k].boundval < col_lower_[domchgstack[k].column])
+            continue;
+          if (colLowerPos_[domchgstack[k].column] != -1) continue;
+        }
+      } else {
+        if (domchgstack[k].boundval >= col_upper_[domchgstack[k].column]) {
+          if (domchgstack[k].boundval > col_upper_[domchgstack[k].column])
+            continue;
+          if (colUpperPos_[domchgstack[k].column] != -1) continue;
+        }
       }
     }
 
@@ -2946,11 +2955,11 @@ void HighsDomain::tightenCoefficients(HighsInt* inds, double* vals,
     if (vals[i] > 0) {
       if (col_upper_[inds[i]] == kHighsInf) return;
 
-      maxactivity += col_upper_[inds[i]] * vals[i];
+      maxactivity += static_cast<HighsCDouble>(col_upper_[inds[i]]) * vals[i];
     } else {
       if (col_lower_[inds[i]] == -kHighsInf) return;
 
-      maxactivity += col_lower_[inds[i]] * vals[i];
+      maxactivity += static_cast<HighsCDouble>(col_lower_[inds[i]]) * vals[i];
     }
   }
 
@@ -3046,7 +3055,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeGeq(
     const std::set<LocalDomChg>& currentFrontier, const LocalDomChg& domchg,
     const HighsInt* inds, const double* vals, HighsInt len, double rhs,
     double maxAct) {
-  if (maxAct == kHighsInf) return false;
+  if (maxAct == kHighsInf || std::abs(maxAct) > kHighsInvMacheps) return false;
 
   // get the coefficient value of the column for which we want to explain
   // the bound change
@@ -3158,7 +3167,7 @@ bool HighsDomain::ConflictSet::explainBoundChangeLeq(
     const std::set<LocalDomChg>& currentFrontier, const LocalDomChg& domchg,
     const HighsInt* inds, const double* vals, HighsInt len, double rhs,
     double minAct) {
-  if (minAct == -kHighsInf) return false;
+  if (minAct == -kHighsInf || std::abs(minAct) > kHighsInvMacheps) return false;
   // get the coefficient value of the column for which we want to explain
   // the bound change
   double domchgVal = 0;
@@ -3665,7 +3674,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityGeq(const HighsInt* inds,
                                                        const double* vals,
                                                        HighsInt len, double rhs,
                                                        double maxAct) {
-  if (maxAct == kHighsInf) return false;
+  if (maxAct == kHighsInf || std::abs(maxAct) > kHighsInvMacheps) return false;
 
   HighsInt infeasible_pos = kHighsIInf;
   if (localdom.infeasible_) infeasible_pos = localdom.infeasible_pos;
@@ -3711,7 +3720,7 @@ bool HighsDomain::ConflictSet::explainInfeasibilityLeq(const HighsInt* inds,
                                                        const double* vals,
                                                        HighsInt len, double rhs,
                                                        double minAct) {
-  if (minAct == -kHighsInf) return false;
+  if (minAct == -kHighsInf || std::abs(minAct) > kHighsInvMacheps) return false;
 
   HighsInt infeasible_pos = kHighsIInf;
   if (localdom.infeasible_) infeasible_pos = localdom.infeasible_pos;
@@ -4016,7 +4025,7 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
     ++numResolved;
     frontier.erase(pos);
     for (const LocalDomChg& i : resolvedDomainChanges) {
-      auto insertResult = frontier.insert(i);
+      auto insertResult = insertIntoFrontier(frontier, i);
       if (insertResult.second) {
         if (increaseConflictScore) {
           if (localdom.domchgstack_[i.pos].boundtype == HighsBoundType::kLower)
@@ -4028,32 +4037,27 @@ HighsInt HighsDomain::ConflictSet::resolveDepth(std::set<LocalDomChg>& frontier,
         }
         if (i.pos >= startPos.pos && resolvable(i.pos))
           pushQueue(insertResult.first);
-      } else {
-        if (i.domchg.boundtype == HighsBoundType::kLower) {
-          // if (insertResult.first->domchg.boundval != i.domchg.boundval)
-          //  printf(
-          //      "got different relaxed lower bounds: current=%g, new=%g, "
-          //      "stack=%g\n",
-          //      insertResult.first->domchg.boundval, i.domchg.boundval,
-          //      localdom.domchgstack_[i.pos].boundval);
-          //
-          insertResult.first->domchg.boundval =
-              std::max(insertResult.first->domchg.boundval, i.domchg.boundval);
-        } else {
-          // if (insertResult.first->domchg.boundval != i.domchg.boundval)
-          //   printf(
-          //       "got different relaxed upper bounds: current=%g, new=%g, "
-          //       "stack=%g\n",
-          //       insertResult.first->domchg.boundval, i.domchg.boundval,
-          //       localdom.domchgstack_[i.pos].boundval);
-          insertResult.first->domchg.boundval =
-              std::min(insertResult.first->domchg.boundval, i.domchg.boundval);
-        }
       }
     }
   }
 
   return numResolved;
+}
+
+std::pair<std::set<HighsDomain::ConflictSet::LocalDomChg>::iterator, bool>
+HighsDomain::ConflictSet::insertIntoFrontier(std::set<LocalDomChg>& frontier,
+                                             const LocalDomChg& locdomchg) {
+  // the frontier is ordered by stack position only, so if an entry for the
+  // same position already exists, keep the stronger of the two relaxed bounds
+  auto insertResult = frontier.insert(locdomchg);
+  if (!insertResult.second) {
+    double& bound = insertResult.first->domchg.boundval;
+    if (locdomchg.domchg.boundtype == HighsBoundType::kLower)
+      bound = std::max(bound, locdomchg.domchg.boundval);
+    else
+      bound = std::min(bound, locdomchg.domchg.boundval);
+  }
+  return insertResult;
 }
 
 HighsInt HighsDomain::ConflictSet::computeCuts(HighsInt depthLevel,
@@ -4119,8 +4123,8 @@ void HighsDomain::ConflictSet::conflictAnalysis(HighsConflictPool& conflictPool,
       1000 + 3 * localdom.mipsolver->mipdata_->integral_cols.size())
     return;
 
-  reasonSideFrontier.insert(resolvedDomainChanges.begin(),
-                            resolvedDomainChanges.end());
+  for (const LocalDomChg& locdomchg : resolvedDomainChanges)
+    insertIntoFrontier(reasonSideFrontier, locdomchg);
 
   localdom.mipsolver->mipdata_->debugSolution.checkConflictReasonFrontier(
       reasonSideFrontier, localdom.domchgstack_);

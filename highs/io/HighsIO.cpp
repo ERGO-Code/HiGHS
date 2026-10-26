@@ -102,6 +102,11 @@ std::array<char, 32> highsDoubleToString(const double val,
   return printString;
 }
 
+std::array<char, 32> highsGapToString(const double gap) {
+  return highsDoubleToString(100.0 * gap,
+                             std::max(std::min(1e-2, 1e-1 * gap), 1e-6));
+}
+
 void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                   const char* format, ...) {
   if (!*log_options_.output_flag) return;
@@ -313,6 +318,10 @@ const std::string highsBoolToString(const bool b, const HighsInt field_width) {
 const std::string highsIntToPlural(const HighsInt i, const bool y) {
   if (y) return i == 1 ? "y" : "ies";
   return i == 1 ? "" : "s";
+}
+
+const std::string highsIntToBe(const HighsInt i) {
+  return (i == 1 ? "is" : "are");
 }
 
 const std::string highsTimeToString(const double time) {

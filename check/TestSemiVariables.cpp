@@ -87,7 +87,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {
@@ -139,7 +139,7 @@ TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {
   // Check that the lower bound of the semi-variable has been restored
   REQUIRE(highs.getLp().col_lower_[semi_col] == semi_col_lower);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
@@ -206,7 +206,7 @@ TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
@@ -247,7 +247,7 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
@@ -280,7 +280,7 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
@@ -310,7 +310,51 @@ TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
   REQUIRE(obj0 == obj1);
   std::remove(test_mps.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("semi-variable-fixed-write", "[highs_test_semi_variables]") {
+  // A semi-variable with equal lower and upper bounds was written to
+  // MPS as FX, so the zero value was lost when the file was read back
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::vector<std::string> extensions = {".mps", ".lp"};
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 1};
+  lp.col_lower_ = {2, 3};
+  lp.col_upper_ = {2, 3};
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {10};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.integrality_ = {semi_continuous, semi_integer};
+  lp.col_names_ = {"sc", "si"};
+  lp.row_names_ = {"r"};
+  for (const std::string& extension : extensions) {
+    const std::string test_file = test_name + extension;
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(highs.getObjectiveValue() == 0);
+
+    REQUIRE(highs.writeModel(test_file) == HighsStatus::kOk);
+    REQUIRE(highs.readModel(test_file) == HighsStatus::kOk);
+    const HighsLp& read_lp = highs.getLp();
+    REQUIRE(read_lp.integrality_ == lp.integrality_);
+    REQUIRE(read_lp.col_lower_ == lp.col_lower_);
+    REQUIRE(read_lp.col_upper_ == lp.col_upper_);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(highs.getObjectiveValue() == 0);
+    std::remove(test_file.c_str());
+
+    highs.resetThreadScheduler(true);
+  }
 }
 
 void semiModel0(HighsLp& lp) {
@@ -353,5 +397,5 @@ TEST_CASE("3015", "[highs_test_semi_variables]") {
   REQUIRE(status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

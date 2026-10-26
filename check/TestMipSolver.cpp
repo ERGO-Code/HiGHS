@@ -3,6 +3,7 @@
 #include "SpecialLps.h"
 #include "catch.hpp"
 #include "mip/HighsCliqueTable.h"
+#include "mip/HighsConflictPool.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
@@ -28,7 +29,7 @@ TEST_CASE("MIP-distillation", "[highs_test_mip_solver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   distillationMIP(highs);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 // Fails but the cases work separately in
@@ -45,7 +46,7 @@ TEST_CASE("MIP-rowless-1", "[highs_test_mip_solver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   rowlessMIP1(highs);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-rowless-2", "[highs_test_mip_solver]") {
@@ -53,7 +54,7 @@ TEST_CASE("MIP-rowless-2", "[highs_test_mip_solver]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   rowlessMIP2(highs);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-solution-limit", "[highs_test_mip_solver]") {
@@ -88,7 +89,7 @@ TEST_CASE("MIP-solution-limit", "[highs_test_mip_solver]") {
   highs.setOptionValue("mip_max_improving_sols", kHighsIInf);
   highs.clearSolver();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
@@ -184,7 +185,7 @@ TEST_CASE("MIP-integrality", "[highs_test_mip_solver]") {
   REQUIRE(fabs(info.mip_dual_bound + 6) < double_equal_tolerance);
   REQUIRE(std::fabs(info.mip_gap) < 1e-12);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-clear-integrality", "[highs_test_mip_solver]") {
@@ -228,7 +229,7 @@ TEST_CASE("MIP-nmck", "[highs_test_mip_solver]") {
   REQUIRE(info.max_primal_infeasibility == 0);
   REQUIRE(info.sum_primal_infeasibilities == 0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
@@ -310,7 +311,7 @@ TEST_CASE("MIP-maximize", "[highs_test_mip_solver]") {
           options.mip_abs_gap);
   REQUIRE(std::abs(info.mip_gap) <= options.mip_rel_gap);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
@@ -420,7 +421,7 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
@@ -489,7 +490,7 @@ TEST_CASE("MIP-od", "[highs_test_mip_solver]") {
   REQUIRE(fabs(solution.col_value[0] - required_x0_value) <
           double_equal_tolerance);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
@@ -534,7 +535,7 @@ TEST_CASE("MIP-infeasible-start", "[highs_test_mip_solver]") {
   highs.run();
   REQUIRE(model_status == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("get-integrality", "[highs_test_mip_solver]") {}
@@ -579,7 +580,7 @@ TEST_CASE("MIP-bounds", "[highs_test_mip_solver]") {
   REQUIRE(obj0 == obj1);
   std::remove(test_mps.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
@@ -608,7 +609,7 @@ TEST_CASE("MIP-get-saved-solutions", "[highs_test_mip_solver]") {
             highs.getSolution().col_value[iCol]);
   std::remove(solution_file.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-objective-target", "[highs_test_mip_solver]") {
@@ -624,7 +625,7 @@ TEST_CASE("MIP-objective-target", "[highs_test_mip_solver]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kObjectiveTarget);
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-max-offset-test", "[highs_test_mip_solver]") {
@@ -654,7 +655,7 @@ TEST_CASE("MIP-max-offset-test", "[highs_test_mip_solver]") {
   REQUIRE(objectiveOk(max_offset_optimal_objective, -offset_optimal_objective,
                       dev_run));
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
@@ -694,7 +695,7 @@ TEST_CASE("MIP-get-saved-solutions-presolve", "[highs_test_mip_solver]") {
             highs.getSolution().col_value[iCol]);
   std::remove(solution_file.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
@@ -753,7 +754,7 @@ TEST_CASE("IP-infeasible-unbounded", "[highs_test_mip_solver]") {
     highs.setOptionValue("presolve", kHighsOnString);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
@@ -790,7 +791,7 @@ TEST_CASE("IP-with-fract-bounds-no-presolve", "[highs_test_mip_solver]") {
   // Infeasible
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 /*
@@ -877,7 +878,7 @@ void solve(Highs& highs, std::string presolve,
   }
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void distillationMIP(Highs& highs) {
@@ -994,7 +995,7 @@ TEST_CASE("issue-2204", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
-TEST_CASE("ZI Round and Shifting Heuristics", "[highs_test_mip_solver]") {
+TEST_CASE("zi-round-and-shifting-heuristics", "[highs_test_mip_solver]") {
   std::string model_file = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
 
   Highs highs;
@@ -1290,7 +1291,7 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
 
   REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("get-presolved-mip", "[highs_test_mip_solver]") {
@@ -1326,7 +1327,7 @@ TEST_CASE("get-presolved-mip", "[highs_test_mip_solver]") {
   h.run();
   const double presolved_lp_objective_value = h.getObjectiveValue();
   REQUIRE(presolved_lp_objective_value == lp_objective_value);
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("get-fixed-lp-semi", "[highs_test_mip_solver]") {
@@ -1362,7 +1363,7 @@ TEST_CASE("get-fixed-lp-semi", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
 
   REQUIRE(h.getInfo().objective_function_value == mip_optimal_objective);
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("row-fixed-lp", "[highs_test_mip_solver]") {
@@ -1385,7 +1386,7 @@ TEST_CASE("row-fixed-lp", "[highs_test_mip_solver]") {
   REQUIRE(h.getInfo().objective_function_value <=
           mip_optimal_objective + double_equal_tolerance);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2585", "[highs_test_mip_solver]") {
@@ -1488,7 +1489,7 @@ TEST_CASE("issue-2975", "[highs_test_mip_solver]") {
   REQUIRE(highs.getInfo().objective_function_value == 20);
   REQUIRE(highs.getSolution().col_value[y] == 0.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
@@ -1530,7 +1531,7 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   REQUIRE(std::abs(2 / M - highs.getInfo().objective_function_value) < 1e-9);
   if (dev_run) highs.writeSolution("", 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
@@ -1610,7 +1611,7 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
             HighsStatus::kOk);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-equality-clique-fixing", "[highs_test_mip_solver]") {
@@ -1657,7 +1658,7 @@ TEST_CASE("MIP-equality-clique-fixing", "[highs_test_mip_solver]") {
   REQUIRE(domain.isFixed(4));
   REQUIRE(domain.col_lower_[4] == 1.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
@@ -1704,7 +1705,7 @@ TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
   REQUIRE(domain.isFixed(4));
   REQUIRE(domain.col_upper_[4] == 0.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3170", "[highs_test_mip_solver]") {
@@ -1757,7 +1758,7 @@ TEST_CASE("issue-3262", "[highs_test_mip_solver]") {
 
   REQUIRE_NOTHROW(highs.run());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2900", "[highs_test_mip_solver]") {
@@ -1918,7 +1919,7 @@ TEST_CASE("dual-fix-probing-nonzero-cost", "[highs_test_mip_solver]") {
   REQUIRE(implications.substitutions[0].offset == 2.0);
   REQUIRE(implications.substitutions[0].scale == -2.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-fix-probing-tentative-global-fix", "[highs_test_mip_solver]") {
@@ -1979,7 +1980,7 @@ TEST_CASE("dual-fix-probing-tentative-global-fix", "[highs_test_mip_solver]") {
   REQUIRE(domain.col_lower_[1] == 0.0);
   REQUIRE(domain.col_upper_[1] == 0.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-fix-probing-tentative-clique-complement",
@@ -2051,7 +2052,7 @@ TEST_CASE("dual-fix-probing-tentative-clique-complement",
   REQUIRE(subst->replace.col == 0);
   REQUIRE(subst->replace.val == 0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-fix-probing-tentative-clique-equivalence",
@@ -2123,7 +2124,7 @@ TEST_CASE("dual-fix-probing-tentative-clique-equivalence",
   REQUIRE(subst->replace.col == 0);
   REQUIRE(subst->replace.val == 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-free-integer-column", "[highs_test_mip_solver]") {
@@ -2357,4 +2358,224 @@ TEST_CASE("implied-row-dual-bound-invalidation", "[highs_test_mip_solver]") {
     REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
     solve(highs, presolve, HighsModelStatus::kOptimal, -4.0);
   }
+}
+
+/*
+TEST_CASE("unresolved-infeasible-or-unbounded", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_.assign(lp.num_col_, 0);
+  lp.col_lower_.assign(lp.num_col_, -kHighsInf);
+  lp.col_upper_.assign(lp.num_col_, kHighsInf);
+  lp.row_lower_ = {0, -19};
+  lp.row_upper_ = lp.row_lower_;
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {1, 2, 0, 2};
+  lp.a_matrix_.value_ = {4, -1, 8, 1};
+
+  for (const std::string& presolve : {kHighsOnString, kHighsOffString}) {
+    Highs highs;
+    //    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+    solve(highs, presolve, HighsModelStatus::kInfeasible);
+  }
+}
+*/
+
+TEST_CASE("implied-equation-unbounded", "[highs_test_mip_solver]") {
+  // the MIP is unbounded, since x2 can be decreased and x1 increased without
+  // bound. with MIP presolve off, the root LP relaxation is still presolved,
+  // and the implied bounds on the row duals then point towards infinite row
+  // bounds. such rows must not be identified as implied equations
+  HighsLp lp;
+  lp.num_col_ = 8;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-4, -1, 0, 0, 0, 0, -3, -4};
+  lp.col_lower_ = {-kHighsInf, 0, -kHighsInf, 0, 4, 0, 0, -10};
+  lp.col_upper_ = {5, kHighsInf, 3, 1, 9, 4, 1, 10};
+  lp.row_lower_ = {-19, -1};
+  lp.row_upper_ = {kHighsInf, kHighsInf};
+  lp.integrality_ = {HighsVarType::kInteger,        HighsVarType::kInteger,
+                     HighsVarType::kInteger,        HighsVarType::kInteger,
+                     HighsVarType::kSemiContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger,        HighsVarType::kContinuous};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2, 3, 4, 6, 8, 9, 11};
+  lp.a_matrix_.index_ = {0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1};
+  lp.a_matrix_.value_ = {7, -9, -1, -3, -1, -3, -3, 1, 1, 2, -8};
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    const HighsModelStatus model_status = highs.getModelStatus();
+    REQUIRE((model_status == HighsModelStatus::kUnbounded ||
+             model_status == HighsModelStatus::kUnboundedOrInfeasible));
+  }
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3389", "[highs_test_mip_solver]") {
+  // tol and coeff are powers of 2, so all data below is exact. with y = 1, the
+  // rows give 1 <= x <= 2 - 1 / coeff = 2 - tol / 2, and x = 2 - tol / 2 is
+  // integral within the MIP feasibility tolerance
+  const double tol = 1.0 / (1 << 20);
+  const double coeff = 2 / tol;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {1, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {3, 3};
+  lp.row_lower_ = {-0.5 * coeff, -kHighsInf, 1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 0.5 * coeff - 1, kHighsInf, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 2, 3};
+  lp.a_matrix_.value_ = {-coeff,          -coeff, 1.5 * coeff - 1,
+                         1.5 * coeff - 1, 1,      1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.setOptionValue("mip_feasibility_tolerance", tol) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    const double objective = highs.getInfo().objective_function_value;
+    REQUIRE((std::fabs(objective - 1) < 1e-8 ||
+             std::fabs(objective - (2 - 0.5 * tol)) < 1e-8));
+  }
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3389-binding-row", "[highs_test_mip_solver]") {
+  // tol and coeff are powers of 2, so all data below is exact. with y = 1,
+  // row 0 gives x <= 2 - tol / 2 and row 1 gives x <= 2 - tol / 8. the
+  // smallest worst-case bound on x comes from row 0 (coefficient 1), but row 1
+  // (coefficient coeff) is the binding row: each row's bound has to be rounded
+  // with its own tolerance. x = 2 - tol / 2 is integral within the MIP
+  // feasibility tolerance
+  const double tol = 1.0 / (1 << 20);
+  const double coeff = 2 / tol;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {1, 0};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {3, 3};
+  lp.row_lower_ = {-(1 - 0.5 * tol), -coeff * (1 - 0.125 * tol), 1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, kHighsInf, kHighsInf, 1};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2, 6};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 2, 3};
+  lp.a_matrix_.value_ = {-1, -coeff, 1, coeff, 1, 1};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.setOptionValue("mip_feasibility_tolerance", tol) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
+    highs.clearSolver();
+    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    const double objective = highs.getInfo().objective_function_value;
+    REQUIRE((std::fabs(objective - 1) < 1e-8 ||
+             std::fabs(objective - (2 - 0.5 * tol)) < 1e-8));
+  }
+  highs.resetThreadScheduler(true);
+}
+
+// unstable: with 64-bit HighsInt, the efficacy check in
+// cmirCutGenerationHeuristic fails in debug builds, since flipping the
+// complementation of integer variables with large bounds does not restore their
+// solution values exactly
+// TEST_CASE("large-int-bounds", "[highs_test_mip_solver]") {
+//   std::string filename =
+//       std::string(HIGHS_DIR) + "/check/instances/large-int-bounds.lp";
+//   Highs highs;
+//   highs.setOptionValue("output_flag", dev_run);
+//   highs.setOptionValue("mip_rel_gap", 0);
+//   highs.setOptionValue("mip_abs_gap", 0);
+//   highs.readModel(filename);
+//   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+//   const double optimal_objective = 9;
+//   solve(highs, kHighsOnString, require_model_status, optimal_objective);
+//   highs.resetThreadScheduler(true);
+// }
+
+TEST_CASE("issue-3433", "[highs_test_mip_solver]") {
+  // conflict analysis used to keep the weaker of two relaxed bounds for the
+  // same domain change, which led to a wrong optimal objective for some seeds
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3433.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 19;
+  for (HighsInt seed : {11, 15, 124, 127, 267}) {
+    // solve resets the options
+    highs.setOptionValue("output_flag", dev_run);
+    highs.setOptionValue("random_seed", seed);
+    highs.setOptionValue("parallel", kHighsOffString);
+    highs.setOptionValue("mip_rel_gap", 0);
+    // the mip solver would otherwise start from the previous solution
+    highs.clearSolver();
+    solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  }
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3451", "[highs_test_mip_solver]") {
+  // reduced version of the model in issue 3451. IPX stops with "no progress"
+  // before centring when computing the analytic centre, but the KKT check
+  // reports the solution as optimal. Fixing columns at bounds of this
+  // uncentred point used to make the feasible model infeasible. The same
+  // cause led to a wrong optimal objective in issue 3452
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3451.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -135.865250363;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  highs.resetGlobalScheduler(true);
+}
+
+TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
+  // an empty conflict, which can be derived when a proof is violated by the
+  // global bounds alone, is stored at the end of the conflict entries and
+  // used to be accessed out of range when synchronising the conflict pools of
+  // the parallel mip solver
+  HighsConflictPool workerPool(10, 100);
+  HighsConflictPool globalPool(10, 100);
+  HighsDomainChange domchg{1.0, 0, HighsBoundType::kLower};
+  workerPool.addConflictFromOtherPool(&domchg, 1);
+  workerPool.addConflictFromOtherPool(nullptr, 0);
+  REQUIRE(workerPool.getNumConflicts() == 2);
+
+  workerPool.syncConflictPool(globalPool);
+  REQUIRE(workerPool.getNumConflicts() == 0);
+  REQUIRE(globalPool.getNumConflicts() == 2);
+
+  const auto& ranges = globalPool.getConflictRanges();
+  REQUIRE(ranges[0].second - ranges[0].first == 1);
+  REQUIRE(ranges[1].second - ranges[1].first == 0);
 }

@@ -1359,7 +1359,7 @@ class Highs {
   std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
 
   /**
-   * @brief Ensures that the global scheduler is initialized,
+   * @brief Ensures that the scheduler is initialized,
    * returning HighsStatus::kError if it has already been initialized,
    * but the threads option is nonzero and not equal to
    * this->max_threads_.
@@ -1367,19 +1367,20 @@ class Highs {
   HighsStatus initializeMultiThreading();
 
   /**
-   * @brief Releases all resources held by the global scheduler instance. It is
-   * not thread-safe to call this function while calling run() or presolve() on
-   * any other Highs instance in any thread. After this function has terminated
-   * it is guaranteed that eventually all previously created scheduler threads
-   * will terminate and allocated memory will be released. After this function
-   * has returned the option value for the number of threads may be altered to a
-   * new value before the next call to run() or presolve(). If the given bool
-   * parameter has value true, then the function will not return until all
-   * memory is freed, which might be desirable when debugging heap memory but
-   * requires the calling thread to wait for all scheduler threads to wake-up
-   * which is usually not necessary.
+   * @brief Releases all resources held by the scheduler owned by the calling
+   * thread. It is thread-safe to call this function only from the thread that
+   * owns the scheduler (not from a worker thread) and when no run() or
+   * presolve() is in progress on that thread. After this function has
+   * terminated it is guaranteed that eventually all previously created
+   * scheduler threads will terminate and allocated memory will be released.
+   * After this function has returned the option value for the number of threads
+   * may be altered to a new value before the next call to run() or presolve().
+   * If the given bool parameter has value true, then the function will not
+   * return until all memory is freed, which might be desirable when debugging
+   * heap memory but requires the calling thread to wait for all scheduler
+   * threads to wake-up which is usually not necessary.
    */
-  static void resetGlobalScheduler(bool blocking = false);
+  static void resetThreadScheduler(bool blocking = false);
 
   /**
    * @brief If profiling is not nullptr, sets up profiling and copies
@@ -1637,6 +1638,10 @@ class Highs {
     this->deprecationMessage("frozenBasisAllDataClear", "None");
     return HighsStatus::kError;
   }
+
+  // Deprecated in favour of resetThreadScheduler().
+  // Cannot call deprecationMessage here.
+  static void resetGlobalScheduler(bool blocking = false);
 
   // End of deprecated methods
  private:

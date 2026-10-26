@@ -476,7 +476,7 @@ TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
   }
   std::remove(write_model_filename.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 HighsHessian getHessianDiagonal4() {
@@ -674,5 +674,5 @@ void testOracleSolve(const HighsModel& model) {
     if (k == 1) local_hessian = local_hessian.toSquare();
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

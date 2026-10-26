@@ -235,3 +235,48 @@ jobs:
           cp ${{github.workspace}}\examples\call_highs_from_csharp.cs .
           dotnet add package Highs.Native -v 1.15.1 -s ${{github.workspace}}\nugets
           dotnet run
+
+  build_windows_arm64:
+    runs-on: windows-11-arm
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build HiGHS Windows ARM64 native
+        run: |
+         cmake -E make_directory ${{github.workspace}}/build
+         cmake -E make_directory ${{github.workspace}}/nugets
+         cmake -E make_directory ${{github.workspace}}/test_nuget
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A ARM64
+
+      - name: Build
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . --config Release --parallel
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Dotnet pack
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
+        run: dotnet pack -c Release /p:Version=1.15.1
+
+      - name: Add local feed
+        run: dotnet nuget add source -n name ${{github.workspace}}\nugets
+
+      - name: Dotnet push to local feed
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
+        shell: bash
+        run: dotnet nuget push ./bin/Release/*.nupkg -s name
+
+      - name: Create new project and test
+        working-directory: ${{github.workspace}}/test_nuget
+        run: |
+          dotnet new console
+          rm Program.cs
+          cp ${{github.workspace}}\examples\call_highs_from_csharp.cs .
+          dotnet add package Highs.Native -v 1.15.1 -s ${{github.workspace}}\nugets
+          dotnet run

@@ -57,7 +57,6 @@ cc_library(
     ] + glob([
         "highs/folding/*.cpp",
         "highs/io/*.cpp",
-        "highs/io/filereaderlp/*.cpp",
         "highs/ipm/*.cpp",
         "highs/ipm/ipx/*.cc",
         "highs/ipm/basiclu/*.c",
@@ -81,7 +80,6 @@ cc_library(
     ] + glob([
         "**/*.h",
         "highs/pdlp/hipdlp/*.hpp",
-        "highs/io/filereaderlp/*.hpp",
         "highs/qpsolver/*.hpp",
         "extern/zstr/*.hpp",
     ]),
@@ -100,7 +98,6 @@ cc_library(
     includes = [
         "extern",
         "extern/catch",
-        # "extern/filereaderlp",
         # "extern/zstr",
         "highs",
         # "highs/ipm",

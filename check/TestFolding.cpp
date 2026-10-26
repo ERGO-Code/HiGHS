@@ -197,7 +197,7 @@ TEST_CASE("test-folding-paper", "[highs-folding]") {
   REQUIRE(std::abs(folded_obj - obj) < 1e-6);
   REQUIRE(std::abs(folded_obj_2 - obj) < 1e-6);
 
-  highs.resetGlobalScheduler();
+  highs.resetThreadScheduler();
 }
 
 TEST_CASE("test-folding-paper-qp", "[highs-folding]") {
@@ -263,7 +263,7 @@ void runFoldingTest(const std::string& filename, HighsInt expected_rows,
   const HighsSolution unfolded_sol = lpf.unfold(folded_sol);
   REQUIRE(isOptimal(highs, model, unfolded_sol));
 
-  highs.resetGlobalScheduler();
+  highs.resetThreadScheduler();
 }
 
 void runFoldingTestFromHighs(const std::string& filename,
@@ -289,7 +289,7 @@ void runFoldingTestFromHighs(const std::string& filename,
   REQUIRE(highs.unfold(folded_sol) == HighsStatus::kOk);
   REQUIRE(isOptimal(highs, highs.getModel(), highs.getSolution()));
 
-  highs.resetGlobalScheduler();
+  highs.resetThreadScheduler();
 }
 
 TEST_CASE("test-folding", "[highs-folding]") {

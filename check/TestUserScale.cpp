@@ -56,7 +56,7 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
             HighsStatus::kOk);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("chip-user-bound-scale", "[highs_user_scale]") {
@@ -107,7 +107,7 @@ TEST_CASE("chip-user-bound-scale", "[highs_user_scale]") {
     chip_solution0 = 40;
     chip_solution1 = 21;
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
@@ -166,12 +166,12 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
 
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const double large_cost = 1.0e+10;           // Algebraically C
   const double small_cost = 1 / large_cost;    // Algebraically c
   const double large_bound = 2.0e+10;          // Algebraically B
@@ -195,8 +195,10 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 0: suggested objective scale = %d; suggested bound scale = %d\n",
-         int(suggested_objective_scale), int(suggested_bound_scale));
+  if (dev_run)
+    printf(
+        "Case 0: suggested objective scale = %d; suggested bound scale = %d\n",
+        int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == -14);
   REQUIRE(suggested_bound_scale == 0);
 
@@ -206,8 +208,10 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 1: suggested objective scale = %d; suggested bound scale = %d\n",
-         int(suggested_objective_scale), int(suggested_bound_scale));
+  if (dev_run)
+    printf(
+        "Case 1: suggested objective scale = %d; suggested bound scale = %d\n",
+        int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == -14);
   REQUIRE(suggested_bound_scale == -15);
 
@@ -216,8 +220,10 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 2: suggested objective scale = %d; suggested bound scale = %d\n",
-         int(suggested_objective_scale), int(suggested_bound_scale));
+  if (dev_run)
+    printf(
+        "Case 2: suggested objective scale = %d; suggested bound scale = %d\n",
+        int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == 20);
   REQUIRE(suggested_bound_scale == -15);
 
@@ -235,8 +241,10 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 3: suggested objective scale = %d; suggested bound scale = %d\n",
-         int(suggested_objective_scale), int(suggested_bound_scale));
+  if (dev_run)
+    printf(
+        "Case 3: suggested objective scale = %d; suggested bound scale = %d\n",
+        int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == 0);
   REQUIRE(suggested_bound_scale == -15);
 
@@ -251,8 +259,10 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 4: suggested objective scale = %d; suggested bound scale = %d\n",
-         int(suggested_objective_scale), int(suggested_bound_scale));
+  if (dev_run)
+    printf(
+        "Case 4: suggested objective scale = %d; suggested bound scale = %d\n",
+        int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == 0);
   REQUIRE(suggested_bound_scale == -15);
 
@@ -261,12 +271,14 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(highs.getObjectiveBoundScaling(suggested_objective_scale,
                                          suggested_bound_scale) ==
           HighsStatus::kOk);
-  printf("Case 5: suggested objective scale = %d; suggested bound scale = %d\n",
-         int(suggested_objective_scale), int(suggested_bound_scale));
+  if (dev_run)
+    printf(
+        "Case 5: suggested objective scale = %d; suggested bound scale = %d\n",
+        int(suggested_objective_scale), int(suggested_bound_scale));
   REQUIRE(suggested_objective_scale == 0);
   REQUIRE(suggested_bound_scale == 0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 HighsLp lp0(const double cost, const double bound) {
@@ -540,5 +552,5 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
     testQp(h, large_cost, large_hessian, small_col_lower, large_bound);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
