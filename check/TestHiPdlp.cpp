@@ -81,7 +81,7 @@ TEST_CASE("hi-pdlp-maximize", "[hipdlp]") {
                     (-min_objective + offset)) <
           1e-3 * (1.0 + std::fabs(min_objective)));
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("hi-pdlp-free-rows", "[hipdlp]") {
@@ -129,7 +129,7 @@ TEST_CASE("hi-pdlp-free-rows", "[hipdlp]") {
     REQUIRE(solution.row_dual.size() == 4);
     REQUIRE(solution.row_value.size() == 4);
     REQUIRE(solution.row_dual[1] == 0.0);  // free row
-    h.resetGlobalScheduler(true);
+    h.resetThreadScheduler(true);
   }
 }
 
@@ -166,5 +166,5 @@ TEST_CASE("hi-pdlp-all-free-rows", "[hipdlp]") {
   REQUIRE(solution.row_dual[0] == 0.0);
   REQUIRE(solution.row_dual[1] == 0.0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
