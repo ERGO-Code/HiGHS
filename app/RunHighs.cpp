@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 
   // Shut down task executor for explicit release of memory.
   // Valgrind still reachable otherwise.
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return runHighsReturn(highs, run_status);
 }
