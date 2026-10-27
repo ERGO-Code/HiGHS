@@ -87,16 +87,21 @@ class Folder {
           : row_colour(model.lp_.num_row_), col_colour(model.lp_.num_col_) {}
     };
 
-    TemporaryData temp;
+    std::unique_ptr<TemporaryData> temp;
     PermanentData perm;
 
-    Data(const HighsModel& model) : temp(model), perm(model) {}
+    Data(const HighsModel& model)
+        : temp(new TemporaryData(model)), perm(model) {
+      assert(temp);
+    }
 
-    const HighsLp& lp() const { return temp.lp; }
-    const HighsSparseMatrix& At() const { return temp.At; }
-    const HighsHessian& Q() const { return temp.Q; }
+    const HighsLp& lp() const { return temp->lp; }
+    const HighsSparseMatrix& At() const { return temp->At; }
+    const HighsHessian& Q() const { return temp->Q; }
     std::vector<HighsInt>& rowColour() { return perm.row_colour; }
     std::vector<HighsInt>& colColour() { return perm.col_colour; }
+
+    void clearTemporary() { temp.reset(); }
   };
   std::unique_ptr<Data> data_;
 
@@ -111,6 +116,8 @@ class Folder {
 
   FoldInfo info_;
 
+  HighsModel folded_model_;
+
   template <typename T>
   HighsInt findInitialColour(HighsInt num, HighsInt* colour, HighsInt start);
   void findInitialColour();
@@ -118,6 +125,7 @@ class Folder {
   bool isPartitionCorrect() const;
   bool success() const { return info_.status == Status::kOk; }
   bool checkTimeLimit();
+  void buildFoldedModel();
 
  public:
   Folder() = default;
@@ -128,7 +136,7 @@ class Folder {
 
   void setTimeLimit(const HighsTimer& timer, double time_limit);
   void run(const HighsModel& model);
-  HighsModel getFoldedModel() const;
+  const HighsModel& getFoldedModel() const { return folded_model_; }
   HighsSolution unfold(const HighsSolution& folded) const;
   const FoldInfo& getInfo() const { return info_; }
 

@@ -178,6 +178,10 @@ void Folder::run(const HighsModel& model) {
     num_col_ = data_->lp().num_col_;
     findInitialColour();
     foldModel();
+    buildFoldedModel();
+    assert(!success() || isPartitionCorrect());
+    data_->clearTemporary();
+
   } catch (const std::bad_alloc&) {
     data_.reset();
     info_.status = Status::kOutOfMemory;
@@ -186,12 +190,11 @@ void Folder::run(const HighsModel& model) {
     info_.status = Status::kGenericError;
   }
 
-  assert(!success() || isPartitionCorrect());
   if (!success()) data_.reset();
   info_.fold_time = timer.read();
 }
 
-HighsModel Folder::getFoldedModel() const {
+void Folder::buildFoldedModel() {
   // Given the partition of rows and columns produced by colour refinement,
   // generate a folded LP with num_row equal to the number of row colours and
   // num_col equal to the number of col colours.
@@ -210,126 +213,188 @@ HighsModel Folder::getFoldedModel() const {
   // col colours. Entry (i, j) is equal to the sum of all the entries of Q in
   // rows of colour i and columns of colour j.
 
-  try {
-    HighsTimer timer;
-    timer.start();
+  HighsTimer timer;
+  timer.start();
 
-    if (!data_ || !success()) return HighsModel{};
+  if (!data_ || !success()) return;
 
-    const HighsInt num_row_colours = info_.num_row_colours;
-    const HighsInt num_col_colours = info_.num_col_colours;
+  const HighsInt num_row_colours = info_.num_row_colours;
+  const HighsInt num_col_colours = info_.num_col_colours;
 
-    // Representative row for each colour:
-    // For each colour, find the row with the fewest nonzero entries in A
-    auto nz_in_row_of_A = [&](HighsInt row) {
-      return data_->At().start_[row + 1] - data_->At().start_[row];
-    };
+  // Representative row for each colour:
+  // For each colour, find the row with the fewest nonzero entries in A
+  auto nz_in_row_of_A = [&](HighsInt row) {
+    return data_->At().start_[row + 1] - data_->At().start_[row];
+  };
 
-    std::vector<HighsInt> row_of_colour(num_row_colours, -1);
-    for (HighsInt row = 0; row < data_->lp().a_matrix_.num_row_; ++row) {
-      const HighsInt colour = data_->rowColour()[row];
-      const HighsInt current_best_row = row_of_colour[colour];
-      if (current_best_row < 0 ||
-          nz_in_row_of_A(row) < nz_in_row_of_A(current_best_row))
-        row_of_colour[colour] = row;
+  std::vector<HighsInt> row_of_colour(num_row_colours, -1);
+  for (HighsInt row = 0; row < data_->lp().a_matrix_.num_row_; ++row) {
+    const HighsInt colour = data_->rowColour()[row];
+    const HighsInt current_best_row = row_of_colour[colour];
+    if (current_best_row < 0 ||
+        nz_in_row_of_A(row) < nz_in_row_of_A(current_best_row))
+      row_of_colour[colour] = row;
+  }
+
+  for (HighsInt colour = 0; colour < num_row_colours; ++colour)
+    assert(row_of_colour[colour] >= 0);
+
+  // Representative col for each colour:
+  // For each colour, find the column with the fewest nonzero entries in Q (or
+  // the first one, if Q is empty)
+  auto nz_in_col_of_Q = [&](HighsInt col) {
+    return data_->Q().empty()
+               ? 0
+               : data_->Q().start_[col + 1] - data_->Q().start_[col];
+  };
+
+  std::vector<HighsInt> col_of_colour(num_col_colours, -1);
+  for (HighsInt col = 0; col < num_col_; ++col) {
+    const HighsInt colour = data_->colColour()[col];
+    const HighsInt current_best_col = col_of_colour[colour];
+    if (current_best_col < 0 ||
+        nz_in_col_of_Q(col) < nz_in_col_of_Q(current_best_col))
+      col_of_colour[colour] = col;
+  }
+
+  for (HighsInt colour = 0; colour < num_col_colours; ++colour)
+    assert(col_of_colour[colour] >= 0);
+
+  // Build the folded lp
+  HighsLp& folded_lp = folded_model_.lp_;
+  folded_lp.sense_ = data_->lp().sense_;
+  folded_lp.offset_ = data_->lp().offset_;
+
+  folded_lp.num_row_ = num_row_colours;
+  folded_lp.num_col_ = num_col_colours;
+
+  // Row bounds: all rows of a colour have the same bounds, up to tolerance,
+  // so use the representative
+  folded_lp.row_lower_.resize(num_row_colours);
+  folded_lp.row_upper_.resize(num_row_colours);
+  for (HighsInt colour = 0; colour < num_row_colours; ++colour) {
+    const HighsInt row = row_of_colour[colour];
+    folded_lp.row_lower_[colour] = data_->lp().row_lower_[row];
+    folded_lp.row_upper_[colour] = data_->lp().row_upper_[row];
+  }
+
+  // Col bounds: all cols of a colour have the same bounds, up to tolerance,
+  // so use the representative
+  folded_lp.col_lower_.resize(num_col_colours);
+  folded_lp.col_upper_.resize(num_col_colours);
+  for (HighsInt colour = 0; colour < num_col_colours; ++colour) {
+    const HighsInt col = col_of_colour[colour];
+    folded_lp.col_lower_[colour] = data_->lp().col_lower_[col];
+    folded_lp.col_upper_[colour] = data_->lp().col_upper_[col];
+  }
+
+  // Col costs: costs are summed over all variables with the same colour
+  folded_lp.col_cost_.assign(num_col_colours, 0.0);
+  for (HighsInt col = 0; col < num_col_; ++col) {
+    const HighsInt colour = data_->colColour()[col];
+    folded_lp.col_cost_[colour] += data_->lp().col_cost_[col];
+  }
+
+  // Build the folded At
+  HighsSparseMatrix Aft;
+  Aft.num_row_ = num_row_colours;
+  Aft.num_col_ = num_col_colours;
+  Aft.format_ = MatrixFormat::kRowwise;
+  Aft.start_.reserve(num_row_colours + 1);
+  // Aft.start_ is already initialised with a leading zero
+  assert(Aft.start_.size() == 1 && Aft.start_[0] == 0);
+
+  // For each row colour, accumulate the sum of entries with the same col
+  // colour
+  std::vector<double> accumulator(num_col_colours, 0.0);
+  std::vector<HighsBool> is_col_used(num_col_colours, false);
+  std::vector<HighsInt> col_used;
+  for (HighsInt r_colour = 0; r_colour < num_row_colours; ++r_colour) {
+    const HighsInt row = row_of_colour[r_colour];
+
+    for (HighsInt el = data_->At().start_[row];
+         el < data_->At().start_[row + 1]; ++el) {
+      const HighsInt col = data_->At().index_[el];
+      const HighsInt c_colour = data_->colColour()[col];
+
+      if (!is_col_used[c_colour]) {
+        is_col_used[c_colour] = true;
+        col_used.push_back(c_colour);
+      }
+      accumulator[c_colour] += data_->At().value_[el];
     }
 
-    for (HighsInt colour = 0; colour < num_row_colours; ++colour)
-      assert(row_of_colour[colour] >= 0);
+    for (HighsInt c_colour : col_used) {
+      const double val = accumulator[c_colour];
 
-    // Representative col for each colour:
-    // For each colour, find the column with the fewest nonzero entries in Q (or
-    // the first one, if Q is empty)
-    auto nz_in_col_of_Q = [&](HighsInt col) {
-      return data_->Q().empty()
-                 ? 0
-                 : data_->Q().start_[col + 1] - data_->Q().start_[col];
-    };
+      // Skip sums that are quantized to zero
+      if (DoubleQuantizer::bucket(val) != 0.0) {
+        Aft.index_.push_back(c_colour);
+        Aft.value_.push_back(val);
+      }
 
-    std::vector<HighsInt> col_of_colour(num_col_colours, -1);
-    for (HighsInt col = 0; col < num_col_; ++col) {
-      const HighsInt colour = data_->colColour()[col];
-      const HighsInt current_best_col = col_of_colour[colour];
-      if (current_best_col < 0 ||
-          nz_in_col_of_Q(col) < nz_in_col_of_Q(current_best_col))
-        col_of_colour[colour] = col;
+      accumulator[c_colour] = 0.0;
+      is_col_used[c_colour] = false;
     }
+    col_used.clear();
 
-    for (HighsInt colour = 0; colour < num_col_colours; ++colour)
-      assert(col_of_colour[colour] >= 0);
+    Aft.start_.push_back(static_cast<HighsInt>(Aft.index_.size()));
+  }
 
-    // Build the folded lp
-    HighsModel folded_model;
-    HighsLp& folded_lp = folded_model.lp_;
-    folded_lp.sense_ = data_->lp().sense_;
-    folded_lp.offset_ = data_->lp().offset_;
+  folded_lp.a_matrix_ = Aft.getColwise();
 
-    folded_lp.num_row_ = num_row_colours;
-    folded_lp.num_col_ = num_col_colours;
+  // Build the folded Hessian
+  if (!data_->Q().empty()) {
+    HighsHessian& Qf = folded_model_.hessian_;
+    Qf.dim_ = num_col_colours;
+    Qf.format_ = HessianFormat::kTriangular;
+    Qf.start_.reserve(num_col_colours + 1);
+    assert(Qf.start_.size() == 1 && Qf.start_[0] == 0);
 
-    // Row bounds: all rows of a colour have the same bounds, up to tolerance,
-    // so use the representative
-    folded_lp.row_lower_.resize(num_row_colours);
-    folded_lp.row_upper_.resize(num_row_colours);
-    for (HighsInt colour = 0; colour < num_row_colours; ++colour) {
-      const HighsInt row = row_of_colour[colour];
-      folded_lp.row_lower_[colour] = data_->lp().row_lower_[row];
-      folded_lp.row_upper_[colour] = data_->lp().row_upper_[row];
-    }
-
-    // Col bounds: all cols of a colour have the same bounds, up to tolerance,
-    // so use the representative
-    folded_lp.col_lower_.resize(num_col_colours);
-    folded_lp.col_upper_.resize(num_col_colours);
-    for (HighsInt colour = 0; colour < num_col_colours; ++colour) {
-      const HighsInt col = col_of_colour[colour];
-      folded_lp.col_lower_[colour] = data_->lp().col_lower_[col];
-      folded_lp.col_upper_[colour] = data_->lp().col_upper_[col];
-    }
-
-    // Col costs: costs are summed over all variables with the same colour
-    folded_lp.col_cost_.assign(num_col_colours, 0.0);
-    for (HighsInt col = 0; col < num_col_; ++col) {
-      const HighsInt colour = data_->colColour()[col];
-      folded_lp.col_cost_[colour] += data_->lp().col_cost_[col];
-    }
-
-    // Build the folded At
-    HighsSparseMatrix Aft;
-    Aft.num_row_ = num_row_colours;
-    Aft.num_col_ = num_col_colours;
-    Aft.format_ = MatrixFormat::kRowwise;
-    Aft.start_.reserve(num_row_colours + 1);
-    // Aft.start_ is already initialised with a leading zero
-    assert(Aft.start_.size() == 1 && Aft.start_[0] == 0);
+    // In the following, row and col refer to row and column entries of Q.
+    // Both of them are coloured according to the "col colour".
 
     // For each row colour, accumulate the sum of entries with the same col
     // colour
-    std::vector<double> accumulator(num_col_colours, 0.0);
-    std::vector<HighsBool> is_col_used(num_col_colours, false);
-    std::vector<HighsInt> col_used;
-    for (HighsInt r_colour = 0; r_colour < num_row_colours; ++r_colour) {
-      const HighsInt row = row_of_colour[r_colour];
+    for (HighsInt r_colour = 0; r_colour < num_col_colours; ++r_colour) {
+      const HighsInt row = col_of_colour[r_colour];
 
-      for (HighsInt el = data_->At().start_[row];
-           el < data_->At().start_[row + 1]; ++el) {
-        const HighsInt col = data_->At().index_[el];
+      for (HighsInt el = data_->Q().start_[row];
+           el < data_->Q().start_[row + 1]; ++el) {
+        const HighsInt col = data_->Q().index_[el];
         const HighsInt c_colour = data_->colColour()[col];
 
         if (!is_col_used[c_colour]) {
           is_col_used[c_colour] = true;
           col_used.push_back(c_colour);
         }
-        accumulator[c_colour] += data_->At().value_[el];
+        accumulator[c_colour] += data_->Q().value_[el];
       }
 
-      for (HighsInt c_colour : col_used) {
-        const double val = accumulator[c_colour];
+      // Qf is built by cols, so r_colour corresponds to the column number in
+      // Qf and c_colour to the row number in Qf.
 
-        // Skip sums that are quantized to zero
-        if (DoubleQuantizer::bucket(val) != 0.0) {
-          Aft.index_.push_back(c_colour);
-          Aft.value_.push_back(val);
+      // The diagonal entry is always the first entry of the column, even if
+      // the representative row has no entry in its own colour. It is stored
+      // as zero if its value quantizes to zero.
+      const double diagonal =
+          is_col_used[r_colour]
+              ? accumulator[r_colour] * col_colours_size_[r_colour]
+              : 0.0;
+      Qf.index_.push_back(r_colour);
+      Qf.value_.push_back(DoubleQuantizer::bucket(diagonal) == 0.0 ? 0.0
+                                                                   : diagonal);
+
+      for (HighsInt c_colour : col_used) {
+        // Off-diagonal entries below the diagonal only, skipping sums that
+        // quantize to zero
+        if (c_colour > r_colour) {
+          const double val =
+              accumulator[c_colour] * col_colours_size_[r_colour];
+          if (DoubleQuantizer::bucket(val) != 0.0) {
+            Qf.index_.push_back(c_colour);
+            Qf.value_.push_back(val);
+          }
         }
 
         accumulator[c_colour] = 0.0;
@@ -337,83 +402,11 @@ HighsModel Folder::getFoldedModel() const {
       }
       col_used.clear();
 
-      Aft.start_.push_back(static_cast<HighsInt>(Aft.index_.size()));
+      Qf.start_.push_back(static_cast<HighsInt>(Qf.index_.size()));
     }
-
-    folded_lp.a_matrix_ = Aft.getColwise();
-
-    // Build the folded Hessian
-    if (!data_->Q().empty()) {
-      HighsHessian& Qf = folded_model.hessian_;
-      Qf.dim_ = num_col_colours;
-      Qf.format_ = HessianFormat::kTriangular;
-      Qf.start_.reserve(num_col_colours + 1);
-      assert(Qf.start_.size() == 1 && Qf.start_[0] == 0);
-
-      // In the following, row and col refer to row and column entries of Q.
-      // Both of them are coloured according to the "col colour".
-
-      // For each row colour, accumulate the sum of entries with the same col
-      // colour
-      for (HighsInt r_colour = 0; r_colour < num_col_colours; ++r_colour) {
-        const HighsInt row = col_of_colour[r_colour];
-
-        for (HighsInt el = data_->Q().start_[row];
-             el < data_->Q().start_[row + 1]; ++el) {
-          const HighsInt col = data_->Q().index_[el];
-          const HighsInt c_colour = data_->colColour()[col];
-
-          if (!is_col_used[c_colour]) {
-            is_col_used[c_colour] = true;
-            col_used.push_back(c_colour);
-          }
-          accumulator[c_colour] += data_->Q().value_[el];
-        }
-
-        // Qf is built by cols, so r_colour corresponds to the column number in
-        // Qf and c_colour to the row number in Qf.
-
-        // The diagonal entry is always the first entry of the column, even if
-        // the representative row has no entry in its own colour. It is stored
-        // as zero if its value quantizes to zero.
-        const double diagonal =
-            is_col_used[r_colour]
-                ? accumulator[r_colour] * col_colours_size_[r_colour]
-                : 0.0;
-        Qf.index_.push_back(r_colour);
-        Qf.value_.push_back(
-            DoubleQuantizer::bucket(diagonal) == 0.0 ? 0.0 : diagonal);
-
-        for (HighsInt c_colour : col_used) {
-          // Off-diagonal entries below the diagonal only, skipping sums that
-          // quantize to zero
-          if (c_colour > r_colour) {
-            const double val =
-                accumulator[c_colour] * col_colours_size_[r_colour];
-            if (DoubleQuantizer::bucket(val) != 0.0) {
-              Qf.index_.push_back(c_colour);
-              Qf.value_.push_back(val);
-            }
-          }
-
-          accumulator[c_colour] = 0.0;
-          is_col_used[c_colour] = false;
-        }
-        col_used.clear();
-
-        Qf.start_.push_back(static_cast<HighsInt>(Qf.index_.size()));
-      }
-    }
-
-    info_.folded_lp_time = timer.read();
-
-    return folded_model;
-
-  } catch (const std::bad_alloc&) {
-    return HighsModel{};
-  } catch (const std::exception&) {
-    return HighsModel{};
   }
+
+  info_.folded_lp_time = timer.read();
 }
 
 void Folder::print() const {
