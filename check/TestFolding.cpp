@@ -246,7 +246,6 @@ void runFoldingTest(const std::string& filename, HighsInt expected_rows,
   lpf.run(model);
   if (lpf.getInfo().status != highs::folding::Status::kOk) return;
   HighsModel folded_model = lpf.getFoldedModel();
-  if (dev_run) lpf.print();
 
   REQUIRE(folded_model.lp_.num_col_ == expected_cols);
   REQUIRE(folded_model.lp_.num_row_ == expected_rows);

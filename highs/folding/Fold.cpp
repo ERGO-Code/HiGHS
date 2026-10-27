@@ -113,9 +113,6 @@ HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
 void Folder::findInitialColour() {
   assert(data_);
 
-  HighsTimer timer;
-  timer.start();
-
   if (checkTimeLimit()) return;
   info_.initial_row_colours =
       findInitialColour<RowQuantizedData>(num_row_, row_colour_.data(), 0);
@@ -123,25 +120,18 @@ void Folder::findInitialColour() {
   if (checkTimeLimit()) return;
   info_.initial_col_colours =
       findInitialColour<ColQuantizedData>(num_col_, col_colour_.data(), 0);
-
-  info_.initial_time = timer.read();
 }
 
 void Folder::foldModel() {
   assert(data_);
 
-  HighsTimer timer;
-  timer.start();
-
   if (checkTimeLimit()) return;
   ColourRefinement CR(data_->lp.a_matrix_, data_->At, data_->Q, row_colour_,
                       col_colour_);
   CR.setTimeLimit(timer_, time_limit_);
-  info_.ctor_time = timer.read();
 
   if (checkTimeLimit()) return;
   info_.status = CR.run();
-  info_.run_time = timer.read() - info_.ctor_time;
 
   if (success()) {
     info_.num_row_colours = CR.rowColoursUsed();
@@ -157,8 +147,6 @@ void Folder::foldModel() {
 }
 
 void Folder::run(const HighsModel& model) {
-  HighsTimer timer;
-  timer.start();
   info_.clear();
 
   if (hasBadStructure(model.lp_, model.hessian_) ||
@@ -188,8 +176,6 @@ void Folder::run(const HighsModel& model) {
   } catch (const std::exception&) {
     info_.status = Status::kGenericError;
   }
-
-  info_.fold_time = timer.read();
 }
 
 void Folder::buildFoldedModel() {
@@ -210,9 +196,6 @@ void Folder::buildFoldedModel() {
   // If the model is a QP, the folded Hessian has size equal to the number of
   // col colours. Entry (i, j) is equal to the sum of all the entries of Q in
   // rows of colour i and columns of colour j.
-
-  HighsTimer timer;
-  timer.start();
 
   if (!data_ || !success()) return;
 
@@ -402,26 +385,6 @@ void Folder::buildFoldedModel() {
       Qf.start_.push_back(static_cast<HighsInt>(Qf.index_.size()));
     }
   }
-
-  info_.folded_lp_time = timer.read();
-}
-
-void Folder::print() const {
-  printf("\nInitial partition:\n");
-  printf("\tRows: %9d out of %9d\n", info_.initial_row_colours, num_row_);
-  printf("\tCols: %9d out of %9d\n", info_.initial_col_colours, num_col_);
-  printf("Final:\n");
-  printf("\tRows: %9d out of %9d (%.1f%%)\n", info_.num_row_colours, num_row_,
-         (double)info_.num_row_colours / num_row_ * 100);
-  printf("\tCols: %9d out of %9d (%.1f%%)\n", info_.num_col_colours, num_col_,
-         (double)info_.num_col_colours / num_col_ * 100);
-
-  printf("\n");
-  printf("Fold time        %f\n", info_.fold_time);
-  printf("Initial          %f\n", info_.initial_time);
-  printf("CR ctor          %f\n", info_.ctor_time);
-  printf("CR run           %f\n", info_.run_time);
-  printf("Folded lp        %f\n", info_.folded_lp_time);
 }
 
 class ColourClasses {

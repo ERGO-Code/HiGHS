@@ -57,11 +57,6 @@ struct FoldInfo {
   HighsInt num_row_colours;
   HighsInt num_col_colours;
   Status status;
-  double initial_time;
-  double ctor_time;
-  double run_time;
-  double fold_time;
-  double folded_lp_time;
 
   FoldInfo() { clear(); }
   void clear() {
@@ -70,11 +65,6 @@ struct FoldInfo {
     num_row_colours = 0;
     num_col_colours = 0;
     status = Status::kNotRun;
-    initial_time = 0;
-    ctor_time = 0;
-    run_time = 0;
-    fold_time = 0;
-    folded_lp_time = 0;
   }
 };
 
@@ -129,8 +119,6 @@ class Folder {
   const HighsModel& getFoldedModel() const { return folded_model_; }
   HighsSolution unfold(const HighsSolution& folded) const;
   const FoldInfo& getInfo() const { return info_; }
-
-  void print() const;
 };
 
 }  // namespace folding
