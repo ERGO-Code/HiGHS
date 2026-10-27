@@ -159,8 +159,7 @@ void Folder::foldModel() {
 void Folder::run(const HighsModel& model) {
   HighsTimer timer;
   timer.start();
-
-  info_.status = Status::kNotRun;
+  info_.clear();
 
   if (hasBadStructure(model.lp_, model.hessian_) ||
       hasBadValues(model.lp_, model.hessian_)) {
