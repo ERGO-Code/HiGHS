@@ -923,5 +923,65 @@ static size_t SessionPeak(size_t before, int rows, int columns, int nnz, bool tr
   return before + std::max(transient, after) + kRuntimeReserve;
 }
 
+// Device memory one solve session (Run) allocates on top of the process's current use, array by
+// array: the model vectors, the unscaled matrix unless borrowed, A^T and its transient conversion
+// workspace unless borrowed, then the two scaled work copies, 21 column and 16 row vectors
+// (scaling, iteration, anchor, check and certificate arrays, the unscaled row / column 1-norms),
+// the reductions and the nine SpMV workspaces.
+size_t SolveFootprint(int rows, int columns, int nnz, bool matrix_borrowed,
+                      bool transpose_borrowed) {
+  size_t m = Charged(size_t(rows) * sizeof(double)), n = Charged(size_t(columns) * sizeof(double));
+  size_t before = 3 * n + 2 * m + (matrix_borrowed ? 0 : CsrCharged(rows, nnz));
+  size_t after = 2 * Charged(size_t(nnz) * sizeof(double)) + 21 * n + 16 * m +
+                 Charged(2 * sizeof(double)) + Charged(kDecisionCapacity * sizeof(Decision)) +
+                 Charged(sizeof(DeviceState)) +
+                 Charged(size_t(Blocks(std::max(rows, columns))) * sizeof(Stats)) +
+                 (nnz && rows && columns ? 9 * SpmvWorkspace(nnz) : 0);
+  return SessionPeak(before, rows, columns, nnz, transpose_borrowed, after);
+}
+
+// The device must be the verified sm_89 (globaltimer behaviour); false fills the result.
+static bool CheckDevice(SolveResult* result) {
+  int device;
+  cudaDeviceProp properties;
+  Cuda(cudaGetDevice(&device));
+  Cuda(cudaGetDeviceProperties(&properties, device));
+  if (properties.major != 8 || properties.minor != 9) {
+    result->status = Status::kUnsupportedModel;
+    result->termination_source = "DEVICE_CAPABILITY";
+    result->message = "Device globaltimer mode is validated only on sm_89";
+    return false;
+  }
+  return true;
+}
+static void CheckSource(const SolveSource& source, const SolveOptions& options,
+                        SolveResult* result) {
+  const HostLp& host = *source.lp;
+  result->rows = host.rows;
+  result->columns = host.columns;
+  if (source.matrix) {
+    result->nonzeros = source.matrix->nnz;
+    result->message = CheckVectors(host, options);
+    if (result->message.empty() &&
+        (source.matrix->rows != host.rows || source.matrix->columns != host.columns))
+      result->message = "Device matrix dimensions do not match the model vectors";
+  } else {
+    result->nonzeros = host.value.size();
+    result->message = CheckInput(host, options);
+  }
+  if (result->message.empty() && (source.start_primal || source.start_dual) &&
+      !(source.start_primal && source.start_dual &&
+        source.start_primal->size() == size_t(host.columns) &&
+        source.start_dual->size() == size_t(host.rows)))
+    result->message = "The start point must give a primal and a dual vector of the model size";
+  if (!result->message.empty()) result->termination_source = "INPUT_VALIDATION";
+}
+static double SynchronizedSeconds(Resources& r, Clock::time_point since) {
+  Cuda(cudaStreamSynchronize(r.stream));
+  return Seconds(since);
+}
+
+
+
 
 }
