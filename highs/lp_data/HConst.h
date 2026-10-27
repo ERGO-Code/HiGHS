@@ -155,6 +155,14 @@ enum BasisValidity {
   kBasisValidityMax = kBasisValidityValid
 };
 
+enum CentringStatus {
+  kCentringStatusNone = 0,
+  kCentringStatusFailed,
+  kCentringStatusSuccess,
+  kCentringStatusMin = kCentringStatusNone,
+  kCentringStatusMax = kCentringStatusSuccess
+};
+
 const std::string kHighsBasisFileV1 = "v1";  // Deprecated
 const std::string kHighsBasisFileV2 = "v2";
 

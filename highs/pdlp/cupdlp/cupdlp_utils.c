@@ -1145,7 +1145,7 @@ double my_clock(void) {
 #ifndef WIN32
   timeee = time(NULL);
 #else
-  timeee = clock();
+  timeee = (double)clock() / CLOCKS_PER_SEC;
 #endif
 
   return timeee;

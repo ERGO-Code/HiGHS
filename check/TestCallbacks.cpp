@@ -386,7 +386,7 @@ TEST_CASE("highs-callback-logging", "[highs_callback]") {
   highs.readModel(filename);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
@@ -403,7 +403,7 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   if (dev_run) highs.writeBasis("");
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
@@ -420,7 +420,7 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
   REQUIRE(highs.getInfo().simplex_iteration_count >
           adlittle_simplex_iteration_limit);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
@@ -447,7 +447,7 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
     REQUIRE(highs.getInfo().ipm_iteration_count ==
             adlittle_ipm_iteration_limit + 1);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-interrupt", "[highs_callback]") {
@@ -463,7 +463,7 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs_callback]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-improving", "[highs_callback]") {
@@ -478,7 +478,7 @@ TEST_CASE("highs-callback-mip-improving", "[highs_callback]") {
   highs.readModel(filename);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-data", "[highs_callback]") {
@@ -492,7 +492,7 @@ TEST_CASE("highs-callback-mip-data", "[highs_callback]") {
   highs.readModel(filename);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-solution", "[highs_callback]") {
@@ -514,7 +514,7 @@ TEST_CASE("highs-callback-mip-solution", "[highs_callback]") {
   highs.startCallback(kCallbackMipSolution);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
@@ -526,7 +526,7 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
   highs.startCallback(kCallbackMipGetCutPool);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 static void runMipUserSolutionTest(
@@ -566,7 +566,7 @@ static void runMipUserSolutionTest(
         std::max(1.0, std::fabs(objective_function_value0));
     REQUIRE(objective_diff < 1e-12);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
@@ -637,7 +637,7 @@ TEST_CASE("highs-callback-mip-user-solution-c", "[highs-callback]") {
   highs.startCallback(kCallbackMipSolution);
 
   highs.run();
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
@@ -653,5 +653,5 @@ TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
   highs.startCallback(kCallbackQpInterrupt);
   highs.run();
   REQUIRE(highs.getInfo().qp_iteration_count == 6);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

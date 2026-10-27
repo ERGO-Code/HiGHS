@@ -392,7 +392,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
           HighsStatus::kOk);
   REQUIRE(check_value == to_value);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-row-index-duplication", "[highs_data]") {
@@ -449,7 +449,7 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-duplicate-small-value", "[highs_data]") {
@@ -481,7 +481,7 @@ TEST_CASE("LP-duplicate-small-value", "[highs_data]") {
   REQUIRE(highs.getLp().a_matrix_.numNz() == 0);
   lp.a_matrix_.value_ = {3, 3};
   REQUIRE(highs.passModel(lp) == HighsStatus::kError);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-inf-cost", "[highs_data]") {
@@ -607,7 +607,7 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   // Check that x was fixed at 1, not 0.5
   REQUIRE(highs.getSolution().col_value[0] == 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-change-coefficient", "[highs_data]") {
@@ -654,7 +654,7 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
                                     highs.getInfo().objective_function_value);
   REQUIRE(delta_objective_value < 1e-8);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
@@ -689,7 +689,7 @@ TEST_CASE("LP-row-wise", "[highs_data]") {
   highs.passModel(lp);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
@@ -720,5 +720,5 @@ TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

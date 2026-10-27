@@ -88,7 +88,7 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
     solution.row_dual.clear();
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-solve-postsolve-mip", "[highs_test_presolve]") {
@@ -182,7 +182,7 @@ TEST_CASE("empty-row", "[highs_test_presolve]") {
   REQUIRE(HighsInt(solution.row_value.size()) == lp.num_row_);
   REQUIRE(HighsInt(basis.row_status.size()) == lp.num_row_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void presolveSolvePostsolve(const std::string& model_file,
@@ -234,7 +234,7 @@ void presolveSolvePostsolve(const std::string& model_file,
     REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
   }
 
-  highs1.resetGlobalScheduler(true);
+  highs1.resetThreadScheduler(true);
 }
 
 HighsStatus zeroCostColSing() {
@@ -271,7 +271,7 @@ HighsStatus zeroCostColSing() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -331,7 +331,7 @@ HighsStatus colSingDoubletonEquality() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -390,7 +390,7 @@ HighsStatus colSingDoubletonInequality() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -430,7 +430,7 @@ HighsStatus twoColSingDoubletonEquality() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -471,7 +471,7 @@ HighsStatus twoColSingDoubletonInequality() {
   highs.run();
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -561,7 +561,7 @@ HighsStatus issue425() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -638,7 +638,7 @@ TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
   REQUIRE(highs.getInfo().simplex_iteration_count == -1);
   std::remove(presolved_model_file.c_str());
 
-  highs1.resetGlobalScheduler(true);
+  highs1.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
@@ -650,7 +650,7 @@ TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
@@ -663,7 +663,7 @@ TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.run() == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {
@@ -732,7 +732,7 @@ TEST_CASE("presolve-solve-postsolve-no-col-dual", "[highs_test_presolve]") {
   solution.col_dual.clear();
   REQUIRE(highs.postsolve(solution) == HighsStatus::kError);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
@@ -792,7 +792,7 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-bound-tightening", "[highs_test_presolve]") {
@@ -853,7 +853,7 @@ TEST_CASE("presolve-rule-off", "[highs_test_presolve]") {
                int(presolve_num_col), int(presolve_num_row));
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
@@ -865,7 +865,7 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-light", "[highs_test_presolve]") {
@@ -897,7 +897,7 @@ TEST_CASE("presolve-light", "[highs_test_presolve]") {
     highs.setOptionValue("presolve_light", kHighsOnString);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-initial-sweep-postsolve", "[highs_test_presolve]") {
@@ -924,7 +924,7 @@ TEST_CASE("presolve-initial-sweep-postsolve", "[highs_test_presolve]") {
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
   if (dev_run) highs.writeSolution("", 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
@@ -974,7 +974,7 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
     }
     if (dev_run) highs.writeSolution("", 1);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
@@ -1015,7 +1015,7 @@ TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("bound_implied", "[highs_test_presolve]") {
@@ -1042,7 +1042,7 @@ TEST_CASE("issue-2962", "[highs_test_presolve]") {
   h.readModel(model_file);
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
@@ -1103,7 +1103,7 @@ TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(h.getInfo().objective_function_value == 2.0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
@@ -1162,7 +1162,7 @@ TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
 
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3140", "[highs_test_presolve]") {
@@ -1188,7 +1188,7 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
   //
   // HighsPresolveStatus::kReducedToEmpty);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-bound-relaxation-unbounded", "[highs_test_presolve]") {
@@ -1235,7 +1235,7 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
   REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
   h.run();
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
@@ -1264,7 +1264,7 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-sparsify-primal-dual-postsolve", "[highs_test_presolve]") {
@@ -1300,7 +1300,7 @@ TEST_CASE("test-sparsify-primal-dual-postsolve", "[highs_test_presolve]") {
   REQUIRE(status == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-duplicate-row-postsolve", "[highs_test_presolve]") {
@@ -1385,7 +1385,7 @@ TEST_CASE("test-duplicate-row-postsolve", "[highs_test_presolve]") {
     lp.row_upper_ = {kHighsInf, 4};
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
@@ -1474,7 +1474,7 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   if (dev_run) h.writeSolution("", 1);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-dual-fixing-primal-dual-postsolve", "[highs_test_presolve]") {
@@ -1565,7 +1565,7 @@ TEST_CASE("test-dual-fixing-primal-dual-postsolve", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 /*
   TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
@@ -1643,7 +1643,7 @@ HighsStatus::kOk); options.run_crossover = kHighsOnString;
   h.run();
   h.writeSolution("", 1);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
 
@@ -1717,7 +1717,7 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
     }
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3342", "[highs_test_presolve]") {
@@ -1824,7 +1824,7 @@ TEST_CASE("issue-3359", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3391", "[highs_test_presolve]") {
@@ -1859,7 +1859,7 @@ TEST_CASE("issue-3391", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
@@ -1950,7 +1950,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
     REQUIRE(h.getRunData().num_simplex_iterations_after_postsolve == 0);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("initial-sweep-empty-fixed-col", "[highs_test_presolve]") {
@@ -1978,6 +1978,24 @@ TEST_CASE("initial-sweep-empty-fixed-col", "[highs_test_presolve]") {
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(h.getInfo().objective_function_value == 7);
   REQUIRE(h.getSolution().col_value[1] == 2);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {
+  // fixing a column while checking a row for dominated columns led to
+  // storeRow being called on a modified row, shrinking the stored row
+  // positions that were still being iterated over
+  const std::string model = "dominated-cols-container-overflow";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 2);
 
   h.resetGlobalScheduler(true);
 }

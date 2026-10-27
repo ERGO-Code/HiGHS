@@ -165,4 +165,4 @@ jobs:
       - name: Test hipo
         working-directory: ${{github.workspace}}/build
         run: |
-          ./bin/unit_tests [highs_hipo]
+          ./bin/unit_tests [highs_hipo] dominated-cols-container-overflow
