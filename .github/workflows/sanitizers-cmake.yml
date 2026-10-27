@@ -31,13 +31,24 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+          # libstdc++ only annotates std::vector for ASan container-overflow
+          # detection when _GLIBCXX_SANITIZE_VECTOR is defined
+          EXTRA_FLAGS=""
+          if [ "${{ matrix.sanitizer }}" = "Address" ]; then
+            EXTRA_FLAGS="-DCMAKE_CXX_FLAGS=-D_GLIBCXX_SANITIZE_VECTOR"
+          fi
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DALL_TESTS=ON -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ $EXTRA_FLAGS
           cmake --build . -j2
 
       - name: Run
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ctest --parallel --timeout 3000 --output-on-failure
 
   clang:
     runs-on: ${{ matrix.os }}
@@ -58,13 +69,24 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          # libstdc++ only annotates std::vector for ASan container-overflow
+          # detection when _GLIBCXX_SANITIZE_VECTOR is defined
+          EXTRA_FLAGS=""
+          if [ "${{ matrix.sanitizer }}" = "Address" ]; then
+            EXTRA_FLAGS="-DCMAKE_CXX_FLAGS=-D_GLIBCXX_SANITIZE_VECTOR"
+          fi
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DALL_TESTS=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ $EXTRA_FLAGS
           cmake --build . -j2
 
       - name: Run
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ctest --parallel --timeout 3000 --output-on-failure
 
   no_hipo_macos:
     runs-on: ${{ matrix.os }}
@@ -84,13 +106,18 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }}
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DALL_TESTS=ON
           cmake --build . -j3
 
       - name: Run
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ctest --parallel --timeout 3000 --output-on-failure
 
   hipo:
     runs-on: ${{ matrix.os }}
@@ -111,8 +138,15 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
+        shell: bash
         run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+          # libstdc++ only annotates std::vector for ASan container-overflow
+          # detection when _GLIBCXX_SANITIZE_VECTOR is defined
+          EXTRA_FLAGS=""
+          if [ "${{ matrix.sanitizer }}" = "Address" ]; then
+            EXTRA_FLAGS="-DCMAKE_CXX_FLAGS=-D_GLIBCXX_SANITIZE_VECTOR"
+          fi
+          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON $EXTRA_FLAGS \
             -DALL_TESTS=${{ matrix.all_tests }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
             -DDEBUG_MEMORY=${{ matrix.sanitizer }} \
@@ -130,10 +164,9 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-      - name: Test hipo
+      - name: Test
         working-directory: ${{github.workspace}}/build
-        run: |
-          ./bin/unit_tests [highs_hipo]
+        run: ctest --parallel --timeout 3000 --output-on-failure
 
   hipo_macos:
     runs-on: ${{ matrix.os }}
@@ -168,7 +201,6 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-      - name: Test hipo
+      - name: Test
         working-directory: ${{github.workspace}}/build
-        run: |
-          ./bin/unit_tests [highs_hipo] dominated-cols-container-overflow
+        run: ctest --parallel --timeout 3000 --output-on-failure
