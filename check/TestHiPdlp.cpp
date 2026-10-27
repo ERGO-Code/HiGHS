@@ -16,7 +16,7 @@
 const bool dev_run = false;
 const double kkt_tolerance = 1e-4;
 
-TEST_CASE("hi-pdlp", "[pdlp]") {
+TEST_CASE("hi-pdlp", "[hipdlp]") {
   std::string model = "afiro";
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
@@ -40,7 +40,7 @@ TEST_CASE("hi-pdlp", "[pdlp]") {
   h.resetThreadScheduler(true);
 }
 
-TEST_CASE("hi-pdlp-maximize", "[pdlp]") {
+TEST_CASE("hi-pdlp-maximize", "[hipdlp]") {
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/3459.mps";
 
@@ -84,7 +84,7 @@ TEST_CASE("hi-pdlp-maximize", "[pdlp]") {
   h.resetGlobalScheduler(true);
 }
 
-TEST_CASE("hi-pdlp-free-rows", "[pdlp]") {
+TEST_CASE("hi-pdlp-free-rows", "[hipdlp]") {
   // min x0 + 2 x1 + 3 x2
   // row 0:  x0 + x1       >= 1
   // row 1:  free (x0 - x2)
@@ -133,7 +133,7 @@ TEST_CASE("hi-pdlp-free-rows", "[pdlp]") {
   }
 }
 
-TEST_CASE("hi-pdlp-all-free-rows", "[pdlp]") {
+TEST_CASE("hi-pdlp-all-free-rows", "[hipdlp]") {
   // min x0 + 2 x1
   // 0 <= x0 <= 3, 1 <= x1 <= 2
   // two free rows, so there are no constraints left after they are removed:

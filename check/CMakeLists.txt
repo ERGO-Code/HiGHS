@@ -49,6 +49,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestHighsRbTree.cpp
       TestHighsSparseMatrix.cpp
       TestHighsVersion.cpp
+      TestHiPdlp.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
@@ -69,7 +70,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestNames.cpp
       TestOptions.cpp
       TestPdlp.cpp
-      TestPdlpHi.cpp
       TestPresolve.cpp
       TestPresolveRules.cpp
       TestQpOracle.cpp
