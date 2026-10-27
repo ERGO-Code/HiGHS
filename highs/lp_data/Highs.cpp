@@ -1222,7 +1222,7 @@ highs::folding::Status Highs::runFolding() {
   folder_.run(model_);
 
   highsLogDev(options_.log_options, HighsLogType::kVerbose,
-              "folding returns status: %s\n",
+              "Folding returns status: %s\n",
               foldingStatusToString(folder_.getInfo().status).c_str());
 
   return folder_.getInfo().status;
@@ -1238,10 +1238,11 @@ HighsStatus Highs::runUnfolding(const HighsSolution& sol) {
 
   if (primal_supplied &&
       HighsInt(sol.col_value.size()) != folder_.getInfo().num_col_colours) {
-    highsLogUser(
-        options_.log_options, HighsLogType::kError,
-        "Col primal solution provided to unfold is of size %d rather than %d\n",
-        int(sol.col_value.size()), int(folder_.getInfo().num_col_colours));
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Column primal solution provided to unfold is of size %d "
+                 "rather than %d\n",
+                 int(sol.col_value.size()),
+                 int(folder_.getInfo().num_col_colours));
     return HighsStatus::kError;
   } else if (primal_supplied && HighsInt(sol.row_value.size()) !=
                                     folder_.getInfo().num_row_colours) {
