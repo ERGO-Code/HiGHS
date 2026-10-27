@@ -248,11 +248,11 @@ int main(int argc, char** argv) {
     else()
         # There is no runtime CPU detection for ARM64 on Windows (DYNAMIC_ARCH
         # always selects the baseline), so build the ARMV8 kernels directly.
-        # USE_TLS avoids a shared lock on every BLAS call that needs a work buffer.
+        # Do not set USE_TLS: with it, OpenBLAS's exit-time cleanup races its
+        # worker threads and intermittently segfaults on process exit.
         set(_arch_cache_args
             -DTARGET:STRING=ARMV8
-            -DDYNAMIC_ARCH:BOOL=OFF
-            -DUSE_TLS:STRING=1)
+            -DDYNAMIC_ARCH:BOOL=OFF)
     endif()
 
     include(ExternalProject)
