@@ -42,7 +42,7 @@ void runHipoTest(
 TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
   Highs highs;
   runHipoTest(highs, "afiro.mps", -464.753);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
@@ -104,7 +104,7 @@ TEST_CASE("test-hipo-options", "[highs_hipo]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-qp", "[highs_hipo]") {
@@ -112,7 +112,7 @@ TEST_CASE("test-hipo-qp", "[highs_hipo]") {
   runHipoTest(highs, "qptestnw.lp", -6.4500);
   runHipoTest(highs, "qjh.lp", -5.2500);
   runHipoTest(highs, "primal1.mps", -3.501296e-2);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
@@ -121,7 +121,7 @@ TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
   runHipoTest(highs, "bgetam.mps", 0, expected_status, "off");
   runHipoTest(highs, "forest6.mps", 0, expected_status, "off");
   runHipoTest(highs, "klein1.mps", 0, expected_status, "off");
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
@@ -129,7 +129,40 @@ TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
   Highs highs;
   runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "on");
   runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "off");
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3369", "[highs_hipo]") {
+  // min   x
+  // s.t.  x >= 1
+  //       . <= 5 (empty row)
+
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1};
+  lp.col_lower_ = {-kHighsInf};
+  lp.col_upper_ = {+kHighsInf};
+  lp.row_lower_ = {1, -kHighsInf};
+  lp.row_upper_ = {+kHighsInf, 5};
+  lp.a_matrix_.start_ = {0, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("solver", "hipo");
+  h.setOptionValue("run_crossover", "off");
+  h.setOptionValue("presolve", "off");
+  HighsStatus status = h.run();
+  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  // hipo used to fail after many iterations and restart with ipx because the
+  // slack of the empty row was set incorrectly in the post-processing.
+  REQUIRE(h.getInfo().ipm_iteration_count < 10);
 }
 
 TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {

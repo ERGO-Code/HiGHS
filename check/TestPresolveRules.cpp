@@ -95,7 +95,7 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   }
   lp.clear();
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-implied-bound-aggregation", "[highs_test_presolve_rules]") {
@@ -349,7 +349,7 @@ kPresolveRuleInitialSweep) == HighsStatus::kOk);
 
     maximize_first = !maximize_first;
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
 
@@ -515,7 +515,7 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
                   solvers, 1, 6, 6);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-parallel-cols-merge-lp", "[highs_test_presolve_rules]") {
@@ -554,7 +554,7 @@ TEST_CASE("test-parallel-cols-merge-lp", "[highs_test_presolve_rules]") {
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(std::abs(h.getObjectiveValue() - 15) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-parallel-cols-merge-ip", "[highs_test_presolve_rules]") {
@@ -596,7 +596,7 @@ TEST_CASE("test-parallel-cols-merge-ip", "[highs_test_presolve_rules]") {
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(std::abs(h.getObjectiveValue() - 15) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-parallel-cols-merge-floor-rounding",
@@ -646,7 +646,7 @@ TEST_CASE("test-parallel-cols-merge-floor-rounding",
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(std::abs(h.getObjectiveValue()) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-parallel-cols-merge-ceil-rounding",
@@ -697,7 +697,7 @@ TEST_CASE("test-parallel-cols-merge-ceil-rounding",
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(std::abs(h.getObjectiveValue() + 10.5) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-clique-extract-origin", "[highs_test_presolve_rules]") {
@@ -1166,7 +1166,7 @@ TEST_CASE("test-clique-no-delete-ranged-row", "[highs_test_presolve_rules]") {
   const std::vector<HighsInt>& deleted = cliquetable.getDeletedRows();
   REQUIRE(deleted.empty());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-clique-implied-equality", "[highs_test_presolve_rules]") {
@@ -1219,7 +1219,7 @@ TEST_CASE("test-clique-implied-equality", "[highs_test_presolve_rules]") {
   REQUIRE(domain.isFixed(1));
   REQUIRE(domain.col_lower_[1] == 1.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
@@ -1346,6 +1346,55 @@ TEST_CASE("test-parallel-rows-singleton-count", "[highs_test_presolve_rules]") {
   REQUIRE(postsolve_stack.getOrigRowIndex(0) == 2);
   REQUIRE(postsolve_stack.getOrigRowIndex(1) == 3);
   REQUIRE(postsolve_stack.getOrigRowIndex(2) == 4);
+}
+
+TEST_CASE("test-aggregator-ranged-row", "[highs_test_presolve_rules]") {
+  // x is free, so implied free, and z >= 0 has zero cost and appears only in
+  // the ranged row 1 <= x + z <= 2. the dual constraint of z implies that the
+  // row dual is non-positive, so the ranged row becomes dual implied free when
+  // the implied row dual bounds are computed. the aggregator then substitutes
+  // x = 2 - z using the upper side of the row
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, 0};
+  lp.col_lower_ = {-kHighsInf, 0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {2};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  h.setOptionValue("presolve_rule_test", kPresolveRuleAggregator);
+  h.presolve();
+  // x and the row have been removed
+  REQUIRE(h.getPresolvedLp().num_col_ == 1);
+  REQUIRE(h.getPresolvedLp().num_row_ == 0);
+
+  // the presolved problem is min -2 + z, z >= 0, with optimal solution z = 0
+  // and reduced cost 1
+  HighsSolution solution;
+  solution.col_value = {0};
+  solution.col_dual = {1};
+  solution.value_valid = true;
+  solution.dual_valid = true;
+  REQUIRE(h.postsolve(solution) == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
+  REQUIRE(h.getInfo().num_dual_infeasibilities == 0);
+
+  // postsolved solution: x = 2, z = 0, row dual -1
+  const HighsSolution& postsolved = h.getSolution();
+  REQUIRE(std::abs(postsolved.col_value[0] - 2) < 1e-8);
+  REQUIRE(std::abs(postsolved.col_value[1]) < 1e-8);
+  REQUIRE(std::abs(postsolved.row_dual[0] + 1) < 1e-8);
+
+  h.resetThreadScheduler(true);
 }
 
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,

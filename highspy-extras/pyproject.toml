@@ -98,3 +98,9 @@ archs = ["auto64", "auto32"]
 build-verbosity = 1
 test-command = "pytest {project}/highspy-extras/tests"
 test-extras = ["test"]
+
+# Published Windows ARM64 wheels must use the optimised OpenBLAS kernels, which
+# need clang-cl; fail the build instead of silently using generic kernels.
+[[tool.cibuildwheel.overrides]]
+select = "*-win_arm64"
+config-settings = { "cmake.define.HIGHS_OPENBLAS_REQUIRE_OPTIMIZED" = "ON" }

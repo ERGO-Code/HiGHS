@@ -1455,8 +1455,8 @@ class HighsOptions : public HighsOptionsStruct {
         "iis_strategy",
         "Strategy for IIS calculation: "
         "0 => Light test; 1 => Try dual ray; "
-        "2 => Try elastic LP; 4 => Prioritise columns; "
-        "8 => Find true IIS; 16 => Find relaxation IIS for MIP",
+        "2 => Try elastic LP; 4 => Find true IIS; "
+        "8 => Prioritise columns; 16 => Find relaxation IIS for MIP",
         advanced, &iis_strategy, kIisStrategyMin, kIisStrategyDefault,
         kIisStrategyMax);
     records.push_back(record_int);
@@ -1792,6 +1792,12 @@ class HighsOptions : public HighsOptionsStruct {
   std::vector<OptionRecord*> records;
   HighsInt num_user_settable_options_;
   void setLogOptions();
+  double getMipPrimalFeasibilityTolerance() const {
+    return this->mip_feasibility_tolerance;
+  }
+  double getMipDualFeasibilityTolerance() const {
+    return this->mip_feasibility_tolerance * 0.1;
+  }
 };
 
 void warnSolverInvalid(const HighsOptions& options,

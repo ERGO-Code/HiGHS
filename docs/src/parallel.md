@@ -11,14 +11,11 @@ that can exploit the availability of a [GPU](@ref gpu).
 
 The value of the [threads](@ref option-threads) option determines the 
 number of threads used by HiGHS. By default it is zero, in which case 
-HiGHS will use half the available threads on a machine. 
+HiGHS uses one thread per physical core available to your program.
 If it is set to one, then HiGHS will never use more than one thread. 
 The maximum value that is advantageous is machine-dependent, 
 but it is unlikely to be more than eight due to most computation in 
 HiGHS being memory-bound.
-
-Note that since parallelism is controlled by a static scheduler,
-concurrent Highs instances must use the same value of `threads`.
 
 ## Dual simplex
 
@@ -138,8 +135,9 @@ For other BLAS libraries, HiPO does not change the number of threads:
   `BLAS.set_num_threads(1)` in Julia before solving with HiPO.
 
 ## MIP
+## [MIP](@id parallel-mip)
 
-If the [parallel](@ref option-parallel) option is set to "on", the MIP solver
+If the [parallel](@ref option-parallel) option is not set to "off", the MIP solver
 will explore the branch-and-bound tree using multiple threads.
 This exploration includes cuts and heuristics that are not run from the root node.
 
@@ -165,3 +163,51 @@ Given the limited scope for parallelisation in HiGHS, if you have
 multiple independent instances to solve, then assign one instance per
 worker (cpu core, thread or machine) so that multiple instances are
 solved concurrently.
+
+
+
+## Parallel scheduler
+
+### What most users need to know
+
+HiGHS can use several threads to solve a model faster. If you call `run()` on a `Highs` instance from ordinary serial code, you do not need to do anything:
+
+- **Nothing to set up.** The first `run()` or `presolve()` starts the threads HiGHS needs.
+- **Nothing to shut down.** The threads are reused by later solves and are stopped automatically when your program exits. Destroying a `Highs` instance does not stop them, and you do not need to do it yourself.
+- **Choosing the number of threads.** By default, HiGHS uses one thread per physical core that your program is allowed to use. To use a different number, set the `threads` option before the first solve:
+
+```cpp
+  highs.setOptionValue("threads", 4);
+```
+
+All of this applies to the C API and to other languages as well.
+
+You only need the advanced section below if you run HiGHS from several threads of your own, or if you need to stop HiGHS' threads explicitly, for example before unloading a library.
+
+### Advanced
+
+#### [Scheduler scope and lifetime](@id scheduler-details)
+
+- An **application thread** is any thread not created by HiGHS. A **worker thread** is created by HiGHS as part of a scheduler. The **owning thread** is the application thread that created a scheduler, and it participates in the parallel work.
+- The scheduler is `thread_local`. It is created lazily by the first `run()` or `presolve()` on an application thread, and is shared by all `Highs` instances used on that thread. It is never visible to other application threads.
+- A scheduler of size `N` consists of the owning thread and `N - 1` workers. `N` is fixed at creation: `run()` and `presolve()` return an error if the `threads` option is nonzero and differs from `N`, so all `Highs` instances on a thread must use the same value (or the default). To change `N`, reset the scheduler first. The default is the number of physical cores in the process's CPU affinity mask.
+- Running HiGHS from many application threads with the default thread count can create far more threads than you have cores and oversubscribe the machine. Set `threads` explicitly in that case.
+
+
+#### Shutdown
+
+A scheduler is destroyed when its owning thread exits, or on `Highs::resetThreadScheduler(bool blocking = false)`. An explicit reset is only needed to release resources early, to change the number of worker threads, or to guarantee that the workers have terminated (for example before unloading a library).
+
+- `blocking = true` joins the workers before returning.
+- `blocking = false` signals the workers to stop and detaches them, so some may still be running on return. Thread exit behaves like `false`.
+
+The call only affects the calling thread's scheduler, and is a no-op if there is none. A later `run()` or `presolve()` on that thread creates a new one.
+
+#### Thread safety
+
+`resetThreadScheduler()` must be called:
+
+- from the owning thread, and
+- with no `run()` or `presolve()` active on it (in particular, not from a callback) and no outstanding tasks.
+
+It must not be called from a worker thread or from within a task.

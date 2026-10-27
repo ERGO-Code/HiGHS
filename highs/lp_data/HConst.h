@@ -27,6 +27,8 @@ const double kHighsInf = std::numeric_limits<double>::infinity();
 const double kHighsUndefined = kHighsInf;
 const double kHighsTiny = 1e-14;
 const double kHighsMacheps = std::ldexp(1, -52);
+// 2^52: doubles of larger magnitude cannot represent fractional parts
+const double kHighsInvMacheps = 1 / kHighsMacheps;
 const double kHighsZero = 1e-50;
 const std::string kHighsOffString = "off";
 const std::string kHighsChooseString = "choose";
@@ -151,6 +153,14 @@ enum BasisValidity {
   kBasisValidityValid,
   kBasisValidityMin = kBasisValidityInvalid,
   kBasisValidityMax = kBasisValidityValid
+};
+
+enum CentringStatus {
+  kCentringStatusNone = 0,
+  kCentringStatusFailed,
+  kCentringStatusSuccess,
+  kCentringStatusMin = kCentringStatusNone,
+  kCentringStatusMax = kCentringStatusSuccess
 };
 
 const std::string kHighsBasisFileV1 = "v1";  // Deprecated

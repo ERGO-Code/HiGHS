@@ -93,7 +93,7 @@ class InfoRecordDouble : public InfoRecord {
 // todo: when creating the new info don't forget underscores for class
 // variables but no underscores for struct
 struct HighsInfoStruct {
-  bool valid;
+  bool valid = false;
   int64_t mip_node_count;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;
@@ -103,6 +103,7 @@ struct HighsInfoStruct {
   HighsInt primal_solution_status;
   HighsInt dual_solution_status;
   HighsInt basis_validity;
+  HighsInt centring_status;
   double objective_function_value;
   double mip_dual_bound;
   double mip_gap;
@@ -232,6 +233,12 @@ class HighsInfo : public HighsInfoStruct {
     record_int = new InfoRecordInt(
         "basis_validity", "Model basis validity: 0 => Invalid; 1 => Valid",
         advanced, &basis_validity, kBasisValidityInvalid);
+    records.push_back(record_int);
+
+    record_int = new InfoRecordInt(
+        "centring_status",
+        "IPM centring status: 0 => None; 1 => Failed; 2 => Success", advanced,
+        &centring_status, kCentringStatusNone);
     records.push_back(record_int);
 
     record_double = new InfoRecordDouble("objective_function_value",
