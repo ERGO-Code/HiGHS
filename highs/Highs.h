@@ -1649,7 +1649,7 @@ class Highs {
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 
-  bool standard_form_valid_;
+  bool standard_form_valid_ = false;
   double standard_form_offset_;
   std::vector<double> standard_form_cost_;
   std::vector<double> standard_form_rhs_;
