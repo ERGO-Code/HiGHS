@@ -40,6 +40,9 @@ HPresolve::Result HPresolve::strengthenInequalities(
 
     HighsCDouble maxviolation;
     HighsCDouble continuouscontribution = 0.0;
+    // maximum contribution of negligible terms not used in covers; a term is
+    // negligible if its maximum contribution is at most primal_feastol
+    HighsCDouble smallcontribution = 0.0;
     double scale;
 
     if (model->row_lower_[row] != -kHighsInf) {
@@ -105,14 +108,17 @@ HPresolve::Result HPresolve::strengthenInequalities(
         weight = -weight;
       }
 
-      if (ub <= primal_feastol || weight <= primal_feastol) continue;
-
       if (model->integrality_[col] == HighsVarType::kContinuous) {
         continuouscontribution += weight * ub;
         continue;
       }
 
-      indices.push_back(reducedcost.size());
+      if (weight * ub <= primal_feastol) {
+        smallcontribution += weight * ub;
+        continue;
+      }
+
+      indices.push_back(static_cast<HighsInt>(reducedcost.size()));
       positions.push_back(pos);
       reducedcost.push_back(weight);
       complementation.push_back(comp);
@@ -141,7 +147,9 @@ HPresolve::Result HPresolve::strengthenInequalities(
         std::max(100 * primal_feastol,
                  primal_feastol * static_cast<double>(maxviolation));
     while (true) {
-      if (maxviolation - continuouscontribution <= smallVal || indices.empty())
+      if (maxviolation - continuouscontribution - smallcontribution <=
+              smallVal ||
+          indices.empty())
         break;
 
       pdqsort(indices.begin(), indices.end(), [&](HighsInt i1, HighsInt i2) {
@@ -149,7 +157,8 @@ HPresolve::Result HPresolve::strengthenInequalities(
                std::make_pair(reducedcost[i2], i2);
       });
 
-      HighsCDouble lambda = maxviolation - continuouscontribution;
+      HighsCDouble lambda =
+          maxviolation - continuouscontribution - smallcontribution;
 
       cover.clear();
       cover.reserve(indices.size());
@@ -187,22 +196,35 @@ HPresolve::Result HPresolve::strengthenInequalities(
         slackupper += upper[cover[i]] * coefs[i];
         step = min(step, reducedcost[cover[i]] / coefs[i]);
       }
+      assert(slackupper >= 0.0);
       step = min(step, maxviolation / coverrhs);
       maxviolation -= step * coverrhs;
 
-      HighsInt slackind = reducedcost.size();
-      reducedcost.push_back(step);
-      upper.push_back(slackupper);
+      // only the cover members' reduced costs change, so only they can become
+      // negligible; move their maximum contribution to smallcontribution and
+      // set their reduced cost to zero, so that they are removed below
+      for (size_t i = 0; i != cover.size(); ++i) {
+        HighsInt index = cover[i];
+        reducedcost[index] -= step * coefs[i];
+        if (reducedcost[index] * upper[index] <= primal_feastol) {
+          if (reducedcost[index] > 0.0)
+            smallcontribution += reducedcost[index] * upper[index];
+          reducedcost[index] = 0.0;
+        }
+      }
 
-      for (size_t i = 0; i != cover.size(); ++i)
-        reducedcost[cover[i]] -= step * coefs[i];
-
-      indices.erase(std::remove_if(indices.begin(), indices.end(),
-                                   [&](HighsInt i) {
-                                     return reducedcost[i] <= primal_feastol;
-                                   }),
-                    indices.end());
-      indices.push_back(slackind);
+      // terms with non-positive reduced cost contribute nothing
+      indices.erase(
+          std::remove_if(indices.begin(), indices.end(),
+                         [&](HighsInt i) { return reducedcost[i] <= 0.0; }),
+          indices.end());
+      if (step * slackupper <= primal_feastol) {
+        smallcontribution += step * slackupper;
+      } else {
+        indices.push_back(static_cast<HighsInt>(reducedcost.size()));
+        reducedcost.push_back(step);
+        upper.push_back(slackupper);
+      }
     }
 
     double threshold = static_cast<double>(maxviolation + primal_feastol);

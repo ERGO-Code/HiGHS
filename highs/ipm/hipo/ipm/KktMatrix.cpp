@@ -67,13 +67,14 @@ Int KktMatrix::buildASstructure() {
 
   info.times[kMatrixStructureTime_AS] = clock.stop();
 
+  AS_ready = true;
   return kOk;
 }
 
 Int KktMatrix::buildASvalues(const std::vector<double>& scaling) {
   // build AS values that change during iterations.
 
-  assert(!ptrAS.empty() && !rowsAS.empty());
+  assert(AS_ready);
   Clock clock;
 
   const HighsHessian& Q = model.Q();
@@ -233,13 +234,15 @@ Int KktMatrix::buildNEstructure() {
   }
 
   info.times[kMatrixStructureTime_NE] = clock.stop();
+
+  NE_ready = true;
   return kOk;
 }
 
 Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
   // given the NE structure already computed, fill in the NE values
 
-  assert(!ptrNE.empty() && !rowsNE.empty());
+  assert(NE_ready);
   Clock clock;
 
   const HighsSparseMatrix& A = model.A();
@@ -312,6 +315,7 @@ void KktMatrix::freeASmemory() {
   freeVector(ptrAS);
   freeVector(rowsAS);
   freeVector(valAS);
+  AS_ready = false;
 }
 
 void KktMatrix::freeNEmemory() {
@@ -322,6 +326,7 @@ void KktMatrix::freeNEmemory() {
   freeVector(ptrA_rw);
   freeVector(idxA_rw);
   freeVector(corr_A);
+  NE_ready = false;
 }
 
 Int KktMatrix::n() const {
@@ -340,8 +345,8 @@ std::string KktMatrix::nla() const {
   return "empty";
 }
 
-bool KktMatrix::isAS() const { return !ptrAS.empty(); }
-bool KktMatrix::isNE() const { return !ptrNE.empty(); }
+bool KktMatrix::isAS() const { return AS_ready && !NE_ready; }
+bool KktMatrix::isNE() const { return NE_ready && !AS_ready; }
 
 const std::vector<Int>& KktMatrix::iperm() const { return S.iperm(); }
 
