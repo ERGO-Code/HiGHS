@@ -308,6 +308,14 @@ TEST_CASE("test-folding-qp-groups", "[highs-folding]") {
   runFoldingTestFromHighs(filename, 7, 12);
 }
 
+TEST_CASE("test-folding-max", "[highs-folding]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/folding_max.mps";
+
+  runFoldingTest(filename, 2, 3);
+  runFoldingTestFromHighs(filename, 2, 3);
+}
+
 TEST_CASE("test-folding-time-limit", "[highs-folding]") {
   const HighsModel model;
   highs::folding::Folder lpf;
@@ -328,6 +336,7 @@ TEST_CASE("test-folding-invalid-model", "[highs-folding]") {
   model.lp_.num_row_ = -1;
   lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kInvalidModel);
+  REQUIRE(lpf.getFoldedModel() == HighsModel());
 
   model.lp_.num_row_ = 0;
   model.lp_.integrality_.push_back(HighsVarType::kInteger);
@@ -342,12 +351,4 @@ TEST_CASE("test-folding-invalid-model", "[highs-folding]") {
   model.hessian_.clear();
   lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kOk);
-}
-
-TEST_CASE("test-folding-max", "[highs-folding]") {
-  std::string filename =
-      std::string(HIGHS_DIR) + "/check/instances/folding_max.mps";
-
-  runFoldingTest(filename, 2, 3);
-  runFoldingTestFromHighs(filename, 2, 3);
 }
