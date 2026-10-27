@@ -893,5 +893,35 @@ std::string CheckInput(const HostLp& lp, const SolveOptions& options) {
   return message;
 }
 
+// --- device memory estimates ---
+// Device memory one cudaMalloc takes (measured with this driver) : requests above 1 MiB are 
+// rounded up to 2 MiB pages, smaller ones are carved from shared pages (64 KiB is an upper bound).
+static size_t Charged(size_t bytes) {
+  size_t page = bytes > (size_t(1) << 20) ? size_t(2) << 20 : size_t(64) << 10;
+  return (std::max(size_t(1), bytes) + page - 1) / page * page;
+}
+// Bounds for the cuSPARSE 12.8 workspaces, from bufferSize queries between 300 and 90M nonzeros:
+// cusparseCsr2cscEx2 (ALG1) asks for 16.13 bytes per nonzero plus < 5 KiB, cusparseSpMV
+// (CSR_ALG2) for about nnz / 36.5 bytes plus 136.
+static size_t TransposeWorkspace(int nnz) {
+  return Charged(size_t(nnz) * 16 + size_t(nnz) / 4 + (size_t(64) << 10));
+}
+static size_t SpmvWorkspace(int nnz) { return Charged(size_t(nnz) / 32 + (size_t(4) << 10)); }
+// A CSR with `rows` rows as UploadCsr / BuildTranspose allocate it (start, index, value).
+static size_t CsrCharged(int rows, int nnz) {
+  return Charged((size_t(rows) + 1) * 4) + Charged(size_t(nnz) * 4) + Charged(size_t(nnz) * 8);
+}
+// What the arrays above do not cover: kernel code loaded on first launch, the cuSPARSE handle and
+// stream, the instantiated graph (together < 10 MiB in the sessions measured, up to Dual2_5000).
+constexpr size_t kRuntimeReserve = size_t(64) << 20;
+// The peak of a session given the arrays allocated before the transpose (`before`), the
+// transpose's transient workspace, and everything allocated after it (`after`).
+static size_t SessionPeak(size_t before, int rows, int columns, int nnz, bool transpose_borrowed,
+                          size_t after) {
+  if (!transpose_borrowed) before += CsrCharged(columns, nnz);
+  size_t transient = transpose_borrowed || !nnz || !rows || !columns ? 0 : TransposeWorkspace(nnz);
+  return before + std::max(transient, after) + kRuntimeReserve;
+}
+
 
 }
