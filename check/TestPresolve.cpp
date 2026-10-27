@@ -1981,3 +1981,21 @@ TEST_CASE("initial-sweep-empty-fixed-col", "[highs_test_presolve]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {
+  // fixing a column while checking a row for dominated columns led to
+  // storeRow being called on a modified row, shrinking the stored row
+  // positions that were still being iterated over
+  const std::string model = "dominated-cols-container-overflow";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 2);
+
+  h.resetGlobalScheduler(true);
+}
