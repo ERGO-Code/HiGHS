@@ -2559,6 +2559,25 @@ TEST_CASE("issue-3451", "[highs_test_mip_solver]") {
   highs.resetGlobalScheduler(true);
 }
 
+TEST_CASE("issue-3461", "[highs_test_mip_solver]") {
+  // model in issue 3461. A row has a coefficient 1.0000010735453797 among
+  // coefficients 1. strengthenInequalities removed residual terms with small
+  // reduced cost from the cover search without accounting for their maximum
+  // contribution, and derived an invalid coefficient, giving the wrong optimal
+  // objective 23138
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3461.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  highs.setOptionValue("mip_abs_gap", 0);
+  highs.readModel(filename);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 21166;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  highs.resetGlobalScheduler(true);
+}
+
 TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
   // an empty conflict, which can be derived when a proof is violated by the
   // global bounds alone, is stored at the end of the conflict entries and
