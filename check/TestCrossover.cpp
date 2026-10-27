@@ -227,5 +227,5 @@ TEST_CASE("issue-3459", "[highs_crossover]") {
     testSolvers("with free row");
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
