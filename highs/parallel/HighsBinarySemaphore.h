@@ -55,7 +55,7 @@ class HighsBinarySemaphore {
     int spinIters = HighsSchedulerConstants::kNumSpinTries;
     while (true) {
       for (int i = 0; i < spinIters; ++i) {
-        if (data_->count.load(std::memory_order_acquire) == 1) {
+        if (data_->count.load(std::memory_order_relaxed) == 1) {
           if (try_acquire()) return;
         }
         HighsSpinMutex::yieldProcessor();
