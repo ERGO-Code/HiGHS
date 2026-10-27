@@ -69,44 +69,22 @@ struct FoldInfo {
 class Folder {
   struct Data {
     // This data exists only during run()
-    struct TemporaryData {
-      const HighsLp lp;
-      const HighsSparseMatrix At;
-      const HighsHessian Q;
-      TemporaryData(const HighsModel model)
-          : lp{model.lp_},
-            At(lp.a_matrix_.getRowwise()),
-            Q(model.hessian_.toSquare()) {}
-    };
-
-    // This data exists until Folder destruction
-    struct PermanentData {
-      std::vector<HighsInt> row_colour;
-      std::vector<HighsInt> col_colour;
-      PermanentData(const HighsModel& model)
-          : row_colour(model.lp_.num_row_), col_colour(model.lp_.num_col_) {}
-    };
-
-    std::unique_ptr<TemporaryData> temp;
-    PermanentData perm;
+    const HighsLp lp;
+    const HighsSparseMatrix At;
+    const HighsHessian Q;
 
     Data(const HighsModel& model)
-        : temp(new TemporaryData(model)), perm(model) {
-      assert(temp);
-    }
-
-    const HighsLp& lp() const { return temp->lp; }
-    const HighsSparseMatrix& At() const { return temp->At; }
-    const HighsHessian& Q() const { return temp->Q; }
-    std::vector<HighsInt>& rowColour() { return perm.row_colour; }
-    std::vector<HighsInt>& colColour() { return perm.col_colour; }
-
-    void clearTemporary() { temp.reset(); }
+        : lp{model.lp_},
+          At(lp.a_matrix_.getRowwise()),
+          Q(model.hessian_.toSquare()) {}
   };
   std::unique_ptr<Data> data_;
 
   HighsInt num_row_{};
   HighsInt num_col_{};
+
+  std::vector<HighsInt> row_colour_;
+  std::vector<HighsInt> col_colour_;
 
   std::vector<HighsInt> row_colours_size_;
   std::vector<HighsInt> col_colours_size_;
