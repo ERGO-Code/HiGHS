@@ -95,14 +95,14 @@ static bool hasBadValues(const HighsLp& lp, const HighsHessian& Q) {
 template <typename T>
 HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
                                    HighsInt start) {
-  assert(model_);
+  assert(data_);
 
   QuantizedMap<T, HighsInt> map;
   HighsInt next_colour = start;
 
   for (HighsInt i = 0; i < n; ++i) {
-    T data(model_->lp_, i);
-    auto result = map.insert({data, next_colour});
+    T quant_data(data_->lp(), i);
+    auto result = map.insert({quant_data, next_colour});
     if (result.second) next_colour++;
     colour[i] = result.first->second;
   }
@@ -111,31 +111,31 @@ HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
 }
 
 void Folder::findInitialColour() {
-  assert(model_ && data_);
+  assert(data_);
 
   HighsTimer timer;
   timer.start();
 
   if (checkTimeLimit()) return;
   info_.initial_row_colours = findInitialColour<RowQuantizedData>(
-      model_->lp_.num_row_, data_->row_colour.data(), 0);
+      num_row_, data_->rowColour().data(), 0);
 
   if (checkTimeLimit()) return;
   info_.initial_col_colours = findInitialColour<ColQuantizedData>(
-      model_->lp_.num_col_, data_->col_colour.data(), 0);
+      num_col_, data_->colColour().data(), 0);
 
   info_.initial_time = timer.read();
 }
 
 void Folder::foldModel() {
-  assert(model_ && data_);
+  assert(data_);
 
   HighsTimer timer;
   timer.start();
 
   if (checkTimeLimit()) return;
-  ColourRefinement CR(model_->lp_.a_matrix_, data_->At, data_->Q,
-                      data_->row_colour, data_->col_colour);
+  ColourRefinement CR(data_->lp().a_matrix_, data_->At(), data_->Q(),
+                      data_->rowColour(), data_->colColour());
   CR.setTimeLimit(timer_, time_limit_);
   info_.ctor_time = timer.read();
 
@@ -149,28 +149,33 @@ void Folder::foldModel() {
 
     row_colours_size_.assign(info_.num_row_colours, 0);
     col_colours_size_.assign(info_.num_col_colours, 0);
-    for (HighsInt row = 0; row < model_->lp_.num_row_; ++row)
-      ++row_colours_size_[data_->row_colour[row]];
-    for (HighsInt col = 0; col < model_->lp_.num_col_; ++col)
-      ++col_colours_size_[data_->col_colour[col]];
+    for (HighsInt row = 0; row < num_row_; ++row)
+      ++row_colours_size_[data_->rowColour()[row]];
+    for (HighsInt col = 0; col < num_col_; ++col)
+      ++col_colours_size_[data_->colColour()[col]];
   }
 }
 
-void Folder::run() {
+void Folder::run(const HighsModel& model) {
   HighsTimer timer;
   timer.start();
 
   info_.status = Status::kNotRun;
-  data_.reset();
 
-  if (!model_ || hasBadStructure(model_->lp_, model_->hessian_) ||
-      hasBadValues(model_->lp_, model_->hessian_)) {
+  if (hasBadStructure(model.lp_, model.hessian_) ||
+      hasBadValues(model.lp_, model.hessian_)) {
     info_.status = Status::kInvalidModel;
     return;
   }
 
   try {
-    data_.reset(new Data(model_->lp_, model_->hessian_));
+    data_.reset(new Data(model));
+    if (!data_) {
+      info_.status = Status::kOutOfMemory;
+      return;
+    }
+    num_row_ = data_->lp().num_row_;
+    num_col_ = data_->lp().num_col_;
     findInitialColour();
     foldModel();
   } catch (const std::bad_alloc&) {
@@ -209,7 +214,7 @@ HighsModel Folder::getFoldedModel() const {
     HighsTimer timer;
     timer.start();
 
-    if (!model_ || !data_ || !success()) return HighsModel{};
+    if (!data_ || !success()) return HighsModel{};
 
     const HighsInt num_row_colours = info_.num_row_colours;
     const HighsInt num_col_colours = info_.num_col_colours;
@@ -217,12 +222,12 @@ HighsModel Folder::getFoldedModel() const {
     // Representative row for each colour:
     // For each colour, find the row with the fewest nonzero entries in A
     auto nz_in_row_of_A = [&](HighsInt row) {
-      return data_->At.start_[row + 1] - data_->At.start_[row];
+      return data_->At().start_[row + 1] - data_->At().start_[row];
     };
 
     std::vector<HighsInt> row_of_colour(num_row_colours, -1);
-    for (HighsInt row = 0; row < model_->lp_.a_matrix_.num_row_; ++row) {
-      const HighsInt colour = data_->row_colour[row];
+    for (HighsInt row = 0; row < data_->lp().a_matrix_.num_row_; ++row) {
+      const HighsInt colour = data_->rowColour()[row];
       const HighsInt current_best_row = row_of_colour[colour];
       if (current_best_row < 0 ||
           nz_in_row_of_A(row) < nz_in_row_of_A(current_best_row))
@@ -236,13 +241,14 @@ HighsModel Folder::getFoldedModel() const {
     // For each colour, find the column with the fewest nonzero entries in Q (or
     // the first one, if Q is empty)
     auto nz_in_col_of_Q = [&](HighsInt col) {
-      return data_->Q.empty() ? 0
-                              : data_->Q.start_[col + 1] - data_->Q.start_[col];
+      return data_->Q().empty()
+                 ? 0
+                 : data_->Q().start_[col + 1] - data_->Q().start_[col];
     };
 
     std::vector<HighsInt> col_of_colour(num_col_colours, -1);
-    for (HighsInt col = 0; col < model_->lp_.a_matrix_.num_col_; ++col) {
-      const HighsInt colour = data_->col_colour[col];
+    for (HighsInt col = 0; col < num_col_; ++col) {
+      const HighsInt colour = data_->colColour()[col];
       const HighsInt current_best_col = col_of_colour[colour];
       if (current_best_col < 0 ||
           nz_in_col_of_Q(col) < nz_in_col_of_Q(current_best_col))
@@ -255,8 +261,8 @@ HighsModel Folder::getFoldedModel() const {
     // Build the folded lp
     HighsModel folded_model;
     HighsLp& folded_lp = folded_model.lp_;
-    folded_lp.sense_ = model_->lp_.sense_;
-    folded_lp.offset_ = model_->lp_.offset_;
+    folded_lp.sense_ = data_->lp().sense_;
+    folded_lp.offset_ = data_->lp().offset_;
 
     folded_lp.num_row_ = num_row_colours;
     folded_lp.num_col_ = num_col_colours;
@@ -267,8 +273,8 @@ HighsModel Folder::getFoldedModel() const {
     folded_lp.row_upper_.resize(num_row_colours);
     for (HighsInt colour = 0; colour < num_row_colours; ++colour) {
       const HighsInt row = row_of_colour[colour];
-      folded_lp.row_lower_[colour] = model_->lp_.row_lower_[row];
-      folded_lp.row_upper_[colour] = model_->lp_.row_upper_[row];
+      folded_lp.row_lower_[colour] = data_->lp().row_lower_[row];
+      folded_lp.row_upper_[colour] = data_->lp().row_upper_[row];
     }
 
     // Col bounds: all cols of a colour have the same bounds, up to tolerance,
@@ -277,15 +283,15 @@ HighsModel Folder::getFoldedModel() const {
     folded_lp.col_upper_.resize(num_col_colours);
     for (HighsInt colour = 0; colour < num_col_colours; ++colour) {
       const HighsInt col = col_of_colour[colour];
-      folded_lp.col_lower_[colour] = model_->lp_.col_lower_[col];
-      folded_lp.col_upper_[colour] = model_->lp_.col_upper_[col];
+      folded_lp.col_lower_[colour] = data_->lp().col_lower_[col];
+      folded_lp.col_upper_[colour] = data_->lp().col_upper_[col];
     }
 
     // Col costs: costs are summed over all variables with the same colour
     folded_lp.col_cost_.assign(num_col_colours, 0.0);
-    for (HighsInt col = 0; col < model_->lp_.num_col_; ++col) {
-      const HighsInt colour = data_->col_colour[col];
-      folded_lp.col_cost_[colour] += model_->lp_.col_cost_[col];
+    for (HighsInt col = 0; col < num_col_; ++col) {
+      const HighsInt colour = data_->colColour()[col];
+      folded_lp.col_cost_[colour] += data_->lp().col_cost_[col];
     }
 
     // Build the folded At
@@ -305,16 +311,16 @@ HighsModel Folder::getFoldedModel() const {
     for (HighsInt r_colour = 0; r_colour < num_row_colours; ++r_colour) {
       const HighsInt row = row_of_colour[r_colour];
 
-      for (HighsInt el = data_->At.start_[row]; el < data_->At.start_[row + 1];
-           ++el) {
-        const HighsInt col = data_->At.index_[el];
-        const HighsInt c_colour = data_->col_colour[col];
+      for (HighsInt el = data_->At().start_[row];
+           el < data_->At().start_[row + 1]; ++el) {
+        const HighsInt col = data_->At().index_[el];
+        const HighsInt c_colour = data_->colColour()[col];
 
         if (!is_col_used[c_colour]) {
           is_col_used[c_colour] = true;
           col_used.push_back(c_colour);
         }
-        accumulator[c_colour] += data_->At.value_[el];
+        accumulator[c_colour] += data_->At().value_[el];
       }
 
       for (HighsInt c_colour : col_used) {
@@ -337,7 +343,7 @@ HighsModel Folder::getFoldedModel() const {
     folded_lp.a_matrix_ = Aft.getColwise();
 
     // Build the folded Hessian
-    if (!data_->Q.empty()) {
+    if (!data_->Q().empty()) {
       HighsHessian& Qf = folded_model.hessian_;
       Qf.dim_ = num_col_colours;
       Qf.format_ = HessianFormat::kTriangular;
@@ -352,16 +358,16 @@ HighsModel Folder::getFoldedModel() const {
       for (HighsInt r_colour = 0; r_colour < num_col_colours; ++r_colour) {
         const HighsInt row = col_of_colour[r_colour];
 
-        for (HighsInt el = data_->Q.start_[row]; el < data_->Q.start_[row + 1];
-             ++el) {
-          const HighsInt col = data_->Q.index_[el];
-          const HighsInt c_colour = data_->col_colour[col];
+        for (HighsInt el = data_->Q().start_[row];
+             el < data_->Q().start_[row + 1]; ++el) {
+          const HighsInt col = data_->Q().index_[el];
+          const HighsInt c_colour = data_->colColour()[col];
 
           if (!is_col_used[c_colour]) {
             is_col_used[c_colour] = true;
             col_used.push_back(c_colour);
           }
-          accumulator[c_colour] += data_->Q.value_[el];
+          accumulator[c_colour] += data_->Q().value_[el];
         }
 
         // Qf is built by cols, so r_colour corresponds to the column number in
@@ -412,17 +418,13 @@ HighsModel Folder::getFoldedModel() const {
 
 void Folder::print() const {
   printf("\nInitial partition:\n");
-  printf("\tRows: %9d out of %9d\n", info_.initial_row_colours,
-         model_->lp_.num_row_);
-  printf("\tCols: %9d out of %9d\n", info_.initial_col_colours,
-         model_->lp_.num_col_);
+  printf("\tRows: %9d out of %9d\n", info_.initial_row_colours, num_row_);
+  printf("\tCols: %9d out of %9d\n", info_.initial_col_colours, num_col_);
   printf("Final:\n");
-  printf("\tRows: %9d out of %9d (%.1f%%)\n", info_.num_row_colours,
-         model_->lp_.num_row_,
-         (double)info_.num_row_colours / model_->lp_.num_row_ * 100);
-  printf("\tCols: %9d out of %9d (%.1f%%)\n", info_.num_col_colours,
-         model_->lp_.num_col_,
-         (double)info_.num_col_colours / model_->lp_.num_col_ * 100);
+  printf("\tRows: %9d out of %9d (%.1f%%)\n", info_.num_row_colours, num_row_,
+         (double)info_.num_row_colours / num_row_ * 100);
+  printf("\tCols: %9d out of %9d (%.1f%%)\n", info_.num_col_colours, num_col_,
+         (double)info_.num_col_colours / num_col_ * 100);
 
   printf("\n");
   printf("Fold time        %f\n", info_.fold_time);
@@ -453,14 +455,14 @@ class ColourClasses {
 bool Folder::isPartitionCorrect() const {
   // Expensive, only runs in debug
 
-  if (!model_ || !data_ || !success()) return false;
+  if (!data_ || !success()) return false;
 
   const HighsInt num_row_colours = info_.num_row_colours;
   const HighsInt num_col_colours = info_.num_col_colours;
 
-  for (HighsInt c : data_->row_colour)
+  for (HighsInt c : data_->rowColour())
     if (c < 0 || c >= num_row_colours) return false;
-  for (HighsInt c : data_->col_colour)
+  for (HighsInt c : data_->colColour())
     if (c < 0 || c >= num_col_colours) return false;
 
   // Check that bounds and costs are partitioned correctly
@@ -551,30 +553,31 @@ bool Folder::isPartitionCorrect() const {
     return true;
   };
 
-  if (!is_vector_partition_correct(model_->lp_.row_lower_, data_->row_colour,
+  if (!is_vector_partition_correct(data_->lp().row_lower_, data_->rowColour(),
                                    num_row_colours) ||
-      !is_vector_partition_correct(model_->lp_.row_upper_, data_->row_colour,
+      !is_vector_partition_correct(data_->lp().row_upper_, data_->rowColour(),
                                    num_row_colours) ||
-      !is_vector_partition_correct(model_->lp_.col_cost_, data_->col_colour,
+      !is_vector_partition_correct(data_->lp().col_cost_, data_->colColour(),
                                    num_col_colours) ||
-      !is_vector_partition_correct(model_->lp_.col_lower_, data_->col_colour,
+      !is_vector_partition_correct(data_->lp().col_lower_, data_->colColour(),
                                    num_col_colours) ||
-      !is_vector_partition_correct(model_->lp_.col_upper_, data_->col_colour,
+      !is_vector_partition_correct(data_->lp().col_upper_, data_->colColour(),
                                    num_col_colours) ||
-      !is_partition_equitable(data_->At.start_, data_->At.index_,
-                              data_->At.value_, data_->row_colour,
-                              num_row_colours, data_->col_colour,
+      !is_partition_equitable(data_->At().start_, data_->At().index_,
+                              data_->At().value_, data_->rowColour(),
+                              num_row_colours, data_->colColour(),
                               num_col_colours) ||
       !is_partition_equitable(
-          model_->lp_.a_matrix_.start_, model_->lp_.a_matrix_.index_,
-          model_->lp_.a_matrix_.value_, data_->col_colour, num_col_colours,
-          data_->row_colour, num_row_colours))
+          data_->lp().a_matrix_.start_, data_->lp().a_matrix_.index_,
+          data_->lp().a_matrix_.value_, data_->colColour(), num_col_colours,
+          data_->rowColour(), num_row_colours))
     return false;
 
-  if (!data_->Q.empty() &&
-      !is_partition_equitable(data_->Q.start_, data_->Q.index_, data_->Q.value_,
-                              data_->col_colour, num_col_colours,
-                              data_->col_colour, num_col_colours))
+  if (!data_->Q().empty() &&
+      !is_partition_equitable(data_->Q().start_, data_->Q().index_,
+                              data_->Q().value_, data_->colColour(),
+                              num_col_colours, data_->colColour(),
+                              num_col_colours))
     return false;
 
   return true;
@@ -591,7 +594,7 @@ HighsSolution Folder::unfold(const HighsSolution& folded) const {
   // - row dual :   y  = C^{ST} y'
 
   HighsSolution sol;
-  if (!model_ || !data_ || !success()) return sol;
+  if (!data_ || !success()) return sol;
 
   const HighsInt num_row_colours = info_.num_row_colours;
   const HighsInt num_col_colours = info_.num_col_colours;
@@ -601,14 +604,14 @@ HighsSolution Folder::unfold(const HighsSolution& folded) const {
         folded.row_value.size() != static_cast<size_t>(num_row_colours))
       return HighsSolution{};
 
-    sol.col_value.resize(model_->lp_.num_col_);
-    sol.row_value.resize(model_->lp_.num_row_);
-    for (HighsInt c = 0; c < model_->lp_.num_col_; ++c) {
-      const HighsInt c_colour = data_->col_colour[c];
+    sol.col_value.resize(num_col_);
+    sol.row_value.resize(num_row_);
+    for (HighsInt c = 0; c < num_col_; ++c) {
+      const HighsInt c_colour = data_->colColour()[c];
       sol.col_value[c] = folded.col_value[c_colour];
     }
-    for (HighsInt r = 0; r < model_->lp_.num_row_; ++r) {
-      const HighsInt r_colour = data_->row_colour[r];
+    for (HighsInt r = 0; r < num_row_; ++r) {
+      const HighsInt r_colour = data_->rowColour()[r];
       sol.row_value[r] = folded.row_value[r_colour];
     }
   }
@@ -618,14 +621,14 @@ HighsSolution Folder::unfold(const HighsSolution& folded) const {
         folded.row_dual.size() != static_cast<size_t>(num_row_colours))
       return HighsSolution{};
 
-    sol.col_dual.resize(model_->lp_.num_col_);
-    sol.row_dual.resize(model_->lp_.num_row_);
-    for (HighsInt c = 0; c < model_->lp_.num_col_; ++c) {
-      const HighsInt c_colour = data_->col_colour[c];
+    sol.col_dual.resize(num_col_);
+    sol.row_dual.resize(num_row_);
+    for (HighsInt c = 0; c < num_col_; ++c) {
+      const HighsInt c_colour = data_->colColour()[c];
       sol.col_dual[c] = folded.col_dual[c_colour] / col_colours_size_[c_colour];
     }
-    for (HighsInt r = 0; r < model_->lp_.num_row_; ++r) {
-      const HighsInt r_colour = data_->row_colour[r];
+    for (HighsInt r = 0; r < num_row_; ++r) {
+      const HighsInt r_colour = data_->rowColour()[r];
       sol.row_dual[r] = folded.row_dual[r_colour] / row_colours_size_[r_colour];
     }
   }

@@ -140,16 +140,14 @@ TEST_CASE("test-folding-paper", "[highs-folding]") {
 
   // Fold
   highs::folding::Folder lpf;
-  lpf.setModel(model);
-  lpf.run();
+  lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kOk);
   HighsModel folded_model = lpf.getFoldedModel();
   REQUIRE(folded_model == getPaperFoldedLp());
 
   // Fold again
   highs::folding::Folder lpf_2;
-  lpf_2.setModel(folded_model);
-  lpf_2.run();
+  lpf_2.run(folded_model);
   REQUIRE(lpf_2.getInfo().status == highs::folding::Status::kOk);
   HighsModel folded_model_2 = lpf_2.getFoldedModel();
   REQUIRE(folded_model_2 == getPaperFoldedFoldedLp());
@@ -205,8 +203,7 @@ TEST_CASE("test-folding-paper-qp", "[highs-folding]") {
 
   // Fold
   highs::folding::Folder lpf;
-  lpf.setModel(model);
-  lpf.run();
+  lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kOk);
   HighsModel folded_model = lpf.getFoldedModel();
   REQUIRE(folded_model == getPaperFoldedQp());
@@ -246,8 +243,7 @@ void runFoldingTest(const std::string& filename, HighsInt expected_rows,
   const HighsModel model = highs.getModel();
 
   highs::folding::Folder lpf;
-  lpf.setModel(model);
-  lpf.run();
+  lpf.run(model);
   if (lpf.getInfo().status != highs::folding::Status::kOk) return;
   HighsModel folded_model = lpf.getFoldedModel();
   if (dev_run) lpf.print();
@@ -316,11 +312,10 @@ TEST_CASE("test-folding-qp-groups", "[highs-folding]") {
 TEST_CASE("test-folding-time-limit", "[highs-folding]") {
   const HighsModel model;
   highs::folding::Folder lpf;
-  lpf.setModel(model);
   HighsTimer timer;
   timer.start();
   lpf.setTimeLimit(timer, 0.0);
-  lpf.run();
+  lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kTimeLimit);
 }
 
@@ -328,27 +323,25 @@ TEST_CASE("test-folding-invalid-model", "[highs-folding]") {
   HighsModel model;
   highs::folding::Folder lpf;
 
-  lpf.run();
-  REQUIRE(lpf.getInfo().status == highs::folding::Status::kInvalidModel);
-
-  lpf.setModel(model);
+  lpf.run(model);
+  REQUIRE(lpf.getInfo().status == highs::folding::Status::kOk);
 
   model.lp_.num_row_ = -1;
-  lpf.run();
+  lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kInvalidModel);
 
   model.lp_.num_row_ = 0;
   model.lp_.integrality_.push_back(HighsVarType::kInteger);
-  lpf.run();
+  lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kInvalidModel);
 
   model.lp_.integrality_.clear();
   model.hessian_.dim_ = 1;
-  lpf.run();
+  lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kInvalidModel);
 
   model.hessian_.clear();
-  lpf.run();
+  lpf.run(model);
   REQUIRE(lpf.getInfo().status == highs::folding::Status::kOk);
 }
 

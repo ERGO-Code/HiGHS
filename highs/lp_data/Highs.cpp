@@ -1218,9 +1218,8 @@ highs::folding::Status Highs::runFolding() {
                 start_folding, left);
   }
 
-  folder_.setModel(model_);
   folder_.setTimeLimit(timer_, options_.time_limit);
-  folder_.run();
+  folder_.run(model_);
 
   highsLogDev(options_.log_options, HighsLogType::kVerbose,
               "folding returns status: %s\n",

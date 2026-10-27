@@ -18,8 +18,8 @@ namespace folding {
 // belong to the same class.
 //
 // Usage:
-//    Folder F(model);
-//    F.run();
+//    Folder F;
+//    F.run(model);
 //    if (F.getInfo().status == Status::kOk) {
 //      HighsModel folded_model = F.getFoldedModel();
 //      ...   // solve the folded model
@@ -32,8 +32,6 @@ namespace folding {
 //    checked);
 //  - the matrix of the model is col-wise;
 //  - the Hessian can be either square or triangular;
-//  - the model must outlive the Folder and must not be modified meanwhile. The
-//    Folder cannot be copied, moved, or constructed from a temporary.
 //
 // Result:
 //  - the folded model has one row per row class and one column per column
@@ -69,21 +67,41 @@ struct FoldInfo {
 };
 
 class Folder {
-  const HighsModel* model_ = nullptr;
-
   struct Data {
-    const HighsSparseMatrix At;
-    const HighsHessian Q;
-    std::vector<HighsInt> row_colour;
-    std::vector<HighsInt> col_colour;
+    // This data exists only during run()
+    struct TemporaryData {
+      const HighsLp lp;
+      const HighsSparseMatrix At;
+      const HighsHessian Q;
+      TemporaryData(const HighsModel model)
+          : lp{model.lp_},
+            At(lp.a_matrix_.getRowwise()),
+            Q(model.hessian_.toSquare()) {}
+    };
 
-    Data(const HighsLp& lp, const HighsHessian& hessian)
-        : At(lp.a_matrix_.getRowwise()),
-          Q(hessian.toSquare()),
-          row_colour(lp.num_row_),
-          col_colour(lp.num_col_) {}
+    // This data exists until Folder destruction
+    struct PermanentData {
+      std::vector<HighsInt> row_colour;
+      std::vector<HighsInt> col_colour;
+      PermanentData(const HighsModel& model)
+          : row_colour(model.lp_.num_row_), col_colour(model.lp_.num_col_) {}
+    };
+
+    TemporaryData temp;
+    PermanentData perm;
+
+    Data(const HighsModel& model) : temp(model), perm(model) {}
+
+    const HighsLp& lp() const { return temp.lp; }
+    const HighsSparseMatrix& At() const { return temp.At; }
+    const HighsHessian& Q() const { return temp.Q; }
+    std::vector<HighsInt>& rowColour() { return perm.row_colour; }
+    std::vector<HighsInt>& colColour() { return perm.col_colour; }
   };
   std::unique_ptr<Data> data_;
+
+  HighsInt num_row_{};
+  HighsInt num_col_{};
 
   std::vector<HighsInt> row_colours_size_;
   std::vector<HighsInt> col_colours_size_;
@@ -104,17 +122,12 @@ class Folder {
  public:
   Folder() = default;
 
-  // Folder holds references to the lp, so it cannot bind to a temporary
-  // HighsModel
-  Folder(const HighsModel&&) = delete;
-
   // Avoid copies because colour refinement holds reference to the Folder
   Folder(const Folder&) = delete;
   Folder& operator=(const Folder&) = delete;
 
-  void setModel(const HighsModel& model) { model_ = &model; }
   void setTimeLimit(const HighsTimer& timer, double time_limit);
-  void run();
+  void run(const HighsModel& model);
   HighsModel getFoldedModel() const;
   HighsSolution unfold(const HighsSolution& folded) const;
   const FoldInfo& getInfo() const { return info_; }
