@@ -32,6 +32,7 @@ namespace folding {
 //    checked);
 //  - the matrix of the model is col-wise;
 //  - the Hessian can be either square or triangular;
+//  - the model is not modified by other threads while run() is executing.
 //
 // Result:
 //  - the folded model has one row per row class and one column per column
@@ -71,7 +72,7 @@ struct FoldInfo {
 class Folder {
   struct Data {
     // This data exists only during run()
-    const HighsLp lp;
+    const HighsLp& lp;
     const HighsSparseMatrix At;
     const HighsHessian Q;
 
@@ -106,11 +107,11 @@ class Folder {
   bool success() const { return info_.status == Status::kOk; }
   bool checkTimeLimit();
   void buildFoldedModel();
+  void discardResult();
 
  public:
   Folder() = default;
 
-  // Avoid copies because colour refinement holds reference to the Folder
   Folder(const Folder&) = delete;
   Folder& operator=(const Folder&) = delete;
 

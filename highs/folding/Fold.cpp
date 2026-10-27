@@ -11,6 +11,18 @@ namespace highs {
 
 namespace folding {
 
+void Folder::discardResult() {
+  row_colour_.clear();
+  col_colour_.clear();
+  row_colours_size_.clear();
+  col_colours_size_.clear();
+  folded_model_.clear();
+  info_.initial_row_colours = 0;
+  info_.initial_col_colours = 0;
+  info_.num_row_colours = 0;
+  info_.num_col_colours = 0;
+}
+
 void Folder::setTimeLimit(const HighsTimer& timer, double time_limit) {
   timer_ = &timer;
   time_limit_ = time_limit;
@@ -157,10 +169,6 @@ void Folder::run(const HighsModel& model) {
 
   try {
     data_.reset(new Data(model));
-    if (!data_) {
-      info_.status = Status::kOutOfMemory;
-      return;
-    }
     num_row_ = data_->lp.num_row_;
     num_col_ = data_->lp.num_col_;
     row_colour_.assign(num_row_, 0);
@@ -169,13 +177,15 @@ void Folder::run(const HighsModel& model) {
     foldModel();
     buildFoldedModel();
     assert(!success() || isPartitionCorrect());
-    data_.reset();
 
   } catch (const std::bad_alloc&) {
     info_.status = Status::kOutOfMemory;
   } catch (const std::exception&) {
     info_.status = Status::kGenericError;
   }
+
+  data_.reset();
+  if (!success()) discardResult();
 }
 
 void Folder::buildFoldedModel() {
@@ -242,6 +252,7 @@ void Folder::buildFoldedModel() {
 
   // Build the folded lp
   HighsLp& folded_lp = folded_model_.lp_;
+  folded_lp.clear();
   folded_lp.sense_ = data_->lp.sense_;
   folded_lp.offset_ = data_->lp.offset_;
 
@@ -326,6 +337,7 @@ void Folder::buildFoldedModel() {
   // Build the folded Hessian
   if (!data_->Q.empty()) {
     HighsHessian& Qf = folded_model_.hessian_;
+    Qf.clear();
     Qf.dim_ = num_col_colours;
     Qf.format_ = HessianFormat::kTriangular;
     Qf.start_.reserve(num_col_colours + 1);
