@@ -304,9 +304,9 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       const bool ubFinite = ub < static_cast<double>(kHighsIInf);
       findLurkingBounds(col, HighsInt{1}, static_cast<HighsInt>(lb),
                         ubFinite ? static_cast<HighsInt>(ub) : HighsInt{0},
-                        ubFinite, lpobjective,
-                        lpredcost[col], maxNumSteps, maxNumStepsExp,
-                        lurkingColUpper[col], lurkingColLower[col]);
+                        ubFinite, lpobjective, lpredcost[col], maxNumSteps,
+                        maxNumStepsExp, lurkingColUpper[col],
+                        lurkingColLower[col]);
     } else if (lpredcost[col] < -mipsolver.mipdata_->feastol &&
                ub < static_cast<double>(kHighsIInf)) {
       // col >= (cutoffbound - lpobj)/redcost + ub
@@ -319,9 +319,9 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       const bool lbFinite = lb > -static_cast<double>(kHighsIInf);
       findLurkingBounds(col, HighsInt{-1}, static_cast<HighsInt>(ub),
                         lbFinite ? static_cast<HighsInt>(lb) : HighsInt{0},
-                        lbFinite, lpobjective,
-                        lpredcost[col], maxNumSteps, maxNumStepsExp,
-                        lurkingColLower[col], lurkingColUpper[col]);
+                        lbFinite, lpobjective, lpredcost[col], maxNumSteps,
+                        maxNumStepsExp, lurkingColLower[col],
+                        lurkingColUpper[col]);
     }
   }
 }
