@@ -378,6 +378,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }} `
+          --repeat until-fail:10 `
           -E "openblas_utest|openblas_utest_ext|xscblat|xdcblat|xccblat|xzcblat"
 
   # linux shared is default, static build tested in the release artifacts
