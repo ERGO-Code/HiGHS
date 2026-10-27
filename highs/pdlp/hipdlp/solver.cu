@@ -98,17 +98,6 @@ __device__ void BoundMetrics(Stats& s, double v, double multiplier, double l, do
   if (!isfinite(contribution) || !isfinite(comp)) s.bad = 1;
 }
 
-__device__ void KktBounds(Stats& s, double v, double mult, double l, double u, double tol) {
-  if (!isfinite(v) || !isfinite(mult)) return;
-  if (isfinite(l) && (l - v) * (l - v) <= tol)
-    s.active_bound = fmax(s.active_bound, fabs(l));
-  else if (isfinite(u) && (v - u) * (v - u) <= tol)
-    s.active_bound = fmax(s.active_bound, fabs(u));
-  double bound = 1;
-  if (isfinite(l) || isfinite(u)) bound = v < 0.5 * (l + u) ? l : u;
-  s.dual_pos += bound * mult;
-}
-
 __device__ void StoreStats(Stats value, Stats* partial) {
   __shared__ typename cub::BlockReduce<Stats, kBlock>::TempStorage storage;
   Stats total = cub::BlockReduce<Stats, kBlock>(storage).Reduce(value, Combine{});
@@ -194,7 +183,7 @@ __global__ void ScalingGuard (DeviceState* s) {
     s->status = Status::kTimeLimit;
 }
 
-__global__ void Initialze(DeviceLp lp, Vectors v, DeviceState* s) {
+__global__ void Initialize(DeviceLp lp, Vectors v, DeviceState* s)  {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i < lp.n) {
     lp.cs[i] = lp.c[i] * lp.dc[i];
@@ -317,7 +306,6 @@ __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
     a.p = lp.c[i] * v.out_x[i];
     if (!isfinite(raw_z) || !isfinite(a.p)) a.bad = 1;
     BoundMetrics(a, v.out_x[i], z, lp.lx[i], lp.ux[i], lp.m + i);
-    KktBounds(a, v.out_x[i], z, lp.lx[i], lp.ux[i], tol);
     double violation = fmax(fmax(lp.lx[i] - v.out_x[i], v.out_x[i] - lp.ux[i]), 0.0);
     a.l2_primal_sq = violation * violation;
     // L2 measures as cuPDLPx: its reduced cost is the primal projection's slack, i.e. nonzero only
@@ -336,7 +324,6 @@ __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
   }
   if (i < lp.m) {
     BoundMetrics(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], i);
-    KktBounds(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], tol);
     double violation = fmax(fmax(lp.lr[i] - v.out_ax[i], v.out_ax[i] - lp.ur[i]), 0.0);
     a.l2_primal_sq += violation * violation;
     if (isfinite(lp.lr[i]) && lp.lr[i] != lp.ur[i]) a.b_sq += lp.lr[i] * lp.lr[i];
@@ -981,7 +968,465 @@ static double SynchronizedSeconds(Resources& r, Clock::time_point since) {
   return Seconds(since);
 }
 
-
-
-
+double CostScale(const HostLp& lp) {
+  double scale = 0;
+  for (double c : lp.cost) scale = std::max(scale, std::abs(c));
+  if (lp.value.empty() || lp.columns == 0) return scale;
+  std::vector<int> count(lp.columns, 0);
+  for (int j : lp.column_index) ++count[j];
+  auto foldable = [&](int j) {
+    return count[j] == 1 && lp.cost[j] != 0 && !std::isfinite(lp.column_lower[j]) &&
+           !std::isfinite(lp.column_upper[j]);
+  };
+  std::vector<double> folded;  // allocated at the first objective-definition row
+  for (int i = 0; i < lp.rows; ++i) {
+    int z = -1;
+    double a = 0;
+    for (int k = lp.row_start[i]; k < lp.row_start[i + 1] && z < 0; ++k)
+      if (lp.value[k] != 0 && foldable(lp.column_index[k])) {
+        z = lp.column_index[k];
+        a = lp.value[k];
+      }
+    if (z < 0) continue;
+    // The row binds on the side the substitution uses (FreeColumn); otherwise it is not folded.
+    double y = lp.cost[z] / a, side = y > 0 ? lp.row_lower[i] : lp.row_upper[i];
+    if (!std::isfinite(y) || !std::isfinite(side)) continue;
+    if (folded.empty()) folded = lp.cost;
+    for (int k = lp.row_start[i]; k < lp.row_start[i + 1]; ++k)
+      folded[lp.column_index[k]] -= y * lp.value[k];
+    folded[z] = 0;
+  }
+  if (folded.empty()) return scale;
+  scale = 0;
+  for (double c : folded)
+    if (std::isfinite(c)) scale = std::max(scale, std::abs(c));
+  return scale;
 }
+
+// The primal measure of the stop criterion (result.primal_valid).
+static double PrimalMeasure(const Metrics& m, StopCriterion stop) {
+  return stop == StopCriterion::kStrict  ? m.primal
+         : stop == StopCriterion::kPdlpL2 ? m.l2_primal
+                                          : m.kkt_primal;
+}
+// One complete GPU solve session. `source.matrix` (when given) is the unscaled constraint matrix
+// of THIS problem; the scaled work copies and the transpose are made here and never alias it.
+static SolveResult Run(const SolveSource& source, const SolveOptions& options, Snapshot* snapshot,
+                       bool fixed_weight, MemoryMeter* shared_meter) {
+  auto start = Clock::now();
+  const HostLp& host = *source.lp;
+  SolveResult result;
+  CheckSource(source, options, &result);
+  if (!result.message.empty()) return result;
+  bool session_started = false;
+  try {
+    if (!CheckDevice(&result)) return result;
+    std::optional<MemoryMeter> own_meter;
+    if (!shared_meter) shared_meter = &own_meter.emplace();
+    MemoryMeter& meter = *shared_meter;
+    int m = host.rows, n = host.columns, nnz = int(result.nonzeros), size = std::max(m, n),
+        blocks = Blocks(size);
+    size_t estimate =
+        SolveFootprint(m, n, nnz, source.matrix != nullptr, source.transposed != nullptr);
+    size_t free_bytes, total_bytes;
+    Cuda(cudaMemGetInfo(&free_bytes, &total_bytes));
+    if (estimate > free_bytes) {
+      result.status = Status::kOutOfMemory;
+      result.termination_source = "GPU_SETUP";
+      result.message = "Insufficient VRAM for FP64 model and workspaces";
+      return result;
+    }
+    Resources r;
+    auto stream = r.stream;
+    Profile& profile = result.profile;
+    nvtxRangePushA("UPLOAD");
+    auto phase = Clock::now();
+    DeviceLp lp{};
+    lp.m = m;
+    lp.n = n;
+    lp.nnz = nnz;
+    // The unscaled matrix is uploaded once (unless borrowed) and stays read-only.
+    DeviceCsr uploaded;
+    const DeviceCsr* unscaled = source.matrix;
+    if (!unscaled) {
+      uploaded = UploadCsr(host, stream, &profile);
+      unscaled = &uploaded;
+    }
+    auto cost = host.cost;
+    for (double& c : cost) c *= host.sense;
+    lp.c = r.Upload(cost);
+    lp.lr = r.Upload(host.row_lower);
+    lp.ur = r.Upload(host.row_upper);
+    lp.lx = r.Upload(host.column_lower);
+    lp.ux = r.Upload(host.column_upper);
+    profile.upload = SynchronizedSeconds(r, phase);
+    meter.Sample();
+    nvtxRangePop();
+    nvtxRangePushA("TRANSPOSE");
+    phase = Clock::now();
+    DeviceTranspose built;
+    const DeviceTranspose* transposed = source.transposed;
+    if (!transposed) {
+      BuildTranspose(*unscaled, r.sparse, stream, false, &built, &profile, &meter);
+      transposed = &built;
+    }
+    profile.transpose = SynchronizedSeconds(r, phase);
+    meter.Sample();
+    nvtxRangePop();
+    nvtxRangePushA("SCALE_COPY");
+    phase = Clock::now();
+    lp.row_start = const_cast<int*>(unscaled->row_start.Get());
+    lp.column = const_cast<int*>(unscaled->column_index.Get());
+    lp.original_a = const_cast<double*>(unscaled->value.Get());
+    lp.transpose_start = const_cast<int*>(transposed->start.Get());
+    lp.row = const_cast<int*>(transposed->row.Get());
+    lp.original_at = const_cast<double*>(transposed->value.Get());
+    // Scaling rewrites these copies in place; the copies fully overwrite the new arrays.
+    lp.a = r.Allocate<double>(nnz);
+    lp.at = r.Allocate<double>(nnz);
+    if (nnz) {
+      Cuda(cudaMemcpyAsync(lp.a, lp.original_a, size_t(nnz) * sizeof(double),
+                           cudaMemcpyDeviceToDevice, stream));
+      Cuda(cudaMemcpyAsync(lp.at, lp.original_at, size_t(nnz) * sizeof(double),
+                           cudaMemcpyDeviceToDevice, stream));
+      r.d2d_bytes += 2 * size_t(nnz) * sizeof(double);
+    }
+    // Initialize and the scaling passes write all of these before anything reads them.
+    // LineNorms (graph prefix) writes row_norm / column_norm before any certificate reads them.
+    for (double** p : {&lp.cs, &lp.lxs, &lp.uxs, &lp.dc, &lp.column_norm})
+      *p = r.Allocate<double>(n);
+    for (double** p : {&lp.lrs, &lp.urs, &lp.dr, &lp.row_norm}) *p = r.Allocate<double>(m);
+    Vectors v{};
+    // Arrays with disjoint lifetimes share storage. The per-sweep scaling factors are dead after
+    // the scaling prefix; every product below is written by its SpMV right before its only
+    // readers (A^T dy: FpeStats; A^T y_out: KktStats; A^T f: the Farkas kernels; A xr: DualStep;
+    // A ray: the ray kernels; A^T ya, A xa: AnchorTerms), and the Farkas row multipliers f are dead
+    // after SaveCertificate, before A ray is formed. Zeroed: some are SpMV warm-up inputs (see
+    // below).
+    double* column_scratch = r.AllocateZero<double>(n);
+    double* row_scratch = r.AllocateZero<double>(m);
+    lp.fc = v.atdy = v.out_aty = v.atf = column_scratch;
+    lp.fr = v.axr = v.f = v.ad = row_scratch;
+    // xr, y and dy are inputs of the SpMV that PrepareSpmv runs once before the graph exists
+    // (a cuSPARSE warm-up), i.e. before Initialize: they are zeroed. The rest are written by
+    // Initialize before anything reads them.
+    for (double** p : {&v.x, &v.xp, &v.dx, &v.epoch_dx, &v.ga}) *p = r.Allocate<double>(n);
+    v.xr = r.AllocateZero<double>(n);
+    for (double** p : {&v.yp, &v.yr, &v.epoch_dy, &v.lower, &v.upper}) *p = r.Allocate<double>(m);
+    // The anchor is the input of the anchor products' warm-up below.
+    v.xa = r.AllocateZero<double>(n);
+    v.ya = r.AllocateZero<double>(m);
+    v.y = r.AllocateZero<double>(m);
+    v.dy = r.AllocateZero<double>(m);
+    for (double** p : {&v.aty, &v.out_x, &v.out_z, &v.g, &v.ray, &v.saved_g, &v.saved_ray,
+                       &v.feasible})
+      *p = r.AllocateZero<double>(n);
+    for (double** p : {&v.out_y, &v.out_ax, &v.saved_f}) *p = r.AllocateZero<double>(m);
+    std::vector<double> constants{1, 0};
+    double* ab = r.Upload(constants);
+    DeviceState initial{};
+    initial.tolerance = options.tolerance;
+    initial.cost_scale = source.cost_scale >= 0 ? source.cost_scale : CostScale(host);
+    initial.iteration_limit = options.iteration_limit;
+    initial.fixed_weight = fixed_weight;
+    initial.exposure_check = !source.reduced;
+    initial.warm_start = source.start_primal && source.start_dual;
+    initial.stop_l2 = options.stop == StopCriterion::kPdlpL2;
+    initial.stop_strict = options.stop == StopCriterion::kStrict;
+    if (snapshot)
+      initial.decisions = r.AllocateZero<Decision>(kDecisionCapacity);  // padding downloaded too
+    DeviceState* s = r.Allocate<DeviceState>(1);  // overwritten by `initial` before the launch
+    Stats* partial = r.AllocateZero<Stats>(blocks);
+    profile.scale_copy = SynchronizedSeconds(r, phase);
+    meter.Sample();
+    nvtxRangePop();
+    nvtxRangePushA("GPU_SETUP");
+    phase = Clock::now();
+    auto aty = PrepareSpmv(r, n, m, nnz, lp.transpose_start, lp.row, lp.at, v.y, v.aty, ab);
+    auto axr = PrepareSpmv(r, m, n, nnz, lp.row_start, lp.column, lp.a, v.xr, v.axr, ab);
+    auto atdy = PrepareSpmv(r, n, m, nnz, lp.transpose_start, lp.row, lp.at, v.dy, v.atdy, ab);
+    auto out_ax =
+        PrepareSpmv(r, m, n, nnz, lp.row_start, lp.column, lp.original_a, v.out_x, v.out_ax, ab);
+    auto out_aty = PrepareSpmv(r, n, m, nnz, lp.transpose_start, lp.row, lp.original_at, v.out_y,
+                               v.out_aty, ab);
+    auto atf =
+        PrepareSpmv(r, n, m, nnz, lp.transpose_start, lp.row, lp.original_at, v.f, v.atf, ab);
+    auto ad = PrepareSpmv(r, m, n, nnz, lp.row_start, lp.column, lp.original_a, v.ray, v.ad, ab);
+    // Anchor products, once per restart, into the scratch arrays (free between the check's last
+    // reader and the reference evaluation).
+    auto aty_anchor =
+        PrepareSpmv(r, n, m, nnz, lp.transpose_start, lp.row, lp.at, v.ya, column_scratch, ab);
+    auto ax_anchor =
+        PrepareSpmv(r, m, n, nnz, lp.row_start, lp.column, lp.a, v.xa, row_scratch, ab);
+    Cuda(cudaStreamSynchronize(stream));
+    Cuda(cudaGraphCreate(&r.graph, 0));
+    cudaGraphConditionalHandle loop, check, restart, cert, initial_cert, reference;
+    for (auto* h : {&loop, &check, &restart, &cert, &initial_cert, &reference})
+      Cuda(cudaGraphConditionalHandleCreate(h, r.graph, 0, cudaGraphCondAssignDefault));
+    auto reduce = [&](int mode) {
+      ReduceStats<<<1, kBlock, 0, stream>>>(partial, blocks, s, mode);
+    };
+    auto kkt = [&]() {
+      Mark<<<1, 1, 0, stream>>>(s, 3);
+      Unscale<<<blocks, kBlock, 0, stream>>>(lp, v, s);
+      Multiply(r, out_ax, ab);
+      Multiply(r, out_aty, ab);
+      KktStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, options.tolerance);
+      reduce(0);
+      KktRelativeStats<<<blocks, kBlock, 0, stream>>>(lp, v, s, partial, options.tolerance);
+      reduce(6);
+      SaveFeasible<<<Blocks(n), kBlock, 0, stream>>>(lp, v, s);
+      Mark<<<1, 1, 0, stream>>>(s, 4);
+    };
+    auto fpe = [&](int mode) {
+      Multiply(r, atdy, ab);
+      FpeStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial);
+      reduce(mode);
+    };
+    auto anchor = [&]() {
+      Multiply(r, aty_anchor, ab);
+      Multiply(r, ax_anchor, ab);
+      AnchorTerms<<<blocks, kBlock, 0, stream>>>(lp, v, column_scratch, row_scratch, s);
+    };
+    auto reference_eval = [&]() {
+      ReferenceCount<<<1, 1, 0, stream>>>(s);
+      Multiply(r, aty, ab);
+      PrimalStep<<<Blocks(n), kBlock, 0, stream>>>(lp, v, s);
+      Multiply(r, axr, ab);
+      DualStep<<<blocks, kBlock, 0, stream>>>(lp, v, s, false);
+      fpe(2);
+    };
+    auto certificates = [&]() {
+      for (int source = 0; source < 3; ++source)
+        for (int sign : {1, -1}) {
+          CertificateDirection<<<blocks, kBlock, 0, stream>>>(lp, v, s, source, sign);
+          Multiply(r, atf, ab);
+          CertificateNorm<<<blocks, kBlock, 0, stream>>>(lp, v, partial, true);
+          reduce(3);
+          NormalizeCertificate<<<blocks, kBlock, 0, stream>>>(lp, v, s, true);
+          Multiply(r, atf, ab);
+          CertificateStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, true);
+          reduce(4);
+          SaveCertificate<<<blocks, kBlock, 0, stream>>>(lp, v, s, true);
+          CertificateNorm<<<blocks, kBlock, 0, stream>>>(lp, v, partial, false);
+          reduce(3);
+          NormalizeCertificate<<<blocks, kBlock, 0, stream>>>(lp, v, s, false);
+          Multiply(r, ad, ab);
+          CertificateStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, false);
+          reduce(5);
+          SaveCertificate<<<blocks, kBlock, 0, stream>>>(lp, v, s, false);
+        }
+    };
+    // Prefix includes GPU scaling and initial original-space validation.
+    StartCapture(r, r.graph);
+    Begin<<<1, 1, 0, stream>>>(s);
+    FillOne<<<Blocks(m), kBlock, 0, stream>>>(lp.dr, m);
+    FillOne<<<Blocks(n), kBlock, 0, stream>>>(lp.dc, n);
+    for (int sweep = 0; sweep < 11; ++sweep) {
+      ScalingFactors<<<WarpBlocks(m), kBlock, 0, stream>>>(m, lp.row_start, lp.a, lp.fr, lp.dr,
+                                                           sweep == 10, s);
+      ScalingFactors<<<WarpBlocks(n), kBlock, 0, stream>>>(n, lp.transpose_start, lp.at, lp.fc,
+                                                           lp.dc, sweep == 10, s);
+      ScaleMatrix<<<WarpBlocks(m), kBlock, 0, stream>>>(m, lp.row_start, lp.column, lp.a, lp.fr,
+                                                        lp.fc, s);
+      ScaleMatrix<<<WarpBlocks(n), kBlock, 0, stream>>>(n, lp.transpose_start, lp.row, lp.at, lp.fc,
+                                                        lp.fr, s);
+      ScalingGuard<<<1, 1, 0, stream>>>(s);
+    }
+    Initialize<<<blocks, kBlock, 0, stream>>>(lp, v, s);
+    Mark<<<1, 1, 0, stream>>>(s, 0);
+    LineNorms<<<Blocks(m), kBlock, 0, stream>>>(m, lp.row_start, lp.original_a, lp.row_norm, s);
+    LineNorms<<<Blocks(n), kBlock, 0, stream>>>(n, lp.transpose_start, lp.original_at,
+                                                lp.column_norm, s);
+    kkt();
+    Decide<<<1, 1, 0, stream>>>(s, restart, initial_cert, true, false);
+    auto deps = FinishCapture(r);
+    cudaGraphNode_t cert_node, reference_node, loop_node, check_node, restart_node;
+    auto cert_graph =
+        AddConditional(r, r.graph, deps, initial_cert, cudaGraphCondTypeIf, &cert_node);
+    StartCapture(r, cert_graph);
+    certificates();
+    FinishCapture(r);
+    StartCapture(r, r.graph, {cert_node});
+    Decide<<<1, 1, 0, stream>>>(s, restart, initial_cert, true, true);
+    LoopCondition<<<1, 1, 0, stream>>>(s, reference);
+    deps = FinishCapture(r);
+    auto reference_graph =
+        AddConditional(r, r.graph, deps, reference, cudaGraphCondTypeIf, &reference_node);
+    StartCapture(r, reference_graph);
+    reference_eval();
+    FinishCapture(r);
+    StartCapture(r, r.graph, {reference_node});
+    LoopCondition<<<1, 1, 0, stream>>>(s, loop);
+    Mark<<<1, 1, 0, stream>>>(s, 1);
+    deps = FinishCapture(r);
+    auto body = AddConditional(r, r.graph, deps, loop, cudaGraphCondTypeWhile, &loop_node);
+    StartCapture(r, body);
+    PrimalStep<<<Blocks(n), kBlock, 0, stream>>>(lp, v, s);
+    Multiply(r, axr, ab);
+    DualStep<<<blocks, kBlock, 0, stream>>>(lp, v, s, true);
+    Multiply(r, aty, ab);
+    StepControl<<<1, 1, 0, stream>>>(s, check);
+    deps = FinishCapture(r);
+    auto check_graph = AddConditional(r, body, deps, check, cudaGraphCondTypeIf, &check_node);
+    StartCapture(r, check_graph);
+    fpe(1);
+    kkt();
+    Decide<<<1, 1, 0, stream>>>(s, restart, cert, false, false);
+    deps = FinishCapture(r);
+    auto nested_cert = AddConditional(r, check_graph, deps, cert, cudaGraphCondTypeIf, &cert_node);
+    StartCapture(r, nested_cert);
+    certificates();
+    FinishCapture(r);
+    StartCapture(r, check_graph, {cert_node});
+    Decide<<<1, 1, 0, stream>>>(s, restart, cert, false, true);
+    deps = FinishCapture(r);
+    auto restart_graph =
+        AddConditional(r, check_graph, deps, restart, cudaGraphCondTypeIf, &restart_node);
+    StartCapture(r, restart_graph);
+    WeightStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, s);
+    UpdateWeight<<<1, kBlock, 0, stream>>>(partial, blocks, s);
+    RestartVectors<<<blocks, kBlock, 0, stream>>>(lp, v, s);
+    anchor();
+    RestartState<<<1, 1, 0, stream>>>(s);
+    reference_eval();
+    FinishCapture(r);
+    StartCapture(r, body, {check_node});
+    LoopCondition<<<1, 1, 0, stream>>>(s, loop);
+    FinishCapture(r);
+    StartCapture(r, r.graph, {loop_node});
+    Mark<<<1, 1, 0, stream>>>(s, 2);
+    FinishCapture(r);
+    Cuda(cudaGraphInstantiate(&r.exec, r.graph, 0));
+    initial.remaining_seconds = std::max(0.0, options.time_limit_seconds - Seconds(start));
+    Cuda(cudaMemcpyAsync(s, &initial, sizeof(initial), cudaMemcpyHostToDevice, stream));
+    r.h2d_bytes += sizeof(initial);
+    if (initial.warm_start) {
+      // The start point travels through the output arrays: nothing reads them before the
+      // initial check overwrites them, so a warm start allocates nothing.
+      Cuda(cudaMemcpyAsync(v.out_x, source.start_primal->data(), size_t(n) * sizeof(double),
+                           cudaMemcpyHostToDevice, stream));
+      Cuda(cudaMemcpyAsync(v.out_y, source.start_dual->data(), size_t(m) * sizeof(double),
+                           cudaMemcpyHostToDevice, stream));
+      r.h2d_bytes += (size_t(n) + size_t(m)) * sizeof(double);
+    }
+    Cuda(cudaEventCreate(&r.event_start));
+    Cuda(cudaEventCreate(&r.event_end));
+    Cuda(cudaEventRecord(r.event_start, stream));
+    meter.Sample();
+    nvtxRangePop();
+    profile.prepare = Seconds(phase);
+    result.times.setup = Seconds(start);
+    nvtxRangePushA("SOLVE_BEGIN/END");
+    session_started = true;
+    Cuda(cudaGraphLaunch(r.exec, stream));
+    Cuda(cudaEventRecord(r.event_end, stream));
+    // The only wait in a session. No copies, callbacks, polling or allocation above it.
+    Cuda(cudaStreamSynchronize(stream));
+    nvtxRangePop();
+    float gpu_ms;
+    Cuda(cudaEventElapsedTime(&gpu_ms, r.event_start, r.event_end));
+    result.times.gpu = gpu_ms * 1e-3;
+    auto download_start = Clock::now();
+    nvtxRangePushA("DOWNLOAD");
+    DeviceState final;
+    Cuda(cudaMemcpy(&final, s, sizeof(final), cudaMemcpyDeviceToHost));
+    result.status = final.status;
+    result.iterations = final.iterations;
+    result.restarts = final.restarts;
+    result.kkt_checks = final.kkt_checks;
+    result.certificate_checks = final.certificate_checks;
+    result.spmv_count = final.spmv_count;
+    result.metrics = final.metrics;
+    result.peak_device_bytes = r.Bytes();
+    result.metrics_valid = !final.bad;
+    result.primal_valid =
+        !final.bad && PrimalMeasure(final.metrics, options.stop) <= options.tolerance;
+    result.dual_valid = final.status == Status::kOptimal;
+    result.certificate_valid = final.farkas_valid;
+    result.ray_valid = final.ray_valid;
+    result.certificate_margin = final.margin;
+    result.certificate_stationarity = final.stationarity;
+    result.certificate_scale = final.cert_scale;
+    result.ray_margin = final.ray_margin;
+    result.ray_row_violation = final.ray_row_violation;
+    result.ray_column_violation = final.ray_column_violation;
+    result.farkas_info = final.farkas_info;
+    result.ray_info = final.ray_info;
+    result.feasible_iteration = final.feasible_iteration;
+    r.d2h_bytes += sizeof(final);
+    auto download = [&](double* p, int length) {
+      std::vector<double> values(length);
+      if (length) {
+        Cuda(cudaMemcpy(values.data(), p, length * sizeof(double), cudaMemcpyDeviceToHost));
+        r.d2h_bytes += length * sizeof(double);
+      }
+      return values;
+    };
+    result.primal = download(v.out_x, n);
+    result.dual = download(v.out_y, m);
+    result.reduced_cost = download(v.out_z, n);
+    result.row_activity = download(v.out_ax, m);
+    if (final.farkas_valid) {
+      result.farkas_row = download(v.saved_f, m);
+      result.farkas_column = download(v.saved_g, n);
+    }
+    if (final.ray_valid) result.ray = download(v.saved_ray, n);
+    if (final.feasible_valid) result.feasible_base = download(v.feasible, n);
+    if (snapshot) {
+      snapshot->row_multiplier = download(lp.dr, m);
+      snapshot->column_multiplier = download(lp.dc, n);
+      snapshot->scaled_value = download(lp.a, nnz);
+      snapshot->xa = download(v.xa, n);
+      snapshot->ya = download(v.ya, m);
+      // Absolute iterates, as the Snapshot documents them.
+      auto absolute = [&](std::vector<double> deviation, const std::vector<double>& anchor) {
+        if (final.deviation)
+          for (size_t i = 0; i < deviation.size(); ++i) deviation[i] += anchor[i];
+        return deviation;
+      };
+      snapshot->x = absolute(download(v.x, n), snapshot->xa);
+      snapshot->y = absolute(download(v.y, m), snapshot->ya);
+      snapshot->xp = absolute(download(v.xp, n), snapshot->xa);
+      snapshot->yp = absolute(download(v.yp, m), snapshot->ya);
+      snapshot->epoch_dx = download(v.epoch_dx, n);
+      snapshot->epoch_dy = download(v.epoch_dy, m);
+      snapshot->epoch_iteration = final.epoch_iteration;
+      snapshot->omega = final.omega;
+      snapshot->fpe = final.fpe;
+      snapshot->decisions.resize(final.decision_count);
+      if (final.decision_count)
+        Cuda(cudaMemcpy(snapshot->decisions.data(), final.decisions,
+                        final.decision_count * sizeof(Decision), cudaMemcpyDeviceToHost));
+    }
+    for (double& y : result.dual) y *= host.sense;
+    for (double& z : result.reduced_cost) z *= host.sense;
+    result.metrics.primal_objective = final.metrics.primal_objective * host.sense + host.offset;
+    result.metrics.dual_objective = final.metrics.dual_objective * host.sense + host.offset;
+    result.times.scaling = double(final.scaling_end - final.begin) * 1e-9;
+    result.times.loop = double(final.end - final.loop_begin) * 1e-9;
+    result.times.device = double(final.end - final.begin) * 1e-9;
+    result.times.validation = double(final.validation_ns) * 1e-9;
+    result.times.download = Seconds(download_start);
+    profile.h2d_bytes += r.h2d_bytes;
+    profile.d2h_bytes += r.d2h_bytes;
+    profile.d2d_bytes += r.d2d_bytes;
+    profile.peak_live_bytes = meter.Peak();
+    nvtxRangePop();
+    if (result.status == Status::kNumericalError)
+      result.message = "Nonfinite arithmetic, invalid FPE, or contradictory conclusions";
+  } catch (const DeviceFailure& e) {
+    result.status = e.status;
+    result.termination_source = session_started ? "CUDA_RUNTIME" : "GPU_SETUP";
+    result.message = e.what();
+  } catch (const std::bad_alloc&) {
+    result.status = Status::kOutOfMemory;
+    result.termination_source = "HOST_SETUP";
+    result.message = "Host allocation failed";
+  }
+  result.times.total = Seconds(start);
+  result.times.overshoot = std::max(0.0, result.times.total - options.time_limit_seconds);
+  return result;
+}
+
+}// end namespace pdlp

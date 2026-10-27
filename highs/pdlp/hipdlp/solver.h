@@ -31,6 +31,11 @@ struct HostLp {
   int sense = 1;
   double offset = 0;
 };
+enum class StopCriterion {
+  kLpKktCheck,  // the original-model KKT check of a hybrid solve
+  kPdlpL2,      // PDLP / cuPDLPx L2 measures (Metrics::l2_*)
+  kStrict       // the strict four measures (Metrics::primal, dual, gap, complementarity)
+};
 struct SolveOptions {
   double tolerance = 1e-4;
   double time_limit_seconds = std::numeric_limits<double>::infinity();
@@ -87,6 +92,49 @@ struct CertificateInfo {
   int64_t iteration = 0;  // Local to the GPU session that generated it.
   double scale = 0;       // Original-coordinate infinity norm before normalization.
 };
+
+// Where the input time went; unused fields stay zero. See docs for the stage boundaries.
+struct InputReport {
+  std::string reader;  // native or snapshot
+  std::string cache = "none", cache_detail;
+  bool pipelined = false;
+  uint64_t file_bytes = 0, text_bytes = 0, cache_bytes = 0;
+  double hash = 0, scan = 0, drain = 0, finalize = 0, inflate = 0, wait = 0;
+  double snapshot_read = 0, snapshot_validate = 0, snapshot_write = 0;
+  uint64_t model_hash = 0;  // LpFingerprint of the original model when requested
+};
+struct SolveResult {
+  Status status = Status::kInvalidModel;
+  std::string message, termination_source = "GPU", fallback_reason;
+  std::string metrics_model = "ORIGINAL";
+  bool metrics_valid = false;
+  bool reduced_metrics_valid = false;
+  int rows = 0, columns = 0, nonzeros = 0;
+  int reduced_rows = 0, reduced_columns = 0, reduced_nonzeros = 0;
+  int64_t iterations = 0, restarts = 0, kkt_checks = 0, certificate_checks = 0, spmv_count = 0;
+  bool primal_valid = false, dual_valid = false, certificate_valid = false, ray_valid = false;
+  std::vector<double> primal, dual, reduced_cost, row_activity;
+  std::vector<double> farkas_row, farkas_column, ray, feasible_base;
+  CertificateInfo farkas_info, ray_info;
+  int64_t feasible_iteration = 0;
+  double certificate_margin = 0, certificate_stationarity = 0, certificate_scale = 0;
+  double ray_margin = 0, ray_row_violation = 0, ray_column_violation = 0;
+  Metrics metrics, reduced_metrics;
+  Timings times;
+  InputReport input;
+  Profile profile;
+  size_t peak_device_bytes = 0;  // Bytes allocated by the largest single solve/validation
+};
+SolveResult Solve(const HostLp& lp, const SolveOptions& options = {});
+// In-tree presolve, the same GPU Solve, CPU recovery, original GPU validation.
+SolveResult SolveHybrid(const HostLp& lp, const SolveOptions& options = {});
+// A GPU-only KKT check of the original model for a given primal/dual pair (no iteration
+// setup): the same four metrics, normalization, sense and offset as a solve's final check.
+SolveResult ValidateSolution(const HostLp& lp, const std::vector<double>& primal,
+                             const std::vector<double>& dual, double tolerance);
+// Native MPS reader (or a binary snapshot with options.snapshot_input), then Solve or, with
+// options.presolve, SolveHybrid. See model_io.h.
+SolveResult SolveMps(const std::string& filename, const SolveOptions& options = {});
 
 struct DeviceLp {
   int m, n, nnz;
