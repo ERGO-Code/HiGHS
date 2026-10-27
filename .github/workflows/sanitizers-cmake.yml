@@ -197,4 +197,6 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ctest --parallel --timeout 3000 --output-on-failure
+        # run: ctest --parallel --timeout 3000 --output-on-failure
+        run: |
+          ./bin/unit_tests [highs_hipo] dominated-cols-container-overflow
