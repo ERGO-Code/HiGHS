@@ -161,7 +161,8 @@ function(highs_build_openblas_windows_arm64 version result_var)
 
     # There is no runtime CPU detection for ARM64 on Windows (DYNAMIC_ARCH
     # always selects the baseline), so build the ARMV8 kernels directly.
-    # USE_TLS avoids a shared lock on every BLAS call that needs a work buffer.
+    # Do not set USE_TLS: with it, OpenBLAS's exit-time cleanup races its
+    # worker threads and intermittently segfaults on process exit.
     ExternalProject_Add(openblas_clang
         GIT_REPOSITORY "https://github.com/OpenMathLib/OpenBLAS.git"
         GIT_TAG "v${version}"
@@ -180,7 +181,6 @@ function(highs_build_openblas_windows_arm64 version result_var)
             -DBUILD_TESTING:BOOL=OFF
             -DTARGET:STRING=ARMV8
             -DDYNAMIC_ARCH:BOOL=OFF
-            -DUSE_TLS:STRING=1
             -DNOFORTRAN:BOOL=ON
             -DONLY_CBLAS:BOOL=ON
             -DNO_LAPACK:BOOL=ON
