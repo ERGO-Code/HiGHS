@@ -123,6 +123,9 @@ test-extras = ["test", "numpy"]
 build-verbosity = 1
 
 [tool.cibuildwheel.macos]
+# C++17 aligned new/delete needs macOS 10.13+; cp39-cp311 x86_64 default to 10.9
+# (overrides the top-level environment, so the vcpkg settings are repeated)
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.13", VCPKG_ROOT = "", VCPKG_INSTALLATION_ROOT = "" }
 repair-wheel-command = """
   delocate-wheel --require-archs {delocate_archs} \
     --ignore-missing-dependencies \
