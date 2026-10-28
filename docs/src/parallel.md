@@ -97,6 +97,44 @@ correct, but the options provide ways of overriding them.
 The extent to which parallelism is used in HiPO depends on the value of the
 [threads](@ref option-threads) option (see above).
 
+### [BLAS threads](@id parallel-blas-threads)
+
+HiPO calls BLAS routines for the dense linear algebra in the factorisation
+and solves. Many BLAS libraries are multi-threaded, and their threads are
+independent of the HiGHS [threads](@ref option-threads) option. Since HiPO
+already exploits parallelism at a higher level, also running OpenBLAS with
+multiple threads oversubscribes the cores and can slow HiPO down
+considerably, as well as making its behaviour non-deterministic. HiPO
+performs best when OpenBLAS runs in serial.
+
+When HiGHS is built with OpenBLAS, HiPO therefore sets the number of OpenBLAS
+threads to one before solving, and stops with an error if OpenBLAS does not
+then report using a single thread. This also applies when OpenBLAS is given
+directly via `BLAS_LIBRARIES` (see [Installation](@ref install-blas)), as long as
+the library name contains "openblas".
+
+The number of OpenBLAS threads is a __process-wide__ setting, so it affects
+any other component of the same process that uses the same OpenBLAS library.
+If HiGHS is one part of a larger application that relies on multi-threaded
+OpenBLAS, set the
+[hipo\_serial\_blas](@ref option-hipo-serial-blas) option to false. HiPO
+then leaves the number of OpenBLAS threads unchanged, and it is up to the
+user to choose it, for instance with the `OPENBLAS_NUM_THREADS` environment
+variable or by calling `openblas_set_num_threads`.
+
+HiPO only changes the number of OpenBLAS threads if it is not already one, and
+HiGHS instances in the same process never change it concurrently. However,
+`openblas_set_num_threads` is not thread safe, so other code in the process
+should not change the number of OpenBLAS threads while HiPO is running.
+
+For other BLAS libraries, HiPO does not change the number of threads:
+
+- Apple Accelerate: HiPO adjusts its own parallelism to suit Accelerate, so no
+  action is needed.
+- libblastrampoline (used by HiGHS.jl, see [HiGHS.jl](@ref HiGHS.jl)): if using OpenBLAS, call
+  `BLAS.set_num_threads(1)` in Julia before solving with HiPO.
+
+## MIP
 ## [MIP](@id parallel-mip)
 
 If the [parallel](@ref option-parallel) option is not set to "off", the MIP solver
