@@ -381,7 +381,7 @@ function(highs_configure_blas)
                     CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO
                     CMAKE_SHARED_LINKER_FLAGS_DEBUG
                     CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO)
-                string(REGEX REPLACE "-f(no-)?sanitize[-=][A-Za-z0-9,-]+" "" ${_highs_blas_flags_var} "${${_highs_blas_flags_var}}")
+                string(REGEX REPLACE "-f(no-)?sanitize[-=][A-Za-z0-9,=-]+" "" ${_highs_blas_flags_var} "${${_highs_blas_flags_var}}")
                 set(${_highs_blas_flags_var} "${${_highs_blas_flags_var}}")
             endforeach()
         endif()

@@ -11,6 +11,9 @@ env:
   # globals (e.g. shared_ptr's __tag) present in both unit_tests and
   # libhighs.so; level 1 still reports globals whose sizes differ
   ASAN_OPTIONS: detect_odr_violation=1
+  # UBSan is built with -fno-sanitize-recover=undefined, so the first error
+  # aborts the test; print a stack trace for it
+  UBSAN_OPTIONS: print_stacktrace=1
 
 jobs:
   gcc:
@@ -87,6 +90,52 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: ctest --parallel --timeout 3000 --output-on-failure
+
+  msvc:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        config: [Debug, RelWithDebInfo]
+        # MSVC only provides AddressSanitizer
+        sanitizer: [Address]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DALL_TESTS=ON
+
+      - name: Add ASan runtime to PATH
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: |
+          # clang_rt.asan_dynamic-x86_64.dll lives next to cl.exe and link.exe,
+          # which are not on PATH outside a developer command prompt. The
+          # Visual Studio generator does not cache CMAKE_CXX_COMPILER, so
+          # locate the directory from CMAKE_LINKER
+          LINKER_PATH=$(sed -n 's/^CMAKE_LINKER:[A-Z]*=//p' CMakeCache.txt)
+          dirname "$LINKER_PATH" >> $GITHUB_PATH
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: cmake --build . --config ${{ matrix.config }} --parallel
+
+      - name: Run
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ./${{ matrix.config }}/bin/highs.exe $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ctest --parallel --timeout 3000 --output-on-failure -C ${{ matrix.config }}
 
   no_hipo_macos:
     runs-on: ${{ matrix.os }}

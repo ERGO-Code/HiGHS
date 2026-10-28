@@ -690,17 +690,42 @@ if (NOT DEBUG_MEMORY STREQUAL "Off")
   endif()
 endif()
 
-if (DEBUG_MEMORY STREQUAL "Address")
+if (MSVC AND NOT DEBUG_MEMORY STREQUAL "Off")
+  # MSVC only provides AddressSanitizer (no UBSan, TSan, LSan or MSan)
+  if (NOT DEBUG_MEMORY STREQUAL "Address")
+    message(FATAL_ERROR "DEBUG_MEMORY=${DEBUG_MEMORY} is not supported with MSVC, only Address is.")
+  endif()
+  foreach(_highs_san_config DEBUG RELWITHDEBINFO)
+    foreach(_highs_san_lang C CXX)
+      # The run-time error checks /RTC1 (on by default in Debug) are
+      # incompatible with /fsanitize=address
+      string(REGEX REPLACE "/RTC[1csu]+" "" CMAKE_${_highs_san_lang}_FLAGS_${_highs_san_config}
+        "${CMAKE_${_highs_san_lang}_FLAGS_${_highs_san_config}}")
+      set (CMAKE_${_highs_san_lang}_FLAGS_${_highs_san_config}
+        "${CMAKE_${_highs_san_lang}_FLAGS_${_highs_san_config}} /fsanitize=address")
+    endforeach()
+    # Incremental linking is incompatible with /fsanitize=address
+    foreach(_highs_san_kind EXE SHARED)
+      string(REGEX REPLACE "/INCREMENTAL(:YES)?" "" CMAKE_${_highs_san_kind}_LINKER_FLAGS_${_highs_san_config}
+        "${CMAKE_${_highs_san_kind}_LINKER_FLAGS_${_highs_san_config}}")
+      set (CMAKE_${_highs_san_kind}_LINKER_FLAGS_${_highs_san_config}
+        "${CMAKE_${_highs_san_kind}_LINKER_FLAGS_${_highs_san_config}} /INCREMENTAL:NO")
+    endforeach()
+  endforeach()
+
+elseif (DEBUG_MEMORY STREQUAL "Address")
+  # -fno-sanitize-recover=undefined makes UBSan abort on the first error, so
+  # that undefined behaviour fails the tests instead of only being printed
   set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
-      -fsanitize=address,undefined \
+      -fsanitize=address,undefined -fno-sanitize-recover=undefined \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
   set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
-      -fsanitize=address,undefined \
+      -fsanitize=address,undefined -fno-sanitize-recover=undefined \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
-      -fsanitize=address,undefined \
+      -fsanitize=address,undefined -fno-sanitize-recover=undefined \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
 
@@ -710,15 +735,15 @@ if (DEBUG_MEMORY STREQUAL "Address")
   # add_link_options("-lubsan")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} \
-      -fsanitize=address,undefined \
+      -fsanitize=address,undefined -fno-sanitize-recover=undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
   set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} \
-      -fsanitize=address,undefined \
+      -fsanitize=address,undefined -fno-sanitize-recover=undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
-      -fsanitize=address,undefined \
+      -fsanitize=address,undefined -fno-sanitize-recover=undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
 
@@ -756,19 +781,19 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
         -fno-omit-frame-pointer ")
   else()
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
-        -fsanitize=leak,undefined \
+        -fsanitize=leak,undefined -fno-sanitize-recover=undefined \
         -fno-omit-frame-pointer")
     set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
-        -fsanitize=leak,undefined \
+        -fsanitize=leak,undefined -fno-sanitize-recover=undefined \
         -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
-        -fsanitize=leak,undefined \
+        -fsanitize=leak,undefined -fno-sanitize-recover=undefined \
         -fno-omit-frame-pointer")
-    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak,undefined \
+    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak,undefined -fno-sanitize-recover=undefined \
         -fno-omit-frame-pointer ")
-    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak,undefined \
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak,undefined -fno-sanitize-recover=undefined \
         -fno-omit-frame-pointer ")
-    set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
+    set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined -fno-sanitize-recover=undefined \
         -fno-omit-frame-pointer ")
   endif()
 elseif (DEBUG_MEMORY STREQUAL "Memory")
