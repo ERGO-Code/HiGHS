@@ -48,25 +48,35 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     for (const auto& nz : getRowVector(knapsack.row)) {
       oldRow.emplace_back(nz.index(), nz.value());
     }
-    HighsInt rhs = knapsack.capacity;
+    HighsCDouble rhs = knapsack.capacity;
     size_t i = 0;
     size_t j = 0;
     while (i != knapsack.terms.size()) {
       const HighsInt& col = knapsack.terms[i].literal / 2;
       const bool positive = knapsack.terms[i].literal % 2 == 1;
-      if (!positive) rhs -= knapsack.terms[i].weight;
+      const double weight = static_cast<double>(knapsack.terms[i].weight);
+      // Some term may have been fixed by clique table propagation
+      // and still have non-zero knapsack weight
+      if (model->col_lower_[col] == model->col_upper_[col])
+        rhs -= (positive ? weight : -weight) * model->col_lower_[col];
+      if (!positive) rhs -= weight;
       while (oldRow[j].first != col) {
         assert(j != oldRow.size());
         ++j;
       }
       const double delta =
-          oldRow[j].second -
-          static_cast<double>(positive ? knapsack.terms[i].weight
-                                       : -knapsack.terms[i].weight);
+          knapsack.direction *
+              static_cast<double>(positive ? weight : -weight) -
+          oldRow[j].second;
       if (delta != 0) {
         addToMatrix(knapsack.row, col, delta);
       }
       ++i;
+    }
+    for (const auto& nz : getRowVector(knapsack.row)) {
+      if (model->col_lower_[nz.index()] == model->col_upper_[nz.index()]) {
+        rhs += knapsack.direction * nz.value() * model->col_lower_[nz.index()];
+      }
     }
     if (knapsack.direction == 1)
       changeRowUpper(knapsack.row, static_cast<double>(rhs));
