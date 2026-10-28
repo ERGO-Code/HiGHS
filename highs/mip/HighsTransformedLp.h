@@ -206,7 +206,7 @@ class HighsTransformedLp {
   // transforms the given row into the transformed space
   bool transform(const std::vector<HighsInt>& inds,
                  const std::vector<double>& vals, HighsCDouble rhs,
-                 TransformedRow& transformedRow, bool& integralPositive,
+                 TransformedRow& transformedRow, bool& integersPositive,
                  bool preferVbds = false, bool enforceSameBds = false);
 
   // transforms the given row back into the original space

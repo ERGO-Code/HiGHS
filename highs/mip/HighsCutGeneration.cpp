@@ -10,7 +10,6 @@
 #include "../extern/pdqsort/pdqsort.h"
 #include "mip/HighsDomain.h"
 #include "mip/HighsMipSolverData.h"
-#include "mip/HighsTransformedLp.h"
 #include "util/HighsIntegers.h"
 
 HighsCutGeneration::HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
@@ -1014,8 +1013,9 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
                                      double rhs, bool onlyInitialCMIRScale) {
 #if 0
   if (vals.size() > 1) {
-    bool intsPositive = true;
-    if (!transLp.transform(inds, vals, rhs, cut, intsPositive)) return false;
+    bool integersPositive = true;
+    if (!transLp.transform(inds, vals, rhs, cut, integersPositive))
+      return false;
 
     bool hasUnboundedInts = false;
     bool hasGeneralInts = false;
@@ -1046,8 +1046,8 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   }
 #endif
 
-  bool intsPositive = true;
-  if (!transLp.transform(inds, vals, rhs, cut, intsPositive)) return false;
+  bool integersPositive = true;
+  if (!transLp.transform(inds, vals, rhs, cut, integersPositive)) return false;
 
   bool hasUnboundedInts = false;
   bool hasGeneralInts = false;
@@ -1063,7 +1063,7 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
   // the lifted inequalities instead of cmir. We need to make sure, however,
   // that the cut values are transformed to positive coefficients first, which
   // we do below.
-  if (!hasUnboundedInts && !intsPositive) {
+  if (!hasUnboundedInts && !integersPositive) {
     for (TransformedVar& var : cut.vars) {
       if (var.val > 0 || !var.integral) continue;
 

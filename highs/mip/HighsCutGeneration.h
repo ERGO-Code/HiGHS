@@ -26,8 +26,8 @@ class HighsLpRelaxation;
 class HighsCutPool;
 class HighsDomain;
 
-/// Helper class to compute single-row relaxations from the current LP
-/// relaxation by substituting bounds and aggregating rows
+/// Helper class to generate cuts from base inequalities in the transformed
+/// space and to add them to the cut pool
 class HighsCutGeneration {
  private:
   using Row = HighsTransformedLp::Row;

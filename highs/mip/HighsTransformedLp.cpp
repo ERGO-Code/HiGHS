@@ -487,7 +487,7 @@ bool HighsTransformedLp::transform(const std::vector<HighsInt>& inds,
     if (var.integral) integersPositive = integersPositive && var.val > 0;
   }
 
-  transformedRow.rhs = static_cast<double>(tmpRhs);
+  transformedRow.rhs = tmpRhs;
 
   if (numNz == 0 && transformedRow.rhs >= -mip.mipdata_->feastol) return false;
 

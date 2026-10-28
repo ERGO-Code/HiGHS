@@ -121,8 +121,8 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                      [](double x) { return -x; });
     }
 
-    bool integralPositive = false;
-    if (!transLp.transform(inds, vals, rowRhs, transformedRow, integralPositive,
+    bool integersPositive = false;
+    if (!transLp.transform(inds, vals, rowRhs, transformedRow, integersPositive,
                            true))
       continue;
     const double rhs = static_cast<double>(transformedRow.rhs);
@@ -191,9 +191,6 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   }
 
   if (integralScales.empty() || numNonzeroRhs == 0) return;
-
-  std::vector<HighsInt> tmpinds;
-  std::vector<double> tmpvals;
 
   HighsHashTable<std::vector<HighsGFkSolve::SolutionEntry>> usedWeights;
   // std::unordered_set<std::vector<HighsGFkSolve::SolutionEntry>,
