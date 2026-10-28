@@ -162,11 +162,11 @@ void PDLPSolver::preprocessLp() {
     logger_.info("Original LP matrix must be in column-wise format,");
   }
 
-  lp_.offset_ = original_lp_->offset_;
-
   HighsInt num_new_cols = 0;
   HighsInt nEqs = 0;
+  HighsInt num_free_rows = 0;
   sense_origin_ = (original_lp_->sense_ == ObjSense::kMinimize) ? 1 : -1;
+  lp_.offset_ = original_lp_->offset_ * sense_origin_;
   constraint_types_.resize(nRows_orig);
 
   // 1. First pass: Classify constraints and count slack variables needed
@@ -189,15 +189,14 @@ void PDLPSolver::preprocessLp() {
       constraint_types_[i] = LEQ;
     } else {
       constraint_types_[i] = FREE;
-      num_new_cols++;
-      nEqs++;
+      num_free_rows++;
     }
   }
 
   // 2. Set new dimensions
   HighsLp& processed_lp = lp_;
   processed_lp.num_col_ = nCols_orig + num_new_cols;
-  processed_lp.num_row_ = nRows_orig;
+  processed_lp.num_row_ = nRows_orig - num_free_rows;  // Free rows are removed
   original_num_col_ = nCols_orig;
   constraint_new_idx_.resize(nRows_orig);
 
@@ -207,37 +206,39 @@ void PDLPSolver::preprocessLp() {
   processed_lp.row_lower_.resize(processed_lp.num_row_);
   processed_lp.row_upper_.resize(processed_lp.num_row_);
 
-  // 3. Determine row permutation: EQ/BOUND/FREE first, then LEQ/GEQ
+  // 3. Determine row permutation: EQ/BOUND first, then LEQ/GEQ； free rows are
+  // removed
   HighsInt eq_idx = 0;
   HighsInt ineq_idx = nEqs;
   for (HighsInt i = 0; i < nRows_orig; ++i) {
-    if (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
-        constraint_types_[i] == FREE) {
+    if (constraint_types_[i] == EQ || constraint_types_[i] == BOUND) {
       constraint_new_idx_[i] = eq_idx++;
+    } else if (constraint_types_[i] == FREE) {
+      constraint_new_idx_[i] = -1;  // Mark free rows with -1
     } else {
       constraint_new_idx_[i] = ineq_idx++;
     }
   }
 
   // 4. Create is_equality_row_ vector based on NEW ordering
-  is_equality_row_.resize(nRows_orig, false);
+  is_equality_row_.resize(processed_lp.num_row_, false);
   for (HighsInt i = 0; i < nRows_orig; ++i) {
+    if (constraint_types_[i] == FREE) continue;  // Skip free rows
     HighsInt new_row_idx = constraint_new_idx_[i];
     is_equality_row_[new_row_idx] =
-        (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
-         constraint_types_[i] == FREE);
+        (constraint_types_[i] == EQ || constraint_types_[i] == BOUND);
   }
 
   // 5. Populate costs and bounds for original and new slack variables
   for (HighsInt i = 0; i < nCols_orig; ++i) {
-    processed_lp.col_cost_[i] = original_lp_->col_cost_[i];
+    processed_lp.col_cost_[i] = original_lp_->col_cost_[i] * sense_origin_;
     processed_lp.col_lower_[i] = original_lp_->col_lower_[i];
     processed_lp.col_upper_[i] = original_lp_->col_upper_[i];
   }
 
   HighsInt current_slack_col = nCols_orig;
   for (HighsInt i = 0; i < nRows_orig; ++i) {
-    if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
+    if (constraint_types_[i] == BOUND) {
       processed_lp.col_cost_[current_slack_col] = 0.0;
       processed_lp.col_lower_[current_slack_col] = original_lp_->row_lower_[i];
       processed_lp.col_upper_[current_slack_col] = original_lp_->row_upper_[i];
@@ -247,6 +248,7 @@ void PDLPSolver::preprocessLp() {
 
   // 6. Set the new RHS (row bounds) in PERMUTED order
   for (HighsInt i = 0; i < nRows_orig; ++i) {
+    if (constraint_types_[i] == FREE) continue;  // Skip free rows
     HighsInt new_row_idx = constraint_new_idx_[i];
     switch (constraint_types_[i]) {
       case EQ:
@@ -263,11 +265,12 @@ void PDLPSolver::preprocessLp() {
         processed_lp.row_upper_[new_row_idx] = kHighsInf;
         break;
       case BOUND:
-      case FREE:
         // Becomes ax - z = 0
         processed_lp.row_lower_[new_row_idx] = 0.0;
         processed_lp.row_upper_[new_row_idx] = 0.0;
         break;
+      case FREE:
+        break;  // Removed above; never reaches here
     }
   }
 
@@ -298,6 +301,12 @@ void PDLPSolver::preprocessLp() {
     for (HighsInt el = original_matrix.start_[col];
          el < original_matrix.start_[col + 1]; ++el) {
       HighsInt old_row = original_matrix.index_[el];
+
+      // Skip free rows
+      if (constraint_types_[old_row] == FREE) {
+        continue;
+      }
+
       HighsInt new_row = constraint_new_idx_[old_row];
       double val = original_matrix.value_[el];
 
@@ -324,7 +333,7 @@ void PDLPSolver::preprocessLp() {
   // Add slack variable columns
   current_slack_col = nCols_orig;
   for (HighsInt i = 0; i < nRows_orig; ++i) {
-    if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
+    if (constraint_types_[i] == BOUND) {
       HighsInt row_idx = constraint_new_idx_[i];
       processed_matrix.index_.push_back(row_idx);
       processed_matrix.value_.push_back(-1.0);
@@ -365,7 +374,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
     return PostSolveRetcode::DIMENSION_MISMATCH;
   }
 
-  if (x_current_.empty() || y_current_.empty()) {
+  if (x_current_.empty() || (y_current_.empty() && lp_.num_row_ > 0)) {
     return PostSolveRetcode::INVALID_SOLUTION;
   }
 
@@ -416,14 +425,19 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   for (HighsInt orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
     HighsInt reordered_row = constraint_new_idx_[orig_row];
 
+    if (constraint_types_[orig_row] == FREE) {
+      solution.row_dual[orig_row] = 0.0;  // Free rows have zero duals
+      continue;
+    }
+
     // Get the dual value from the reordered position
     double dual_value = y_reordered[reordered_row];
 
     // Apply sign correction for LEQ constraints
     if (constraint_types_[orig_row] == LEQ) {
-      solution.row_dual[orig_row] = -dual_value;
+      solution.row_dual[orig_row] = -dual_value * sense_origin_;
     } else {
-      solution.row_dual[orig_row] = dual_value;
+      solution.row_dual[orig_row] = dual_value * sense_origin_;
     }
   }
 

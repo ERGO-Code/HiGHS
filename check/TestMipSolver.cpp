@@ -2538,7 +2538,7 @@ TEST_CASE("issue-3433", "[highs_test_mip_solver]") {
     highs.clearSolver();
     solve(highs, kHighsOnString, require_model_status, optimal_objective);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3451", "[highs_test_mip_solver]") {
@@ -2556,7 +2556,7 @@ TEST_CASE("issue-3451", "[highs_test_mip_solver]") {
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = -135.865250363;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3461", "[highs_test_mip_solver]") {
