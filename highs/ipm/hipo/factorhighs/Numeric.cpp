@@ -37,7 +37,6 @@ Int Numeric::prepare() {
   if (!sn_columns_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
   SH_.reset(new HybridSolveHandler(*S_, *sn_columns_, swaps_, any_swaps_,
                                    pivot_2x2_, *data_, *options_));
-  if (!SH_) return kRetGeneric;
   if (options_->pivoting) computeAnySwaps();
   return kRetOk;
 }

@@ -19,7 +19,6 @@ enum Error {
   kErrorNan,
   kErrorNegativeComponent,
   kErrorInvalidPointer,
-  kErrorFailedAllocation,
 };
 
 enum Status {
@@ -71,7 +70,6 @@ inline std::string errorString(Error error) {
       {kErrorNan, "NaN detected"},
       {kErrorNegativeComponent, "Negative component detected"},
       {kErrorInvalidPointer, "Invalid pointer"},
-      {kErrorFailedAllocation, "Failed allocation"},
   };
 
   auto found = status_map.find(error);
