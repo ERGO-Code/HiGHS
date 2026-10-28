@@ -1,7 +1,7 @@
-#include "sort.h"
-
 #include <algorithm>
 #include <functional>
+
+#include "metislib.h"
 
 extern "C" void isortd(size_t n, idx_t* base) {
   std::sort(base, base + n, std::greater<idx_t>());
