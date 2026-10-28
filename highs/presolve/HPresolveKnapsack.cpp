@@ -207,9 +207,9 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     // larger than minWeight (either some single item larger than minWeight or
     // the two smallest items together), then its weight can be increased to
     // capacity - minWeight.
-    HighsInt minWeight = kHighsIInf;
-    HighsInt secondWeight = kHighsIInf;
-    HighsInt secondUniqueMinWeight = kHighsIInf;
+    int64_t minWeight = kHighsIInf;
+    int64_t secondWeight = kHighsIInf;
+    int64_t secondUniqueMinWeight = kHighsIInf;
     for (const auto& term : knapsack.terms) {
       if (term.weight < minWeight) {
         secondWeight = minWeight;
