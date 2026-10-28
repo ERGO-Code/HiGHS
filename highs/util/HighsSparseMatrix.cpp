@@ -131,6 +131,7 @@ void HighsSparseMatrix::ensureColwise() {
 
   HighsInt num_nz = numNz();
   *this = oppositeFormat();
+  (void)num_nz;  // avoid unused variable warning
 
   assert(isColwise());
   assert(numNz() == num_nz);
@@ -139,12 +140,15 @@ void HighsSparseMatrix::ensureColwise() {
   assert(static_cast<HighsInt>(value_.size()) >= numNz());
 }
 void HighsSparseMatrix::ensureRowwise() {
+  // If a change of format is needed, the result of oppositeFormat() is built
+  // in a temporary and move-assigned into *this, so no extra copy is made.
   assert(formatOk());
 
   if (isRowwise()) return;
 
   HighsInt num_nz = numNz();
   *this = oppositeFormat();
+  (void)num_nz;  // avoid unused variable warning
 
   assert(isRowwise());
   assert(numNz() == num_nz);
