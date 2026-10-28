@@ -111,9 +111,7 @@ void report(const std::string message, const HighsLp& lp,
   printf(" Obj %11.4g\n", objective);
 }
 
-const std::vector<std::string> solvers{kPdlpString,
-                                       // kHiPdlpString,
-                                       kIpxString
+const std::vector<std::string> solvers{kPdlpString, kHiPdlpString, kIpxString
 #ifdef HIPO
                                        ,
                                        kHipoString
@@ -227,5 +225,5 @@ TEST_CASE("issue-3459", "[highs_crossover]") {
     testSolvers("with free row");
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

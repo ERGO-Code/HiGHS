@@ -1979,7 +1979,7 @@ TEST_CASE("initial-sweep-empty-fixed-col", "[highs_test_presolve]") {
   REQUIRE(h.getInfo().objective_function_value == 7);
   REQUIRE(h.getSolution().col_value[1] == 2);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {

@@ -2580,3 +2580,37 @@ TEST_CASE("no-modification-on-error", "[highs_data]") {
 
   REQUIRE((lp == highs_lp));
 }
+
+/*
+#include <chrono>
+TEST_CASE("issue-3476", "[highs_data]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  HighsInt num_col = 10;
+  std::chrono::_V2::system_clock timer;
+  double prev_tt0 = 1.0;
+  double prev_tt1 = 1.0;
+  for (;;) {
+    double tt0 =
+-std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) h.addVar();
+    tt0 +=
+std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    printf("For num_col = %9d: %-32s time taken is %9.4f (ratio = %4.0f)\n",
+           int(num_col), "addVar", tt0, tt0/prev_tt0);
+
+    double tt1 =
+-std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+       h.changeColIntegrality(iCol, HighsVarType::kContinuous);
+    tt1 +=
+std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    printf("For num_col = %9d: %-32s time taken is %9.4f (ratio = %4.0f)\n",
+           int(num_col), "changeColIntegrality", tt1, tt1/prev_tt1);
+    num_col *= 4;
+    prev_tt0 = tt0;
+    prev_tt1 = tt1;
+    if (num_col > 20000000) break;
+  }
+}
+*/
