@@ -1776,43 +1776,82 @@ TEST_CASE("issue-2900", "[highs_test_mip_solver]") {
 
 TEST_CASE("redcost-fixing-large-bounds", "[highs_test_mip_solver]") {
   // Regression: addRootRedcost must not stall when an integer variable
-  // has a finite bound exceeding kHighsIInf (e.g. 1e19 > 9.2e18).
-  HighsLp lp;
-  lp.num_col_ = 1;
-  lp.num_row_ = 0;
-  lp.sense_ = ObjSense::kMinimize;
-  lp.offset_ = 0;
-  lp.col_cost_ = {1.0};
-  lp.col_lower_ = {0.0};
-  lp.col_upper_ = {1e19};
-  lp.integrality_ = {HighsVarType::kInteger};
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
-  lp.a_matrix_.start_ = {0, 0};
+  // has a finite bound exceeding kHighsIInf (e.g. 1e19 > 9.2e18), and must
+  // not cast bounds outside the range of HighsInt (undefined behaviour)
+  auto getLurkingBounds = [&](double lower, double upper, double redcost) {
+    HighsLp lp;
+    lp.num_col_ = 1;
+    lp.num_row_ = 0;
+    lp.sense_ = ObjSense::kMinimize;
+    lp.offset_ = 0;
+    lp.col_cost_ = {redcost};
+    lp.col_lower_ = {lower};
+    lp.col_upper_ = {upper};
+    lp.integrality_ = {HighsVarType::kInteger};
+    lp.a_matrix_.format_ = MatrixFormat::kColwise;
+    lp.a_matrix_.start_ = {0, 0};
 
-  Highs highs;
-  highs.setOptionValue("output_flag", false);
-  highs.passModel(lp);
+    Highs highs;
+    highs.setOptionValue("output_flag", false);
+    highs.passModel(lp);
 
-  HighsCallback callback(&highs);
-  const HighsOptions& options = highs.getOptions();
-  HighsSolution solution;
-  HighsMipSolver mipsolver(callback, options, lp, solution);
-  mipsolver.mipdata_ =
-      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
-  mipsolver.mipdata_->feastol = 1e-6;
-  mipsolver.mipdata_->lower_bound = 0.0;
-  mipsolver.mipdata_->setupDomainPropagation();
-  mipsolver.mipdata_->integral_cols.push_back(0);
+    HighsCallback callback(&highs);
+    const HighsOptions& options = highs.getOptions();
+    HighsSolution solution;
+    HighsMipSolver mipsolver(callback, options, lp, solution);
+    mipsolver.mipdata_ =
+        std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+    mipsolver.mipdata_->feastol = 1e-6;
+    mipsolver.mipdata_->lower_bound = 0.0;
+    mipsolver.mipdata_->setupDomainPropagation();
+    mipsolver.mipdata_->integral_cols.push_back(0);
 
-  std::vector<double> lpredcost = {1.0};
-  double lpobjective = 0.0;
+    std::vector<double> lpredcost = {redcost};
+    double lpobjective = 0.0;
 
-  mipsolver.mipdata_->redcostfixing.addRootRedcost(mipsolver, lpredcost,
-                                                   lpobjective);
+    mipsolver.mipdata_->redcostfixing.addRootRedcost(mipsolver, lpredcost,
+                                                     lpobjective);
 
-  auto lurkingBounds = mipsolver.mipdata_->redcostfixing.getLurkingBounds(
-      mipsolver, mipsolver.mipdata_->getDomain());
+    return mipsolver.mipdata_->redcostfixing.getLurkingBounds(
+        mipsolver, mipsolver.mipdata_->getDomain());
+  };
+
+  // 1. finite bounds: lurking bounds lie between the bounds
+  auto lurkingBounds = getLurkingBounds(0.0, 10.0, 1.0);
   REQUIRE(!lurkingBounds.empty());
+  for (const auto& lurkingBound : lurkingBounds) {
+    REQUIRE(lurkingBound.second.boundtype == HighsBoundType::kUpper);
+    REQUIRE(lurkingBound.second.boundval >= 0.0);
+    REQUIRE(lurkingBound.second.boundval <= 9.0);
+  }
+  lurkingBounds = getLurkingBounds(-10.0, 0.0, -1.0);
+  REQUIRE(!lurkingBounds.empty());
+  for (const auto& lurkingBound : lurkingBounds) {
+    REQUIRE(lurkingBound.second.boundtype == HighsBoundType::kLower);
+    REQUIRE(lurkingBound.second.boundval >= -9.0);
+    REQUIRE(lurkingBound.second.boundval <= 0.0);
+  }
+
+  // 2. other bound exceeding kHighsIInf: treated as infinite
+  REQUIRE(!getLurkingBounds(0.0, 1e19, 1.0).empty());
+  REQUIRE(!getLurkingBounds(-1e19, 0.0, -1.0).empty());
+
+  // 3. bound that cannot be cast to HighsInt (too large or infinite): no
+  // lurking bounds
+  REQUIRE(getLurkingBounds(1e16, 1e19, 1.0).empty());
+  REQUIRE(getLurkingBounds(-1e19, -1e16, -1.0).empty());
+  REQUIRE(getLurkingBounds(-kHighsInf, 0.0, 1.0).empty());
+  REQUIRE(getLurkingBounds(0.0, kHighsInf, -1.0).empty());
+
+  // 4. bound close to kHighsIInf and other bound treated as infinite:
+  // lurking bounds stay in the range of HighsInt (none for 64-bit HighsInt,
+  // since the bound is too large)
+  for (const auto& lurkingBound :
+       getLurkingBounds(static_cast<double>(kHighsIInf - 10), 1e19, 1.0))
+    REQUIRE(lurkingBound.second.boundval <= static_cast<double>(kHighsIInf));
+  for (const auto& lurkingBound :
+       getLurkingBounds(-1e19, -static_cast<double>(kHighsIInf - 10), -1.0))
+    REQUIRE(lurkingBound.second.boundval >= -static_cast<double>(kHighsIInf));
 }
 
 TEST_CASE("pr-3261", "[highs_test_mip_solver]") {
