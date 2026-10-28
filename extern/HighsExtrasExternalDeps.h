@@ -14,42 +14,9 @@
 #include <tuple>
 
 #include "HighsExtrasApiBinding.h"
+#include "HighsMetis.h"
 #include "amd/amd.h"
 #include "blas/mycblas.h"
-#ifdef HIPO
-#include "metis/metis.h"
-#else
-// Without HIPO, METIS is not compiled and extern/metis may be absent (e.g.
-// SciPy trims it from its sdist), so declare only the part of the METIS
-// interface used by HiGHS. This keeps HighsExtrasApi layout-compatible with
-// an extras library built with HIPO. Must match extern/metis/metis.h
-#include <stdint.h>
-
-#include "HConfig.h"
-
-#ifdef HIGHSINT64
-typedef int64_t idx_t;
-#else
-typedef int32_t idx_t;
-#endif
-
-#define METIS_NOPTIONS 13
-
-enum { METIS_OK = 1 };
-
-enum {
-  METIS_OPTION_DBGLVL = 3,
-  METIS_OPTION_SEED = 5,
-  METIS_OPTION_NO2HOP = 12,
-};
-
-extern "C" {
-int Highs_METIS_NodeND(idx_t* nvtxs, const idx_t* xadj, const idx_t* adjncy,
-                       idx_t* vwgt, idx_t* options, idx_t* perm, idx_t* iperm);
-
-int Highs_METIS_SetDefaultOptions(idx_t* options);
-}
-#endif
 #include "rcm/rcm.h"
 
 //
