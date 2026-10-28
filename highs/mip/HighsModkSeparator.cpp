@@ -82,11 +82,10 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   scaleVals.reserve(lp.num_col_);
 
   HighsTransformedLp::TransformedRow transformedRow;
-  double rhs;
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
   HighsInt numNonzeroRhs = 0;
-  HighsInt maxIntRowLen = 1000 + 0.1 * lp.num_col_;
+  HighsInt maxIntRowLen = 1000 + lp.num_col_ / 10;
 
   for (HighsInt row = 0; row != lp.num_row_; ++row) {
     if (skipRow[row]) continue;
@@ -108,15 +107,14 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     lpRelaxation.getRow(row, rowlen, rowinds, rowvals);
 
+    const double rowRhs = leqRow ? lp.row_upper_[row] : -lp.row_lower_[row];
     if (leqRow) {
-      rhs = lp.row_upper_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.assign(rowvals, rowvals + rowlen);
     } else {
       assert(lpSolution.row_value[row] - lp.row_lower_[row] <=
              mipsolver.mipdata_->feastol);
 
-      rhs = -lp.row_lower_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.resize(rowlen);
       std::transform(rowvals, rowvals + rowlen, vals.begin(),
@@ -124,10 +122,10 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     }
 
     bool integralPositive = false;
-    if (!transLp.transform(inds, vals, rhs, transformedRow, integralPositive,
+    if (!transLp.transform(inds, vals, rowRhs, transformedRow, integralPositive,
                            true))
       continue;
-    rhs = static_cast<double>(transformedRow.rhs);
+    const double rhs = static_cast<double>(transformedRow.rhs);
 
     rowlen = transformedRow.vars.size();
     if (rowlen > maxIntRowLen) {
@@ -215,29 +213,28 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     assert(lpAggregator.isEmpty());
     for (const auto& w : weights) {
       double weight = integralScales[w.index].second *
-                      (double((w.weight * (k - 1)) % k) / k);
+                      (static_cast<double>((w.weight * (k - 1)) % k) / k);
       HighsInt row = integralScales[w.index].first;
       lpAggregator.addRow(row, weight);
     }
 
     lpAggregator.getCurrentAggregation(inds, vals, false);
-
-    rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs, true);
+    // the aggregation of rows (including their slacks) has right-hand side 0
+    cutGen.generateCut(transLp, inds, vals, 0.0, true);
 
     if (k != 2) {
       lpAggregator.clear();
       for (const auto& w : weights) {
-        double weight = integralScales[w.index].second * (double(w.weight) / k);
+        double weight = integralScales[w.index].second *
+                        (static_cast<double>(w.weight) / k);
         HighsInt row = integralScales[w.index].first;
         lpAggregator.addRow(row, weight);
       }
     }
 
     lpAggregator.getCurrentAggregation(inds, vals, true);
-
-    rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs, true);
+    // the aggregation of rows (including their slacks) has right-hand side 0
+    cutGen.generateCut(transLp, inds, vals, 0.0, true);
 
     lpAggregator.clear();
   };
