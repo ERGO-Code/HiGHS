@@ -25,7 +25,7 @@ HighsCutGeneration::HighsCutGeneration(const HighsLpRelaxation& lpRelaxation,
 bool HighsCutGeneration::determineCover(bool lpSol) {
   if (cut.rhs <= 10 * feastol) return false;
 
-  const HighsInt numVars = cut.vars.size();
+  const HighsInt numVars = static_cast<HighsInt>(cut.vars.size());
   cover.clear();
   cover.reserve(numVars);
 
@@ -137,7 +137,7 @@ bool HighsCutGeneration::determineCover(bool lpSol) {
 
 void HighsCutGeneration::separateLiftedKnapsackCover() {
   const HighsInt coversize = cover.size();
-  const HighsInt numVars = cut.vars.size();
+  const HighsInt numVars = static_cast<HighsInt>(cut.vars.size());
 
   std::vector<double> S;
   S.resize(coversize);
@@ -226,7 +226,7 @@ bool HighsCutGeneration::separateLiftedMixedBinaryCover() {
   integralCoefficients = false;
 
   HighsInt coversize = cover.size();
-  const HighsInt numVars = cut.vars.size();
+  const HighsInt numVars = static_cast<HighsInt>(cut.vars.size());
   std::vector<double> S;
   S.resize(coversize);
   std::vector<HighsBool> coverflag;
@@ -296,7 +296,7 @@ bool HighsCutGeneration::separateLiftedMixedIntegerCover() {
   integralCoefficients = false;
 
   HighsInt coversize = cover.size();
-  const HighsInt numVars = cut.vars.size();
+  const HighsInt numVars = static_cast<HighsInt>(cut.vars.size());
 
   HighsInt l = -1;
 
@@ -546,7 +546,7 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   HighsCDouble continuouscontribution = 0.0;
   HighsCDouble continuoussqrnorm = 0.0;
 
-  const HighsInt numVars = cut.vars.size();
+  const HighsInt numVars = static_cast<HighsInt>(cut.vars.size());
   deltas.clear();
   deltas.reserve(numVars + 3);
   integerinds.clear();
@@ -899,7 +899,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
   hasGeneralInts = false;
   HighsInt numZeros = 0;
 
-  const HighsInt numVars = cut.vars.size();
+  const HighsInt numVars = static_cast<HighsInt>(cut.vars.size());
   HighsCDouble maxact = -feastol;
   initialScale = computeScale(cut.maxAbsVal());
   cut.scale(initialScale);
@@ -1023,25 +1023,25 @@ bool HighsCutGeneration::generateCut(HighsTransformedLp& transLp,
     // printf("before preprocessing of base inequality:\n");
     Row checkRow;
     cut.store(checkRow);
-    checkNumerics(checkRow.vals.data(), checkRow.vals.size(),
+    checkNumerics(checkRow.vals.data(), static_cast<HighsInt>(checkRow.vals.size()),
                   static_cast<double>(checkRow.rhs));
     if (!preprocessBaseInequality(hasUnboundedInts, hasGeneralInts,
                                   hasContinuous))
       return false;
     cut.store(checkRow);
     // printf("after preprocessing of base inequality:\n");
-    checkNumerics(checkRow.vals.data(), checkRow.vals.size(),
+    checkNumerics(checkRow.vals.data(), static_cast<HighsInt>(checkRow.vals.size()),
                   static_cast<double>(checkRow.rhs));
 
     if (!transLp.untransform(checkRow)) return false;
 
     // printf("after untransform of base inequality:\n");
-    checkNumerics(checkRow.vals.data(), checkRow.vals.size(),
+    checkNumerics(checkRow.vals.data(), static_cast<HighsInt>(checkRow.vals.size()),
                   static_cast<double>(checkRow.rhs));
 
     // finally check whether the cut is violated
     lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-        checkRow.inds.data(), checkRow.vals.data(), checkRow.inds.size(),
+        checkRow.inds.data(), checkRow.vals.data(), static_cast<HighsInt>(checkRow.inds.size()),
         static_cast<double>(checkRow.rhs));
   }
 #endif
@@ -1095,7 +1095,8 @@ bool HighsCutGeneration::generateConflict(
     const std::vector<HighsInt>& proofinds,
     const std::vector<double>& proofvals, double proofrhs) {
   lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-      proofinds.data(), proofvals.data(), proofinds.size(), proofrhs);
+      proofinds.data(), proofvals.data(),
+      static_cast<HighsInt>(proofinds.size()), proofrhs);
 
   cut.load(proofinds, proofvals, proofrhs);
 
@@ -1183,8 +1184,8 @@ bool HighsCutGeneration::postprocessAndAddCut(Row& row,
   // check cut
   if (!isConflict)
     lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-        row.inds.data(), row.vals.data(), row.inds.size(),
-        static_cast<double>(row.rhs));
+        row.inds.data(), row.vals.data(),
+        static_cast<HighsInt>(row.inds.size()), static_cast<double>(row.rhs));
 
   // apply cut postprocessing including scaling and removal of small
   // coefficients
@@ -1194,7 +1195,8 @@ bool HighsCutGeneration::postprocessAndAddCut(Row& row,
   // check cut again after post-processing
   if (!isConflict)
     lpRelaxation.getMipSolver().mipdata_->debugSolution.checkCut(
-        row.inds.data(), row.vals.data(), row.inds.size(), rhs);
+        row.inds.data(), row.vals.data(),
+        static_cast<HighsInt>(row.inds.size()), rhs);
 
   // finally determine the violation of the cut in the original space
   if (checkViolation &&
@@ -1203,15 +1205,15 @@ bool HighsCutGeneration::postprocessAndAddCut(Row& row,
 
   // tighten coefficients
   globaldom.tightenCoefficients(row.inds.data(), row.vals.data(),
-                                row.inds.size(), rhs);
+                                static_cast<HighsInt>(row.inds.size()), rhs);
   row.rhs = rhs;
 
   // if the cut is violated by a small factor above the feasibility
   // tolerance, add it to the cutpool
   HighsInt cutindex = cutpool.addCut(
       lpRelaxation.getMipSolver(), row.inds.data(), row.vals.data(),
-      row.inds.size(), rhs, integralSupport && integralCoefficients, true, true,
-      isConflict);
+      static_cast<HighsInt>(row.inds.size()), rhs,
+      integralSupport && integralCoefficients, true, true, isConflict);
 
   // only return true if cut was accepted by the cutpool, i.e. not a duplicate
   // of a cut already in the pool

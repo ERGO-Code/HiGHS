@@ -153,7 +153,7 @@ class HighsTransformedLp {
     // copies the given indices, values, and right hand side
     void load(const std::vector<HighsInt>& inds,
               const std::vector<double>& vals, HighsCDouble rhs_) {
-      const HighsInt numVars = inds.size();
+      const HighsInt numVars = static_cast<HighsInt>(inds.size());
       vars.resize(numVars);
       for (HighsInt i = 0; i != numVars; ++i) {
         vars[i].col = inds[i];
@@ -164,7 +164,7 @@ class HighsTransformedLp {
 
     // copies the indices, values, and right hand side to the given row
     void store(Row& row) const {
-      const HighsInt numVars = vars.size();
+      const HighsInt numVars = static_cast<HighsInt>(vars.size());
       row.inds.resize(numVars);
       row.vals.resize(numVars);
       for (HighsInt i = 0; i != numVars; ++i) {

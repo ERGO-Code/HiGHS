@@ -127,8 +127,7 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       continue;
     const double rhs = static_cast<double>(transformedRow.rhs);
 
-    rowlen = transformedRow.vars.size();
-    if (rowlen > maxIntRowLen) {
+    if (static_cast<HighsInt>(transformedRow.vars.size()) > maxIntRowLen) {
       HighsInt intRowLen = 0;
       for (const auto& var : transformedRow.vars) {
         if (var.solval <= mipsolver.mipdata_->feastol) continue;

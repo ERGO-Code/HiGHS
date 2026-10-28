@@ -144,7 +144,7 @@ bool HighsTransformedLp::transform(const std::vector<HighsInt>& inds,
   // copy the row into the transformed row
   transformedRow.load(inds, vals, rhs);
   std::vector<TransformedVar>& vars = transformedRow.vars;
-  HighsInt numNz = vars.size();
+  HighsInt numNz = static_cast<HighsInt>(vars.size());
   HighsCDouble tmpRhs = transformedRow.rhs;
 
   auto getLb = [&](HighsInt col) {
@@ -389,7 +389,7 @@ bool HighsTransformedLp::transform(const std::vector<HighsInt>& inds,
     }
 
     const std::vector<HighsInt>& nonzeros = vectorsum.getNonzeros();
-    numNz = nonzeros.size();
+    numNz = static_cast<HighsInt>(nonzeros.size());
 
     vars.resize(numNz);
     for (HighsInt j = 0; j != numNz; ++j) {
