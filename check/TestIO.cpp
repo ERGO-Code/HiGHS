@@ -39,7 +39,7 @@ TEST_CASE("run-callback", "[highs_io]") {
   highs.readModel(filename);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("log-callback", "[highs_io]") {
@@ -159,5 +159,5 @@ TEST_CASE("console-file-callback-log", "[highs_io]") {
 
   std::remove(test_highs_log.c_str());
   std::remove(test_user_log.c_str());
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

@@ -409,6 +409,7 @@ struct HighsOptionsStruct {
   HighsInt hipo_block_size;
   HighsInt hipo_parallel_force;
   HighsInt hipo_parallel_forbid;
+  bool hipo_serial_blas;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -595,6 +596,7 @@ struct HighsOptionsStruct {
         hipo_block_size(0),
         hipo_parallel_force(0),
         hipo_parallel_forbid(0),
+        hipo_serial_blas(true),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -1367,6 +1369,13 @@ class HighsOptions : public HighsOptionsStruct {
                             static_cast<int>(hipo::ParallelTechnique::kMaxSum));
     records.push_back(record_int);
 
+    record_bool = new OptionRecordBool(
+        "hipo_serial_blas",
+        "Force OpenBLAS to run in serial when used by HiPO. This setting is "
+        "process-wide, so affects any other use of OpenBLAS",
+        advanced, &hipo_serial_blas, true);
+    records.push_back(record_bool);
+
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,
         &pdlp_iteration_limit, 0, kHighsIInf, kHighsIInf);
@@ -1446,8 +1455,8 @@ class HighsOptions : public HighsOptionsStruct {
         "iis_strategy",
         "Strategy for IIS calculation: "
         "0 => Light test; 1 => Try dual ray; "
-        "2 => Try elastic LP; 4 => Prioritise columns; "
-        "8 => Find true IIS; 16 => Find relaxation IIS for MIP",
+        "2 => Try elastic LP; 4 => Find true IIS; "
+        "8 => Prioritise columns; 16 => Find relaxation IIS for MIP",
         advanced, &iis_strategy, kIisStrategyMin, kIisStrategyDefault,
         kIisStrategyMax);
     records.push_back(record_int);

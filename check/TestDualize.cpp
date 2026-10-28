@@ -30,7 +30,7 @@ TEST_CASE("Dualize", "[highs_test_dualize]") {
   //  instanceTest(highs, "afiro");
   //  instanceTest(highs, "adlittle");
   instanceTest(highs, "25fv47");
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void dualizeTest(Highs& highs) {

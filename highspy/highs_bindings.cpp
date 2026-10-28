@@ -32,7 +32,7 @@ using dense_array_t = py::array_t<T, py::array::c_style | py::array::forcecast>;
 // 'getter' wrapper around std::vector<T> to numpy array without copying data
 template <typename Base, typename T>
 std::function<dense_array_t<T>(const Base&)> make_readonly_ptr(
-    std::vector<T> Base::* member) {
+    std::vector<T> Base::*member) {
   return [member](const Base& self) -> dense_array_t<T> {
     // last parameter means we keep ownership
     return dense_array_t<T>((self.*member).size(), (self.*member).data(),
@@ -44,7 +44,7 @@ std::function<dense_array_t<T>(const Base&)> make_readonly_ptr(
 // python)
 template <typename Base, typename T>
 std::function<void(Base&, dense_array_t<T>)> make_setter_ptr(
-    std::vector<T> Base::* member) {
+    std::vector<T> Base::*member) {
   return [member](Base& self, dense_array_t<T> array) -> void {
     auto buf = array.request();
     if (buf.ndim != 1) {
@@ -1187,6 +1187,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
                      &HighsInfo::primal_solution_status)
       .def_readwrite("dual_solution_status", &HighsInfo::dual_solution_status)
       .def_readwrite("basis_validity", &HighsInfo::basis_validity)
+      .def_readwrite("centring_status", &HighsInfo::centring_status)
       .def_readwrite("objective_function_value",
                      &HighsInfo::objective_function_value)
       .def_readwrite("mip_dual_bound", &HighsInfo::mip_dual_bound)
@@ -1402,6 +1403,7 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("postsolve", &highs_postsolve)
       .def("postsolve", &highs_mipPostsolve)
       .def("run", &Highs::run, py::call_guard<py::gil_scoped_release>())
+      .def_static("resetThreadScheduler", &Highs::resetThreadScheduler)
       .def_static("resetGlobalScheduler", &Highs::resetGlobalScheduler)
       .def(
           "feasibilityRelaxation",

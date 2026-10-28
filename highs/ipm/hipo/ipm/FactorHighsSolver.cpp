@@ -1,6 +1,5 @@
 #include "FactorHighsSolver.h"
 
-#include <cstring>
 #include <limits>
 
 #include "HighsExternalApi.h"
@@ -8,6 +7,7 @@
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 #include "parallel/HighsParallel.h"
+#include "util/stringutil.h"
 
 namespace hipo {
 
@@ -40,7 +40,7 @@ Int FactorHighsSolver::analyseAS(Symbolic& S) {
   // Perform analyse phase of augmented system and return symbolic factorisation
   // in object S and the status.
 
-  if (kkt_.rowsAS.empty() || kkt_.ptrAS.empty()) return kErrorAnalyse;
+  if (!kkt_.AS_ready) return kErrorAnalyse;
 
   const Int m = model_.A().num_row_;
   const Int n = model_.A().num_col_;
@@ -63,7 +63,7 @@ Int FactorHighsSolver::analyseNE(Symbolic& S) {
   // in object S and the status. Structure of the matrix must be already
   // computed.
 
-  if (kkt_.rowsNE.empty() || kkt_.ptrNE.empty()) return kErrorAnalyse;
+  if (!kkt_.NE_ready) return kErrorAnalyse;
 
   std::vector<Int> pivot_signs(model_.A().num_row_, 1);
 
@@ -83,7 +83,7 @@ Int FactorHighsSolver::analyseNE(Symbolic& S) {
 
 Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   assert(!this->valid_);
-  assert(kkt_.isAS());
+  if (!kkt_.isAS()) return kErrorFactorise;
 
   kkt_.buildASvalues(scaling);
 
@@ -103,7 +103,7 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
 
 Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   assert(!this->valid_);
-  assert(kkt_.isNE());
+  if (!kkt_.isNE()) return kErrorFactorise;
 
   kkt_.buildNEvalues(scaling);
 
@@ -213,7 +213,7 @@ Int FactorHighsSolver::chooseNla() {
   bool overflow_AS = false;
 
   const bool AS_possible = true;
-  const bool NE_possible = !(model_.nonSeparableQp() || model_.m() == 0);
+  const bool NE_possible = !model_.nonSeparableQp();
 
   const bool expect_AS_much_cheaper =
       model_.nzNElb() > model_.nzAS() * kSkipSystemNzBoundsRatio;
@@ -400,26 +400,28 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     logger_.printInfo("Running %s for %s\n", orderings_to_try[i].c_str(),
                       nla.c_str());
 
-    if (orderings_to_try[i] == kHipoMetisString) {
-      Int status =
-          FH_.reorderMetis(n, rows.size(), full_rows.data(), full_ptr.data(),
-                           permutations[i].data(), true, options_.random_seed);
-      if (status) failure[i] = true;
+    if (n > 0) {
+      if (orderings_to_try[i] == kHipoMetisString) {
+        Int status = FH_.reorderMetis(n, rows.size(), full_rows.data(),
+                                      full_ptr.data(), permutations[i].data(),
+                                      true, options_.random_seed);
+        if (status) failure[i] = true;
 
-    } else if (orderings_to_try[i] == kHipoAmdString) {
-      Int status =
-          FH_.reorderAmd(n, rows.size(), full_rows.data(), full_ptr.data(),
-                         permutations[i].data(), true);
-      if (status) failure[i] = true;
+      } else if (orderings_to_try[i] == kHipoAmdString) {
+        Int status =
+            FH_.reorderAmd(n, rows.size(), full_rows.data(), full_ptr.data(),
+                           permutations[i].data(), true);
+        if (status) failure[i] = true;
 
-    } else if (orderings_to_try[i] == kHipoRcmString) {
-      Int status =
-          FH_.reorderRcm(n, rows.size(), full_rows.data(), full_ptr.data(),
-                         permutations[i].data(), true);
-      if (status) failure[i] = true;
+      } else if (orderings_to_try[i] == kHipoRcmString) {
+        Int status =
+            FH_.reorderRcm(n, rows.size(), full_rows.data(), full_ptr.data(),
+                           permutations[i].data(), true);
+        if (status) failure[i] = true;
 
-    } else {
-      assert(1 == 0);
+      } else {
+        assert(1 == 0);
+      }
     }
 
     logger_.printInfo("Finished %s for %s\n", orderings_to_try[i].c_str(),
@@ -505,6 +507,8 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
         ind_best_memory = i;
       }
     }
+
+    if (n == 0) chosen = 0;
 
     assert(chosen >= 0 && chosen < k);
 
@@ -592,15 +596,11 @@ void FactorHighsSolver::setParallelBeforeSymbolic() {
                           parallel_NE_values_default);
 }
 
-static bool usingAppleBlas() {
-  return strstr(HighsExtras::blas::getInfo()->provider, "Apple") != nullptr;
-}
-
 void FactorHighsSolver::setParallelAfterSymbolic() {
   bool parallel_tree = false;
   bool parallel_node = false;
 
-  if (usingAppleBlas()) {
+  if (is_substring_case(HighsExtras::blas::getInfo()->provider, "apple")) {
     // Blas on Apple do not work well with parallel_node, but parallel_tree
     // seems to always be beneficial.
     parallel_node = false;
