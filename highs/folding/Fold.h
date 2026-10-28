@@ -114,10 +114,13 @@ class Folder {
 
   Folder(const Folder&) = delete;
   Folder& operator=(const Folder&) = delete;
+  Folder(Folder&&) = default;
+  Folder& operator=(Folder&&) = default;
 
   void setTimeLimit(const HighsTimer& timer, double time_limit);
   void run(const HighsModel& model);
   const HighsModel& getFoldedModel() const { return folded_model_; }
+  HighsModel takeFoldedModel() { return std::move(folded_model_); }
   HighsSolution unfold(const HighsSolution& folded) const;
   const FoldInfo& getInfo() const { return info_; }
 };
