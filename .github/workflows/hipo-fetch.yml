@@ -382,6 +382,8 @@ jobs:
           --repeat until-fail:10 `
           -E "openblas_utest|openblas_utest_ext|xscblat|xdcblat|xccblat|xzcblat"
 
+        # --repeat until-fail:10 `
+
   # linux shared is default, static build tested in the release artifacts
   # windows static is default so test shared
   windows_shared:
