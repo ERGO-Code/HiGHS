@@ -175,7 +175,7 @@ option(CUPDLP_GPU "Build pdlp with GPU" OFF)
 message(STATUS "Build pdlp with GPU: ${CUPDLP_GPU}")
 
 option(HIGHS_HIPDLP_CUDA
-  "Detect CUDA compiler support for the HiPDLP rewrite" OFF)
+  "Build the GPU HiPDLP solver (needs the CUDA Toolkit 12.8 or later)" OFF)
 set(HIGHS_HIPDLP_CUDA_DETECTED OFF)
 if (HIGHS_HIPDLP_CUDA)
   include(CheckLanguage)
@@ -184,10 +184,33 @@ if (HIGHS_HIPDLP_CUDA)
     message(FATAL_ERROR
       "HIGHS_HIPDLP_CUDA=ON requires a detectable CUDA compiler")
   endif()
+
+  # A GPU can only run the solver if the build holds code for its architecture.
+  # Unless chosen with -DCMAKE_CUDA_ARCHITECTURES=... or the CUDAARCHS
+  # environment variable, build for the GPUs installed in this machine
+  # ("native", CMake 3.24 or later). Without a GPU here (a container, a login
+  # node), or with an older CMake, build for every generation from Turing on,
+  # with PTX for the newest so that later GPUs still run.
+  set(HIGHS_HIPDLP_CUDA_DEFAULT_ARCHITECTURES
+    "75-real;80-real;86-real;89-real;90-real;100-real;120")
+  if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES AND NOT DEFINED ENV{CUDAARCHS})
+    if (CMAKE_VERSION VERSION_LESS "3.24")
+      set(CMAKE_CUDA_ARCHITECTURES ${HIGHS_HIPDLP_CUDA_DEFAULT_ARCHITECTURES})
+    else()
+      set(CMAKE_CUDA_ARCHITECTURES native)
+    endif()
+  endif()
   enable_language(CUDA)
-  find_package(CUDAToolkit REQUIRED)
-  set(HIGHS_HIPDLP_CUDA_LIBRARIES
-    CUDA::cudart CUDA::cublas CUDA::cusparse)
+  if (CMAKE_CUDA_ARCHITECTURES STREQUAL "native" AND
+      NOT CMAKE_CUDA_ARCHITECTURES_NATIVE MATCHES "^[0-9]")
+    message(STATUS "HiPDLP: no GPU found, building for "
+      "${HIGHS_HIPDLP_CUDA_DEFAULT_ARCHITECTURES}")
+    set(CMAKE_CUDA_ARCHITECTURES ${HIGHS_HIPDLP_CUDA_DEFAULT_ARCHITECTURES})
+  endif()
+  message(STATUS "HiPDLP CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
+
+  find_package(CUDAToolkit 12.8 REQUIRED)
+  set(HIGHS_HIPDLP_CUDA_LIBRARIES CUDA::cudart CUDA::cusparse)
   set(HIGHS_HIPDLP_CUDA_DETECTED ON)
 endif()
 message(STATUS

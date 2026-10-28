@@ -25,7 +25,7 @@ if(NOT FAST_BUILD)
 
   if(HIGHS_HIPDLP_CUDA_DETECTED)
     set_target_properties(libhighs PROPERTIES
-      CUDA_STANDARD 11
+      CUDA_STANDARD 17
       CUDA_STANDARD_REQUIRED ON)
     target_link_libraries(libhighs ${HIGHS_HIPDLP_CUDA_LIBRARIES})
   endif()
@@ -203,7 +203,7 @@ else()
 
   if(HIGHS_HIPDLP_CUDA_DETECTED)
     set_target_properties(highs PROPERTIES
-      CUDA_STANDARD 11
+      CUDA_STANDARD 17
       CUDA_STANDARD_REQUIRED ON)
     target_link_libraries(highs PRIVATE ${HIGHS_HIPDLP_CUDA_LIBRARIES})
   endif()

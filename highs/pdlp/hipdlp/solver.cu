@@ -9,12 +9,12 @@
 #include <cub/block/block_reduce.cuh>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 #include "device.h"
+#include "kernel_types.h"
 #include "solver.h"
-#include "solver_internal.h"
-#include "solver_test.h"
 
 namespace hipdlp {
 constexpr int kBlock = 256;
@@ -30,43 +30,46 @@ static double Seconds(Clock::time_point start) {
 }
 static int Blocks(int size) { return std::max(1, int((int64_t(size) + kBlock - 1) / kBlock)); }
 
-static int WarpBlocks(int rows) {
-  return std::max(1, int(std::min(int64_t(4096), (int64_t(rows) + 7) / 8)));
+// Blocks for one lane group per row: kBlock / lanes groups per block, at most 4096 blocks.
+static int WarpBlocks(int rows, int lanes) {
+  int64_t groups = kBlock / lanes;
+  return std::max(1, int(std::min(int64_t(4096), (int64_t(rows) + groups - 1) / groups)));
 }
 
-__device__ unsigned long long DeviceTime() {
+static __device__ unsigned long long DeviceTime() {
   unsigned long long value;
   asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(value));
   return value;
 }
 
-__device__ bool Expired(const DeviceState* s) {
+static __device__ bool Expired(const DeviceState* s) {
   return double(DeviceTime() - s->begin) * 1e-9 >= s->remaining_seconds;
 }
 
-__device__ double Project(double v, double l, double u) { return fmin(fmax(v, l), u); }
+static __device__ double Project(double v, double l, double u) { return fmin(fmax(v, l), u); }
 
-__device__ double Multiplier(double v, double l, double u) {
+static __device__ double Multiplier(double v, double l, double u) {
   if (!isfinite(l)) v = fmin(v, 0.0);
   if (!isfinite(u)) v = fmax(v, 0.0);
   return v;
 }
-__device__ double Recession(double v, double l, double u) {
+static __device__ double Recession(double v, double l, double u) {
   if (isfinite(l)) v = fmax(v, 0.0);
   if (isfinite(u)) v = fmin(v, 0.0);
   return v;
 }
-__device__ double BoundProduct(double v, double l, double u) {
+static __device__ double BoundProduct(double v, double l, double u) {
   return v > 0 ? v * l : (v < 0 ? v * u : 0.0);
 }
-__device__ double ConeViolation(double v, double l, double u) {
+static __device__ double ConeViolation(double v, double l, double u) {
   double error = 0;
   if (isfinite(l)) error = fmax(error, -v);
   if (isfinite(u)) error = fmax(error, v);
   return error;
 }
 
-__device__ void BoundMetrics(Stats& s, double v, double multiplier, double l, double u, int index) {
+static __device__ void BoundMetrics(Stats& s, double v, double multiplier, double l, double u,
+                                    int index) {
   if (!isfinite(v) || !isfinite(multiplier)) {
     s.bad = 1;
     return;
@@ -98,7 +101,53 @@ __device__ void BoundMetrics(Stats& s, double v, double multiplier, double l, do
   if (!isfinite(contribution) || !isfinite(comp)) s.bad = 1;
 }
 
-__device__ void StoreStats(Stats value, Stats* partial) {
+// lpKktCheck pass 1 for one row activity or column value v with multiplier `mult` and bounds
+// [l, u]: a value within sqrt(tol) of a bound is active and puts that bound into the active
+// bound norm; the dual objective takes the bound on the side of the midpoint v is on (not the
+// bound the sign of the multiplier selects), and a free variable contributes its multiplier.
+static __device__ void KktBounds(Stats& s, double v, double mult, double l, double u, double tol) {
+  if (!isfinite(v) || !isfinite(mult)) return;
+  if (isfinite(l) && (l - v) * (l - v) <= tol)
+    s.active_bound = fmax(s.active_bound, fabs(l));
+  else if (isfinite(u) && (v - u) * (v - u) <= tol)
+    s.active_bound = fmax(s.active_bound, fabs(u));
+  double bound = 1;
+  if (isfinite(l) || isfinite(u)) bound = v < 0.5 * (l + u) ? l : u;
+  s.dual_pos += bound * mult;
+}
+// lpKktCheck pass 2 (getKktFailures) for the same value: primal violation over 1 + the active
+// bound norm (or the violated bound itself when the value is not near a bound and that bound is
+// larger), dual sign violation over 1 + the active cost norm (or the cost when the multiplier
+// is not near zero). Only a boxed variable of meaningful length has a two-sided sign rule: it
+// uses the multiplier sign that the side of the midpoint requires. `cost` is 0 for rows.
+static __device__ void KktRelative(Stats& s, double v, double mult, double l, double u,
+                                   double cost, double tol, double active_bound,
+                                   double active_cost) {
+  if (!isfinite(v) || !isfinite(mult)) return;
+  double violation = fmax(fmax(l - v, v - u), 0.0);
+  bool near_bound = (l - v) * (l - v) <= tol || (v - u) * (v - u) <= tol;
+  int side = 0;  // -1: below the midpoint (lower rule), +1: above (upper rule), 0: none
+  double sign_violation = 0;
+  if (l < u) {
+    if (!isfinite(l) && !isfinite(u))
+      sign_violation = fabs(mult);
+    else if ((u - l) * (u - l) > tol) {
+      side = v < 0.5 * (l + u) ? -1 : 1;
+      sign_violation = side < 0 ? fmax(-mult, 0.0) : fmax(mult, 0.0);
+    }
+  }
+  if (violation > 0) {
+    double measure = active_bound;
+    if (!near_bound) measure = fmax(side > 0 ? fabs(u) : fabs(l), measure);
+    s.rel_primal = fmax(s.rel_primal, violation / (1 + measure));
+  }
+  if (sign_violation > 0) {
+    double measure = active_cost;
+    if (cost != 0 && mult * mult >= tol) measure = fmax(fabs(cost), measure);
+    s.rel_dual = fmax(s.rel_dual, sign_violation / (1 + measure));
+  }
+}
+static __device__ void StoreStats(Stats value, Stats* partial) {
   __shared__ typename cub::BlockReduce<Stats, kBlock>::TempStorage storage;
   Stats total = cub::BlockReduce<Stats, kBlock>(storage).Reduce(value, Combine{});
   if (threadIdx.x == 0) partial[blockIdx.x] = total;
@@ -133,26 +182,26 @@ __global__ void Begin(DeviceState* s) {
 
 // A bounded grid of warps handles both sparse and very long rows/columns.
 __global__ void ScalingFactors(int size, const int* start, const double* a, double* factor,
-                               double* cumulative, bool pc, DeviceState* s) {
+                               double* cumulative, bool pc, int lanes, DeviceState* s) {
   if (s->status != Status::kRunning) return;
-  int lane = threadIdx.x % 32;
-  int stride = gridDim.x * blockDim.x / 32;
-  for (int i = (blockIdx.x * blockDim.x + threadIdx.x) / 32; i < size; i += stride) {
+  int lane = threadIdx.x % lanes;
+  int stride = gridDim.x * blockDim.x / lanes;
+  for (int i = (blockIdx.x * blockDim.x + threadIdx.x) / lanes; i < size; i += stride) {
     int active = 0;
     if (lane == 0) active = s->status == Status::kRunning && !Expired(s);
-    active = __shfl_sync(0xffffffff, active, 0);
+    active = GroupBroadcast(active, lanes);
     if (!active) {
       if (lane == 0) factor[i] = 1;
       continue;
     }
     double norm = 0;
-    for (int k = start[i] + lane; k < start[i + 1]; k += 32) {
+    for (int k = start[i] + lane; k < start[i + 1]; k += lanes) {
       double v = fabs(a[k]);
       if (!isfinite(v)) atomicOr(&s->bad, 1);
       norm = pc ? norm + v : fmax(norm, v);
     }
-    for (int offset = 16; offset > 0; offset /= 2) {
-      double other = __shfl_down_sync(0xffffffff, norm, offset);
+    for (int offset = lanes / 2; offset > 0; offset /= 2) {
+      double other = GroupShflDown(norm, offset, lanes);
       norm = pc ? norm + other : fmax(norm, other);
     }
     if (lane == 0) {
@@ -165,11 +214,11 @@ __global__ void ScalingFactors(int size, const int* start, const double* a, doub
 }
 
 __global__ void ScaleMatrix(int size, const int* start, const int* index, double* a,
-const double* left, const double* right, DeviceState* s) {
+                            const double* left, const double* right, int lanes, DeviceState* s) {
   if (s->status != Status::kRunning) return;
-  int stride = gridDim.x * blockDim.x / 32;
-  for (int i = (blockIdx.x * blockDim.x + threadIdx.x) / 32; i < size; i += stride) {
-    for (int k = start[i] + threadIdx.x % 32; k < start[i + 1]; k += 32) {
+  int stride = gridDim.x * blockDim.x / lanes;
+  for (int i = (blockIdx.x * blockDim.x + threadIdx.x) / lanes; i < size; i += stride) {
+    for (int k = start[i] + threadIdx.x % lanes; k < start[i + 1]; k += lanes) {
       a[k] *= left[i] * right[index[k]];
       if (!isfinite(a[k])) atomicOr(&s->bad, 1);
     }
@@ -190,16 +239,17 @@ __global__ void Initialize(DeviceLp lp, Vectors v, DeviceState* s)  {
     lp.lxs[i] = lp.lx[i] / lp.dc[i];
     lp.uxs[i] = lp.ux[i] / lp.dc[i];
     double start = s->warm_start ? v.out_x[i] / lp.dc[i] : 0; //out_x holds the start point
-    v.x[i] = v.xp[i] = v.xr = v.xa[i] = Project(start, lp.lxs[i], lp.uxs[i]);
+    v.x[i] = v.xp[i] = v.xr[i] = v.xa[i] = Project(start, lp.lxs[i], lp.uxs[i]);
     v.dx[i] = v.epoch_dx[i] = 0;
-    if (!isfinite(lp.cs[i]) || (isfinite(lp.lxs[i]) && !isfinite(v.x[i])) || (isfinite(lp.ux[i]) && !isfinite(lp.uxs[i])) || !isfinite(v.x[i]) ||
-      !isfinite(start)) atomicOr(&s->bad, 1);
+    if (!isfinite(lp.cs[i]) || (isfinite(lp.lx[i]) && !isfinite(lp.lxs[i])) ||
+        (isfinite(lp.ux[i]) && !isfinite(lp.uxs[i])) || !isfinite(v.x[i]) || !isfinite(start))
+      atomicOr(&s->bad, 1);
     }
     if (i < lp.m) {
       lp.lrs[i] = lp.lr[i] * lp.dr[i];
       lp.urs[i] = lp.ur[i] * lp.dr[i];
       double start = s->warm_start ? v.out_y[i] / lp.dr[i] : 0.0; // already of a legal sign
-      v.y[i] = v.py[i] = v.yr[i] = v.ya[i] = start;
+      v.y[i] = v.yp[i] = v.yr[i] = v.ya[i] = start;
       v.dy[i] = v.epoch_dy[i] = 0;
       if ((isfinite(lp.lr[i]) && !isfinite(lp.lrs[i])) ||
           (isfinite(lp.ur[i]) && !isfinite(lp.urs[i])) || !isfinite(start))
@@ -306,6 +356,8 @@ __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
     a.p = lp.c[i] * v.out_x[i];
     if (!isfinite(raw_z) || !isfinite(a.p)) a.bad = 1;
     BoundMetrics(a, v.out_x[i], z, lp.lx[i], lp.ux[i], lp.m + i);
+    KktBounds(a, v.out_x[i], z, lp.lx[i], lp.ux[i], tol);
+    if (isfinite(z) && z * z < tol) a.active_cost = fabs(lp.c[i]);
     double violation = fmax(fmax(lp.lx[i] - v.out_x[i], v.out_x[i] - lp.ux[i]), 0.0);
     a.l2_primal_sq = violation * violation;
     // L2 measures as cuPDLPx: its reduced cost is the primal projection's slack, i.e. nonzero only
@@ -324,6 +376,7 @@ __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
   }
   if (i < lp.m) {
     BoundMetrics(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], i);
+    KktBounds(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], tol);
     double violation = fmax(fmax(lp.lr[i] - v.out_ax[i], v.out_ax[i] - lp.ur[i]), 0.0);
     a.l2_primal_sq += violation * violation;
     if (isfinite(lp.lr[i]) && lp.lr[i] != lp.ur[i]) a.b_sq += lp.lr[i] * lp.lr[i];
@@ -333,6 +386,24 @@ __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
   StoreStats(a, partial);
 }
 
+// Pass 2 of the lpKktCheck measures; reads the norms ReduceStats(mode 0) stored in `s`. out_aty
+// still holds A^T y of this check (nothing runs between the two passes).
+__global__ void KktRelativeStats(DeviceLp lp, Vectors v, const DeviceState* s, Stats* partial,
+                                 double tol) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  Stats a;
+  double active_bound = s->active_bound_norm, active_cost = s->active_cost_norm;
+  if (i < lp.n) {
+    KktRelative(a, v.out_x[i], v.out_z[i], lp.lx[i], lp.ux[i], lp.c[i], tol, active_bound,
+                active_cost);
+    double residual = fabs(lp.c[i] - v.out_aty[i] - v.out_z[i]);
+    if (isfinite(residual)) a.rel_residual = residual / (1 + active_cost);
+  }
+  if (i < lp.m)
+    KktRelative(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], 0.0, tol, active_bound,
+                active_cost);
+  StoreStats(a, partial);
+}
 __global__ void SaveFeasible(DeviceLp lp, Vectors v, DeviceState* s) {
   int j = blockIdx.x * blockDim.x + threadIdx.x;
   if (j < lp.n && s->metrics.primal <= s->tolerance && !s->bad) v.feasible[j] = v.out_x[j];
@@ -831,7 +902,7 @@ static std::string CheckOptions(const SolveOptions& options) {
   return "";
 }
 
-std::string CheckVectors(const HostLp& lp, const SolveOptions& options) {
+static std::string CheckVectors(const HostLp& lp, const SolveOptions& options) {
   std::string message = CheckOptions(options);
   if (!message.empty()) return message;
   if (lp.rows < 0 || lp.columns < 0 || lp.cost.size() != size_t(lp.columns) ||
@@ -851,7 +922,7 @@ std::string CheckVectors(const HostLp& lp, const SolveOptions& options) {
   return "";
 }
 
-std::string CheckMatrix(const HostLp& lp) {
+static std::string CheckMatrix(const HostLp& lp) {
   if (lp.rows < 0 || lp.columns < 0 || lp.value.size() > INT_MAX ||
       lp.row_start.size() != size_t(lp.rows) + 1 || lp.column_index.size() != lp.value.size())
     return "Invalid dimensions, objective sense, or offset";
@@ -873,7 +944,7 @@ std::string CheckMatrix(const HostLp& lp) {
   return "";
 }
 
-std::string CheckInput(const HostLp& lp, const SolveOptions& options) {
+static std::string CheckInput(const HostLp& lp, const SolveOptions& options) {
   std::string message = CheckOptions(options);
   if (message.empty()) message = CheckMatrix(lp);
   if (message.empty()) message = CheckVectors(lp, options);
@@ -915,7 +986,7 @@ static size_t SessionPeak(size_t before, int rows, int columns, int nnz, bool tr
 // workspace unless borrowed, then the two scaled work copies, 21 column and 16 row vectors
 // (scaling, iteration, anchor, check and certificate arrays, the unscaled row / column 1-norms),
 // the reductions and the nine SpMV workspaces.
-size_t SolveFootprint(int rows, int columns, int nnz, bool matrix_borrowed,
+static size_t SolveFootprint(int rows, int columns, int nnz, bool matrix_borrowed,
                       bool transpose_borrowed) {
   size_t m = Charged(size_t(rows) * sizeof(double)), n = Charged(size_t(columns) * sizeof(double));
   size_t before = 3 * n + 2 * m + (matrix_borrowed ? 0 : CsrCharged(rows, nnz));
@@ -927,18 +998,56 @@ size_t SolveFootprint(int rows, int columns, int nnz, bool matrix_borrowed,
   return SessionPeak(before, rows, columns, nnz, transpose_borrowed, after);
 }
 
-// The device must be the verified sm_89 (globaltimer behaviour); false fills the result.
-static bool CheckDevice(SolveResult* result) {
+// What the solver needs from the device, found out at run time (not by model name).
+struct DeviceInfo {
+  int lanes = 32;  // threads per warp / wavefront
+};
+// Cooperative threads that cannot make the device-side time limit fire are useless: a stalled
+// %globaltimer would let a solve run past its limit. Spin for `wait_ns` of timer time (bounded
+// in reads, so a frozen timer ends the kernel too) and report how much it advanced.
+__global__ void TimerProbe(unsigned long long wait_ns, unsigned long long* advanced) {
+  unsigned long long t0 = DeviceTime(), t = t0;
+  for (int i = 0; i < (1 << 24) && t - t0 < wait_ns; ++i) t = DeviceTime();
+  *advanced = t - t0;
+}
+static bool TimerAdvances() {
+  const unsigned long long wait_ns = 1000000;  // 1 ms
+  unsigned long long* advanced;
+  Cuda(cudaMalloc(&advanced, sizeof(*advanced)));
+  auto begin = Clock::now();
+  TimerProbe<<<1, 1>>>(wait_ns, advanced);
+  unsigned long long value = 0;
+  cudaError_t error = cudaMemcpy(&value, advanced, sizeof(value), cudaMemcpyDeviceToHost);
+  double wall = Seconds(begin);
+  cudaFree(advanced);
+  Cuda(error);
+  // It must advance by the wait, and not faster than the host clock says time passed.
+  return value >= wait_ns && double(value) * 1e-9 <= wall;
+}
+// Rejects only what cannot work: no usable GPU or driver (see StatusOf), no kernel image for this
+// device in the build, or a timer that does not run. Which GPUs those are is decided by the
+// build (CMAKE_CUDA_ARCHITECTURES) and the machine, not by a list in the code. False fills the result.
+static bool CheckDevice(SolveResult* result, DeviceInfo* info) {
   int device;
   cudaDeviceProp properties;
   Cuda(cudaGetDevice(&device));
   Cuda(cudaGetDeviceProperties(&properties, device));
-  if (properties.major != 8 || properties.minor != 9) {
+  auto unsupported = [&](const std::string& message) {
     result->status = Status::kUnsupportedModel;
     result->termination_source = "DEVICE_CAPABILITY";
-    result->message = "Device globaltimer mode is validated only on sm_89";
+    result->message = message;
     return false;
+  };
+  std::string name = std::string(properties.name) + " (compute capability " +
+                     std::to_string(properties.major) + "." + std::to_string(properties.minor) + ")";
+  cudaFuncAttributes attributes;
+  if (cudaFuncGetAttributes(&attributes, Begin) != cudaSuccess) {
+    cudaGetLastError();
+    return unsupported("This build has no code for " + name +
+                       "; add its architecture to CMAKE_CUDA_ARCHITECTURES");
   }
+  if (!TimerAdvances()) return unsupported("The device timer does not advance on " + name);
+  info->lanes = properties.warpSize;
   return true;
 }
 static void CheckSource(const SolveSource& source, const SolveOptions& options,
@@ -968,7 +1077,7 @@ static double SynchronizedSeconds(Resources& r, Clock::time_point since) {
   return Seconds(since);
 }
 
-double CostScale(const HostLp& lp) {
+static double CostScale(const HostLp& lp) {
   double scale = 0;
   for (double c : lp.cost) scale = std::max(scale, std::abs(c));
   if (lp.value.empty() || lp.columns == 0) return scale;
@@ -1020,7 +1129,9 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
   if (!result.message.empty()) return result;
   bool session_started = false;
   try {
-    if (!CheckDevice(&result)) return result;
+    DeviceInfo device;
+    if (!CheckDevice(&result, &device)) return result;
+    const int lanes = device.lanes;
     std::optional<MemoryMeter> own_meter;
     if (!shared_meter) shared_meter = &own_meter.emplace();
     MemoryMeter& meter = *shared_meter;
@@ -1223,14 +1334,14 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     FillOne<<<Blocks(m), kBlock, 0, stream>>>(lp.dr, m);
     FillOne<<<Blocks(n), kBlock, 0, stream>>>(lp.dc, n);
     for (int sweep = 0; sweep < 11; ++sweep) {
-      ScalingFactors<<<WarpBlocks(m), kBlock, 0, stream>>>(m, lp.row_start, lp.a, lp.fr, lp.dr,
-                                                           sweep == 10, s);
-      ScalingFactors<<<WarpBlocks(n), kBlock, 0, stream>>>(n, lp.transpose_start, lp.at, lp.fc,
-                                                           lp.dc, sweep == 10, s);
-      ScaleMatrix<<<WarpBlocks(m), kBlock, 0, stream>>>(m, lp.row_start, lp.column, lp.a, lp.fr,
-                                                        lp.fc, s);
-      ScaleMatrix<<<WarpBlocks(n), kBlock, 0, stream>>>(n, lp.transpose_start, lp.row, lp.at, lp.fc,
-                                                        lp.fr, s);
+      ScalingFactors<<<WarpBlocks(m, lanes), kBlock, 0, stream>>>(
+          m, lp.row_start, lp.a, lp.fr, lp.dr, sweep == 10, lanes, s);
+      ScalingFactors<<<WarpBlocks(n, lanes), kBlock, 0, stream>>>(
+          n, lp.transpose_start, lp.at, lp.fc, lp.dc, sweep == 10, lanes, s);
+      ScaleMatrix<<<WarpBlocks(m, lanes), kBlock, 0, stream>>>(m, lp.row_start, lp.column, lp.a,
+                                                               lp.fr, lp.fc, lanes, s);
+      ScaleMatrix<<<WarpBlocks(n, lanes), kBlock, 0, stream>>>(n, lp.transpose_start, lp.row, lp.at,
+                                                               lp.fc, lp.fr, lanes, s);
       ScalingGuard<<<1, 1, 0, stream>>>(s);
     }
     Initialize<<<blocks, kBlock, 0, stream>>>(lp, v, s);
@@ -1429,4 +1540,34 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
   return result;
 }
 
-}// end namespace pdlp
+SolveResult Solve(const HostLp& lp, const SolveOptions& options) {
+  return Run(SolveSource{&lp, nullptr}, options, nullptr, false, nullptr);
+}
+const char* StatusName(Status status) {
+  switch (status) {
+    case Status::kRunning:
+      return "RUNNING";
+    case Status::kOptimal:
+      return "OPTIMAL";
+    case Status::kInfeasible:
+      return "INFEASIBLE";
+    case Status::kUnbounded:
+      return "UNBOUNDED";
+    case Status::kTimeLimit:
+      return "TIME_LIMIT";
+    case Status::kIterationLimit:
+      return "ITERATION_LIMIT";
+    case Status::kInvalidModel:
+      return "INVALID_MODEL";
+    case Status::kUnsupportedModel:
+      return "UNSUPPORTED_MODEL";
+    case Status::kOutOfMemory:
+      return "OUT_OF_MEMORY";
+    case Status::kNumericalError:
+      return "NUMERICAL_ERROR";
+    case Status::kDeviceError:
+      return "DEVICE_ERROR";
+  }
+  return "DEVICE_ERROR";
+}
+}  // namespace hipdlp

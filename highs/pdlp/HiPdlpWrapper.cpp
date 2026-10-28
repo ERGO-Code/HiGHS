@@ -25,18 +25,6 @@ HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object) {
                        solver_object.highs_info_, solver_object.callback_);
 }
 
-/*
-HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
-                          const HighsLp& lp, HighsBasis& highs_basis,
-                          HighsSolution& highs_solution,
-                          HighsModelStatus& model_status, HighsInfo& highs_info,
-                          HighsCallback& callback) {
-  return hipdlp::api::solve(options, timer, lp, highs_basis, highs_solution,
-                            model_status, highs_info, callback,
-                            hipdlp::api::defaultMigrationOptions());
-}
-*/
-
 #ifdef HIGHS_HIPDLP_CUDA_DETECTED
 
 namespace {
@@ -70,13 +58,19 @@ hipdlp::HostLp toHostLp(const HighsLp& lp) {
   return host;
 }
 
-hipdlp::SolveOptions toSolveOptions(const HighsOptions& options, HighsTimer& timer) {
+hipdlp::SolveOptions toSolveOptions(const HighsOptions& options,
+                                    HighsTimer& timer) {
   hipdlp::SolveOptions solve_options;
-  // The solver has a single tolerance, applied to the HiGHS lpKktCheck
-  // measures. A user-set kkt_tolerance wins.
-solve_options.tolerance = options.kkt_tolerance != kDefaultKktTolerance
+  // The solver has a single tolerance. A user-set kkt_tolerance wins.
+  solve_options.tolerance = options.kkt_tolerance != kDefaultKktTolerance
                                 ? options.kkt_tolerance
                                 : options.pdlp_optimality_tolerance;
+  // What decides "optimal" (see hipdlp::StopCriterion in hipdlp/solver.h):
+  //   kPdlpL2      the PDLP / cuPDLPx relative-L2 measures (the library default)
+  //   kLpKktCheck  the per-component measures of HiGHS lpKktCheck
+  //   kStrict      the strict element-wise measures
+  // Change this line to use another one.
+  solve_options.stop = hipdlp::StopCriterion::kPdlpL2;
   // Remaining share of the global time limit
   solve_options.time_limit_seconds =
       options.time_limit >= kHighsInf
@@ -85,8 +79,6 @@ solve_options.tolerance = options.kkt_tolerance != kDefaultKktTolerance
   solve_options.iteration_limit = options.pdlp_iteration_limit >= kHighsIInf
                                       ? std::numeric_limits<int64_t>::max()
                                       : options.pdlp_iteration_limit;
-  // HiGHS has already presolved: Solve() does not presolve anyway
-  solve_options.presolve = false;
   return solve_options;
 }
 
@@ -95,7 +87,7 @@ HighsStatus solveError(HighsModelStatus& model_status) {
   return HighsStatus::kError;
 }
 
-} // namespace
+}  // namespace
 
 HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
                           const HighsLp& lp, HighsBasis& highs_basis,
@@ -107,7 +99,8 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   highs_solution.clear();
 
   const hipdlp::HostLp host = toHostLp(lp);
-  const hipdlp::SolveResult result = hipdlp::Solve(host, toSolveOptions(options, timer));
+  const hipdlp::SolveResult result =
+      hipdlp::Solve(host, toSolveOptions(options, timer));
 
   highs_info.pdlp_iteration_count = static_cast<HighsInt>(
       std::min<int64_t>(result.iterations, kHighsIInf));
@@ -135,8 +128,8 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
       model_status = HighsModelStatus::kIterationLimit;
       break;
     default:
-      // kInvalidModel, kUnsupportedModel (not an sm_89 GPU), kOutOfMemory,
-      // kNumericalError, kDeviceError
+      // kInvalidModel, kUnsupportedModel (no usable GPU, or none the build
+      // has code for), kOutOfMemory, kNumericalError, kDeviceError
       highsLogUser(options.log_options, HighsLogType::kError,
                    "HiPDLP failed with status %s: %s\n",
                    hipdlp::StatusName(result.status), result.message.c_str());
@@ -180,4 +173,3 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 }
 
 #endif
-

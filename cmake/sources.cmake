@@ -474,6 +474,12 @@ set(highs_sources
     HighsExternalApi.cpp
     HighsExternalDeps.cpp)
 
+if (HIGHS_HIPDLP_CUDA_DETECTED)
+  list(APPEND highs_sources
+    pdlp/hipdlp/device_matrix.cu
+    pdlp/hipdlp/solver.cu)
+endif()
+
 # add catch header?
 set(highs_headers
     ../extern/pdqsort/pdqsort.h

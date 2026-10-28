@@ -19,13 +19,41 @@ struct DeviceFailure : std::runtime_error {
     DeviceFailure(Status code, const std::string& text) : std::runtime_error(text), status(code) {}
 };
 
+// The device cannot run this build at all (no GPU, driver too old, no kernel image for its
+// architecture, feature missing): kUnsupportedModel, so the caller can tell it from a fault.
+inline Status StatusOf(cudaError_t error) {
+  switch (error) {
+    case cudaErrorMemoryAllocation:
+      return Status::kOutOfMemory;
+    case cudaErrorNoDevice:
+    case cudaErrorInsufficientDriver:
+    case cudaErrorNoKernelImageForDevice:
+    case cudaErrorInvalidDeviceFunction:
+    case cudaErrorNotSupported:
+    case cudaErrorCompatNotSupportedOnDevice:
+      return Status::kUnsupportedModel;
+    default:
+      return Status::kDeviceError;
+  }
+}
 inline void Cuda(cudaError_t error) {
-    if (error != cudaSuccess) {
-        cudaGetLastError(); // Clear the error state
-        throw DeviceFailure(
-            error == cudaErrorMemoryAllocation ? Status::kOutOfMemory : Status::kDeviceError,
-            cudaGetErrorString(error));
-    }
+  if (error != cudaSuccess) {
+    cudaGetLastError();  // Clear the error state
+    throw DeviceFailure(StatusOf(error), cudaGetErrorString(error));
+  }
+}
+
+// Lane groups: `lanes` consecutive threads that cooperate on one row. It is the hardware warp
+// (32 on NVIDIA; 32 or 64 on AMD) and the only place the width enters; kBlock must be a multiple
+// of it. A group narrower than 32 needs the mask of its own lanes, a full warp needs all of them.
+__device__ inline unsigned GroupMask(int lanes) {
+  return lanes >= 32 ? 0xffffffffu : ((1u << lanes) - 1u) << ((threadIdx.x % 32) / lanes * lanes);
+}
+__device__ inline int GroupBroadcast(int value, int lanes) {
+  return __shfl_sync(GroupMask(lanes), value, 0, lanes);
+}
+__device__ inline double GroupShflDown(double value, int offset, int lanes) {
+  return __shfl_down_sync(GroupMask(lanes), value, offset, lanes);
 }
 
 inline void Sparse(cusparseStatus_t error) {
@@ -115,7 +143,7 @@ public:
     MemoryMeter() : baseline_(Used()) {}
     void Sample() {
         size_t used = Used();
-        if (used > basedline_) peak_ = std::max(peak_, used - baseline_);
+        if (used > baseline_) peak_ = std::max(peak_, used - baseline_);
     }
     size_t Peak() const { return peak_; }
 private:
