@@ -92,7 +92,6 @@ set(metis_headers
   metis/libmetis/macros.h
   metis/libmetis/metislib.h
   metis/libmetis/proto.h
-  metis/libmetis/sort.h
   metis/libmetis/stdheaders.h
   metis/libmetis/struct.h
   metis/metis.h)
