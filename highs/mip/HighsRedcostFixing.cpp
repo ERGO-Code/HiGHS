@@ -226,8 +226,9 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   HighsInt maxNumSteps = static_cast<HighsInt>(1ULL << maxNumStepsExp);
 
   // bounds whose absolute value is at least this are not handled: they
-  // cannot be cast to HighsInt or are too large for exact integer
-  // arithmetic in doubles
+  // cannot be cast to HighsInt (kHighsIInf) or, for 64-bit HighsInt, leave
+  // no room for the integer arithmetic in findLurkingBounds and are not
+  // exact integers in double precision (kHighsInvMacheps)
   const double maxBound =
       std::min(static_cast<double>(kHighsIInf), kHighsInvMacheps);
 
@@ -238,7 +239,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
           HighsInt maxNumSteps, HighsInt maxNumStepsExp,
           std::multimap<double, HighsInt>& lurkingBounds,
           std::multimap<double, HighsInt>& otherLurkingBounds) {
-        // bounds outside the range of HighsInt cannot be handled
+        // bounds whose absolute value is at least maxBound cannot be handled
         if (std::abs(inputBound) >= maxBound) return;
         HighsInt bound = static_cast<HighsInt>(inputBound);
 
@@ -251,8 +252,9 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
 
         int64_t lastBound;
         if (direction * inputOtherBound >= maxBound) {
-          // bounds outside the range of HighsInt cannot be handled
+          // other bound cannot be handled, treat it as infinite
           lastBound = static_cast<int64_t>(bound) + direction * maxNumSteps;
+          // keep the lurking bounds in the range of HighsInt
           lastBound = direction * std::min(direction * lastBound,
                                            static_cast<int64_t>(kHighsIInf));
         } else {

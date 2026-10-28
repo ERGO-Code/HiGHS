@@ -1836,8 +1836,8 @@ TEST_CASE("redcost-fixing-large-bounds", "[highs_test_mip_solver]") {
   REQUIRE(!getLurkingBounds(0.0, 1e19, 1.0).empty());
   REQUIRE(!getLurkingBounds(-1e19, 0.0, -1.0).empty());
 
-  // 3. bound that cannot be cast to HighsInt (too large or infinite): no
-  // lurking bounds
+  // 3. bound that cannot be handled (too large for HighsInt or for the
+  // integer arithmetic, or infinite): no lurking bounds
   REQUIRE(getLurkingBounds(1e16, 1e19, 1.0).empty());
   REQUIRE(getLurkingBounds(-1e19, -1e16, -1.0).empty());
   REQUIRE(getLurkingBounds(-kHighsInf, 0.0, 1.0).empty());
