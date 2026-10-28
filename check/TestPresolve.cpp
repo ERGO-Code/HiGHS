@@ -4,7 +4,7 @@
 #include "catch.hpp"
 #include "presolve/HPresolve.h"
 
-const bool dev_run = true;  // false;
+const bool dev_run = false;
 
 const std::vector<std::string> solvers{kHighsChooseString, kPdlpString,
                                        kHiPdlpString, kIpxString
@@ -14,24 +14,36 @@ const std::vector<std::string> solvers{kHighsChooseString, kPdlpString,
 #endif
 };
 
-void testAllLpSolversCrossoverChoose(
+void testAllLpSolversCrossoverOption(
     Highs& highs, const HighsModelStatus require_model_status,
-    const bool write_solution = false) {
+    const std::string& run_crossover, const bool write_solution = false) {
   for (auto& solver : solvers) {
-    if (dev_run)
-      printf(
-          "\n======================================================\n"
-          " Running solver = \"%s\" with crossover = \"choose\" \n"
-          "======================================================\n",
-          solver.c_str());
+    if (dev_run) {
+      std::string text = "Running with solver = \"" + solver +
+                         "\" and run_crossover = \"" + run_crossover + "\"";
+      highsPrintStringAsHeading(text);
+    }
+    highs.clearSolver();
     highs.setOptionValue(kSolverString, solver);
-    highs.setOptionValue("run_crossover", kHighsChooseString);
+    highs.setOptionValue("run_crossover", run_crossover);
     HighsStatus status = highs.run();
     REQUIRE(status == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == require_model_status);
     if (dev_run && write_solution) highs.writeSolution("", 1);
-    highs.clearSolver();
   }
+}
+
+void testAllLpSolversCrossoverOn(Highs& highs,
+                                 const HighsModelStatus require_model_status,
+                                 const bool write_solution = false) {
+  testAllLpSolversCrossoverOption(highs, require_model_status, kHighsOnString);
+}
+
+void testAllLpSolversCrossoverChoose(
+    Highs& highs, const HighsModelStatus require_model_status,
+    const bool write_solution = false) {
+  testAllLpSolversCrossoverOption(highs, require_model_status,
+                                  kHighsChooseString);
 }
 
 bool hasBasisPostsolve(const std::string& solver) {
@@ -1414,14 +1426,9 @@ TEST_CASE("test-duplicate-row-postsolve", "[highs_test_presolve]") {
       // computeRowDualAndStatus - and test the correctness of both
       // primal-dual and basis postsolve.
       //
-      h.setOptionValue("run_crossover", kHighsOnString);
-      for (HighsInt k = 0; k < 2; k++) {
-        REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-        REQUIRE(h.run() == HighsStatus::kOk);
-
-        REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-        h.setOptionValue("run_crossover", kHighsOffString);
-      }
+      REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+      testAllLpSolversCrossoverOn(h, HighsModelStatus::kOptimal);
+      testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
       lp.a_matrix_.value_ = {-1, 4, 1, -4, -3, 12};
     }
     lp.row_lower_ = {0, 0};
@@ -1510,12 +1517,7 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue(kSolverString, kIpxString);
-  h.setOptionValue("run_crossover", kHighsOffString);
-
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  if (dev_run) h.writeSolution("", 1);
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
   h.resetThreadScheduler(true);
 }
@@ -1601,12 +1603,7 @@ TEST_CASE("test-dual-fixing-primal-dual-postsolve", "[highs_test_presolve]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue(kSolverString, kIpxString);
-  h.setOptionValue("run_crossover", kHighsOffString);
-
-  if (dev_run) h.writeSolution("", 1);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
   h.resetThreadScheduler(true);
 }
@@ -1726,7 +1723,7 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
             HighsStatus::kOk);
 
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-    REQUIRE(h.run() == HighsStatus::kOk);
+    testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
     if (k == 0) {
       REQUIRE(run_data.presolved_model_num_row == 1);
@@ -1917,8 +1914,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
   options.presolve_rule_logging = true;
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
 
-  if (debugging)
-    printf("\n====================\nWithout presolve\n====================\n");
+  if (debugging) highsPrintStringAsHeading("Without presolve");
 
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
@@ -1934,8 +1930,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
   }
 
   if (!reduces_to_empty) {
-    if (debugging)
-      printf("\n====================\nPresolved LP\n====================\n");
+    if (debugging) highsPrintStringAsHeading("Presolved LP");
 
     REQUIRE(h.passOptions(options) == HighsStatus::kOk);
     REQUIRE(h.setOptionValue(kSolverString, kIpxString) == HighsStatus::kOk);
@@ -1954,10 +1949,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
     if (debugging) h.writeSolution("", 1);
   }
 
-  if (debugging)
-    printf(
-        "\n====================\nPresolve no "
-        "crossover\n====================\n");
+  if (debugging) highsPrintStringAsHeading("Presolve no crossover");
 
   h.passModel(lp);
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
@@ -1974,10 +1966,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
     REQUIRE(status == HighsStatus::kOk);
   }
 
-  if (debugging)
-    printf(
-        "\n====================\nPresolve with "
-        "crossover\n====================\n");
+  if (debugging) highsPrintStringAsHeading("Presolve with crossover");
 
   h.passModel(lp);
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
@@ -2042,3 +2031,92 @@ TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {
 
   h.resetThreadScheduler(true);
 }
+
+#ifdef HIPO
+TEST_CASE("hipo-ipx-no-crossover", "[highs_test_presolve]") {
+    const std::string model = "bandm";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.presolve();
+  HighsLp lp = h.getPresolvedLp();
+
+  Highs h1;
+  //  h1.setOptionValue("output_flag", dev_run);
+  h1.passModel(lp);
+  REQUIRE(h1.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+  REQUIRE(h1.setOptionValue("run_crossover", kHighsChooseString) == HighsStatus::kOk);
+
+  REQUIRE(h1.setOptionValue(kSolverString, kIpxString) == HighsStatus::kOk);
+  REQUIRE(h1.run() == HighsStatus::kOk);
+  HighsInfo ipx_info = h1.getInfo();
+  HighsSolution ipx_solution = h1.getSolution();
+  h1.clearSolver();
+  REQUIRE(h1.setOptionValue(kSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h1.run() == HighsStatus::kOk);
+  HighsInfo hipo_info = h1.getInfo();
+  HighsSolution hipo_solution = h1.getSolution();
+
+  auto logIntegerInfo = [&] (const std::string& name, const HighsInt ipx, const HighsInt hipo) {
+    if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
+    printf("%-35s   %9d   %9d   %9d\n", name.c_str(), int(ipx), int(hipo), int(ipx-hipo));
+  };
+  auto logDoubleInfo = [&] (const std::string& name, const double ipx, const double hipo) {
+    if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
+    printf("%-35s %11.4g %11.4g %11.4g\n", name.c_str(), ipx, hipo, ipx/hipo);
+  };
+
+  printf("Measure                                     IPX        HiPO     Compare\n");
+  logIntegerInfo("simplex_iteration_count", ipx_info.simplex_iteration_count, hipo_info.simplex_iteration_count);
+  logIntegerInfo("ipm_iteration_count", ipx_info.ipm_iteration_count, hipo_info.ipm_iteration_count);
+  logIntegerInfo("crossover_iteration_count", ipx_info.crossover_iteration_count, hipo_info.crossover_iteration_count);
+  logIntegerInfo("primal_solution_status", ipx_info.primal_solution_status, hipo_info.primal_solution_status);
+  logIntegerInfo("dual_solution_status", ipx_info.dual_solution_status, hipo_info.dual_solution_status);
+  logIntegerInfo("centring_status", ipx_info.centring_status, hipo_info.centring_status);
+  logDoubleInfo("objective_function_value", ipx_info.objective_function_value, hipo_info.objective_function_value);
+  logIntegerInfo("num_primal_infeasibilities", ipx_info.num_primal_infeasibilities, hipo_info.num_primal_infeasibilities);
+  logDoubleInfo("max_primal_infeasibility", ipx_info.max_primal_infeasibility, hipo_info.max_primal_infeasibility);
+  logDoubleInfo("sum_primal_infeasibilities", ipx_info.sum_primal_infeasibilities, hipo_info.sum_primal_infeasibilities);
+  logIntegerInfo("num_dual_infeasibilities", ipx_info.num_dual_infeasibilities, hipo_info.num_dual_infeasibilities);
+  logDoubleInfo("max_dual_infeasibility", ipx_info.max_dual_infeasibility, hipo_info.max_dual_infeasibility);
+  logDoubleInfo("sum_dual_infeasibilities", ipx_info.sum_dual_infeasibilities, hipo_info.sum_dual_infeasibilities);
+  logIntegerInfo("num_relative_primal_infeasibilities", ipx_info.num_relative_primal_infeasibilities, hipo_info.num_relative_primal_infeasibilities);
+  logDoubleInfo("max_relative_primal_infeasibility", ipx_info.max_relative_primal_infeasibility, hipo_info.max_relative_primal_infeasibility);
+  logIntegerInfo("num_relative_dual_infeasibilities", ipx_info.num_relative_dual_infeasibilities, hipo_info.num_relative_dual_infeasibilities);
+  logDoubleInfo("max_relative_dual_infeasibility", ipx_info.max_relative_dual_infeasibility, hipo_info.max_relative_dual_infeasibility);
+  logIntegerInfo("num_primal_residual_errors", ipx_info.num_primal_residual_errors, hipo_info.num_primal_residual_errors);
+  logDoubleInfo("max_primal_residual_error", ipx_info.max_primal_residual_error, hipo_info.max_primal_residual_error);
+  logIntegerInfo("num_dual_residual_errors", ipx_info.num_dual_residual_errors, hipo_info.num_dual_residual_errors);
+  logDoubleInfo("max_dual_residual_error", ipx_info.max_dual_residual_error, hipo_info.max_dual_residual_error);
+  logIntegerInfo("num_relative_primal_residual_errors", ipx_info.num_relative_primal_residual_errors, hipo_info.num_relative_primal_residual_errors);
+  logDoubleInfo("max_relative_primal_residual_error", ipx_info.max_relative_primal_residual_error, hipo_info.max_relative_primal_residual_error);
+  logIntegerInfo("num_relative_dual_residual_errors", ipx_info.num_relative_dual_residual_errors, hipo_info.num_relative_dual_residual_errors);
+  logDoubleInfo("max_relative_dual_residual_error", ipx_info.max_relative_dual_residual_error, hipo_info.max_relative_dual_residual_error);
+  logIntegerInfo("num_complementarity_violations", ipx_info.num_complementarity_violations, hipo_info.num_complementarity_violations);
+  logDoubleInfo("max_complementarity_violation", ipx_info.max_complementarity_violation, hipo_info.max_complementarity_violation);
+  logDoubleInfo("primal_dual_objective_error", ipx_info.primal_dual_objective_error, hipo_info.primal_dual_objective_error);
+  logDoubleInfo("active_cost_norm", ipx_info.active_cost_norm, hipo_info.active_cost_norm);
+  logDoubleInfo("active_bound_norm", ipx_info.active_bound_norm, hipo_info.active_bound_norm);
+
+  double col_value_dl = 0;
+  double col_dual_dl = 0;
+  double row_value_dl = 0;
+  double row_dual_dl = 0;
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    col_value_dl +=  std::fabs(ipx_solution.col_value[iCol]-hipo_solution.col_value[iCol]);
+    col_dual_dl +=  std::fabs(ipx_solution.col_dual[iCol]-hipo_solution.col_dual[iCol]);
+  }  
+  for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+    row_value_dl +=  std::fabs(ipx_solution.row_value[iRow]-hipo_solution.row_value[iRow]);
+    row_dual_dl +=  std::fabs(ipx_solution.row_dual[iRow]-hipo_solution.row_dual[iRow]);
+  }
+  printf("\ncol_value ||IPX-HiPO|| = %11.4g\n", col_value_dl);
+  printf("col_dual  ||IPX-HiPO|| = %11.4g\n", col_dual_dl);
+  printf("row_value ||IPX-HiPO|| = %11.4g\n", row_value_dl);
+  printf("row_dual  ||IPX-HiPO|| = %11.4g\n", row_dual_dl);
+  h.resetThreadScheduler(true);
+}
+
+#endif
