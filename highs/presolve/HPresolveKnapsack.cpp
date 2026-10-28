@@ -199,18 +199,28 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       changed = true;
     }
 
-    // If the two smallest items can't fit into the knapsack then
+    // (1) If the two smallest items can't fit into the knapsack then
     // the row is a clique.
-    // If an item cannot fit in knapsack along with the smallest item,
+    // (2) If an item cannot fit in a knapsack along with the smallest item,
     // then its weight can be raised to knapsack capacity.
+    // (3) If an item cannot fit in a knapsack with the smallest value
+    // larger than minWeight (either some single item larger than minWeight or
+    // the two smallest items together), then its weight can be increased to
+    // capacity - minWeight.
     HighsInt minWeight = kHighsIInf;
     HighsInt secondWeight = kHighsIInf;
+    HighsInt secondUniqueMinWeight = kHighsIInf;
     for (const auto& term : knapsack.terms) {
       if (term.weight < minWeight) {
         secondWeight = minWeight;
+        secondUniqueMinWeight = minWeight;
         minWeight = term.weight;
-      } else if (term.weight < secondWeight) {
-        secondWeight = term.weight;
+      } else {
+        if (term.weight < secondWeight) {
+          secondWeight = term.weight;
+        }
+        if (term.weight > minWeight)
+          secondUniqueMinWeight = std::min(term.weight, secondUniqueMinWeight);
       }
     }
     if (minWeight + secondWeight > knapsack.capacity) {
@@ -221,11 +231,19 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
         changed = true;
       }
     } else {
+      secondUniqueMinWeight =
+          std::min(secondUniqueMinWeight, minWeight + secondWeight);
       for (auto& term : knapsack.terms) {
         if (term.weight < knapsack.capacity &&
             term.weight + minWeight > knapsack.capacity) {
           knapsack.weightsum += knapsack.capacity - term.weight;
           term.weight = knapsack.capacity;
+          changed = true;
+        } else if (term.weight < knapsack.capacity - minWeight &&
+                   term.weight > knapsack.capacity / 2 &&
+                   knapsack.capacity - term.weight < secondUniqueMinWeight) {
+          knapsack.weightsum += knapsack.capacity - minWeight - term.weight;
+          term.weight = knapsack.capacity - minWeight;
           changed = true;
         }
       }
