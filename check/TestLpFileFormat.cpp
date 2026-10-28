@@ -1823,3 +1823,92 @@ TEST_CASE("lp-file-format-large-file", "[LpFileFormat]") {
           HighsStatus::kOk);
   REQUIRE((highs.getLp().col_names_ == std::vector<std::string>{name}));
 }
+
+TEST_CASE("lp-file-format-just-over-1mib", "[LpFileFormat]") {
+  // The lexer reads chunks of 16kB, 32kB, ..., 512kB, and then 1MiB. A file
+  // that is just over 1MiB reaches the end of the file in the first 1MiB
+  // chunk.
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  const size_t one_mib = size_t{1} << 20;
+  std::string content = "min\n obj: y\nst\n";
+  HighsInt num_row = 0;
+  while (content.size() <= one_mib) {
+    content += " c" + std::to_string(num_row) + ": " +
+               std::to_string(num_row + 1) + " x" +
+               std::to_string(num_row % 1000) +
+               " + y >= " + std::to_string(num_row) + "\n";
+    num_row++;
+  }
+  content += "end\n";
+  REQUIRE(content.size() > one_mib);
+  REQUIRE(content.size() < one_mib + 64);
+  Highs highs;
+  REQUIRE(readLp(highs, filename, content) == HighsStatus::kOk);
+  const HighsLp& lp = highs.getLp();
+  REQUIRE(lp.num_row_ == num_row);
+  REQUIRE(lp.num_col_ == 1001);
+  // Check every value, by summing them
+  double sum_value = 0;
+  for (const double value : lp.a_matrix_.value_) sum_value += value;
+  REQUIRE(sum_value == double(num_row) * (num_row + 1) / 2 + num_row);
+  double sum_lower = 0;
+  for (const double lower : lp.row_lower_) sum_lower += lower;
+  REQUIRE(sum_lower == double(num_row) * (num_row - 1) / 2);
+  REQUIRE(lp.row_names_.back() == "c" + std::to_string(num_row - 1));
+}
+
+TEST_CASE("lp-file-format-corrupt-gzip", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  const std::string content("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03\x07", 11);
+  Highs highs;
+  std::string log;
+  REQUIRE(readLp(highs, filename, content, log) == HighsStatus::kError);
+#ifdef ZLIB_FOUND
+  REQUIRE(log.find("invalid block type") != std::string::npos);
+#endif
+}
+
+TEST_CASE("lp-file-format-long-token-of-utf8-continuation", "[LpFileFormat]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  const std::string content = std::string(40, '\x80') + "\n";
+  Highs highs;
+  std::string log;
+  REQUIRE(readLp(highs, filename, content, log) == HighsStatus::kError);
+  REQUIRE(log.find("expected a section keyword") != std::string::npos);
+}
+
+TEST_CASE("lp-file-format-corrupt-gzip-after-parse-error", "[LpFileFormat]") {
+  // A parse error at the start of a long line, in a gzip file whose checksum
+  // is wrong. The parser stops before the end of the stream, but rendering
+  // the error reads the rest of the line, which reaches the bad checksum.
+  // The tokens are short, so the parser stops reading early. The data is in
+  // stored (uncompressed) deflate blocks of 60000 bytes.
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".lp";
+  std::string content("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03", 10);
+  const size_t kBlock = 60000;
+  const size_t kNumBlock = 4;
+  for (size_t b = 0; b < kNumBlock; b++) {
+    std::string data;
+    while (data.size() < kBlock) data += "x ";
+    if (b == 0) data.replace(0, 4, "bad ");
+    if (b + 1 == kNumBlock) data.back() = '\n';
+    content += char(b + 1 == kNumBlock ? 1 : 0);  // BFINAL, BTYPE = stored
+    content += char(kBlock & 0xFF);
+    content += char(kBlock >> 8);
+    content += char(~kBlock & 0xFF);
+    content += char((~kBlock >> 8) & 0xFF);
+    content += data;
+  }
+  content += std::string(8, '\0');  // wrong CRC32 and length
+  Highs highs;
+  std::string log;
+  REQUIRE(readLp(highs, filename, content, log) == HighsStatus::kError);
+#ifdef ZLIB_FOUND
+  REQUIRE(log.find("expected a section keyword, found `bad`") !=
+          std::string::npos);
+#endif
+}

@@ -672,8 +672,8 @@ bool HessianOracle::hasProductCall() const {
   if (!this->call_) return false;
   // A Hessian oracle is valid if it has product call
   HighsInt num_nz = 0;
-  HighsInt index;
-  double value;
+  HighsInt index = 0;
+  double value = 0.0;
   return this->call_(kHessianOracleCallTypeProduct, &num_nz, &index, &value,
                      nullptr, nullptr, &value, this->data_) == 0;
 }
