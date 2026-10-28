@@ -457,6 +457,8 @@ TEST_CASE("ParallelSchedulerIsPerThread", "[parallel]") {
   REQUIRE(b.threads_after_reset == num_threads_B);
   REQUIRE(b.sum_after_reset == expected_sum);
 
+  HighsTaskExecutor::shutdown(true);
+
   // A really was reset
   REQUIRE(a.threads_after_reset == num_threads_A_second);
   REQUIRE(a.sum_after_reset == expected_sum);

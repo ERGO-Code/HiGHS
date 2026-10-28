@@ -43,6 +43,13 @@ endfunction()
 function(highs_configure_blas_metadata)
     set(HIGHS_BLAS_COMPILE_DEFINITION "" PARENT_SCOPE)
 
+    # if OpenBLAS is passed directly via BLAS_LIBRARIES, the vendor is not
+    # known to CMake, so detect it from the library name
+    string(TOLOWER "${BLAS_LIBRARIES}" BLAS_LIBRARIES_LOWER)
+    if(BLAS_LIBRARIES_LOWER MATCHES "openblas")
+        set(BLA_VENDOR OpenBLAS)
+    endif()
+
     if(OpenBLAS_FOUND OR OPENBLAS_LIB OR BLA_VENDOR MATCHES "OpenBLAS")
         set(HIGHS_BLAS_VENDOR OpenBLAS PARENT_SCOPE)
         set(HIGHS_BLAS_VERSION "${OpenBLAS_VERSION}" PARENT_SCOPE)

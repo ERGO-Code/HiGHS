@@ -248,8 +248,8 @@ void testStandardForm(const HighsLp& lp) {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsInt sense = HighsInt(lp.sense_);
-  highs.passModel(lp);
-  highs.run();
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   //  highs.writeSolution("", kSolutionStylePretty);
   double required_objective_function_value =
       highs.getInfo().objective_function_value;
@@ -364,6 +364,23 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
   testStandardForm(highs.getLp());
 
   highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("standard-form-empty-lp", "[highs_lp_solver]") {
+  // Exposed that standard_form_valid_ was not initialised if a model
+  // had not been loaded - ie empty or built
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  HighsInt num_col;
+  HighsInt num_row;
+  HighsInt num_nz;
+  double offset;
+  REQUIRE(h.getStandardFormLp(num_col, num_row, num_nz, offset) ==
+          HighsStatus::kOk);
+  REQUIRE(num_col == 0);
+  REQUIRE(num_row == 0);
+  REQUIRE(num_nz == 0);
 }
 
 TEST_CASE("simplex-stats", "[highs_lp_solver]") {
