@@ -54,6 +54,12 @@ class HPresolveCliqueTable {
 
   bool substituteCol(HighsInt substCol, HighsCliqueTable::CliqueVar replacement,
                      std::vector<HighsCliqueTable::CliqueVar>& impliedFixings);
+
+  void recordLiteralNeighbourhood(HighsInt literal, int64_t weight,
+                                  std::vector<int64_t>& removedWeight,
+                                  std::vector<HighsInt>& seenItem,
+                                  std::vector<HighsInt>& candidates,
+                                  HighsInt maxCliqueSize) const;
 };
 
 #endif

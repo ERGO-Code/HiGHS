@@ -33,6 +33,8 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     HighsPostsolveStack& postsolve_stack, bool& strengthenedKnapsacks) {
   strengthenedKnapsacks = false;
 
+  constexpr HighsInt maxRowSize = 1000;
+  const int64_t maxValue = std::min<int64_t>(kHighsIInf, int64_t{1} << 50);
   const HighsInt numRows = model->num_row_;
   const HighsInt numCols = model->num_col_;
   HighsInt numNormalized = 0;
@@ -44,6 +46,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   std::vector<std::pair<HighsInt, double>> oldRow;
 
   auto changeRow = [&](const KnapsackRow& knapsack) {
+    strengthenedKnapsacks = true;
     oldRow.clear();
     for (const auto& nz : getRowVector(knapsack.row)) {
       oldRow.emplace_back(nz.index(), nz.value());
@@ -88,14 +91,15 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   // row of pure binary columns with integer coefficients where at least one
   // coefficient > 1
   for (HighsInt row = 0; row < numRows; ++row) {
-    if (rowDeleted[row] || rowsize[row] <= 2 || rowsize[row] > 100 ||
+    if (rowDeleted[row] || rowsize[row] <= 2 || rowsize[row] > maxRowSize ||
         isRanged(row))
       continue;
     const HighsInt direction = model->row_upper_[row] == kHighsInf ? -1 : 1;
     const double rowBound =
         direction == 1 ? model->row_upper_[row] : -model->row_lower_[row];
-    // TODO: Can we require a minimum rowBound?
-    if (std::abs(rowBound) > kHighsIInf) continue;
+    if (std::abs(rowBound) > maxValue) continue;
+    int64_t overflowBudget =
+        maxValue - static_cast<int64_t>(std::ceil(std::abs(rowBound)));
     HighsCDouble capacity = rowBound;
     KnapsackRow knapsack{row, direction, 0, 0, {}};
     bool eligible = true;
@@ -104,7 +108,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     for (const auto& nz : getRowVector(row)) {
       const HighsInt col = nz.index();
       const double value = direction * nz.value();
-      if (value != std::floor(value) || std::abs(value) > kHighsIInf) {
+      if (value != std::floor(value) || std::abs(value) > maxValue) {
         eligible = false;
         break;
       }
@@ -112,12 +116,13 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       if (model->col_lower_[col] == model->col_upper_[col]) {
         const double fixedValue = model->col_lower_[col];
         const double contribution = value * fixedValue;
-        if (std::abs(contribution) > kHighsIInf ||
+        if (std::abs(contribution) > overflowBudget ||
             fixedValue != std::floor(fixedValue) ||
             contribution != std::floor(contribution)) {
           eligible = false;
           break;
         }
+        overflowBudget -= static_cast<int64_t>(std::abs(contribution));
         capacity -= contribution;
         changed = true;
       } else {
@@ -126,7 +131,12 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
           eligible = false;
           break;
         }
-        const HighsInt weight = static_cast<HighsInt>(std::abs(value));
+        const int64_t weight = static_cast<int64_t>(std::abs(value));
+        if (weight > overflowBudget) {
+          eligible = false;
+          break;
+        }
+        overflowBudget -= weight;
         knapsack.weightsum += weight;
         knapsack.terms.push_back({2 * col + (value > 0), weight});
         if (value < 0) capacity += weight;
@@ -207,9 +217,9 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     // larger than minWeight (either some single item larger than minWeight or
     // the two smallest items together), then its weight can be increased to
     // capacity - minWeight.
-    int64_t minWeight = kHighsIInf;
-    int64_t secondWeight = kHighsIInf;
-    int64_t secondUniqueMinWeight = kHighsIInf;
+    int64_t minWeight = maxValue;
+    int64_t secondWeight = maxValue;
+    int64_t secondUniqueMinWeight = maxValue;
     for (const auto& term : knapsack.terms) {
       if (term.weight < minWeight) {
         secondWeight = minWeight;
@@ -264,11 +274,11 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   std::vector<std::vector<double>> newValues;
   std::vector<double> newUpper;
   std::vector<HighsInt> disaggregatedRows;
-  for (const auto& knapsack : knapsacks) {
+  for (KnapsackRow& knapsack : knapsacks) {
     std::vector<KnapsackTerm> maxWeightItems;
     std::vector<KnapsackTerm> smallItems;
     int64_t smallItemSum = 0;
-    for (const auto& term : knapsack.terms) {
+    for (const KnapsackTerm& term : knapsack.terms) {
       if (term.weight == knapsack.capacity)
         maxWeightItems.push_back({term.literal, 1});
       else {
@@ -277,8 +287,12 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       }
     }
     if (maxWeightItems.empty() || smallItems.empty() ||
-        smallItemSum > knapsack.capacity)
+        smallItemSum > knapsack.capacity ||
+        maxWeightItems.size() * smallItems.size() >
+            10 * knapsack.terms.size()) {
       continue;
+    }
+    knapsack.capacity = 1;  // Spoof capacity so we don't try lifting afterwards
     for (const KnapsackTerm& term : smallItems) {
       std::vector<KnapsackTerm> clique = maxWeightItems;
       clique.push_back(term);
@@ -311,20 +325,72 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     strengthenedKnapsacks = true;
   }
 
-  // TODO: Remove the disaggregated knapsacks before doing the below code?
+  knapsacks.erase(std::remove_if(knapsacks.begin(), knapsacks.end(),
+                                 [](const KnapsackRow& knapsack) {
+                                   return knapsack.capacity <= 1;
+                                 }),
+                  knapsacks.end());
 
-  // TODO: Somehow sort out ??
-  std::stable_partition(
-      knapsacks.begin(), knapsacks.end(),
-      [](const KnapsackRow& row) { return row.capacity > 1; });
+  // Search for a literal u, s.t.,
+  // u = 1 -> x_i = 0 for some set of I
+  // If \alpha = \sum_{i \in I} a_i - (weightsum - capacity) > 0
+  // then we can lift \alpha u into the row
 
-  // TODO: Want to do the lifting from SCIP
+  // The sum of a_i for x_i = 0 when literal = 1, i.e.,
+  // the weight from the knapsack that disappears by fixing the literal.
+  std::vector<int64_t> removedWeight(2 * numCols, 0);
+  // Keeps track of source from where the literal was last visited
+  std::vector<HighsInt> lastLiteralSource(2 * numCols, -1);
+  // Keep track of literals with non-zero removed weight
+  std::vector<HighsInt> candidates;
+  for (const KnapsackRow& knapsack : knapsacks) {
+    candidates.clear();
+    for (const KnapsackTerm& term : knapsack.terms) {
+      HighsInt negatedTermLiteral = term.literal ^ 1;
+      lastLiteralSource[negatedTermLiteral] = term.literal;
+      if (removedWeight[negatedTermLiteral] == 0)
+        candidates.push_back(negatedTermLiteral);
+      removedWeight[negatedTermLiteral] += term.weight;
+      presolveCliqueTable.recordLiteralNeighbourhood(
+          term.literal, term.weight, removedWeight, lastLiteralSource,
+          candidates, maxRowSize);
+    }
+    HighsInt bestLiteral = -1;
+    int64_t bestWeight = 0;
+    for (HighsInt literal : candidates) {
+      const HighsInt col = literal / 2;
+      const int64_t weight =
+          removedWeight[literal] - (knapsack.weightsum - knapsack.capacity);
+      if (!colDeleted[col] &&
+          model->col_lower_[col] != model->col_upper_[col] &&
+          weight > bestWeight) {
+        bestLiteral = literal;
+        bestWeight = weight;
+      }
+      removedWeight[literal] = 0;
+      lastLiteralSource[literal] = -1;
+    }
+    if (bestLiteral == -1) continue;
+    const double weight = static_cast<double>(bestWeight);
+    const bool positive = bestLiteral % 2 == 1;
+    addToMatrix(knapsack.row, bestLiteral / 2,
+                knapsack.direction * (positive ? weight : -weight));
+    if (!positive) {
+      if (knapsack.direction == 1) {
+        addToRowUpper(knapsack.row, -static_cast<HighsCDouble>(weight));
+      } else {
+        addToRowLower(knapsack.row, static_cast<HighsCDouble>(weight));
+      }
+    }
+    ++numLifted;
+    strengthenedKnapsacks = true;
+  }
 
   highsLogDev(options->log_options, HighsLogType::kInfo,
               "Knapsack presolve: %d normalized, %d fixed, %d disaggregated, "
               "%d lifted\n",
-              int(numNormalized), int(numFixed), int(numDisaggregated),
-              int(numLifted));
+              static_cast<int>(numNormalized), static_cast<int>(numFixed),
+              static_cast<int>(numDisaggregated), static_cast<int>(numLifted));
   return Result::kOk;
 }
 
