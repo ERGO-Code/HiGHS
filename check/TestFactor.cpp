@@ -639,14 +639,12 @@ TEST_CASE("study-factor", "[highs_test_factor]") {
   // no entries in row 2) hence the zero pivot is skipped. There's a
   // meaningful INVERT error because the singular system has a
   // non-unique solution.
-
+  //
   // Factor the singular basis
   invert();
   // After INVERT, basis is [3, 1, 8], where the 8 is the identity
   // column variable replacing column 2 to ensure non-singularity
   //
-  // If
-
   // Recover the non-singular basis [2, 1, 0]
   basis = ok_basis;
   invert();
