@@ -453,6 +453,16 @@ void HPresolve::chooseRules() {
 
   may_require_basis_postsolve_ = false;
   may_require_primal_dual_postsolve_ = false;
+
+  auto postsolveRuleOff = [&] (const std::string& postsolve_type, const HighsInt rule) {
+      allow_rule_[rule] = false;
+      if (!silent && options->log_dev_level)
+        highsLogUser(
+            options->log_options, HighsLogType::kWarning,
+            "May require %s postsolve, so switched off \"%s\" rule\n",
+            postsolve_type.c_str(), utilPresolveRuleTypeToString(rule).c_str());
+  };
+
   if (mipsolver == nullptr) {
     // Record whether one or both of dual and basis postsolve may be
     // required, and switch off rules that are correspondingly
@@ -461,44 +471,25 @@ void HPresolve::chooseRules() {
       may_require_primal_dual_postsolve_ = true;
       // Cannot use weakly dominated column rule (see
       // test-weakly-dominated-column-dual-postsolve)
-      allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
-      if (!silent && options->log_dev_level)
-        highsLogUser(
-            options->log_options, HighsLogType::kWarning,
-            "May require dual postsolve, so switched off \"%s\" rule\n",
-            utilPresolveRuleTypeToString(kPresolveRuleWeaklyDominatedCol)
-                .c_str());
+      postsolveRuleOff("dual", kPresolveRuleWeaklyDominatedCol);
       // Cannot use kPresolveRuleDualFixing rule (see
       // test-dual-fixing-dual-postsolve)
-      allow_rule_[kPresolveRuleDualFixing] = false;
-      if (!silent && options->log_dev_level)
-        highsLogUser(
-            options->log_options, HighsLogType::kWarning,
-            "May require dual postsolve, so switched off \"%s\" rule\n",
-            utilPresolveRuleTypeToString(kPresolveRuleDualFixing).c_str());
+      postsolveRuleOff("dual", kPresolveRuleDualFixing);
+      // Cannot use kPresolveRuleZeroCostSingleton (see
+      // hipo-ipx-pdlp-no-crossover)
+      postsolveRuleOff("dual", kPresolveRuleZeroCostSingleton);
     }
     if (mayRequireBasisPostsolve(options)) {
       may_require_basis_postsolve_ = true;
       // Cannot use sparsify or any parallel row rule using
       // EqualityRowAddition(s). Latter are avoided logically in
       // HPresolve::detectParallelRowsAndCols
-      allow_rule_[kPresolveRuleSparsify] = false;
-      if (!silent && options->log_dev_level)
-        highsLogUser(
-            options->log_options, HighsLogType::kWarning,
-            "May require basis postsolve, so switched off \"%s\" rule\n",
-            utilPresolveRuleTypeToString(kPresolveRuleSparsify).c_str());
+      postsolveRuleOff("basis", kPresolveRuleSparsify);
     }
     if (may_require_basis_postsolve_ || may_require_primal_dual_postsolve_) {
       // Cannot use dominated column rule for either basis or dual
       // postsolve (see issue-3342)
-      allow_rule_[kPresolveRuleDominatedCol] = false;
-      if (!silent && options->log_dev_level)
-        highsLogUser(
-            options->log_options, HighsLogType::kWarning,
-            "May require dual or basis postsolve, so switched off \"%s\" "
-            "rule\n",
-            utilPresolveRuleTypeToString(kPresolveRuleDominatedCol).c_str());
+      postsolveRuleOff("dual or basis", kPresolveRuleDominatedCol);
     }
   }
   // If dominated column rule is off, weakly dominated column rule

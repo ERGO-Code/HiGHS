@@ -2033,7 +2033,7 @@ TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {
 }
 
 #ifdef HIPO
-TEST_CASE("hipo-ipx-no-crossover", "[highs_test_presolve]") {
+TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
   const std::string model = "bandm";  //"avgas";//
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
