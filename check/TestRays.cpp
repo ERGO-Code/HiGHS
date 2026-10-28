@@ -716,7 +716,6 @@ TEST_CASE("Rays-464a", "[highs_test_rays]") {
   REQUIRE(highs.setOptionValue("allow_unbounded_or_infeasible",
                                allow_unbounded_or_infeasible) ==
           HighsStatus::kOk);
-
   REQUIRE(highs.setOptionValue("presolve", kHighsOffString) ==
           HighsStatus::kOk);
   std::string presolve_status = "off";
@@ -962,6 +961,8 @@ TEST_CASE("Rays-2415", "[highs_test_rays]") {
           HighsStatus::kOk);
   REQUIRE(h.getInfo().primal_solution_status != kSolutionStatusFeasible);
   REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusNone);
+
+  h.resetGlobalScheduler(true);
 }
 
 TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
@@ -1007,4 +1008,70 @@ TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
     lp.integrality_ = {HighsVarType::kInteger};
     if (dev_run) printf("\nFor unbounded MIP\n");
   }
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3413", "[highs_test_rays]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  // An infeasible LP
+  std::vector<HighsInt> index = {0};
+  std::vector<double> value = {1};
+  h.addCol(0.0, 0.0, kHighsInf, 0, nullptr, nullptr);
+  h.addRow(-kHighsInf, -1, 1, index.data(), value.data());
+  h.setOptionValue(kSolverString, kIpmString);
+  h.run();
+  bool has_dual_ray = false;
+  std::vector<double> dual_ray_value = {NAN};
+  h.getDualRay(has_dual_ray, dual_ray_value.data());
+  REQUIRE(dual_ray_value[0] == -1);
+  h.clear();
+
+  // An unbounded LP
+  h.setOptionValue("output_flag", dev_run);
+  h.addCol(-1.0, 0.0, kHighsInf, 0, nullptr, nullptr);
+  h.addRow(1, kHighsInf, 1, index.data(), value.data());
+  h.setOptionValue(kSolverString, kIpmString);
+  h.run();
+  bool has_primal_ray = false;
+  std::vector<double> primal_ray_value = {NAN};
+  h.getPrimalRay(has_primal_ray, primal_ray_value.data());
+  REQUIRE(primal_ray_value[0] == 1);
+  h.clear();
+
+  // An infeasible problem with a semi-integer variable
+  h.setOptionValue("output_flag", dev_run);
+  index = {0, 1};
+  value = {1, -1};
+  h.addVar(2.0, 3.0);
+  h.addVar(4.0, 4.0);
+  h.changeColIntegrality(0, HighsVarType::kSemiInteger);
+  h.addRow(0.0, kHighsInf, 2, index.data(), value.data());
+  h.run();
+
+  has_dual_ray = false;
+  dual_ray_value = {NAN, NAN};
+  h.getDualRay(has_dual_ray, dual_ray_value.data());
+  REQUIRE(dual_ray_value[0] == 1);
+  h.clear();
+
+  // An unbounded problem with a semi-integer variable
+  h.setOptionValue("output_flag", dev_run);
+  index = {1};
+  value = {1};
+  h.addCol(-1.0, 2.0, 3.0, 0, nullptr, nullptr);
+  h.addCol(-1.0, 0.0, kHighsInf, 0, nullptr, nullptr);
+  h.changeColIntegrality(0, HighsVarType::kSemiInteger);
+  h.addRow(1, kHighsInf, 1, index.data(), value.data());
+  h.run();
+
+  has_primal_ray = false;
+  primal_ray_value = {NAN, NAN};
+  h.writeModel("");
+  h.writeSolution("", 1);
+  h.getPrimalRay(has_primal_ray, primal_ray_value.data());
+  REQUIRE(primal_ray_value[0] == 0);
+  REQUIRE(primal_ray_value[1] == 1);
+  h.resetGlobalScheduler(true);
 }

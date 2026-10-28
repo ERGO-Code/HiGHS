@@ -35,6 +35,13 @@ endfunction()
 function(highs_configure_blas_metadata)
     set(HIGHS_BLAS_COMPILE_DEFINITION "" PARENT_SCOPE)
 
+    # if OpenBLAS is passed directly via BLAS_LIBRARIES, the vendor is not
+    # known to CMake, so detect it from the library name
+    string(TOLOWER "${BLAS_LIBRARIES}" BLAS_LIBRARIES_LOWER)
+    if(BLAS_LIBRARIES_LOWER MATCHES "openblas")
+        set(BLA_VENDOR OpenBLAS)
+    endif()
+
     if(OpenBLAS_FOUND OR OPENBLAS_LIB OR BLA_VENDOR MATCHES "OpenBLAS")
         set(HIGHS_BLAS_VENDOR OpenBLAS PARENT_SCOPE)
         set(HIGHS_BLAS_VERSION "${OpenBLAS_VERSION}" PARENT_SCOPE)
@@ -161,7 +168,9 @@ function(highs_build_openblas_windows_arm64 version result_var)
 
     # There is no runtime CPU detection for ARM64 on Windows (DYNAMIC_ARCH
     # always selects the baseline), so build the ARMV8 kernels directly.
-    # USE_TLS avoids a shared lock on every BLAS call that needs a work buffer.
+    # Build without the thread pool, which HiPO never uses and which
+    # intermittently segfaults when highs_extras.dll is unloaded at exit, and
+    # with locking, since HiPO calls BLAS from several threads.
     ExternalProject_Add(openblas_clang
         GIT_REPOSITORY "https://github.com/OpenMathLib/OpenBLAS.git"
         GIT_TAG "v${version}"
@@ -180,7 +189,8 @@ function(highs_build_openblas_windows_arm64 version result_var)
             -DBUILD_TESTING:BOOL=OFF
             -DTARGET:STRING=ARMV8
             -DDYNAMIC_ARCH:BOOL=OFF
-            -DUSE_TLS:STRING=1
+            -DUSE_THREAD:BOOL=OFF
+            -DUSE_LOCKING:BOOL=ON
             -DNOFORTRAN:BOOL=ON
             -DONLY_CBLAS:BOOL=ON
             -DNO_LAPACK:BOOL=ON

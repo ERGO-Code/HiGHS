@@ -55,7 +55,7 @@ class HighsBinarySemaphore {
     int spinIters = HighsSchedulerConstants::kNumSpinTries;
     while (true) {
       for (int i = 0; i < spinIters; ++i) {
-        if (data_->count.load(std::memory_order_acquire) == 1) {
+        if (data_->count.load(std::memory_order_relaxed) == 1) {
           if (try_acquire()) return;
         }
         HighsSpinMutex::yieldProcessor();
@@ -73,7 +73,9 @@ class HighsBinarySemaphore {
     }
 
     std::unique_lock<std::mutex> lg{data_->mutex};
-    int prev = data_->count.exchange(-1, std::memory_order_relaxed);
+    // acquire, to synchronise with release() when it was called before this
+    // exchange and the mutex is not involved
+    int prev = data_->count.exchange(-1, std::memory_order_acquire);
     if (prev == 1) {
       data_->count.store(0, std::memory_order_relaxed);
       return;
@@ -91,7 +93,9 @@ class HighsBinarySemaphore {
   }
 
   void acquire(std::unique_lock<std::mutex> lockGuard) {
-    int prev = data_->count.exchange(-1, std::memory_order_relaxed);
+    // acquire, to synchronise with release() when it was called before this
+    // exchange and the mutex is not involved
+    int prev = data_->count.exchange(-1, std::memory_order_acquire);
     if (prev == 1) {
       data_->count.store(0, std::memory_order_relaxed);
       return;
@@ -99,7 +103,7 @@ class HighsBinarySemaphore {
 
     do {
       data_->condvar.wait(lockGuard);
-    } while (data_->count.load(std::memory_order_relaxed) != 1);
+    } while (data_->count.load(std::memory_order_acquire) != 1);
 
     data_->count.store(0, std::memory_order_relaxed);
   }
