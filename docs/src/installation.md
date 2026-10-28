@@ -41,7 +41,7 @@ HiGHS does not have any external dependencies, however, the new interior point s
 
 HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is already part of the HiGHS library, so there is no need to link them. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD.
 
-### BLAS
+### [BLAS](@id install-blas)
 
 On MacOS no BLAS installation is required because HiPO uses [Apple Accelerate](https://developer.apple.com/accelerate/) by default.
 
@@ -59,6 +59,8 @@ cmake -S. -B build -DHIPO=ON
 ```
 cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON
 ```
+
+On Windows ARM64, MSVC cannot assemble OpenBLAS's optimised kernels. When building natively on an ARM64 machine, HiGHS therefore builds OpenBLAS separately with `clang-cl` and Ninja (HiGHS itself is still compiled with MSVC). `clang-cl` is found in the Visual Studio "C++ Clang Compiler for Windows" component or an LLVM installation, or can be set explicitly with `-DHIGHS_OPENBLAS_C_COMPILER=<path to clang-cl>`. If `clang-cl` or Ninja is not available, OpenBLAS falls back to generic C kernels, which are several times slower; add `-DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON` to make this a configure error instead.
 
 #### Linux and Windows: Link with BLAS installatied on your machine
 
@@ -91,6 +93,8 @@ cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsyste
 
 To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` could be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
 
+When `BLAS_LIBRARIES` is used, HiGHS can only tell which vendor provides BLAS from the library name: if the name contains "openblas" (in any case), the library is treated as OpenBLAS. This matters for performance, because HiPO runs OpenBLAS in serial (see [BLAS threads](@ref parallel-blas-threads)). If OpenBLAS is provided under a different name, also set `-DBLA_VENDOR=OpenBLAS`.
+
 
 ## [Building HiGHS with NVidia GPU support](@id gpu-build)
 
@@ -117,7 +121,7 @@ cmake --build build --parallel
 
 to build HiGHS.
 
-### Bazel build with Cuda
+### Bazel build with CUDA
 
 Alternatively, for Bazel run
 
@@ -130,3 +134,73 @@ It may be necessary to also specify the architecture, e.g.
 ```
 bazel build //... --//:cupdlp_gpu --@rules_cuda//cuda:archs=sm_89
 ```
+
+## [Building HiGHS with AMD GPU support](@id gpu-build-amd)
+
+The native HiPDLP solver can also run on an AMD GPU using
+[ROCm](https://rocm.docs.amd.com/) / HIP. This requires a ROCm
+installation providing the HIP compiler and the hipBLAS and hipSPARSE
+libraries. Make sure the HIP compiler is available by running
+
+```
+hipcc --version
+```
+
+ROCm 10.0 or newer is recommended (this is the version the HIP backend
+is tested against). On such a ROCm, the supported GPU architectures are
+`gfx908` and newer (e.g. `gfx908`/MI100, `gfx90a`/MI200,
+`gfx942`/MI300, and recent RDNA cards).
+
+Then build HiGHS, from the root directory, with
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON
+cmake --build build --parallel
+```
+
+CMake must be able to find ROCm. If it is not installed in the default
+location, point it there, for example
+
+```
+export PATH=/opt/rocm/bin:$PATH
+export CMAKE_PREFIX_PATH=/opt/rocm
+```
+
+By default the HIP device code is compiled for a generic set of GPU
+architectures. To target the specific GPU on the build machine (which
+also speeds up compilation and linking), set `CMAKE_HIP_ARCHITECTURES`
+to its `gfx` target, for example
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx90a
+```
+
+You can find the `gfx` identifier of the installed GPU with `rocminfo`
+(look for the `gfx` name, e.g. `gfx90a` for MI200-class cards or
+`gfx942` for MI300). Multiple architectures may be given as a
+semicolon-separated list, e.g. `-DCMAKE_HIP_ARCHITECTURES="gfx90a;gfx942"`.
+
+By default the host C/C++ sources are compiled with the system compiler
+(e.g. GCC) and only the HIP device code with ROCm's compiler. To build
+the whole of HiGHS with the ROCm toolchain instead, for a uniform
+Clang-based build, point CMake at `amdclang` / `amdclang++`
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON \
+  -DCMAKE_C_COMPILER=amdclang -DCMAKE_CXX_COMPILER=amdclang++
+```
+
+The HIP backend compiles the same HiPDLP source as the CUDA backend,
+selecting the AMD implementation at build time. Once built, the solver
+is selected at run time by setting the [__solver__](@ref
+option-solver) option to "hipdlp".
+
+To check the ROCm / HIP backend on the local machine, run the example
+`call_highs_hipdlp` (also registered as the ctest
+`cxx_examples_call_highs_hipdlp`), which solves a small LP with
+`solver = "hipdlp"` and verifies the result. A successful run is a
+quick end-to-end sanity check of the GPU backend.
+
+To confirm the work is actually running on the GPU, watch `rocm-smi`
+(for example `watch -n 0.1 rocm-smi`) while the solve runs and check
+that GPU utilisation and memory usage rise.

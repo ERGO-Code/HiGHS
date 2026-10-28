@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "qpasm" or "hipdlp", 
+- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "hipdlp" or "qpasm"
 - Type: string
 - Default: "choose"
 
@@ -44,7 +44,7 @@
 - Default: 1e+20
 
 ## [infinite\_bound](@id option-infinite-bound)
-- Limit on |constraint bound|: values greater than or equal to this will be treated as infinite
+- Limit on |variable/constraint bound|: values greater than or equal to this will be treated as infinite
 - Type: double
 - Range: [1e+15, inf]
 - Default: 1e+20
@@ -472,6 +472,11 @@
 - Range: {0, 2147483647}
 - Default: 128
 
+## [hipo\_serial\_blas](@id option-hipo-serial-blas)
+- Force OpenBLAS to run in serial when used by HiPO. This setting is process-wide, so affects any other use of OpenBLAS
+- Type: boolean
+- Default: "true"
+
 ## [pdlp\_iteration\_limit](@id option-pdlp-iteration-limit)
 - Iteration limit for PDLP solver
 - Type: integer
@@ -554,7 +559,7 @@
 - Default: 1e-07
 
 ## [iis\_strategy](@id option-iis-strategy)
-- Strategy for IIS calculation: 0 => Light test; 1 => Try dual ray; 2 => Try elastic LP; 4 => Prioritise columns; 8 => Find true IIS; 16 => Find relaxation IIS for MIP
+- Strategy for IIS calculation: 0 => Light test; 1 => Try dual ray; 2 => Try elastic LP; 4 => Find true IIS; 8 => Prioritise columns; 16 => Find relaxation IIS for MIP
 - Type: integer
 - Range: {0, 31}
 - Default: 0

@@ -74,15 +74,18 @@ HiGHS has two interior point (IPM) solvers:
   The option [__hipo\_ordering__](@ref option-hipo-ordering) can be used
   to select the fill-reducing heuristic to use during the
   factorisation:
-  
+
   * Nested dissection, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "metis".
-  
+
   * Approximate minimum degree, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "amd".
-  
+
   * Reverse Cuthill-McKee, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "rcm".
+
+  [__hipo\_serial\_blas__](@ref option-hipo-serial-blas) option. See
+  [BLAS threads](@ref parallel-blas-threads) for details.
 
 For small LPs, IPX is often faster than HiPO. However, as problem size
 grows, HiPO becomes more efficient, and its advantage can be more
@@ -94,8 +97,9 @@ HiGHS includes the [
 cuPDLP-C](https://github.com/COPT-Public/cuPDLP-C) primal-dual hybrid
 gradient method for LP (PDLP), and also has a native PDLP solver,
 HiPDLP. On Linux and Windows, these solvers can be run on an NVIDIA
-[GPU](@ref gpu). On a CPU, they are unlikely to be competitive with
-the HiGHS interior point or simplex solvers.
+[GPU](@ref gpu), and HiPDLP can additionally be run on an AMD GPU via
+ROCm / HIP. On a CPU, they are unlikely to be competitive with the HiGHS
+interior point or simplex solvers.
 
   * Setting the option [__solver__](@ref option-solver) to "pdlp" forces the cuPDLP-C solver to be used
   * Setting the option [__solver__](@ref option-solver) to "hipdlp" forces the HiPDLP solver to be used
@@ -204,10 +208,9 @@ add a test of Hessian convexity.
 
 ## MIP
 
-MIPs are solved using a sophisticated branch-and-cut solver. This is
-largely single-threaded, although a prototype multithreaded solver was
-completed in February 2026, and is expected to be released by
-June. Users can choose the solver for LP sub-problems as follows
+MIPs are solved using a sophisticated branch-and-cut solver that exploits 
+multi-threading (see [here](@ref parallel-mip)).
+Users can choose the solver for LP sub-problems as follows
 
 * LPs where an advanced basis is not known. This is generally the case
   at the root node of the branch-and-bound tree, but can occur at

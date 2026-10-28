@@ -89,7 +89,7 @@ TEST_CASE("qp-unbounded", "[qpsolver]") {
     highs.clearSolver();
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("qp-infeasible", "[qpsolver]") {
@@ -106,7 +106,7 @@ TEST_CASE("qp-infeasible", "[qpsolver]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -229,7 +229,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
     REQUIRE(return_status == HighsStatus::kOk);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {
@@ -382,7 +382,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {
@@ -509,7 +509,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-min-negative-definite", "[qpsolver]") {
@@ -538,7 +538,7 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
     REQUIRE(highs.run() == HighsStatus::kError);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-max-negative-definite", "[qpsolver]") {
@@ -597,7 +597,7 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
     REQUIRE(fabs(solution.col_dual[0] + 1.0) < double_equal_tolerance);
     REQUIRE(fabs(solution.row_dual[0] + 0.5) < double_equal_tolerance);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite0", "[qpsolver]") {
@@ -645,7 +645,7 @@ TEST_CASE("test-semi-definite0", "[qpsolver]") {
     if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite1", "[qpsolver]") {
@@ -695,7 +695,7 @@ TEST_CASE("test-semi-definite1", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1]) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite2", "[qpsolver]") {
@@ -745,7 +745,7 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1] - 2) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-modification", "[qpsolver]") {
@@ -860,7 +860,7 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
     highs.run();
     if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
-    highs.resetGlobalScheduler(true);
+    highs.resetThreadScheduler(true);
   }
 }
 
@@ -1146,7 +1146,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-terminations", "[qpsolver]") {
@@ -1192,7 +1192,7 @@ TEST_CASE("test-qp-terminations", "[qpsolver]") {
   highs.setOptionValue("time_limit", kHighsInf);
 #endif
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("rowless-qp", "[qpsolver]") {
@@ -1220,11 +1220,12 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
   REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
           HighsStatus::kOk);
 
+  HighsStatus require_write_solution_status = HighsStatus::kWarning;
   for (auto& solver : solvers) {
     highs.setOptionValue("solver", solver);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.writeSolution("", kSolutionStylePretty) ==
-            HighsStatus::kWarning);
+            require_write_solution_status);
 
     const double required_objective_function_value = -2.25;
 
@@ -1237,9 +1238,13 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
     REQUIRE(dl_solution < 1e-6);
     dl_solution = std::fabs(col_value[1] - 1.5);
     REQUIRE(dl_solution < 1e-6);
+    // If there is more than one solver, writeSolution returns
+    // HighsStatus::kOk, since column names exist for the model and
+    // the absence of row names no longer yields a warning
+    require_write_solution_status = HighsStatus::kOk;
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2489", "[qpsolver]") {
@@ -1283,7 +1288,7 @@ TEST_CASE("issue-2489", "[qpsolver]") {
     REQUIRE(run_status == expected_status);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2821", "[qpsolver]") {
@@ -1336,7 +1341,7 @@ TEST_CASE("issue-2821", "[qpsolver]") {
                                 optimal_objective_value));
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("pass-square-hessian", "[qpsolver]") {
@@ -1380,7 +1385,7 @@ TEST_CASE("pass-square-hessian", "[qpsolver]") {
   REQUIRE(okValueDifference(info.objective_function_value,
                             optimal_objective_value));
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 /*
@@ -1405,9 +1410,33 @@ TEST_CASE("issue-2894", "[qpsolver]") {
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
+
+TEST_CASE("issue-3322", "[qpsolver]") {
+  // Convex QP: a maximization whose only quadratic term is a negative
+  // multiple of the square of a free column. The active set solver
+  // declared it non-convex, because the new diagonal entry of the
+  // Cholesky factor of the reduced Hessian was computed as the
+  // difference of two nearly equal numbers
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/3322.mps";
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("solver", kQpAsmString) == HighsStatus::kOk);
+  const double required_objective_function_value = -1.5339266953e-02;
+  for (const double regularization : {1e-7, 0.0}) {
+    REQUIRE(h.setOptionValue("qp_regularization_value", regularization) ==
+            HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(okValueDifference(h.getInfo().objective_function_value,
+                              required_objective_function_value));
+  }
+  h.resetThreadScheduler(true);
+}
 
 TEST_CASE("issue-3045", "[qpsolver]") {
   // Nonconvex QP
@@ -1501,7 +1530,7 @@ TEST_CASE("issue-3045", "[qpsolver]") {
             (solver == kHipoString ? HighsStatus::kOk : HighsStatus::kError));
     //    }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-atwood", "[qpsolver]") {
@@ -1600,5 +1629,5 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
       assert(basis_.valid);
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

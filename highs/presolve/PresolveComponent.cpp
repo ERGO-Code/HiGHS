@@ -21,20 +21,14 @@ HighsStatus PresolveComponent::init(const HighsLp& lp, HighsTimer& timer,
   return HighsStatus::kOk;
 }
 
-void PresolveComponent::negateReducedLpColDuals() {
-  for (HighsInt col = 0; col < data_.reduced_lp_.num_col_; col++)
-    data_.recovered_solution_.col_dual[col] =
-        -data_.recovered_solution_.col_dual[col];
-  return;
-}
-
 HighsPresolveStatus PresolveComponent::run() {
   presolve::HPresolve presolve;
   presolve.setInput(data_.reduced_lp_, *options_,
                     options_->presolve_reduction_limit, timer);
   presolve.run(data_.postSolveStack);
   presolve_status_ = presolve.getPresolveStatus();
-  if (presolve_status_ != HighsPresolveStatus::kOutOfMemory)
+  if (presolve_status_ != HighsPresolveStatus::kOutOfMemory &&
+      presolve_status_ != HighsPresolveStatus::kException)
     data_.presolve_log_ = presolve.getPresolveLog();
   return presolve_status_;
 }

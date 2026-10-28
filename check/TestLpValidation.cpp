@@ -392,7 +392,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
           HighsStatus::kOk);
   REQUIRE(check_value == to_value);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-row-index-duplication", "[highs_data]") {
@@ -449,7 +449,39 @@ TEST_CASE("LP-extreme-coefficient", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("LP-duplicate-small-value", "[highs_data]") {
+  // a column with two entries in the same row is only illegal if both
+  // entries are retained: an entry that is ignored because its value is
+  // small is not identified as a duplicate. this must not depend on the
+  // order of the entries
+  HighsLp lp;
+  lp.num_col_ = 1;
+  lp.num_row_ = 3;
+  lp.col_cost_.assign(1, 1);
+  lp.col_lower_.assign(1, 0);
+  lp.col_upper_.assign(1, 1);
+  lp.row_lower_.assign(3, -inf);
+  lp.row_upper_.assign(3, 1);
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {2, 2};
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  lp.a_matrix_.value_ = {3, 1e-12};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  REQUIRE(highs.getLp().a_matrix_.numNz() == 1);
+  lp.a_matrix_.value_ = {1e-12, 3};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  REQUIRE(highs.getLp().a_matrix_.numNz() == 1);
+  lp.a_matrix_.value_ = {1e-12, 1e-12};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kWarning);
+  REQUIRE(highs.getLp().a_matrix_.numNz() == 0);
+  lp.a_matrix_.value_ = {3, 3};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kError);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-inf-cost", "[highs_data]") {
@@ -575,7 +607,7 @@ TEST_CASE("LP-inf-cost", "[highs_data]") {
   // Check that x was fixed at 1, not 0.5
   REQUIRE(highs.getSolution().col_value[0] == 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-change-coefficient", "[highs_data]") {
@@ -622,7 +654,7 @@ TEST_CASE("LP-change-coefficient", "[highs_data]") {
                                     highs.getInfo().objective_function_value);
   REQUIRE(delta_objective_value < 1e-8);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-illegal-empty-start-ok", "[highs_data]") {
@@ -657,7 +689,7 @@ TEST_CASE("LP-row-wise", "[highs_data]") {
   highs.passModel(lp);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
@@ -688,5 +720,5 @@ TEST_CASE("LP-infeasible-bounds", "[highs_data]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

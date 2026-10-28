@@ -16,7 +16,7 @@ add_library(cudalin SHARED
 # latest has
 # set_target_properties(cudalin PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-set_target_properties(cudalin PROPERTIES 
+set_target_properties(cudalin PROPERTIES
 CUDA_SEPARABLE_COMPILATION ON
 #CUDA_ARCHITECTURES "60;70;75;80;86" )
 #Deleted 60;70 due to errors
@@ -26,6 +26,7 @@ CUDA_ARCHITECTURES "75;80;86" )
 
 
 # set_target_properties(cudalin PROPERTIES CUDA_ARCHITECTURES native)
+
 
 target_include_directories(cudalin PUBLIC "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>")
 
@@ -50,3 +51,9 @@ target_link_libraries(testcudalin PRIVATE cudalin ${CUDA_LIBRARY})
 
 set_target_properties(testcublas PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 target_link_libraries(testcublas PRIVATE cudalin ${CUDA_LIBRARY})
+
+target_include_directories(cudalin PUBLIC 
+    "$<BUILD_INTERFACE:${CMAKE_CUDA_PATH}/include>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../hipdlp>"  # Add this for pdhg_kernels.hpp
+    "$<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>"  # Add this for HConfig.h
+)

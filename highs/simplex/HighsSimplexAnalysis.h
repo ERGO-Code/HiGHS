@@ -184,7 +184,7 @@ class HighsSimplexAnalysis {
   // Pointer to timer
   HighsTimer* timer_;
 
-  void setup(const std::string lp_name, const HighsLp& lp,
+  void setup(const std::string& lp_name, const HighsLp& lp,
              const HighsOptions& options,
              const HighsInt simplex_iteration_count);
   void setupSimplexTime(const HighsOptions& options);

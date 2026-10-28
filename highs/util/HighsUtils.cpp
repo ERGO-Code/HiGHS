@@ -67,7 +67,7 @@ void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
   // Make a AR copy
   std::vector<HighsInt> iwork(numRow, 0);
   ARstart.resize(numRow + 1, 0);
-  HighsInt AcountX = Aindex.size();
+  HighsInt AcountX = Astart[numCol];
   ARindex.resize(AcountX);
   ARvalue.resize(AcountX);
   for (HighsInt k = 0; k < AcountX; k++) {
@@ -1256,4 +1256,12 @@ bool highsPause(const bool pause_condition, const std::string& message) {
     fflush(stdout);
   }
   return pause_condition;
+}
+
+bool handleExceptionIsOom(const HighsLogOptions& log_options,
+                          const std::string& source,
+                          const std::exception& exception) {
+  highsLogUser(log_options, HighsLogType::kError, "Exception %s in %s\n",
+               exception.what(), source.c_str());
+  return dynamic_cast<const std::bad_alloc*>(&exception);
 }

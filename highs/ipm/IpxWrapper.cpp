@@ -16,6 +16,7 @@
 #include "HighsExternalApi.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsSolution.h"
+#include "util/stringutil.h"
 
 using std::min;
 
@@ -198,6 +199,13 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
   if (report_solve_data) reportSolveData(options.log_options, ipx_info);
   highs_info.ipm_iteration_count += (HighsInt)ipx_info.iter;
   highs_info.crossover_iteration_count += (HighsInt)ipx_info.updates_crossover;
+  // Record the outcome of any centring, since the model status only
+  // indicates whether the LP is solved. Centring is not tried if the
+  // IPM stops before reaching optimality
+  highs_info.centring_status = !ipx_info.centring_tried ? kCentringStatusNone
+                               : ipx_info.centring_success
+                                   ? kCentringStatusSuccess
+                                   : kCentringStatusFailed;
 
   // If not solved...
   if (solve_status != IPX_STATUS_solved) {
@@ -420,6 +428,23 @@ HighsStatus solveQpHipo(HighsQpSolverObject& solver_object) {
                    solver_object.callback_);
 }
 
+static HighsInt prepareOpenBLAS(const HighsOptions& options) {
+  // OpenBLAS threads are a process-wide setting, so the user can opt out of
+  // changing them
+  if (!options.hipo_serial_blas) return 0;
+
+  // force openblas to run in serial, for determinism and better performance
+  // no-op if openblas is not used
+  const int threads_used = HighsExtras::blas::openblas_set_num_threads(1);
+  if (is_substring_case(HighsExtras::blas::getInfo()->provider, "openblas") &&
+      threads_used != 1) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "OpenBLAS failed to set the number of threads to 1\n");
+    return 1;
+  }
+  return 0;
+}
+
 HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
                       const HighsLp& lp, const HighsHessian& Q,
                       HighsBasis& highs_basis, HighsSolution& highs_solution,
@@ -457,9 +482,10 @@ HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
   // Indicate that no imprecise solution has (yet) been found
   resetModelStatusAndHighsInfo(model_status, highs_info);
 
-  // force openblas to run in serial, for determinism and better performance
-  // no-op if openblas is not used
-  HighsExtras::blas::openblas_set_num_threads(1);
+  if (prepareOpenBLAS(options)) {
+    model_status = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
 
   // Create solver instance
   hipo::Solver hipo{};
@@ -693,8 +719,9 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   if (free_rows.size() > 0) {
     HighsInt counter = 0;
     HighsInt findex = 0;
+    const HighsInt free_rows_size = static_cast<HighsInt>(free_rows.size());
     for (HighsInt row = 0; row < lp.num_row_; row++) {
-      if (free_rows[findex] == row) {
+      if (findex < free_rows_size && free_rows[findex] == row) {
         findex++;
         continue;
       } else {
@@ -740,7 +767,7 @@ void fillInIpxData(const HighsLp& lp, ipx::Int& num_col, ipx::Int& num_row,
   }
 
   for (HighsInt k = 0; k < num_slack; k++) {
-    Ai.push_back((ipx::Int)general_bounded_rows[k]);
+    Ai.push_back((ipx::Int)reduced_rowmap[general_bounded_rows[k]]);
     Ax.push_back(-1);
   }
 
@@ -1470,5 +1497,4 @@ HighsStatus reportHipoCrossoverStatus(const HighsOptions& options,
                  "Hipo: Crossover unrecognised status\n");
     return HighsStatus::kError;
   }
-  return HighsStatus::kError;
 }

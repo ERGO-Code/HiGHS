@@ -577,7 +577,7 @@ class Highs {
   /**
    * @brief Zero all clocks in the internal HighsTimer instance
    */
-  void zeroAllClocks() { timer_.zeroAllClocks(); };
+  void zeroAllClocks() { timer_.zeroAllClocks(); }
 
   /**
    * @brief Return a const reference to the internal HighsSolution
@@ -590,7 +590,7 @@ class Highs {
   /**
    * @brief Return a const reference to the internal ICrash info instance
    */
-  const ICrashInfo& getICrashInfo() const { return icrash_info_; };
+  const ICrashInfo& getICrashInfo() const { return icrash_info_; }
 
   /**
    * @brief Return a const reference to the internal HighsBasis instance
@@ -1341,7 +1341,7 @@ class Highs {
   std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
 
   /**
-   * @brief Ensures that the global scheduler is initialized,
+   * @brief Ensures that the scheduler is initialized,
    * returning HighsStatus::kError if it has already been initialized,
    * but the threads option is nonzero and not equal to
    * this->max_threads_.
@@ -1349,19 +1349,20 @@ class Highs {
   HighsStatus initializeMultiThreading();
 
   /**
-   * @brief Releases all resources held by the global scheduler instance. It is
-   * not thread-safe to call this function while calling run() or presolve() on
-   * any other Highs instance in any thread. After this function has terminated
-   * it is guaranteed that eventually all previously created scheduler threads
-   * will terminate and allocated memory will be released. After this function
-   * has returned the option value for the number of threads may be altered to a
-   * new value before the next call to run() or presolve(). If the given bool
-   * parameter has value true, then the function will not return until all
-   * memory is freed, which might be desirable when debugging heap memory but
-   * requires the calling thread to wait for all scheduler threads to wake-up
-   * which is usually not necessary.
+   * @brief Releases all resources held by the scheduler owned by the calling
+   * thread. It is thread-safe to call this function only from the thread that
+   * owns the scheduler (not from a worker thread) and when no run() or
+   * presolve() is in progress on that thread. After this function has
+   * terminated it is guaranteed that eventually all previously created
+   * scheduler threads will terminate and allocated memory will be released.
+   * After this function has returned the option value for the number of threads
+   * may be altered to a new value before the next call to run() or presolve().
+   * If the given bool parameter has value true, then the function will not
+   * return until all memory is freed, which might be desirable when debugging
+   * heap memory but requires the calling thread to wait for all scheduler
+   * threads to wake-up which is usually not necessary.
    */
-  static void resetGlobalScheduler(bool blocking = false);
+  static void resetThreadScheduler(bool blocking = false);
 
   /**
    * @brief If profiling is not nullptr, sets up profiling and copies
@@ -1620,6 +1621,10 @@ class Highs {
     return HighsStatus::kError;
   }
 
+  // Deprecated in favour of resetThreadScheduler().
+  // Cannot call deprecationMessage here.
+  static void resetGlobalScheduler(bool blocking = false);
+
   // End of deprecated methods
  private:
   HighsSolution solution_;
@@ -1644,7 +1649,7 @@ class Highs {
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 
-  bool standard_form_valid_;
+  bool standard_form_valid_ = false;
   double standard_form_offset_;
   std::vector<double> standard_form_cost_;
   std::vector<double> standard_form_rhs_;
@@ -1850,6 +1855,7 @@ class Highs {
       const HighsStatus return_status, const std::string& original_model_name,
       const HighsModelStatus original_model_status,
       const HighsInt original_num_col, const HighsInt original_num_row,
+      const ObjSense original_sense,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
       const std::vector<double>& original_col_upper,
@@ -1873,7 +1879,7 @@ class Highs {
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
-  HighsStatus invertRequirementError(std::string method_name) const;
+  HighsStatus invertRequirementError(const std::string& method_name) const;
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);

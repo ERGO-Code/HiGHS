@@ -126,11 +126,15 @@ struct HighsLpMods {
 
 struct HighsNameHash {
   std::unordered_map<std::string, int> name2index;
-  void form(const std::vector<std::string>& name);
-  bool hasDuplicate(const std::vector<std::string>& name);
-  void update(int index, const std::string& old_name,
-              const std::string& new_name);
-  void clear();
+  size_t size() { return this->name2index.size(); }
+  void form(const std::vector<std::string>& names);
+  bool hasDuplicate(const std::vector<std::string>& names);
+  void addName(const HighsInt index, const std::string& name);
+  bool addNameFindsDuplicate(const HighsInt index, const std::string& name);
+  bool updateFindsDuplicate(const HighsInt index, const std::string& old_name,
+                            const std::string& new_name);
+  bool ok(const std::vector<std::string>& names);
+  void clear() { this->name2index.clear(); }
 };
 
 struct HighsPresolveRuleLog {
@@ -205,6 +209,9 @@ struct HighsProfiling {
   //  HighsInt getSepaClockIndex(const std::string& name);
 };
 
+// Starts a profiling clock and stops it when the scope is left, on every exit
+using HighsProfilingScope = HighsClockScope<HighsProfiling>;
+
 struct HighsSimplexStats {
   bool valid;
   HighsInt iteration_count;
@@ -215,7 +222,7 @@ struct HighsSimplexStats {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
-  void report(FILE* file, const std::string message = "") const;
+  void report(FILE* file, const std::string& message = "") const;
   void initialise(const HighsInt iteration_count_ = 0);
 };
 

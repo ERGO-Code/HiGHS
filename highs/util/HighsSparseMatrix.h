@@ -29,6 +29,16 @@ const HighsInt kDebugReportAll = -1;
 class HighsSparseMatrix {
  public:
   HighsSparseMatrix() { clear(); }
+
+  // Explicitly default the special member functions so that the move
+  // operations (relied on by getRowwise/getColwise) can't silently vanish
+  // if a copy operation or the destructor is ever customized in the future.
+  HighsSparseMatrix(const HighsSparseMatrix&) = default;
+  HighsSparseMatrix& operator=(const HighsSparseMatrix&) = default;
+  HighsSparseMatrix(HighsSparseMatrix&&) = default;
+  HighsSparseMatrix& operator=(HighsSparseMatrix&&) = default;
+  ~HighsSparseMatrix() = default;
+
   MatrixFormat format_;
   HighsInt num_col_;
   HighsInt num_row_;
@@ -52,9 +62,9 @@ class HighsSparseMatrix {
 
   void addVec(const HighsInt num_nz, const HighsInt* index, const double* value,
               const double multiple = 1);
-  void addCols(const HighsSparseMatrix new_cols,
+  void addCols(const HighsSparseMatrix& new_cols,
                const int8_t* in_partition = NULL);
-  void addRows(const HighsSparseMatrix new_rows,
+  void addRows(const HighsSparseMatrix& new_rows,
                const int8_t* in_partition = NULL);
   void getRow(const HighsInt iRow, HighsInt& num_nz, HighsInt* index,
               double* value) const;
@@ -68,7 +78,7 @@ class HighsSparseMatrix {
   HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
 
   HighsStatus assess(const HighsLogOptions& log_options,
-                     const std::string matrix_name,
+                     const std::string& matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
                      const std::string* col_names = nullptr,
@@ -129,6 +139,10 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
+
+  HighsSparseMatrix oppositeFormat() const;
+  HighsSparseMatrix getRowwise() const;
+  HighsSparseMatrix getColwise() const;
 
  private:
   void priceByRowDenseResult(

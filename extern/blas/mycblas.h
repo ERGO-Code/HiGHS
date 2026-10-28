@@ -1,9 +1,27 @@
 #ifndef FACTORHIGHS_MY_CBLAS_H
 #define FACTORHIGHS_MY_CBLAS_H
 
+#include <stdint.h>
+
+#if defined(HIPO_USES_APPLE_BLAS)
+
+// Use Apple's own Accelerate header (instead of the hand-rolled Netlib-style
+// declarations below) so that cblas_* calls bind to the modern, actively
+// maintained Accelerate implementation instead of the legacy one (frozen at
+// LAPACK 3.2.1, with long-standing known correctness quirks in its BLAS).
+// ACCELERATE_NEW_LAPACK only takes effect through Apple's header itself
+// (it works via $NEWLAPACK asm-label symbol renaming declared there); the
+// macro alone, without including this header, has no effect - see
+// https://github.com/ERGO-Code/HiGHS/issues/3160.
+#define ACCELERATE_NEW_LAPACK
+#include <Accelerate/Accelerate.h>
+
+typedef int32_t blasint;
+
+#else
+
 // Provide definition for cblas functions
 // Based on Netlib implementation
-#include <stdint.h>
 
 enum CBLAS_ORDER { CblasRowMajor = 101, CblasColMajor = 102 };
 enum CBLAS_TRANSPOSE {
@@ -77,11 +95,22 @@ void cblas_dtrsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side,
                  const double alpha, const double* a, const blasint lda,
                  double* b, const blasint ldb);
 
-#if defined(HIPO_USES_OPENBLAS)
-void openblas_set_num_threads(int num_threads);
+#ifdef __cplusplus
+}
 #endif
 
-void highs_openblas_set_num_threads(int num_threads);
+#endif  // HIPO_USES_APPLE_BLAS
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined(HIPO_USES_OPENBLAS)
+void openblas_set_num_threads(int num_threads);
+int openblas_get_num_threads(void);
+#endif
+
+int highs_openblas_set_num_threads(int num_threads);
 #ifdef __cplusplus
 }
 #endif

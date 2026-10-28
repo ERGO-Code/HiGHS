@@ -541,6 +541,9 @@ HighsInt Highs_getInfoType(const void* highs, const char* info,
 HighsInt Highs_getSolution(const void* highs, double* col_value,
                            double* col_dual, double* row_value,
                            double* row_dual) {
+  if (((Highs*)highs)->getInfo().primal_solution_status == kSolutionStatusNone)
+    return kHighsStatusError;
+
   const HighsSolution& solution = ((Highs*)highs)->getSolution();
 
   if (col_value != nullptr) {
@@ -572,6 +575,7 @@ HighsInt Highs_getSolution(const void* highs, double* col_value,
 HighsInt Highs_getBasis(const void* highs, HighsInt* col_status,
                         HighsInt* row_status) {
   const HighsBasis& basis = ((Highs*)highs)->getBasis();
+  if (!basis.valid) return kHighsStatusError;
   for (size_t i = 0; i < basis.col_status.size(); i++) {
     col_status[i] = static_cast<HighsInt>(basis.col_status[i]);
   }
@@ -1546,8 +1550,8 @@ HighsInt Highs_feasibilityRelaxation(void* highs,
                               local_upper_penalty, local_rhs_penalty);
 }
 
-void Highs_resetGlobalScheduler(HighsInt blocking) {
-  Highs::resetGlobalScheduler(blocking != 0);
+void Highs_resetThreadScheduler(HighsInt blocking) {
+  Highs::resetThreadScheduler(blocking != 0);
 }
 
 const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
@@ -1818,4 +1822,10 @@ double Highs_getHighsInfinity(const void* highs) {
 
 HighsInt Highs_getScaledModelStatus(const void* highs) {
   return (HighsInt)((Highs*)highs)->getModelStatus();
+}
+
+// Deprecated in favour of resetThreadScheduler().
+// Cannot call deprecationMessage here.
+void Highs_resetGlobalScheduler(HighsInt blocking) {
+  Highs::resetGlobalScheduler(blocking != 0);
 }

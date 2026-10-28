@@ -10,6 +10,7 @@
  */
 #ifndef PRESOLVE_HIGHS_PRESOLVE_H_
 #define PRESOLVE_HIGHS_PRESOLVE_H_
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <list>
@@ -24,6 +25,7 @@
 #include "lp_data/HighsOptions.h"
 #include "mip/HighsMipSolver.h"
 #include "presolve/HPresolveAnalysis.h"
+#include "presolve/HPresolveCliqueTable.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
 #include "util/HighsHashTree.h"
@@ -40,7 +42,10 @@ class HPresolve {
   const HighsOptions* options;
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
+  HPresolveCliqueTable presolveCliqueTable;
   double primal_feastol;
+  bool may_require_basis_postsolve_;
+  bool may_require_primal_dual_postsolve_;
   std::vector<HighsBool> allow_rule_;
 
   // triplet storage
@@ -62,6 +67,8 @@ class HPresolve {
   std::vector<HighsInt> rowsize;
   std::vector<HighsInt> rowsizeInteger;
   std::vector<HighsInt> rowsizeImplInt;
+  // number of singleton columns in a row
+  std::vector<HighsInt> rowsizeSingleton;
   std::vector<HighsInt> colsize;
 
   // vector to store the nonzero positions of a row
@@ -110,7 +117,6 @@ class HPresolve {
   bool shrinkProblemEnabled;
   size_t reductionLimit;
   size_t last_reduction_;
-  bool in_initial_sweep_;
 
   // vectors storing singleton rows and columns
   std::vector<HighsInt> singletonRows;
@@ -134,6 +140,10 @@ class HPresolve {
   HighsInt numDeletedRows;
   HighsInt numDeletedCols;
 
+  // number of rows with singleEquationChecked set, so that marking a changed
+  // column can skip clearing the flags of its rows when none is set
+  HighsInt numSingleEquationChecked;
+
   // store old problem sizes to compute percentage reductions in
   // presolve loop
   HighsInt oldNumCol;
@@ -145,7 +155,8 @@ class HPresolve {
     kPrimalInfeasible,
     kDualInfeasible,
     kStopped,
-    kOutOfMemory
+    kOutOfMemory,
+    kException
   };
 
   struct StatusResult {
@@ -187,6 +198,8 @@ class HPresolve {
 
   void markChangedCol(HighsInt col);
 
+  bool resetSingleEquationChecked(HighsInt row);
+
   double getMaxAbsColVal(HighsInt col) const;
 
   double getMaxAbsRowVal(HighsInt row) const;
@@ -214,11 +227,37 @@ class HPresolve {
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
+  void resetRowDualImpliedBoundsIfDualSideLost(HighsInt col, bool isLowerBound);
+
+  void matrixNonZeroChanged(HighsInt row, HighsInt col, double oldCoef,
+                            double newCoef, bool rowIsDeleted,
+                            bool colIsDeleted);
+
+  void changeRowLower(HighsInt row, double newLower,
+                      bool skipRowDualUpdate = false);
+
+  void changeRowUpper(HighsInt row, double newUpper,
+                      bool skipRowDualUpdate = false);
+
+  void addToRowLower(HighsInt row, const HighsCDouble& delta);
+
+  void addToRowUpper(HighsInt row, const HighsCDouble& delta);
+
   bool rowCoefficientsIntegral(HighsInt row, double scale) const;
+
+  bool isBinary(HighsInt col) const;
 
   bool isImpliedFree(HighsInt col) const;
 
   bool isDualImpliedFree(HighsInt row) const;
+
+  bool isDualImpliedLeq(HighsInt row) const;
+
+  bool isDualImpliedLeq(HighsInt row, double implUpper) const;
+
+  bool isDualImpliedGeq(HighsInt row) const;
+
+  bool isDualImpliedGeq(HighsInt row, double implLower) const;
 
   void dualImpliedFreeGetRhsAndRowType(HighsInt row, double& rhs,
                                        HighsPostsolveStack::RowType& rowType,
@@ -249,16 +288,19 @@ class HPresolve {
 
   bool isLowerImplied(HighsInt col) const;
 
+  bool isLowerImplied(HighsInt col, double implLower) const;
+
   bool isLowerStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
   bool isUpperImplied(HighsInt col) const;
 
+  bool isUpperImplied(HighsInt col, double implUpper) const;
+
   bool isUpperStrictlyImplied(HighsInt col, double* tolerance = nullptr) const;
 
-  HighsInt countFillin(HighsInt row);
+  bool isStrictlyImpliedForDual(HighsInt col, bool isLowerBound) const;
 
-  bool checkFillin(HighsHashTable<HighsInt, HighsInt>& fillinCache,
-                   HighsInt row, HighsInt col);
+  HighsInt countFillin(HighsInt row);
 
   void reinsertEquation(HighsInt row);
 
@@ -284,9 +326,6 @@ class HPresolve {
   void toCSC(std::vector<double>& Aval, std::vector<HighsInt>& Aindex,
              std::vector<HighsInt>& Astart);
 
-  void toCSR(std::vector<double>& ARval, std::vector<HighsInt>& ARindex,
-             std::vector<HighsInt>& ARstart);
-
   void getRowPositions(HighsInt row,
                        std::vector<HighsInt>& myrowpositions) const;
 
@@ -308,7 +347,7 @@ class HPresolve {
 
   Result fixColToUpper(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
-  void fixColToZero(HighsPostsolveStack& postsolve_stack, HighsInt col);
+  Result fixColToZero(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   Result transformColumn(HighsPostsolveStack& postsolve_stack, HighsInt col,
                          double scale, double constant);
@@ -327,8 +366,6 @@ class HPresolve {
 
   Result checkColBounds(HighsInt col, bool* isFixed = nullptr);
 
-  Result checkModelColBounds(HighsInt col, bool& isFixed);
-
   void changeRowDualUpper(HighsInt row, double newUpper);
 
   void changeRowDualLower(HighsInt row, double newLower);
@@ -343,6 +380,8 @@ class HPresolve {
   void changeImplRowDualLower(HighsInt row, double newLower,
                               HighsInt originCol);
 
+  void moveCutsToPool(HighsPostsolveStack& postsolve_stack);
+
   Result scaleMIP(HighsPostsolveStack& postsolve_stack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postsolve_stack,
@@ -351,8 +390,6 @@ class HPresolve {
   Result fastPresolveLoop(HighsPostsolveStack& postsolve_stack);
 
   Result presolve(HighsPostsolveStack& postsolve_stack);
-
-  Result removeSlacks(HighsPostsolveStack& postsolve_stack);
 
   Result checkTimeLimit();
 
@@ -371,7 +408,17 @@ class HPresolve {
                         double* worstCaseUpperBound = nullptr);
 
   template <typename storageFormat>
-  HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector);
+  HighsCDouble computeDynamism(const HighsMatrixSlice<storageFormat>& vector) {
+    double minAbsCoef = kHighsInf;
+    double maxAbsCoef = -kHighsInf;
+    for (const auto& nonzero : vector) {
+      double absCoef = std::abs(nonzero.value());
+      minAbsCoef = std::min(minAbsCoef, absCoef);
+      maxAbsCoef = std::max(maxAbsCoef, absCoef);
+    }
+    return static_cast<HighsCDouble>(maxAbsCoef) /
+           static_cast<HighsCDouble>(minAbsCoef);
+  }
 
   bool silentLog() const;
 
@@ -384,10 +431,6 @@ class HPresolve {
   // for MIP presolve
   void setInput(HighsMipSolver& mipsolver,
                 const HighsInt presolve_reduction_limit);
-
-  void setReductionLimit(size_t reductionLimit) {
-    this->reductionLimit = reductionLimit;
-  }
 
   bool okSetupPresolveDataStructures();
   void setupSubstitutionOpportunities();
@@ -408,6 +451,8 @@ class HPresolve {
                    double row_upper, const std::vector<HighsInt>& row_indices,
                    const std::vector<double>& row_values);
 
+  Result normaliseCliqueRows(HighsPostsolveStack& postsolve_stack);
+
   Result prepareProbing(HighsPostsolveStack& postsolve_stack, bool& firstCall);
 
   Result finaliseProbing(HighsPostsolveStack& postsolve_stack, bool firstCall,
@@ -426,12 +471,9 @@ class HPresolve {
   Result doubletonEq(HighsPostsolveStack& postsolve_stack, HighsInt row,
                      HighsPostsolveStack::RowType rowType);
 
-  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row,
-                      const HighsInt col_ = -1, const double val_ = 0);
+  Result singletonRow(HighsPostsolveStack& postsolve_stack, HighsInt row);
 
   Result emptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
-
-  Result modelEmptyCol(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
   Result singletonCol(HighsPostsolveStack& postsolve_stack, HighsInt col,
                       const bool timing = false);
@@ -451,7 +493,7 @@ class HPresolve {
 
   void computeLocks(
       HighsInt col, bool considerObjective,
-      std::function<bool(HighsInt, bool, bool)> lockCallback) const;
+      const std::function<bool(HighsInt, bool, bool)>& lockCallback) const;
 
   Result dualFixing(HighsPostsolveStack& postsolve_stack, HighsInt col);
 
@@ -478,22 +520,20 @@ class HPresolve {
                                     double boundColValue = kHighsInf,
                                     HighsInt boundColCoeffPattern = 0);
 
-  Result initialSweep(HighsPostsolveStack& postsolve_stack);
+  Result checkOriginalModelBounds();
 
   Result initialRowAndColPresolve(HighsPostsolveStack& postsolve_stack);
 
   HighsModelStatus run(HighsPostsolveStack& postsolve_stack);
 
-  void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
-                                 std::vector<HighsInt>& flagCol,
-                                 size_t& numreductions);
+  Result substitute(HighsInt substcol, HighsInt staycol, double offset,
+                    double scale, HighsInt row = -1);
 
-  void substitute(HighsInt substcol, HighsInt staycol, double offset,
-                  double scale);
+  Result removeFixedCol(HighsInt col);
 
-  void removeFixedCol(HighsInt col);
+  Result removeFixedCol(HighsInt col, double fixval);
 
-  void removeFixedCol(HighsInt col, double fixval);
+  void unlinkRow(HighsInt row);
 
   void removeRow(HighsInt row);
 
@@ -502,6 +542,9 @@ class HPresolve {
   Result removeDependentFreeCols(HighsPostsolveStack& postsolve_stack);
 
   Result aggregator(HighsPostsolveStack& postsolve_stack);
+
+  Result fourierMotzkin(HighsPostsolveStack& postsolve_stack,
+                        HighsInt& numColsEliminated);
 
   Result removeRowSingletons(HighsPostsolveStack& postsolve_stack);
 
@@ -514,7 +557,7 @@ class HPresolve {
   Result removeDoubletonEquations(HighsPostsolveStack& postsolve_stack);
 
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
-                                HighsInt& num_strenghtened);
+                                HighsInt& num_strengthened);
 
   Result detectImpliedIntegers();
 
@@ -527,9 +570,14 @@ class HPresolve {
 
   void extractVarBounds(HighsInt row);
 
-  Result sparsify(HighsPostsolveStack& postsolve_stack);
+  Result updateCliqueTableFixedCol(HighsInt col, double val);
 
-  void setRelaxedImpliedBounds();
+  Result updateCliqueTableSubstituteCol(HighsInt substCol, HighsInt stayCol,
+                                        double offset, double scale);
+
+  void aggregateVarBounds();
+
+  Result sparsify(HighsPostsolveStack& postsolve_stack);
 
   const HighsPresolveLog& getPresolveLog() const {
     return analysis_.presolve_log_;
@@ -544,9 +592,24 @@ class HPresolve {
 
   Result presolveRuleTest(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestColStuffing(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestParallelRowsAndCols(
+      HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestAggregator(HighsPostsolveStack& postsolve_stack);
 
-  // Not currently called
+  /*
+  // Methods defined and used in HPresolveDebug, and only executed if
+  // HPresolve::debug is called. This hasn't been used for ages, and
+  // this comment is retained in case it's useful in future
   static void debug(const HighsLp& lp, const HighsOptions& options);
+  void computeIntermediateMatrix(std::vector<HighsInt>& flagRow,
+                                 std::vector<HighsInt>& flagCol,
+                                 size_t& numreductions);
+  void setReductionLimit(size_t reductionLimit) {
+    this->reductionLimit = reductionLimit;
+  }
+  */
 };
 
 }  // namespace presolve

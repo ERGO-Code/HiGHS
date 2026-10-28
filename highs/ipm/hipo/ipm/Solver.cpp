@@ -303,7 +303,6 @@ isFailure Solver::prepareIpx() {
 
   if (load_status) {
     logger_.printInfo("Error loading model into IPX\n");
-    info_.error = kErrorIpx;
     return true;
   }
   return false;
@@ -319,7 +318,6 @@ isFailure Solver::prepareIpxStartingPoint() {
 
   if (start_point_status) {
     logger_.printInfo("Error loading starting point into IPX\n");
-    info_.error = kErrorIpx;
     return true;
   }
 
@@ -342,12 +340,26 @@ void Solver::refineWithIpx() {
   if (prepareIpx()) return;
   if (prepareIpxStartingPoint()) return;
   ipx_lps_.Solve();
-  info_.ipx_used = true;
   info_.ipx_info = ipx_lps_.GetInfo();
-  setStatus1(IpxToHipoStatus(info_.ipx_info.status_ipm));
-  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
-    setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
-  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
+
+  // Hipo status_1 is no progress. If ipx fails, leave current hipo status,
+  // because no progress is better than failed status.
+
+  const bool ipx_status_usable =
+      info_.ipx_info.status_ipm != IPX_STATUS_not_run &&
+      info_.ipx_info.status_ipm != IPX_STATUS_failed;
+
+  if (ipx_status_usable) {
+    info_.ipx_used = true;
+    setStatus1(IpxToHipoStatus(info_.ipx_info.status_ipm));
+
+    const bool crossover_status_usable =
+        info_.ipx_info.status_crossover != IPX_STATUS_not_run &&
+        info_.ipx_info.status_crossover != IPX_STATUS_failed;
+
+    if (crossover_status_usable)
+      setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
+  }
 }
 
 void Solver::crossoverWithIpx() {
@@ -356,12 +368,26 @@ void Solver::crossoverWithIpx() {
   if (prepareIpx()) return;
   if (prepareIpxStartingPoint()) return;
   ipx_lps_.Solve();
-  info_.ipx_used = true;
   info_.ipx_info = ipx_lps_.GetInfo();
-  setStatus2(IpxToHipoStatus(info_.ipx_info.status_ipm));
-  if (info_.ipx_info.status_crossover != IPX_STATUS_not_run)
-    setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
-  if (info_.ipx_info.errflag) info_.error = kErrorIpx;
+
+  // Hipo status_1 is optimal. If ipx fails, leave current hipo status,
+  // because optimal without crossover is better than failed status.
+
+  const bool ipx_status_usable =
+      info_.ipx_info.status_ipm != IPX_STATUS_not_run &&
+      info_.ipx_info.status_ipm != IPX_STATUS_failed;
+
+  if (ipx_status_usable) {
+    info_.ipx_used = true;
+    setStatus2(IpxToHipoStatus(info_.ipx_info.status_ipm));
+
+    const bool crossover_status_usable =
+        info_.ipx_info.status_crossover != IPX_STATUS_not_run &&
+        info_.ipx_info.status_crossover != IPX_STATUS_failed;
+
+    if (crossover_status_usable)
+      setStatus2(IpxToHipoStatus(info_.ipx_info.status_crossover));
+  }
 }
 
 isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
@@ -1213,7 +1239,7 @@ isSuccess Solver::checkTerminationKkt() {
                       highs_solution, Hoptions_, "During HiPO solve");
 
     if (model_status == HighsModelStatus::kOptimal) {
-      logger_.printInfo("Check successfull\n");
+      logger_.printInfo("Check successful\n");
       return true;
     } else
       logger_.printInfo("Check failed\n");
@@ -1282,7 +1308,7 @@ isFailure Solver::initialiseLinearSolver() {
 }
 
 isSuccess Solver::switchToMultifrontal() {
-  bool switch_successfull = false;
+  bool switch_successful = false;
 
   if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
     LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
@@ -1297,11 +1323,11 @@ isSuccess Solver::switchToMultifrontal() {
       it_->largest_dx_x_ = 0;
       it_->largest_dy_y_ = 0;
       info_.error = kOk;
-      switch_successfull = true;
+      switch_successful = true;
     }
   }
 
-  return switch_successfull;
+  return switch_successful;
 }
 
 void Solver::printHeader() const {
@@ -1479,6 +1505,7 @@ void Solver::chooseNumberOfCorrectors() {
     double alpha = 1.0 / 112.0;
 
     double ratio = alpha * fact_effort / solv_effort;
+    if (std::isnan(ratio)) ratio = 0;
 
     // At each ipm iteration, there are up to (1+k) directions computed, where
     // k is the number of correctors. Each direction requires up (1+f) solves,

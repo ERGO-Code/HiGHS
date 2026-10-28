@@ -195,16 +195,30 @@ void writeLpObjective(FILE* file, const HighsLogOptions& log_options,
 
 void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
                          const double objective_value) {
-  auto objStr = highsDoubleToString(objective_value,
-                                    kHighsSolutionValueToStringTolerance);
-  std::string s = highsFormatToString("Objective %s\n", objStr.data());
+  auto obj_string = highsDoubleToString(objective_value,
+                                        kHighsSolutionValueToStringTolerance);
+  std::string s = highsFormatToString("Objective %s\n", obj_string.data());
+  highsFprintfString(file, log_options, s);
+}
+
+void writeMipBoundGap(FILE* file, const HighsLogOptions& log_options,
+                      const double mip_dual_bound, const double mip_gap) {
+  std::string s = highsFormatToString(
+      "Objective_bound %s\n",
+      highsDoubleToString(mip_dual_bound, kHighsSolutionValueToStringTolerance)
+          .data());
+  highsFprintfString(file, log_options, s);
+  s = highsFormatToString(
+      "MIP_rel_gap %s\n",
+      highsDoubleToString(mip_gap, kHighsSolutionValueToStringTolerance)
+          .data());
   highsFprintfString(file, log_options, s);
 }
 
 void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
                          const HighsLp& lp,
                          const std::vector<double>& primal_solution,
-                         const bool sparse) {
+                         const bool sparse, const bool partial) {
   // Use when writing out the solution file (when names can be assumed
   // to exist) and the improving solution in the MIP solver (when
   // names cannot be assumed to exist)
@@ -212,7 +226,9 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
   const bool have_col_names = lp.col_names_.size() > 0;
   if (have_col_names)
     assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
-  if (sparse) {
+  const bool sparse_or_partial = sparse || partial;
+  assert(!(sparse && partial));
+  if (sparse_or_partial) {
     // Determine the number of nonzero primal solution values
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
       if (primal_solution[iCol]) num_nonzero_primal_value++;
@@ -223,20 +239,26 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
 
   std::stringstream ss;
   ss.str(std::string());
-  HighsInt num_col_field = sparse ? -num_nonzero_primal_value : lp.num_col_;
-  ss << highsFormatToString("# Columns %d\n", int(num_col_field));
+  HighsInt num_col_field =
+      sparse_or_partial ? -num_nonzero_primal_value : lp.num_col_;
+  std::string sparse_or_partial_string =
+      sparse_or_partial
+          ? (" " + (sparse ? kHighsSparseString : kHighsPartialString))
+          : "";
+  ss << highsFormatToString("# Columns %d%s\n", int(num_col_field),
+                            sparse_or_partial_string.c_str());
   highsFprintfString(file, log_options, ss.str());
   for (HighsInt ix = 0; ix < lp.num_col_; ix++) {
-    if (sparse && !primal_solution[ix]) continue;
-    auto valStr = highsDoubleToString(primal_solution[ix],
-                                      kHighsSolutionValueToStringTolerance);
-    // Don't invent names locallty: if none exist, then indicate this
-    // - so that the (sparse) solution line format remains "name value
-    // (index)"
+    if (sparse_or_partial && !primal_solution[ix]) continue;
+    auto val_string = highsDoubleToString(primal_solution[ix],
+                                          kHighsSolutionValueToStringTolerance);
+    // Don't invent names locally: if none exist, then indicate this -
+    // so that the (sparse/partial) solution line format remains "name
+    // value (index)"
     const std::string name = have_col_names ? lp.col_names_[ix] : "NoName";
     ss.str(std::string());
-    ss << highsFormatToString("%-s %s", name.c_str(), valStr.data());
-    if (sparse) ss << highsFormatToString(" %d", int(ix));
+    ss << highsFormatToString("%-s %s", name.c_str(), val_string.data());
+    if (sparse_or_partial) ss << highsFormatToString(" %d", int(ix));
     ss << "\n";
     highsFprintfString(file, log_options, ss.str());
   }
@@ -244,8 +266,10 @@ void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
 }
 
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
-                        const HighsModel& model, const HighsSolution& solution,
-                        const HighsInfo& info, const bool sparse) {
+                        const HighsModel& model,
+                        const HighsModelStatus model_status,
+                        const HighsSolution& solution, const HighsInfo& info,
+                        const bool sparse, const bool partial) {
   const HighsLp& lp = model.lp_;
   const bool have_primal = solution.value_valid;
   const bool have_dual = solution.dual_valid;
@@ -262,6 +286,11 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     assert(info.dual_solution_status != kSolutionStatusNone);
   }
   std::stringstream ss;
+  highsFprintfString(file, log_options, "Model status\n");
+  ss.str(std::string());
+  ss << highsFormatToString("%s\n",
+                            utilModelStatusToString(model_status).c_str());
+  highsFprintfString(file, log_options, ss.str());
   highsFprintfString(file, log_options, "\n# Primal solution values\n");
   if (!have_primal || info.primal_solution_status == kSolutionStatusNone) {
     highsFprintfString(file, log_options, "None\n");
@@ -273,18 +302,21 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
       highsFprintfString(file, log_options, "Infeasible\n");
     }
     writeModelObjective(file, log_options, model, solution.col_value);
+    if (model.isMip() && model_status == HighsModelStatus::kOptimal &&
+        info.mip_gap < kHighsInf)
+      writeMipBoundGap(file, log_options, info.mip_dual_bound, info.mip_gap);
     writePrimalSolution(file, log_options, model.lp_, solution.col_value,
-                        sparse);
-    if (sparse) return;
+                        sparse, partial);
+    if (sparse || partial) return;
     ss.str(std::string());
     ss << highsFormatToString("# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsFprintfString(file, log_options, ss.str());
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
-      auto valStr = highsDoubleToString(solution.row_value[ix],
-                                        kHighsSolutionValueToStringTolerance);
+      auto val_string = highsDoubleToString(
+          solution.row_value[ix], kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
       ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
-                                valStr.data());
+                                val_string.data());
       highsFprintfString(file, log_options, ss.str());
     }
   }
@@ -313,11 +345,11 @@ void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
     ss << highsFormatToString("# Rows %" HIGHSINT_FORMAT "\n", lp.num_row_);
     highsFprintfString(file, log_options, ss.str());
     for (HighsInt ix = 0; ix < lp.num_row_; ix++) {
-      auto valStr = highsDoubleToString(solution.row_dual[ix],
-                                        kHighsSolutionValueToStringTolerance);
+      auto val_string = highsDoubleToString(
+          solution.row_dual[ix], kHighsSolutionValueToStringTolerance);
       ss.str(std::string());
       ss << highsFormatToString("%-s %s\n", lp.row_names_[ix].c_str(),
-                                valStr.data());
+                                val_string.data());
       highsFprintfString(file, log_options, ss.str());
     }
   }
@@ -364,7 +396,7 @@ bool hasNamesWithSpaces(const HighsLogOptions& log_options, const bool col,
 bool hasIllegalNameForLpFile(const std::vector<std::string>& names) {
   HighsInt num_name = names.size();
   for (HighsInt ix = 0; ix < num_name; ix++) {
-    const std::string name = names[ix];
+    const std::string& name = names[ix];
     const std::string first_character = name.substr(0, 1);
     if (name.find_first_not_of(kLegalLpFileColRowNameChar) != std::string::npos)
       return true;
@@ -409,6 +441,8 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsInt& name_suffix,
                            std::vector<std::string>& names,
                            HighsNameHash& name_hash, HighsFileType type) {
+  // First look for no names being required
+  if (num_name_required <= 0) return HighsStatus::kOk;
   // First look for there being no names
   HighsInt max_name_length = maxNameLength(names);
   // Keep track of whether the names are invalid
@@ -481,7 +515,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
   return HighsStatus::kWarning;
 }
 
-HighsFileType getFileType(const std::string filename) {
+HighsFileType getFileType(const std::string& filename) {
   std::string lower_case_extension = getFilenameExt(filename);
   tolower(lower_case_extension);
   if (lower_case_extension.compare("mps") == 0) {
@@ -520,31 +554,47 @@ void writeSolutionFile(FILE* file, const HighsOptions& options,
     highsFprintfString(file, log_options, "\n");
     std::stringstream ss;
     ss.str(std::string());
-    ss << highsFormatToString("Model status: %s\n",
+    // Log the model status
+    ss << highsFormatToString("Model status: %s\n\n",
                               utilModelStatusToString(model_status).c_str());
     highsFprintfString(file, log_options, ss.str());
-    auto objStr = highsDoubleToString((double)info.objective_function_value,
-                                      kHighsSolutionValueToStringTolerance);
-    highsFprintfString(file, log_options, "\n");
+    // Log the objective value
     ss.str(std::string());
-    ss << highsFormatToString("Objective value: %s\n", objStr.data());
+    auto obj_string = highsDoubleToString((double)info.objective_function_value,
+                                          kHighsSolutionValueToStringTolerance);
+    ss << highsFormatToString("Objective value: %s\n", obj_string.data());
     highsFprintfString(file, log_options, ss.str());
+    if (model.isMip() && model_status == HighsModelStatus::kOptimal &&
+        info.mip_gap < kHighsInf) {
+      // Possibly log the MIP bounds and gap
+      auto mip_dual_bound_string = highsDoubleToString(
+          info.mip_dual_bound, kHighsSolutionValueToStringTolerance);
+      auto mip_gap_string = highsGapToString(info.mip_gap);
+      ss.str(std::string());
+      ss << highsFormatToString("Objective bound: %s\n",
+                                mip_dual_bound_string.data());
+      ss << highsFormatToString("MIP rel gap: %s%%\n", mip_gap_string.data());
+      highsFprintfString(file, log_options, ss.str());
+    }
   } else if (style == kSolutionStyleGlpsolRaw ||
              style == kSolutionStyleGlpsolPretty) {
+    if (model.isQp()) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "Cannot write QP solution in Glpsol format\n");
+      return;
+    }
     const bool raw = style == kSolutionStyleGlpsolRaw;
-    writeGlpsolSolution(file, options, model, basis, solution, model_status,
+    writeGlpsolSolution(file, options, model.lp_, basis, solution, model_status,
                         info, raw);
   } else {
-    // Standard raw solution file, possibly sparse => only nonzero primal values
+    // Standard raw solution file, possibly sparse or partial => only
+    // nonzero primal values, but different flag
     const bool sparse = style == kSolutionStyleSparse;
-    assert(style == kSolutionStyleRaw || sparse);
-    highsFprintfString(file, log_options, "Model status\n");
-    std::stringstream ss;
-    ss.str(std::string());
-    ss << highsFormatToString("%s\n",
-                              utilModelStatusToString(model_status).c_str());
-    highsFprintfString(file, log_options, ss.str());
-    writeModelSolution(file, log_options, model, solution, info, sparse);
+    const bool partial = style == kSolutionStylePartial;
+    assert(!(sparse && partial));
+    assert(style == kSolutionStyleRaw || sparse || partial);
+    writeModelSolution(file, log_options, model, model_status, solution, info,
+                       sparse, partial);
   }
 }
 
@@ -581,7 +631,7 @@ void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
 }
 
 void writeGlpsolSolution(FILE* file, const HighsOptions& options,
-                         const HighsModel& model, const HighsBasis& basis,
+                         const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution,
                          const HighsModelStatus model_status,
                          const HighsInfo& info, const bool raw) {
@@ -592,7 +642,6 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   const double kGlpsolMediumQuality = 1e-6;
   const double kGlpsolLowQuality = 1e-3;
   const double kGlpsolPrintAsZero = 1e-9;
-  const HighsLp& lp = model.lp_;
   const HighsLogOptions& log_options = options.log_options;
   assert(lp.col_names_.size() == static_cast<size_t>(lp.num_col_));
   assert(lp.row_names_.size() == static_cast<size_t>(lp.num_row_));
@@ -602,7 +651,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     if (lp.col_cost_[iCol]) num_nz++;
   const bool empty_cost_row = num_nz == lp.numNz();
-  const bool has_objective = !empty_cost_row || model.hessian_.dim_;
+  const bool has_objective = !empty_cost_row;
   // Writes the solution using the GLPK raw style (defined in
   // api/wrsol.c) or pretty style (defined in api/prsol.c)
   //
@@ -1108,7 +1157,7 @@ void writeGlpsolSolution(FILE* file, const HighsOptions& options,
   double absolute_error_value;
   HighsInt relative_error_index;
   double relative_error_value;
-  getKktFailures(options, model, solution, basis, local_info, errors, true);
+  getLpKktFailures(options, lp, solution, basis, local_info, &errors, true);
   highsFprintfString(file, log_options, "\n");
   if (is_mip) {
     highsFprintfString(file, log_options, "Integer feasibility conditions:\n");
@@ -1424,64 +1473,44 @@ std::string utilModelStatusToString(const HighsModelStatus model_status) {
   switch (model_status) {
     case HighsModelStatus::kNotset:
       return "Not Set";
-      break;
     case HighsModelStatus::kLoadError:
       return "Load error";
-      break;
     case HighsModelStatus::kModelError:
       return "Model error";
-      break;
     case HighsModelStatus::kPresolveError:
       return "Presolve error";
-      break;
     case HighsModelStatus::kSolveError:
       return "Solve error";
-      break;
     case HighsModelStatus::kPostsolveError:
       return "Postsolve error";
-      break;
     case HighsModelStatus::kModelEmpty:
       return "Empty";
-      break;
     case HighsModelStatus::kMemoryLimit:
       return "Memory limit reached";
-      break;
     case HighsModelStatus::kOptimal:
       return "Optimal";
-      break;
     case HighsModelStatus::kInfeasible:
       return "Infeasible";
-      break;
     case HighsModelStatus::kUnboundedOrInfeasible:
       return "Primal infeasible or unbounded";
-      break;
     case HighsModelStatus::kUnbounded:
       return "Unbounded";
-      break;
     case HighsModelStatus::kObjectiveBound:
       return "Bound on objective reached";
-      break;
     case HighsModelStatus::kObjectiveTarget:
       return "Target for objective reached";
-      break;
     case HighsModelStatus::kTimeLimit:
       return "Time limit reached";
-      break;
     case HighsModelStatus::kIterationLimit:
       return "Iteration limit reached";
-      break;
     case HighsModelStatus::kSolutionLimit:
       return "Solution limit reached";
-      break;
     case HighsModelStatus::kInterrupt:
       return "Interrupted by user";
-      break;
     case HighsModelStatus::kHighsInterrupt:
       return "Interrupted by HiGHS";
-      break;
     case HighsModelStatus::kUnknown:
       return "Unknown";
-      break;
     default:
       assert(1 == 0);
       return "Unrecognised HiGHS model status";
@@ -1529,11 +1558,34 @@ std::string utilPresolveRuleTypeToString(const HighsInt rule_type) {
     return "Zero cost singleton";
   } else if (rule_type == kPresolveRuleColStuffing) {
     return "Col stuffing";
+  } else if (rule_type == kPresolveRuleDualFixProbing) {
+    return "Dual-fixing probing";
   } else if (rule_type == kPresolveRuleInitialSweep) {
     return "Initial sweep";
+  } else if (rule_type == kPresolveRuleFourierMotzkin) {
+    return "Fourier-Motzkin";
+  } else if (rule_type == kPresolveRuleWeaklyDominatedCol) {
+    return "Weakly dominated col";
   }
   assert(1 == 0);
   return "????";
+}
+
+std::string utilPostsolveStatusToString(
+    const HighsPostsolveStatus postsolve_status) {
+  switch (postsolve_status) {
+    case HighsPostsolveStatus::kNotPresolved:
+      return "Not presolved";
+    case HighsPostsolveStatus::kNoPrimalSolutionError:
+      return "Primal solution error";
+    case HighsPostsolveStatus::kSolutionRecovered:
+      return "Solution recovered";
+    case HighsPostsolveStatus::kBasisError:
+      return "Basis error";
+    default:
+      assert(1 == 0);
+      return "Unrecognised HiGHS postsolve status";
+  }
 }
 
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.

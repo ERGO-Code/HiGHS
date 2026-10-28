@@ -16,6 +16,10 @@
 #include <string>
 #include <vector>
 
+static const std::string kDefaultNonChars = "\t\n\v\f\r ";
+static const char* kLegalIntegerCharacters = "+-0123456789eE";
+static const char* kLegalDoubleCharacters = ".+-0123456789eE";
+
 /*
 void strRemoveWhitespace(char* str);
 char* strClone(const char* str);
@@ -28,13 +32,12 @@ void strTrim(char* str);
 void tolower(std::string& str);
 void toupper(std::string& str);
 
-const std::string default_non_chars = "\t\n\v\f\r ";
 std::string& ltrim(std::string& str,
-                   const std::string& chars = default_non_chars);
+                   const std::string& chars = kDefaultNonChars);
 std::string& rtrim(std::string& str,
-                   const std::string& chars = default_non_chars);
+                   const std::string& chars = kDefaultNonChars);
 std::string& trim(std::string& str,
-                  const std::string& chars = default_non_chars);
+                  const std::string& chars = kDefaultNonChars);
 
 template <class Iterator>
 std::string joinString(Iterator begin, Iterator end,
@@ -136,14 +139,41 @@ class HighsTextTable {
   std::vector<Row> rows_;
 };
 
-bool is_empty(std::string& str, const std::string& chars = default_non_chars);
-bool is_empty(char c, const std::string& chars = default_non_chars);
+bool is_empty(std::string& str, const std::string& chars = kDefaultNonChars);
+bool is_empty(char c, const std::string& chars = kDefaultNonChars);
 bool is_end(std::string& str, size_t end,
-            const std::string& chars = default_non_chars);
+            const std::string& chars = kDefaultNonChars);
 
 // todo: replace with pair of references rather than string ret value to avoid
 // copy and also using function below. or do it properly with iterators.
 std::string first_word(std::string& str, size_t start);
 size_t first_word_end(std::string& str, size_t start);
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <string.h>  // _strnicmp
+#else
+#include <strings.h>  // strncasecmp
+#endif
+
+// check if substring is contained in str, case insensitive
+inline bool is_substring_case(const char* str, const char* substring) {
+  if (!str || !substring) return false;
+
+  const size_t substring_len = strlen(substring);
+  if (substring_len == 0) return true;
+
+  const size_t str_len = strlen(str);
+  if (substring_len > str_len) return false;
+
+  const char* str_last_possible = str + str_len - substring_len;
+  for (; str <= str_last_possible; ++str) {
+#if defined(_WIN32) || defined(_WIN64)
+    if (_strnicmp(str, substring, substring_len) == 0) return true;
+#else
+    if (strncasecmp(str, substring, substring_len) == 0) return true;
+#endif
+  }
+  return false;
+}
 
 #endif

@@ -1,0 +1,912 @@
+NAME miplib_gt2_FZ_18
+ROWS
+ N obj
+ G r0
+ G r1
+ G r2
+ G r3
+ G r4
+ G r5
+ G r6
+ G r7
+ G r8
+ G r9
+ G r10
+ G r11
+ L r12
+ L r13
+ L r14
+ L r15
+ L r16
+ L r17
+ L r18
+ L r19
+ L r20
+ L r21
+ L r22
+ L r23
+ L r24
+ L r25
+ L r26
+ L r27
+ L r28
+COLUMNS
+ M0 'MARKER' 'INTORG'
+ x0 obj 3595.0
+ x0 r0 50.0
+ x0 r12 1.0
+ x1 obj 3595.0
+ x1 r1 50.0
+ x1 r12 1.0
+ x2 obj 1833.0
+ x2 r2 50.0
+ x2 r12 1.0
+ x3 obj 3595.0
+ x3 r3 50.0
+ x3 r12 1.0
+ x4 obj 3595.0
+ x4 r6 50.0
+ x4 r12 1.0
+ x5 obj 3595.0
+ x5 r7 50.0
+ x5 r12 1.0
+ x6 obj 1833.0
+ x6 r8 50.0
+ x6 r12 1.0
+ x7 obj 3595.0
+ x7 r9 50.0
+ x7 r12 1.0
+ x8 obj 3100.0
+ x8 r0 45.0
+ x8 r13 1.0
+ x9 obj 3100.0
+ x9 r1 45.0
+ x9 r13 1.0
+ x10 obj 1257.0
+ x10 r2 45.0
+ x10 r13 1.0
+ x11 obj 3100.0
+ x11 r3 45.0
+ x11 r13 1.0
+ x12 obj 1355.0
+ x12 r4 28.0
+ x12 r13 1.0
+ x13 obj 7797.0
+ x13 r5 28.0
+ x13 r13 1.0
+ x14 obj 3100.0
+ x14 r6 45.0
+ x14 r13 1.0
+ x15 obj 3100.0
+ x15 r7 45.0
+ x15 r13 1.0
+ x16 obj 1257.0
+ x16 r8 45.0
+ x16 r13 1.0
+ x17 obj 3100.0
+ x17 r9 45.0
+ x17 r13 1.0
+ x18 obj 1355.0
+ x18 r10 28.0
+ x18 r13 1.0
+ x19 obj 7797.0
+ x19 r11 28.0
+ x19 r13 1.0
+ x20 obj 2685.0
+ x20 r0 40.0
+ x20 r14 1.0
+ x21 obj 2685.0
+ x21 r1 40.0
+ x21 r14 1.0
+ x22 obj 1257.0
+ x22 r2 40.0
+ x22 r14 1.0
+ x23 obj 2685.0
+ x23 r3 40.0
+ x23 r14 1.0
+ x24 obj 1176.0
+ x24 r4 45.0
+ x24 r14 1.0
+ x25 obj 6214.0
+ x25 r5 45.0
+ x25 r14 1.0
+ x26 obj 2685.0
+ x26 r6 40.0
+ x26 r14 1.0
+ x27 obj 2685.0
+ x27 r7 40.0
+ x27 r14 1.0
+ x28 obj 1257.0
+ x28 r8 40.0
+ x28 r14 1.0
+ x29 obj 2685.0
+ x29 r9 40.0
+ x29 r14 1.0
+ x30 obj 1176.0
+ x30 r10 45.0
+ x30 r14 1.0
+ x31 obj 6214.0
+ x31 r11 45.0
+ x31 r14 1.0
+ x32 obj 2940.0
+ x32 r0 30.0
+ x32 r15 1.0
+ x33 obj 2940.0
+ x33 r1 30.0
+ x33 r15 1.0
+ x34 obj 1980.0
+ x34 r2 30.0
+ x34 r15 1.0
+ x35 obj 2940.0
+ x35 r3 30.0
+ x35 r15 1.0
+ x36 obj 1980.0
+ x36 r4 16.5
+ x36 r15 1.0
+ x37 obj 7145.0
+ x37 r5 16.5
+ x37 r15 1.0
+ x38 obj 2940.0
+ x38 r6 30.0
+ x38 r15 1.0
+ x39 obj 2940.0
+ x39 r7 30.0
+ x39 r15 1.0
+ x40 obj 1980.0
+ x40 r8 30.0
+ x40 r15 1.0
+ M41 'MARKER' 'INTEND'
+ x41 obj 2940.0
+ x41 r9 30.0
+ x41 r15 1.0
+ M42 'MARKER' 'INTORG'
+ x42 obj 1980.0
+ x42 r10 16.5
+ x42 r15 1.0
+ x43 obj 7145.0
+ x43 r11 16.5
+ x43 r15 1.0
+ x44 obj 3100.0
+ x44 r0 32.0
+ x44 r16 1.0
+ x45 obj 3100.0
+ x45 r1 32.0
+ x45 r16 1.0
+ x46 obj 1816.0
+ x46 r2 32.0
+ x46 r16 1.0
+ x47 obj 3100.0
+ x47 r3 32.0
+ x47 r16 1.0
+ x48 obj 1926.0
+ x48 r4 45.0
+ x48 r16 1.0
+ x49 obj 7011.0
+ x49 r5 45.0
+ x49 r16 1.0
+ x50 obj 3100.0
+ x50 r6 32.0
+ x50 r16 1.0
+ x51 obj 3100.0
+ x51 r7 32.0
+ x51 r16 1.0
+ x52 obj 1816.0
+ x52 r8 32.0
+ x52 r16 1.0
+ x53 obj 3100.0
+ x53 r9 32.0
+ x53 r16 1.0
+ x54 obj 1926.0
+ x54 r10 45.0
+ x54 r16 1.0
+ x55 obj 7011.0
+ x55 r11 45.0
+ x55 r16 1.0
+ x56 obj 3100.0
+ x56 r0 50.0
+ x56 r17 1.0
+ x57 obj 3100.0
+ x57 r1 50.0
+ x57 r17 1.0
+ x58 obj 1816.0
+ x58 r2 50.0
+ x58 r17 1.0
+ x59 obj 3100.0
+ x59 r3 52.0
+ x59 r17 1.0
+ x60 obj 1983.0
+ x60 r4 52.0
+ x60 r17 1.0
+ x61 obj 7797.0
+ x61 r5 52.0
+ x61 r17 1.0
+ x62 obj 3100.0
+ x62 r6 50.0
+ x62 r17 1.0
+ x63 obj 3100.0
+ x63 r7 50.0
+ x63 r17 1.0
+ x64 obj 1816.0
+ x64 r8 50.0
+ x64 r17 1.0
+ x65 obj 3100.0
+ x65 r9 52.0
+ x65 r17 1.0
+ x66 obj 1983.0
+ x66 r10 52.0
+ x66 r17 1.0
+ x67 obj 7797.0
+ x67 r11 52.0
+ x67 r17 1.0
+ x68 obj 1926.0
+ x68 r4 45.0
+ x68 r18 1.0
+ x69 obj 7011.0
+ x69 r5 45.0
+ x69 r18 1.0
+ x70 obj 1926.0
+ x70 r10 45.0
+ x70 r18 1.0
+ x71 obj 7011.0
+ x71 r11 45.0
+ x71 r18 1.0
+ x72 obj 3100.0
+ x72 r0 45.0
+ x72 r19 1.0
+ x73 obj 3100.0
+ x73 r1 45.0
+ x73 r19 1.0
+ x74 obj 1257.0
+ x74 r2 45.0
+ x74 r19 1.0
+ x75 obj 3100.0
+ x75 r3 44.0
+ x75 r19 1.0
+ x76 obj 3100.0
+ x76 r6 45.0
+ x76 r19 1.0
+ x77 obj 3100.0
+ x77 r7 45.0
+ x77 r19 1.0
+ x78 obj 1257.0
+ x78 r8 45.0
+ x78 r19 1.0
+ x79 obj 3100.0
+ x79 r9 44.0
+ x79 r19 1.0
+ x80 obj 2448.0
+ x80 r0 2534.0
+ x80 r20 1.0
+ x81 obj 2448.0
+ x81 r1 2534.0
+ x81 r20 1.0
+ x82 obj 1652.0
+ x82 r2 2534.0
+ x82 r20 1.0
+ x83 obj 2448.0
+ x83 r3 2534.0
+ x83 r20 1.0
+ x84 obj 1652.0
+ x84 r4 2519.0
+ x84 r20 1.0
+ x85 obj 5954.0
+ x85 r5 2519.0
+ x85 r20 1.0
+ x86 obj 2448.0
+ x86 r6 2534.0
+ x86 r20 1.0000010735453797
+ x87 obj 2448.0
+ x87 r7 2534.0
+ x87 r20 1.0
+ x88 obj 1652.0
+ x88 r8 2534.0
+ x88 r20 1.0
+ x89 obj 2448.0
+ x89 r9 2534.0
+ x89 r20 1.0
+ x90 obj 1652.0
+ x90 r10 2519.0
+ x90 r20 1.0
+ x91 obj 5954.0
+ x91 r11 2519.0
+ x91 r20 1.0
+ x92 r0 22.0
+ x92 r21 1.0
+ x93 r0 56.0
+ x93 r22 1.0
+ x94 r0 30.0
+ x94 r23 1.0
+ x95 r0 30.0
+ x95 r24 1.0
+ x96 r0 23.0
+ x96 r25 1.0
+ x97 r0 42.0
+ x97 r26 1.0
+ x98 r0 56.0
+ x98 r27 1.0
+ x99 r0 28.0
+ x99 r28 1.0
+ x100 r1 22.0
+ x100 r21 1.0
+ x101 r1 56.0
+ x101 r22 1.0
+ x102 r1 30.0
+ x102 r23 1.0
+ x103 r1 30.0
+ x103 r24 1.0
+ x104 r1 23.0
+ x104 r25 1.0
+ x105 r1 42.0
+ x105 r26 1.0
+ x106 r1 56.0
+ x106 r27 1.0
+ x107 r1 28.0
+ x107 r28 1.0
+ x108 r2 22.0
+ x108 r21 1.0
+ x109 r2 56.0
+ x109 r22 1.0
+ x110 r2 30.0
+ x110 r23 1.0
+ x111 r2 30.0
+ x111 r24 1.0
+ x112 r2 23.0
+ x112 r25 1.0
+ x113 r2 42.0
+ x113 r26 1.0
+ x114 r2 56.0
+ x114 r27 1.0
+ x115 r2 28.0
+ x115 r28 1.0
+ x116 r3 22.0
+ x116 r21 1.0
+ x117 r3 56.0
+ x117 r22 1.0
+ x118 r3 30.0
+ x118 r23 1.0
+ x119 r3 30.0
+ x119 r24 1.0
+ x120 r3 23.0
+ x120 r25 1.0
+ x121 r3 42.0
+ x121 r26 1.0
+ x122 r3 56.0
+ x122 r27 1.0
+ x123 r3 28.0
+ x123 r28 1.0
+ x124 r4 25.0
+ x124 r21 1.0
+ x125 r4 34.0
+ x125 r22 1.0
+ x126 r4 25.0
+ x126 r23 1.0
+ x127 r4 19.0
+ x127 r24 1.0
+ x128 r4 56.0
+ x128 r25 1.0
+ x129 r4 34.0
+ x129 r26 1.0
+ x130 r4 34.0
+ x130 r27 1.0
+ x131 r4 25.0
+ x131 r28 1.0
+ x132 r5 25.0
+ x132 r21 1.0
+ x133 r5 34.0
+ x133 r22 1.0
+ x134 r5 25.0
+ x134 r23 1.0
+ x135 r5 19.0
+ x135 r24 1.0
+ x136 r5 56.0
+ x136 r25 1.0
+ x137 r5 34.0
+ x137 r26 1.0
+ x138 r5 34.0
+ x138 r27 1.0
+ x139 r5 25.0
+ x139 r28 1.0
+ x140 r6 22.0
+ x140 r21 1.0
+ x141 r6 56.0
+ x141 r22 1.0
+ x142 r6 30.0
+ x142 r23 1.0
+ x143 r6 30.0
+ x143 r24 1.0
+ x144 r6 23.0
+ x144 r25 1.0
+ x145 r6 42.0
+ x145 r26 1.0
+ x146 r6 56.0
+ x146 r27 1.0
+ x147 r6 28.0
+ x147 r28 1.0
+ x148 r7 22.0
+ x148 r21 1.0
+ x149 r7 56.0
+ x149 r22 1.0
+ x150 r7 30.0
+ x150 r23 1.0
+ x151 r7 30.0
+ x151 r24 1.0
+ x152 r7 23.0
+ x152 r25 1.0
+ x153 r7 42.0
+ x153 r26 1.0
+ x154 r7 56.0
+ x154 r27 1.0
+ x155 r7 28.0
+ x155 r28 1.0
+ x156 r8 22.0
+ x156 r21 1.0
+ x157 r8 56.0
+ x157 r22 1.0
+ x158 r8 30.0
+ x158 r23 1.0
+ x159 r8 30.0
+ x159 r24 1.0
+ x160 r8 23.0
+ x160 r25 1.0
+ x161 r8 42.0
+ x161 r26 1.0
+ x162 r8 56.0
+ x162 r27 1.0
+ x163 r8 28.0
+ x163 r28 1.0
+ x164 r9 22.0
+ x164 r21 1.0
+ x165 r9 56.0
+ x165 r22 1.0
+ x166 r9 30.0
+ x166 r23 1.0
+ x167 r9 30.0
+ x167 r24 1.0
+ x168 r9 23.0
+ x168 r25 1.0
+ x169 r9 42.0
+ x169 r26 1.0
+ x170 r9 56.0
+ x170 r27 1.0
+ x171 r9 28.0
+ x171 r28 1.0
+ x172 r10 25.0
+ x172 r21 1.0
+ x173 r10 34.0
+ x173 r22 1.0
+ x174 r10 25.0
+ x174 r23 1.0
+ x175 r10 19.0
+ x175 r24 1.0
+ x176 r10 56.0
+ x176 r25 1.0
+ x177 r10 34.0
+ x177 r26 1.0
+ x178 r10 34.0
+ x178 r27 1.0
+ x179 r10 25.0
+ x179 r28 1.0
+ x180 r11 25.0
+ x180 r21 1.0
+ x181 r11 34.0
+ x181 r22 1.0
+ x182 r11 25.0
+ x182 r23 1.0
+ x183 r11 19.0
+ x183 r24 1.0
+ x184 r11 56.0
+ x184 r25 1.0
+ x185 r11 34.0
+ x185 r26 1.0
+ x186 r11 34.0
+ x186 r27 1.0
+ x187 r11 25.0
+ x187 r28 1.0
+ M188 'MARKER' 'INTEND'
+RHS
+ RHS r0 200.0
+ RHS r1 80.0
+ RHS r2 300.0
+ RHS r3 250.0
+ RHS r4 61.0
+ RHS r5 6064.0
+ RHS r6 94.0
+ RHS r7 67.0
+ RHS r8 450.0
+ RHS r9 231.0
+ RHS r10 76.0
+ RHS r12 9.0
+ RHS r13 15.0
+ RHS r14 14.0
+ RHS r15 1.0
+ RHS r16 6.0
+ RHS r17 8.0
+ RHS r18 5.0
+ RHS r19 12.0
+ RHS r20 5.0
+ RHS r21 6.0
+ RHS r22 4.0
+ RHS r23 9.0
+ RHS r24 5.0
+ RHS r25 4.0
+ RHS r26 2.0
+ RHS r27 2.0
+ RHS r28 1.0
+BOUNDS
+ LO BND x0 0.0
+ UP BND x0 9.0
+ LO BND x1 0.0
+ UP BND x1 9.0
+ LO BND x2 0.0
+ UP BND x2 9.0
+ LO BND x3 0.0
+ UP BND x3 9.0
+ LO BND x4 0.0
+ UP BND x4 9.0
+ LO BND x5 0.0
+ UP BND x5 9.0
+ LO BND x6 0.0
+ UP BND x6 9.0
+ LO BND x7 0.0
+ UP BND x7 9.0
+ LO BND x8 0.0
+ UP BND x8 15.0
+ LO BND x9 0.0
+ UP BND x9 15.0
+ LO BND x10 0.0
+ UP BND x10 15.0
+ LO BND x11 0.0
+ UP BND x11 15.0
+ LO BND x12 0.0
+ UP BND x12 15.0
+ LO BND x13 0.0
+ UP BND x13 15.0
+ LO BND x14 0.0
+ UP BND x14 15.0
+ LO BND x15 0.0
+ UP BND x15 15.0
+ LO BND x16 0.0
+ UP BND x16 15.0
+ LO BND x17 0.0
+ UP BND x17 15.0
+ LO BND x18 0.0
+ UP BND x18 15.0
+ LO BND x19 0.0
+ UP BND x19 15.0
+ LO BND x20 0.0
+ UP BND x20 14.0
+ LO BND x21 0.0
+ UP BND x21 14.0
+ LO BND x22 0.0
+ UP BND x22 14.0
+ LO BND x23 0.0
+ UP BND x23 14.0
+ LO BND x24 0.0
+ UP BND x24 14.0
+ LO BND x25 0.0
+ UP BND x25 14.0
+ LO BND x26 0.0
+ UP BND x26 14.0
+ LO BND x27 0.0
+ UP BND x27 14.0
+ LO BND x28 0.0
+ UP BND x28 14.0
+ LO BND x29 0.0
+ UP BND x29 14.0
+ LO BND x30 0.0
+ UP BND x30 14.0
+ LO BND x31 0.0
+ UP BND x31 14.0
+ LO BND x32 0.0
+ UP BND x32 1.0
+ LO BND x33 0.0
+ UP BND x33 1.0
+ LO BND x34 0.0
+ UP BND x34 1.0
+ LO BND x35 0.0
+ UP BND x35 1.0
+ LO BND x36 0.0
+ UP BND x36 1.0
+ LO BND x37 0.0
+ UP BND x37 1.0
+ LO BND x38 0.0
+ UP BND x38 1.0
+ LO BND x39 0.0
+ UP BND x39 1.0
+ LO BND x40 0.0
+ UP BND x40 1.0
+ LO BND x41 0.0
+ UP BND x41 1.0
+ LO BND x42 0.0
+ UP BND x42 1.0
+ LO BND x43 0.0
+ UP BND x43 1.0
+ LO BND x44 0.0
+ UP BND x44 6.0
+ LO BND x45 0.0
+ UP BND x45 6.0
+ LO BND x46 0.0
+ UP BND x46 6.0
+ LO BND x47 0.0
+ UP BND x47 6.0
+ LO BND x48 0.0
+ UP BND x48 6.0
+ LO BND x49 0.0
+ UP BND x49 6.0
+ LO BND x50 0.0
+ UP BND x50 6.0
+ LO BND x51 0.0
+ UP BND x51 6.0
+ LO BND x52 0.0
+ UP BND x52 6.0
+ LO BND x53 0.0
+ UP BND x53 6.0
+ LO BND x54 0.0
+ UP BND x54 6.0
+ LO BND x55 0.0
+ UP BND x55 6.0
+ LO BND x56 0.0
+ UP BND x56 8.0
+ LO BND x57 0.0
+ UP BND x57 8.0
+ LO BND x58 0.0
+ UP BND x58 8.0
+ LO BND x59 0.0
+ UP BND x59 8.0
+ LO BND x60 0.0
+ UP BND x60 8.0
+ LO BND x61 0.0
+ UP BND x61 8.0
+ LO BND x62 0.0
+ UP BND x62 8.0
+ LO BND x63 0.0
+ UP BND x63 8.0
+ LO BND x64 0.0
+ UP BND x64 8.0
+ LO BND x65 0.0
+ UP BND x65 8.0
+ LO BND x66 0.0
+ UP BND x66 8.0
+ LO BND x67 0.0
+ UP BND x67 8.0
+ LO BND x68 0.0
+ UP BND x68 5.0
+ LO BND x69 0.0
+ UP BND x69 5.0
+ LO BND x70 0.0
+ UP BND x70 5.0
+ LO BND x71 0.0
+ UP BND x71 5.0
+ LO BND x72 0.0
+ UP BND x72 12.0
+ LO BND x73 0.0
+ UP BND x73 12.0
+ LO BND x74 0.0
+ UP BND x74 12.0
+ LO BND x75 0.0
+ UP BND x75 12.0
+ LO BND x76 0.0
+ UP BND x76 12.0
+ LO BND x77 0.0
+ UP BND x77 12.0
+ LO BND x78 0.0
+ UP BND x78 12.0
+ LO BND x79 0.0
+ UP BND x79 12.0
+ LO BND x80 0.0
+ UP BND x80 5.0
+ LO BND x81 0.0
+ UP BND x81 5.0
+ LO BND x82 0.0
+ UP BND x82 5.0
+ LO BND x83 0.0
+ UP BND x83 5.0
+ LO BND x84 0.0
+ UP BND x84 5.0
+ LO BND x85 0.0
+ UP BND x85 5.0
+ LO BND x86 0.0
+ UP BND x86 5.0
+ LO BND x87 0.0
+ UP BND x87 5.0
+ LO BND x88 0.0
+ UP BND x88 5.0
+ LO BND x89 0.0
+ UP BND x89 5.0
+ LO BND x90 0.0
+ UP BND x90 5.0
+ LO BND x91 0.0
+ UP BND x91 5.0
+ LO BND x92 0.0
+ UP BND x92 6.0
+ LO BND x93 0.0
+ UP BND x93 4.0
+ LO BND x94 0.0
+ UP BND x94 9.0
+ LO BND x95 0.0
+ UP BND x95 5.0
+ LO BND x96 0.0
+ UP BND x96 4.0
+ LO BND x97 0.0
+ UP BND x97 2.0
+ LO BND x98 0.0
+ UP BND x98 2.0
+ LO BND x99 0.0
+ UP BND x99 1.0
+ LO BND x100 0.0
+ UP BND x100 6.0
+ LO BND x101 0.0
+ UP BND x101 4.0
+ LO BND x102 0.0
+ UP BND x102 9.0
+ LO BND x103 0.0
+ UP BND x103 5.0
+ LO BND x104 0.0
+ UP BND x104 4.0
+ LO BND x105 0.0
+ UP BND x105 2.0
+ LO BND x106 0.0
+ UP BND x106 2.0
+ LO BND x107 0.0
+ UP BND x107 1.0
+ LO BND x108 0.0
+ UP BND x108 6.0
+ LO BND x109 0.0
+ UP BND x109 4.0
+ LO BND x110 0.0
+ UP BND x110 9.0
+ LO BND x111 0.0
+ UP BND x111 5.0
+ LO BND x112 0.0
+ UP BND x112 4.0
+ LO BND x113 0.0
+ UP BND x113 2.0
+ LO BND x114 0.0
+ UP BND x114 2.0
+ LO BND x115 0.0
+ UP BND x115 1.0
+ LO BND x116 0.0
+ UP BND x116 6.0
+ LO BND x117 0.0
+ UP BND x117 4.0
+ LO BND x118 0.0
+ UP BND x118 9.0
+ LO BND x119 0.0
+ UP BND x119 5.0
+ LO BND x120 0.0
+ UP BND x120 4.0
+ LO BND x121 0.0
+ UP BND x121 2.0
+ LO BND x122 0.0
+ UP BND x122 2.0
+ LO BND x123 0.0
+ UP BND x123 1.0
+ LO BND x124 0.0
+ UP BND x124 6.0
+ LO BND x125 0.0
+ UP BND x125 4.0
+ LO BND x126 0.0
+ UP BND x126 9.0
+ LO BND x127 0.0
+ UP BND x127 5.0
+ LO BND x128 0.0
+ UP BND x128 4.0
+ LO BND x129 0.0
+ UP BND x129 2.0
+ LO BND x130 0.0
+ UP BND x130 2.0
+ LO BND x131 0.0
+ UP BND x131 1.0
+ LO BND x132 0.0
+ UP BND x132 6.0
+ LO BND x133 0.0
+ UP BND x133 4.0
+ LO BND x134 0.0
+ UP BND x134 9.0
+ LO BND x135 0.0
+ UP BND x135 5.0
+ LO BND x136 0.0
+ UP BND x136 4.0
+ LO BND x137 0.0
+ UP BND x137 2.0
+ LO BND x138 0.0
+ UP BND x138 2.0
+ LO BND x139 0.0
+ UP BND x139 1.0
+ LO BND x140 0.0
+ UP BND x140 6.0
+ LO BND x141 0.0
+ UP BND x141 4.0
+ LO BND x142 0.0
+ UP BND x142 9.0
+ LO BND x143 0.0
+ UP BND x143 5.0
+ LO BND x144 0.0
+ UP BND x144 4.0
+ LO BND x145 0.0
+ UP BND x145 2.0
+ LO BND x146 0.0
+ UP BND x146 2.0
+ LO BND x147 0.0
+ UP BND x147 1.0
+ LO BND x148 0.0
+ UP BND x148 6.0
+ LO BND x149 0.0
+ UP BND x149 4.0
+ LO BND x150 0.0
+ UP BND x150 9.0
+ LO BND x151 0.0
+ UP BND x151 5.0
+ LO BND x152 0.0
+ UP BND x152 4.0
+ LO BND x153 0.0
+ UP BND x153 2.0
+ LO BND x154 0.0
+ UP BND x154 2.0
+ LO BND x155 0.0
+ UP BND x155 1.0
+ LO BND x156 0.0
+ UP BND x156 6.0
+ LO BND x157 0.0
+ UP BND x157 4.0
+ LO BND x158 0.0
+ UP BND x158 9.0
+ LO BND x159 0.0
+ UP BND x159 5.0
+ LO BND x160 0.0
+ UP BND x160 4.0
+ LO BND x161 0.0
+ UP BND x161 2.0
+ LO BND x162 0.0
+ UP BND x162 2.0
+ LO BND x163 0.0
+ UP BND x163 1.0
+ LO BND x164 0.0
+ UP BND x164 6.0
+ LO BND x165 0.0
+ UP BND x165 4.0
+ LO BND x166 0.0
+ UP BND x166 9.0
+ LO BND x167 0.0
+ UP BND x167 5.0
+ LO BND x168 0.0
+ UP BND x168 4.0
+ LO BND x169 0.0
+ UP BND x169 2.0
+ LO BND x170 0.0
+ UP BND x170 2.0
+ LO BND x171 0.0
+ UP BND x171 1.0
+ LO BND x172 0.0
+ UP BND x172 6.0
+ LO BND x173 0.0
+ UP BND x173 4.0
+ LO BND x174 0.0
+ UP BND x174 9.0
+ LO BND x175 0.0
+ UP BND x175 5.0
+ LO BND x176 0.0
+ UP BND x176 4.0
+ LO BND x177 0.0
+ UP BND x177 2.0
+ LO BND x178 0.0
+ UP BND x178 2.0
+ LO BND x179 0.0
+ UP BND x179 1.0
+ LO BND x180 0.0
+ UP BND x180 6.0
+ LO BND x181 0.0
+ UP BND x181 4.0
+ LO BND x182 0.0
+ UP BND x182 9.0
+ LO BND x183 0.0
+ UP BND x183 5.0
+ LO BND x184 0.0
+ UP BND x184 4.0
+ LO BND x185 0.0
+ UP BND x185 2.0
+ LO BND x186 0.0
+ UP BND x186 2.0
+ LO BND x187 0.0
+ UP BND x187 1.0
+ENDATA

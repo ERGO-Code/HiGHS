@@ -22,8 +22,6 @@
 
 HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
-      lps(1, HighsLpRelaxation(mipsolver)),
-      domains(1, HighsDomain(mipsolver)),
       pseudocosts(1),
       parallel_lock(false),
       heuristics(mipsolver),
@@ -75,6 +73,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       upper_limit(kHighsInf),
       optimality_limit(kHighsInf),
       debugSolution(mipsolver) {
+  lps.emplace_back(mipsolver);
+  domains.emplace_back(mipsolver);
   conflictpools.emplace_back(5 * mipsolver.options_mip_->mip_pool_age_limit,
                              mipsolver.options_mip_->mip_pool_soft_limit);
   cutpools.emplace_back(mipsolver.numCol(),
@@ -486,6 +486,12 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
+    // The model status only indicates that the LP is solved, which is
+    // true for any feasible point since the costs are zero. Fixing
+    // variables in finishAnalyticCenterComputation requires the point to
+    // be centred, so only accept an optimal status if centring succeeded
+    if (ipm.getInfo().centring_status != kCentringStatusSuccess)
+      analyticCenterStatus = HighsModelStatus::kUnknown;
     analyticCenter = sol;
   });
 }
@@ -506,7 +512,11 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     fflush(stdout);
   }
   analyticCenterComputed = true;
-  if (analyticCenterStatus == HighsModelStatus::kOptimal) {
+  // Disable fixings if presolve=off as it possible to produce valid analytic
+  // centers close to a bound when adding sets of equalities and redundant
+  // constraints
+  if (analyticCenterStatus == HighsModelStatus::kOptimal &&
+      mipsolver.options_mip_->presolve != kHighsOffString) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -514,8 +524,8 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
                           mipsolver.mipdata_->getDomain().col_lower_[i];
       if (boundRange == 0.0) continue;
 
-      double tolerance =
-          mipsolver.mipdata_->feastol * std::min(boundRange, 1.0);
+      const double tolerance =
+          (mipsolver.mipdata_->feastol / 10) * std::min(boundRange, 1.0);
 
       if (analyticCenter[i] <= mipsolver.model_->col_lower_[i] + tolerance) {
         mipsolver.mipdata_->getDomain().changeBound(
@@ -823,7 +833,9 @@ void HighsMipSolverData::runMipPresolve(
   presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
-  if (presolve_status == HighsPresolveStatus::kOutOfMemory) return;
+  if (presolve_status == HighsPresolveStatus::kOutOfMemory ||
+      presolve_status == HighsPresolveStatus::kException)
+    return;
   // Report the final presolve reductions unless this is a restart
   if (mipsolver.options_mip_->presolve != kHighsOffString && numRestarts == 0)
     reportPresolveReductions(mipsolver.options_mip_->log_options,
@@ -1101,19 +1113,19 @@ void HighsMipSolverData::runSetup() {
 		 "%" HIGHSINT_FORMAT " continuous, "
 		 "%" HIGHSINT_FORMAT " domain fixed)\n"
 		 "   %" HIGHSINT_FORMAT " nonzero%s\n"
-		 "   Thread count %" HIGHSINT_FORMAT " (of "
-		 "%" HIGHSINT_FORMAT " threads). "
-		 "Using %" HIGHSINT_FORMAT " max workers. "
-		 "Parallel search %s\n",
+		 "   Thread count: "
+		 "%" HIGHSINT_FORMAT " available cores, "
+		 "%" HIGHSINT_FORMAT " logical processors, "
+		 "using up to %" HIGHSINT_FORMAT " workers "
+		 "across %" HIGHSINT_FORMAT " threads.\n",
         // clang-format on
         mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s", num_col,
         num_col == 1 ? "" : "s", num_binary, num_general_integer,
         num_implied_integer, num_continuous, num_domain_fixed,
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
-        HighsInt{highs::parallel::num_threads()},
         HighsInt{static_cast<int>(highs::parallel::available_core_count())},
-        mipsolver.getMaxNumWorkers(),
-        mipsolver.getMaxNumWorkers() > 1 ? "on" : "off");
+        HighsInt{static_cast<int>(std::thread::hardware_concurrency())},
+        mipsolver.getMaxNumWorkers(), HighsInt{highs::parallel::num_threads()});
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has "
@@ -1188,15 +1200,15 @@ try_again:
       mipsolver.orig_model_, solution.col_value, &solution.row_value, violation,
       mipsolver_quad_objective_value);
   double bound_violation_ = 0;
-  double integrality_violation_ = 0;
   double row_violation_ = 0;
-  violation.copy(bound_violation_, integrality_violation_, row_violation_);
+  double integrality_violation_ = 0;
+  violation.copy(bound_violation_, row_violation_, integrality_violation_);
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
-    //     "trying to repair sol that is violated by %.12g bounds, %.12g "
-    //     "integrality, %.12g rows\n",
-    //     bound_violation_, integrality_violation_, row_violation_);
+    //     "trying to repair sol that is violated by %.12g bounds, %.12g rows,
+    //     %.12g "integrality\n", bound_violation_, row_violation_,
+    //     integrality_violation_);
     HighsLp fixedModel = *mipsolver.orig_model_;
     fixedModel.integrality_.clear();
     for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
@@ -1493,19 +1505,13 @@ void HighsMipSolverData::basisTransfer() {
     firstrootbasis.alien = true;
     firstrootbasis.useful = true;
 
-    for (HighsInt i = 0;
-         i < static_cast<HighsInt>(postSolveStack.getOrigRowIndex().size());
-         ++i) {
-      if (!postSolveStack.isOrigRow(i)) break;
+    for (HighsInt i : postSolveStack.getOrigRows()) {
       HighsBasisStatus status =
           mipsolver.rootbasis->row_status[postSolveStack.getOrigRowIndex(i)];
       firstrootbasis.row_status[i] = status;
     }
 
-    for (HighsInt i = 0;
-         i < static_cast<HighsInt>(postSolveStack.getOrigColIndex().size());
-         ++i) {
-      if (!postSolveStack.isOrigCol(i)) break;
+    for (HighsInt i : postSolveStack.getOrigCols()) {
       HighsBasisStatus status =
           mipsolver.rootbasis->col_status[postSolveStack.getOrigColIndex(i)];
       firstrootbasis.col_status[i] = status;
@@ -2764,7 +2770,7 @@ void HighsMipSolverData::setCallbackDataOut(
 
 bool HighsMipSolverData::interruptFromCallbackWithData(
     const int callback_type, const double mipsolver_objective_value,
-    const std::string message) const {
+    const std::string& message) const {
   if (!mipsolver.callback_->callbackActive(callback_type)) return false;
   assert(!mipsolver.submip);
   setCallbackDataOut(mipsolver_objective_value);
@@ -2812,9 +2818,9 @@ void HighsMipSolverData::queryExternalSolution(
           mipsolver.orig_model_, user_solution, nullptr, violation,
           user_solution_quad_objective_value);
       double bound_violation_ = 0;
-      double integrality_violation_ = 0;
       double row_violation_ = 0;
-      violation.copy(bound_violation_, integrality_violation_, row_violation_);
+      double integrality_violation_ = 0;
+      violation.copy(bound_violation_, row_violation_, integrality_violation_);
       double user_solution_objective_value =
           double(user_solution_quad_objective_value);
       if (!feasible) {
@@ -2859,7 +2865,8 @@ void HighsMipSolverData::terminatorReport() const {
 }
 
 void HighsMipSolverData::reportOriginalPresolvedCol(
-    const HighsInt original_col, const std::vector<double> presolved_solution) {
+    const HighsInt original_col,
+    const std::vector<double>& presolved_solution) {
   if (original_col < 0 || original_col >= mipsolver.orig_model_->num_col_)
     return;
   // Find this column in the presolved model
@@ -3055,7 +3062,7 @@ HighsModelStatus HighsTerminator::terminationStatus() const {
   return HighsModelStatus::kNotset;
 }
 
-void HighsTerminator::report(const HighsLogOptions log_options) const {
+void HighsTerminator::report(const HighsLogOptions& log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminator:        ");
   for (HighsInt instance = 0; instance < this->num_instance; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",
