@@ -233,7 +233,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
           std::multimap<double, HighsInt>& lurkingBounds,
           std::multimap<double, HighsInt>& otherLurkingBounds) {
         // bounds outside the range of HighsInt cannot be handled
-        assert(direction * inputBound > -kHighsIInf);
+        if (std::abs(inputBound) >= kHighsIInf) return;
         HighsInt bound = static_cast<HighsInt>(inputBound);
 
         if (direction * redCost == kHighsInf) {
@@ -297,8 +297,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
     double lb = mipsolver.mipdata_->getDomain().col_lower_[col];
     double ub = mipsolver.mipdata_->getDomain().col_upper_[col];
 
-    if (lpredcost[col] > mipsolver.mipdata_->feastol &&
-        lb > -static_cast<double>(kHighsIInf)) {
+    if (lpredcost[col] > mipsolver.mipdata_->feastol) {
       // col <= (cutoffbound - lpobj)/redcost + lb
       // so for lurkub = lb to ub - 1 we can compute the necessary cutoff
       // bound to reach this bound which is:
@@ -307,8 +306,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
       findLurkingBounds(col, HighsInt{1}, lb, ub, lpobjective, lpredcost[col],
                         maxNumSteps, maxNumStepsExp, lurkingColUpper[col],
                         lurkingColLower[col]);
-    } else if (lpredcost[col] < -mipsolver.mipdata_->feastol &&
-               ub < static_cast<double>(kHighsIInf)) {
+    } else if (lpredcost[col] < -mipsolver.mipdata_->feastol) {
       // col >= (cutoffbound - lpobj)/redcost + ub
       // so for lurklb = lb + 1 to ub we can compute the necessary cutoff
       // bound to reach this bound which is:
