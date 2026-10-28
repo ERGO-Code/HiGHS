@@ -416,30 +416,48 @@ bool testSolveDense() {
   return true;
 }
 
-TEST_CASE("factor-hints", "[highs_test_factor]") {
-
+TEST_CASE("study-factor", "[highs_test_factor]") {
   HighsInt dim = 3;
   HighsRandom random;
-  double epsilon;
+  double epsilon = 1e-12;
+  double kPivotTolerance = 1e-8;
+  const double kNumericalTroubleTolerance = 1e-7;
+
   HighsSparseMatrix matrix;
   matrix.num_col_ = 6;
   matrix.num_row_ = dim;
-  matrix.start_ = {0, 2, 4, 6, 8, 10, 13};
+  matrix.start_ = {0, 2, 4, 6, 8, 10, 12};
   matrix.index_ = {0, 1, 1, 2, 0, 2, 0, 2, 0, 2, 0, 2};
-  matrix.value_ = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1};
+  matrix.value_ = {1,
+                   1,
+                   1,
+                   1,
+                   1,
+                   1,
+                   1,
+                   1,
+                   1 + epsilon * random.fraction(),
+                   1 + epsilon * random.fraction(),
+                   1,
+                   -1};
   const HighsInt kParallelTo2 = dim;
   const HighsInt kAlmostParallelTo2 = kParallelTo2 + 1;
   const HighsInt kOrthogonalTo2 = kAlmostParallelTo2 + 1;
-  for (HighsInt iEl = matrix.start_[kAlmostParallelTo2]; iEl < matrix.start_[kAlmostParallelTo2+1]; iEl++)
-    matrix.value_[iEl] = 1+epsilon*random.fraction();
-  HVector a_q, e_p, rhs;
-  a_q.setup(dim);
-  e_p.setup(dim);
+  HVector hat_a_q, pi_p, rhs;
+  hat_a_q.setup(dim);
+  pi_p.setup(dim);
   rhs.setup(dim);
-  std::vector<HighsInt>basis = {0, 1, 2};
+  std::vector<HighsInt> basis = {0, 1, 2};
   HFactor factor;
   factor.setup(matrix, basis);
-  factor.build();
+
+  HighsInt update_count;
+  double update_solve_synthetic_tick;
+  double invert_synthetic_tick;
+  HighsInt illegal_hint = -kHighsIInf;
+  HighsInt hint = illegal_hint;
+
+  const bool logging = dev_run;  // true; //
 
   auto testInvert = [&]() {
     std::vector<double> solution;
@@ -449,56 +467,175 @@ TEST_CASE("factor-hints", "[highs_test_factor]") {
       solution.push_back(value);
       HighsInt iVar = basis[iCol];
       if (iVar < matrix.num_col_) {
-	for (HighsInt iEl = matrix.start_[iVar]; iEl < matrix.start_[iVar+1]; iEl++)
-	  rhs.array[matrix.index_[iEl]] += matrix.value_[iEl] * value;
+        for (HighsInt iEl = matrix.start_[iVar]; iEl < matrix.start_[iVar + 1];
+             iEl++)
+          rhs.array[matrix.index_[iEl]] += matrix.value_[iEl] * value;
       } else {
-	rhs.array[iVar-matrix.num_col_] += value;
+        rhs.array[iVar - matrix.num_col_] += value;
       }
     }
     rhs.count = dim;
     factor.ftranCall(rhs, 1);
     double error = 0;
-    for (HighsInt iCol = 0; iCol < dim; iCol++) 
+    for (HighsInt iCol = 0; iCol < dim; iCol++)
       error += std::fabs(rhs.array[iCol] - solution[iCol]);
-    printf("Random solve error = %g\n", error);
+    return error;
   };
 
-  HighsInt hint;
+  auto analyseFactor = [&]() {
+    double error = testInvert();
+    if (logging)
+      printf(
+          "After update %3d: INVERT error = %1.1e; Ticks: INVERT = %9d; UPDATE "
+          "solve = %9d\n",
+          int(update_count), error, int(invert_synthetic_tick),
+          int(update_solve_synthetic_tick));
+    return error < 1e-10;
+  };
 
-  for (HighsInt iRow = 0; iRow < dim; iRow++) {
-    HighsInt iVar = matrix.num_col_ + iRow;
-    a_q.clear();
-    matrix.collectAj(a_q, iVar, 1);
-    a_q.packFlag = true;
-    factor.ftranCall(a_q, 1);
+  auto printBasis = [&](const std::string& when) {
+    if (!logging) return;
+    printf("%s, basis is [", when.c_str());
+    for (HighsInt iRow = 0; iRow < dim; iRow++)
+      printf("%d%s", int(basis[iRow]), iRow < dim - 1 ? ", " : "]\n");
+  };
 
-    e_p.clear();
-    e_p.count = 1;
-    e_p.index[0] = iRow;
-    e_p.array[iRow] = 1;
-    e_p.packFlag = true;
-    factor.btranCall(e_p, 1);
+  auto invert = [&]() {
+    printBasis("\nBefore INVERT");
+    HighsInt rank_deficiency = factor.build();
+    update_count = 0;
+    update_solve_synthetic_tick = 0;
+    invert_synthetic_tick = factor.build_synthetic_tick;
+    // If the basis matrix is singular, then the simplex solver
+    // back-tracks to the basis half way through the previous sequence
+    // of updates, and refactors. For now the QP ASM solver should log
+    // an error and fail cleanly
+    if (rank_deficiency && logging)
+      printf("Basis matrix has rank deficiency of %d\n", int(rank_deficiency));
+    printBasis("After  INVERT");
+    if (logging) printf("INVERT error = %g\n\n", testInvert());
+  };
 
-    factor.update(&a_q, &e_p, &iRow, &hint);
-    testInvert();
-  }
+  auto updateOk = [&](const HighsInt entering_column,
+                      const HighsInt leaving_row) {
+    hat_a_q.clear();
+    matrix.collectAj(hat_a_q, entering_column, 1);
+    hat_a_q.packFlag = true;
+    factor.ftranCall(hat_a_q, 1);
+    update_solve_synthetic_tick += hat_a_q.synthetic_tick;
 
-  for (HighsInt iRow = 0; iRow < dim; iRow++) {
-    HighsInt iVar = iRow;
-    a_q.clear();
-    matrix.collectAj(a_q, iVar, 1);
-    a_q.packFlag = true;
-    factor.ftranCall(a_q, 1);
+    pi_p.clear();
+    pi_p.count = 1;
+    pi_p.index[0] = leaving_row;
+    pi_p.array[leaving_row] = 1;
+    pi_p.packFlag = true;
+    factor.btranCall(pi_p, 1);
+    update_solve_synthetic_tick += pi_p.synthetic_tick;
 
-    e_p.clear();
-    e_p.count = 1;
-    e_p.index[0] = iRow;
-    e_p.array[iRow] = 1;
-    e_p.packFlag = true;
-    factor.btranCall(e_p, 1);
+    // The pivot is e_p^T.B^{-1}.a_q, which can be computed as either
+    //
+    // pivot0 = e_p^T.(B^{-1}.a_q) = e_p^T.hat_a_q
+    //
+    // pivot1 = (e_p^T.B^{-1}).a_q = pi_p^T.a_q
+    double pivot0 = hat_a_q.array[leaving_row];
+    double pivot1;
+    if (entering_column < matrix.num_col_) {
+      pivot1 = 0;
+      for (HighsInt iEl = matrix.start_[entering_column];
+           iEl < matrix.start_[entering_column + 1]; iEl++)
+        pivot1 += matrix.value_[iEl] * pi_p.array[matrix.index_[iEl]];
+    } else {
+      pivot1 = pi_p.array[entering_column - matrix.num_col_];
+    }
 
-    factor.update(&a_q, &e_p, &iRow, &hint);
-    testInvert();
-  }
+    double numerical_trouble = std::fabs(pivot0 - pivot1) /
+                               std::min(std::fabs(pivot0), std::fabs(pivot1));
+    const bool bad_pivot = fabs(pivot0) < kPivotTolerance;
+    const bool bad_numerics =
+        bad_pivot || numerical_trouble > kNumericalTroubleTolerance;
+    if ((bad_pivot || bad_numerics) && logging)
+      printf(
+          "%4s pivot; %4s numerics: pivot0 = %g; pivot1 = %g => "
+          "numerical_trouble = %g\n",
+          bad_pivot ? "Bad " : "Good", bad_numerics ? "Bad " : "Good", pivot0,
+          pivot1, numerical_trouble);
+
+    // Bad pivots should be avoided by tolerances in the ratio test,
+    // but bad numerics can evolve - maybe as a consequence of a
+    // sequence of poor (but not bad) pivots
+    //
+    // If bad numerics are detected after at least one update has
+    // been performed, the simplex solver rejects the basis change
+    // and reinverts the basis in the hope that the numerical
+    // clean-up leads to better behaviour
+    update_count++;
+    // Because leaving_row is not const in HFactor::update
+    HighsInt pass_leaving_row = leaving_row;
+    factor.update(&hat_a_q, &pi_p, &pass_leaving_row, &hint);
+    // hint is no longer used in HiGHS, since it no longer uses Qi's
+    // experimental simplex update schemes that forced inversion
+    // from within HFactor::update
+    //
+    // In the simplex solvers, decisions to refactor on numerical or
+    // efficiency grounds are taken in the simplex solver based on
+    // tests that are illustrated above in updateOk
+    assert(hint == illegal_hint);
+    basis[leaving_row] = entering_column;
+    return analyseFactor();
+  };
+
+  auto replaceStructurals = [&]() {
+    // Have to introduce logicals in this order to avoid singularity
+    for (HighsInt iRow = dim - 1; iRow >= 0; iRow--)
+      REQUIRE(updateOk(matrix.num_col_ + iRow, iRow));
+  };
+
+  auto replaceLogicals = [&]() {
+    for (HighsInt iRow = 0; iRow < dim; iRow++) REQUIRE(updateOk(iRow, iRow));
+  };
+
+  invert();
+
+  replaceStructurals();
+  replaceLogicals();
+  replaceStructurals();
+  replaceLogicals();
+
+  if (update_solve_synthetic_tick > invert_synthetic_tick) invert();
+
+  std::vector<HighsInt> ok_basis = basis;
+  // Column kParallelTo2 is the same as column 2, so replacing column
+  // 0 (or 1) - basis entry 2 (or 1) by kParallelTo2 yields a singular
+  // matrix
+  HighsInt pivot_row = 2;
+  assert(basis[pivot_row] != 2);
+  REQUIRE(!updateOk(kParallelTo2, pivot_row));
+
+  // Note that the zero pivot doesn't cause a NaN since the it
+  // corresponds to a RHS entry of 0 (due to the basis matrix having
+  // no entries in row 2) hence the zero pivot is skipped. There's a
+  // meaningful INVERT error because the singular system has a
+  // non-unique solution.
+
+  // Factor the singular basis
+
+  invert();
+  // After INVERT, basis is [3, 1, 8], where the 8 is the identity
+  // column variable replacing column 2 to ensure non-singularity
+  //
+  // If
+
+  // Recover the non-singular basis [2, 1, 0]
+  basis = ok_basis;
+  invert();
+  // After INVERT the basis is [0, 1, 2]
+
+  // Column kAlmostParallelTo2 is almost the same as column 2, so
+  // replacing column 0 (or 1) - basis entry 0 (or 1) by kParallelTo2
+  // yields an ill-conditioned matrix
+  pivot_row = 0;
+  assert(basis[pivot_row] != 2);
+  REQUIRE(!updateOk(kAlmostParallelTo2, pivot_row));
+
+  REQUIRE(updateOk(kOrthogonalTo2, pivot_row));
 }
-
