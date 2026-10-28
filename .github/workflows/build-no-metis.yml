@@ -4,7 +4,7 @@ name: build-no-metis
 # https://github.com/scipy/scipy/blob/main/tools/building/trim_sdist_content.py
 # Check that HiGHS still builds without it when HIPO is not enabled.
 
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
