@@ -232,8 +232,12 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
           HighsInt maxNumSteps, HighsInt maxNumStepsExp,
           std::multimap<double, HighsInt>& lurkingBounds,
           std::multimap<double, HighsInt>& otherLurkingBounds) {
+        // bounds whose absolute value is at least this cannot be cast to
+        // HighsInt (for 64-bit HighsInt, the cast rounds kHighsIInf up to
+        // 2^63)
+        const double maxBound = static_cast<double>(kHighsIInf);
         // bounds outside the range of HighsInt cannot be handled
-        if (std::abs(inputBound) >= kHighsIInf) return;
+        if (std::abs(inputBound) >= maxBound) return;
         HighsInt bound = static_cast<HighsInt>(inputBound);
 
         if (direction * redCost == kHighsInf) {
@@ -244,7 +248,7 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         }
 
         int64_t lastBound;
-        if (direction * inputOtherBound >= kHighsIInf)
+        if (direction * inputOtherBound >= maxBound)
           // bounds outside the range of HighsInt cannot be handled
           lastBound = static_cast<int64_t>(bound) + direction * maxNumSteps;
         else {
@@ -278,8 +282,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
 
           // we have no better lurking bound stored; store this lurking bound
           // and check if it dominates one that is already stored
-          auto it = lurkingBounds.emplace_hint(pos, requiredCutoffBound,
-                                               lurkingBound);
+          auto it = lurkingBounds.emplace_hint(
+              pos, requiredCutoffBound, static_cast<HighsInt>(lurkingBound));
 
           auto i = lurkingBounds.begin();
           while (i != it) {
