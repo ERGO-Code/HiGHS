@@ -168,8 +168,9 @@ function(highs_build_openblas_windows_arm64 version result_var)
 
     # There is no runtime CPU detection for ARM64 on Windows (DYNAMIC_ARCH
     # always selects the baseline), so build the ARMV8 kernels directly.
-    # Do not set USE_TLS: with it, OpenBLAS's exit-time cleanup races its
-    # worker threads and intermittently segfaults on process exit.
+    # Build without the thread pool, which HiPO never uses and which
+    # intermittently segfaults when highs_extras.dll is unloaded at exit, and
+    # with locking, since HiPO calls BLAS from several threads.
     ExternalProject_Add(openblas_clang
         GIT_REPOSITORY "https://github.com/OpenMathLib/OpenBLAS.git"
         GIT_TAG "v${version}"
@@ -188,6 +189,8 @@ function(highs_build_openblas_windows_arm64 version result_var)
             -DBUILD_TESTING:BOOL=OFF
             -DTARGET:STRING=ARMV8
             -DDYNAMIC_ARCH:BOOL=OFF
+            -DUSE_THREAD:BOOL=OFF
+            -DUSE_LOCKING:BOOL=ON
             -DNOFORTRAN:BOOL=ON
             -DONLY_CBLAS:BOOL=ON
             -DNO_LAPACK:BOOL=ON
