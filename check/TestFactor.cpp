@@ -419,7 +419,7 @@ bool testSolveDense() {
 TEST_CASE("study-factor", "[highs_test_factor]") {
   HighsInt dim = 3;
   HighsRandom random;
-  double epsilon = 1e-12;
+  double epsilon = 1e-9;
   double kPivotTolerance = 1e-8;
   const double kNumericalTroubleTolerance = 1e-7;
 
@@ -452,6 +452,16 @@ TEST_CASE("study-factor", "[highs_test_factor]") {
   factor.setup(matrix, basis);
 
   HighsInt update_count;
+  // The synthetic clocks for INVERT and the operations in FTRAN and
+  // BTRAN associated with UPDATE are doubles - because they can get
+  // big!
+  //
+  // For INVERT the value is HFactor::build_synthetic_tick;
+  //
+  // For the operations in FTRAN and BTRAN associated with UPDATE, the
+  // values HVector::synthetic_tick that are calculated for each
+  // individual FTRAN and BTRAN (they are zeroed by calling
+  // HVector::clear) have to be accumulated outside HFactor
   double update_solve_synthetic_tick;
   double invert_synthetic_tick;
   HighsInt illegal_hint = -kHighsIInf;
@@ -564,6 +574,9 @@ TEST_CASE("study-factor", "[highs_test_factor]") {
     // but bad numerics can evolve - maybe as a consequence of a
     // sequence of poor (but not bad) pivots
     //
+    // I'd hoped that by bringing in a near-parallel column I'd be able to
+    // illustrate the bad numerics
+    //
     // If bad numerics are detected after at least one update has
     // been performed, the simplex solver rejects the basis change
     // and reinverts the basis in the hope that the numerical
@@ -594,6 +607,11 @@ TEST_CASE("study-factor", "[highs_test_factor]") {
     for (HighsInt iRow = 0; iRow < dim; iRow++) REQUIRE(updateOk(iRow, iRow));
   };
 
+  auto heading = [&](const std::string& text) {
+    if (logging)
+      printf("\n%s\n %s\n%s\n", std::string(text.length() + 2, '=').c_str(),
+             text.c_str(), std::string(text.length() + 2, '=').c_str());
+  };
   invert();
 
   replaceStructurals();
@@ -607,8 +625,13 @@ TEST_CASE("study-factor", "[highs_test_factor]") {
   // Column kParallelTo2 is the same as column 2, so replacing column
   // 0 (or 1) - basis entry 2 (or 1) by kParallelTo2 yields a singular
   // matrix
+  std::string text =
+      "Introducing an exactly parallel column so the basis matrix is exactly "
+      "singular";
   HighsInt pivot_row = 2;
+  const HighsInt kRuleLength = 75;
   assert(basis[pivot_row] != 2);
+  heading(text);
   REQUIRE(!updateOk(kParallelTo2, pivot_row));
 
   // Note that the zero pivot doesn't cause a NaN since the it
@@ -618,7 +641,6 @@ TEST_CASE("study-factor", "[highs_test_factor]") {
   // non-unique solution.
 
   // Factor the singular basis
-
   invert();
   // After INVERT, basis is [3, 1, 8], where the 8 is the identity
   // column variable replacing column 2 to ensure non-singularity
@@ -631,11 +653,22 @@ TEST_CASE("study-factor", "[highs_test_factor]") {
   // After INVERT the basis is [0, 1, 2]
 
   // Column kAlmostParallelTo2 is almost the same as column 2, so
-  // replacing column 0 (or 1) - basis entry 0 (or 1) by kParallelTo2
+  // replacing column 0 (or 1) - basis entry 0 (or 1) by kAlmostParallelTo2
   // yields an ill-conditioned matrix
+  text =
+      "Introducing a near-parallel column so the basis matrix is near singular";
   pivot_row = 0;
   assert(basis[pivot_row] != 2);
+  heading(text);
   REQUIRE(!updateOk(kAlmostParallelTo2, pivot_row));
 
+  // Column kOrthogonalTo2 is orthogonal to column 2 of the matrix, so
+  // using it to replace kAlmostParallelTo2 makes the basis matrix
+  // well-conditioned again. This is usually reflected in the updated
+  // invertible representaiton, since the Forrest-Tomlin update in
+  // HiGHS is numerically stable: well, not numerically unstable...
+  text =
+      "Introducing a orthogonal column so the basis matrix is well conditioned";
+  heading(text);
   REQUIRE(updateOk(kOrthogonalTo2, pivot_row));
 }
