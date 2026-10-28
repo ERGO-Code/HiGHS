@@ -1,0 +1,53 @@
+name: build-no-metis
+
+# SciPy removes extern/metis from its sdist for licensing reasons, see
+# https://github.com/scipy/scipy/blob/main/tools/building/trim_sdist_content.py
+# Check that HiGHS still builds without it when HIPO is not enabled.
+
+on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  meson-no-metis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install meson and ninja
+        run: python -m pip install meson ninja
+
+      - name: Trim sources as in the SciPy sdist
+        run: |
+          rm -rf extern/metis
+          rm -rf .github app check docs examples nuget scripts tests
+
+      - name: Build
+        run: |
+          meson setup bbdir
+          meson compile -C bbdir
+
+  cmake-no-metis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Remove METIS
+        run: rm -rf extern/metis
+
+      - name: Configure CMake
+        run: cmake -S . -B build -DFAST_BUILD=ON -DHIPO=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test executable
+        run: |
+          ./build/bin/highs check/instances/afiro.mps
+          ./build/bin/highs --solver=ipm check/instances/25fv47.mps
