@@ -2043,21 +2043,34 @@ TEST_CASE("hipo-ipx-no-crossover", "[highs_test_presolve]") {
   h.presolve();
   HighsLp lp = h.getPresolvedLp();
 
+  std::string use_pdlp = kPdlpString;
+
   Highs h1;
   //  h1.setOptionValue("output_flag", dev_run);
   h1.passModel(lp);
   REQUIRE(h1.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+  REQUIRE(h1.setOptionValue(kPresolveString, kHighsOffString) == HighsStatus::kOk);
   REQUIRE(h1.setOptionValue("run_crossover", kHighsChooseString) == HighsStatus::kOk);
 
   REQUIRE(h1.setOptionValue(kSolverString, kIpxString) == HighsStatus::kOk);
   REQUIRE(h1.run() == HighsStatus::kOk);
+  HighsModelStatus ipx_model_status = h1.getModelStatus();
   HighsInfo ipx_info = h1.getInfo();
   HighsSolution ipx_solution = h1.getSolution();
+
   h1.clearSolver();
   REQUIRE(h1.setOptionValue(kSolverString, kHipoString) == HighsStatus::kOk);
   REQUIRE(h1.run() == HighsStatus::kOk);
+  HighsModelStatus hipo_model_status = h1.getModelStatus();
   HighsInfo hipo_info = h1.getInfo();
   HighsSolution hipo_solution = h1.getSolution();
+
+  h1.clearSolver();
+  REQUIRE(h1.setOptionValue(kSolverString, use_pdlp) == HighsStatus::kOk);
+  REQUIRE(h1.run() == HighsStatus::kOk);
+  HighsModelStatus pdlp_model_status = h1.getModelStatus();
+  HighsInfo pdlp_info = h1.getInfo();
+  HighsSolution pdlp_solution = h1.getSolution();
 
   auto logIntegerInfo = [&] (const std::string& name, const HighsInt ipx, const HighsInt hipo) {
     if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
@@ -2067,55 +2080,88 @@ TEST_CASE("hipo-ipx-no-crossover", "[highs_test_presolve]") {
     if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
     printf("%-35s %11.4g %11.4g %11.4g\n", name.c_str(), ipx, hipo, ipx/hipo);
   };
+  auto compareSolverInfo = [&] (const std::string& solver0, const std::string& solver1, const HighsModelStatus& model_status0, const HighsModelStatus& model_status1, const HighsInfo& info0, const HighsInfo& info1) {
+    printf("\n%-35s   %9s   %9s\n", "Model status", h.modelStatusToString(model_status0).c_str(), h.modelStatusToString(model_status1).c_str());
+    printf("Measure                                  %6s      %6s     Compare\n", solver0.c_str(), solver1.c_str());
+  logIntegerInfo("simplex_iteration_count", info0.simplex_iteration_count, info1.simplex_iteration_count);
+  logIntegerInfo("ipm_iteration_count", info0.ipm_iteration_count, info1.ipm_iteration_count);
+  logIntegerInfo("pdlp_iteration_count", info0.pdlp_iteration_count, info1.pdlp_iteration_count);
+  logIntegerInfo("crossover_iteration_count", info0.crossover_iteration_count, info1.crossover_iteration_count);
+  logIntegerInfo("primal_solution_status", info0.primal_solution_status, info1.primal_solution_status);
+  logIntegerInfo("dual_solution_status", info0.dual_solution_status, info1.dual_solution_status);
+  logIntegerInfo("centring_status", info0.centring_status, info1.centring_status);
+  logDoubleInfo("objective_function_value", info0.objective_function_value, info1.objective_function_value);
+  logIntegerInfo("num_primal_infeasibilities", info0.num_primal_infeasibilities, info1.num_primal_infeasibilities);
+  logDoubleInfo("max_primal_infeasibility", info0.max_primal_infeasibility, info1.max_primal_infeasibility);
+  logDoubleInfo("sum_primal_infeasibilities", info0.sum_primal_infeasibilities, info1.sum_primal_infeasibilities);
+  logIntegerInfo("num_dual_infeasibilities", info0.num_dual_infeasibilities, info1.num_dual_infeasibilities);
+  logDoubleInfo("max_dual_infeasibility", info0.max_dual_infeasibility, info1.max_dual_infeasibility);
+  logDoubleInfo("sum_dual_infeasibilities", info0.sum_dual_infeasibilities, info1.sum_dual_infeasibilities);
+  logIntegerInfo("num_relative_primal_infeasibilities", info0.num_relative_primal_infeasibilities, info1.num_relative_primal_infeasibilities);
+  logDoubleInfo("max_relative_primal_infeasibility", info0.max_relative_primal_infeasibility, info1.max_relative_primal_infeasibility);
+  logIntegerInfo("num_relative_dual_infeasibilities", info0.num_relative_dual_infeasibilities, info1.num_relative_dual_infeasibilities);
+  logDoubleInfo("max_relative_dual_infeasibility", info0.max_relative_dual_infeasibility, info1.max_relative_dual_infeasibility);
+  logIntegerInfo("num_primal_residual_errors", info0.num_primal_residual_errors, info1.num_primal_residual_errors);
+  logDoubleInfo("max_primal_residual_error", info0.max_primal_residual_error, info1.max_primal_residual_error);
+  logIntegerInfo("num_dual_residual_errors", info0.num_dual_residual_errors, info1.num_dual_residual_errors);
+  logDoubleInfo("max_dual_residual_error", info0.max_dual_residual_error, info1.max_dual_residual_error);
+  logIntegerInfo("num_relative_primal_residual_errors", info0.num_relative_primal_residual_errors, info1.num_relative_primal_residual_errors);
+  logDoubleInfo("max_relative_primal_residual_error", info0.max_relative_primal_residual_error, info1.max_relative_primal_residual_error);
+  logIntegerInfo("num_relative_dual_residual_errors", info0.num_relative_dual_residual_errors, info1.num_relative_dual_residual_errors);
+  logDoubleInfo("max_relative_dual_residual_error", info0.max_relative_dual_residual_error, info1.max_relative_dual_residual_error);
+  logIntegerInfo("num_complementarity_violations", info0.num_complementarity_violations, info1.num_complementarity_violations);
+  logDoubleInfo("max_complementarity_violation", info0.max_complementarity_violation, info1.max_complementarity_violation);
+  logDoubleInfo("primal_dual_objective_error", info0.primal_dual_objective_error, info1.primal_dual_objective_error);
+  logDoubleInfo("active_cost_norm", info0.active_cost_norm, info1.active_cost_norm);
+  logDoubleInfo("active_bound_norm", info0.active_bound_norm, info1.active_bound_norm);
+  };
 
-  printf("Measure                                     IPX        HiPO     Compare\n");
-  logIntegerInfo("simplex_iteration_count", ipx_info.simplex_iteration_count, hipo_info.simplex_iteration_count);
-  logIntegerInfo("ipm_iteration_count", ipx_info.ipm_iteration_count, hipo_info.ipm_iteration_count);
-  logIntegerInfo("crossover_iteration_count", ipx_info.crossover_iteration_count, hipo_info.crossover_iteration_count);
-  logIntegerInfo("primal_solution_status", ipx_info.primal_solution_status, hipo_info.primal_solution_status);
-  logIntegerInfo("dual_solution_status", ipx_info.dual_solution_status, hipo_info.dual_solution_status);
-  logIntegerInfo("centring_status", ipx_info.centring_status, hipo_info.centring_status);
-  logDoubleInfo("objective_function_value", ipx_info.objective_function_value, hipo_info.objective_function_value);
-  logIntegerInfo("num_primal_infeasibilities", ipx_info.num_primal_infeasibilities, hipo_info.num_primal_infeasibilities);
-  logDoubleInfo("max_primal_infeasibility", ipx_info.max_primal_infeasibility, hipo_info.max_primal_infeasibility);
-  logDoubleInfo("sum_primal_infeasibilities", ipx_info.sum_primal_infeasibilities, hipo_info.sum_primal_infeasibilities);
-  logIntegerInfo("num_dual_infeasibilities", ipx_info.num_dual_infeasibilities, hipo_info.num_dual_infeasibilities);
-  logDoubleInfo("max_dual_infeasibility", ipx_info.max_dual_infeasibility, hipo_info.max_dual_infeasibility);
-  logDoubleInfo("sum_dual_infeasibilities", ipx_info.sum_dual_infeasibilities, hipo_info.sum_dual_infeasibilities);
-  logIntegerInfo("num_relative_primal_infeasibilities", ipx_info.num_relative_primal_infeasibilities, hipo_info.num_relative_primal_infeasibilities);
-  logDoubleInfo("max_relative_primal_infeasibility", ipx_info.max_relative_primal_infeasibility, hipo_info.max_relative_primal_infeasibility);
-  logIntegerInfo("num_relative_dual_infeasibilities", ipx_info.num_relative_dual_infeasibilities, hipo_info.num_relative_dual_infeasibilities);
-  logDoubleInfo("max_relative_dual_infeasibility", ipx_info.max_relative_dual_infeasibility, hipo_info.max_relative_dual_infeasibility);
-  logIntegerInfo("num_primal_residual_errors", ipx_info.num_primal_residual_errors, hipo_info.num_primal_residual_errors);
-  logDoubleInfo("max_primal_residual_error", ipx_info.max_primal_residual_error, hipo_info.max_primal_residual_error);
-  logIntegerInfo("num_dual_residual_errors", ipx_info.num_dual_residual_errors, hipo_info.num_dual_residual_errors);
-  logDoubleInfo("max_dual_residual_error", ipx_info.max_dual_residual_error, hipo_info.max_dual_residual_error);
-  logIntegerInfo("num_relative_primal_residual_errors", ipx_info.num_relative_primal_residual_errors, hipo_info.num_relative_primal_residual_errors);
-  logDoubleInfo("max_relative_primal_residual_error", ipx_info.max_relative_primal_residual_error, hipo_info.max_relative_primal_residual_error);
-  logIntegerInfo("num_relative_dual_residual_errors", ipx_info.num_relative_dual_residual_errors, hipo_info.num_relative_dual_residual_errors);
-  logDoubleInfo("max_relative_dual_residual_error", ipx_info.max_relative_dual_residual_error, hipo_info.max_relative_dual_residual_error);
-  logIntegerInfo("num_complementarity_violations", ipx_info.num_complementarity_violations, hipo_info.num_complementarity_violations);
-  logDoubleInfo("max_complementarity_violation", ipx_info.max_complementarity_violation, hipo_info.max_complementarity_violation);
-  logDoubleInfo("primal_dual_objective_error", ipx_info.primal_dual_objective_error, hipo_info.primal_dual_objective_error);
-  logDoubleInfo("active_cost_norm", ipx_info.active_cost_norm, hipo_info.active_cost_norm);
-  logDoubleInfo("active_bound_norm", ipx_info.active_bound_norm, hipo_info.active_bound_norm);
-
+  auto compareSolverSolution = [&] (const HighsLp& lp, const std::string& solver0, const std::string& solver1, const HighsSolution& solution0, const HighsSolution& solution1) {
   double col_value_dl = 0;
   double col_dual_dl = 0;
   double row_value_dl = 0;
   double row_dual_dl = 0;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-    col_value_dl +=  std::fabs(ipx_solution.col_value[iCol]-hipo_solution.col_value[iCol]);
-    col_dual_dl +=  std::fabs(ipx_solution.col_dual[iCol]-hipo_solution.col_dual[iCol]);
+    col_value_dl +=  std::fabs(solution0.col_value[iCol]-solution1.col_value[iCol]);
+    col_dual_dl +=  std::fabs(solution0.col_dual[iCol]-solution1.col_dual[iCol]);
   }  
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    row_value_dl +=  std::fabs(ipx_solution.row_value[iRow]-hipo_solution.row_value[iRow]);
-    row_dual_dl +=  std::fabs(ipx_solution.row_dual[iRow]-hipo_solution.row_dual[iRow]);
+    row_value_dl +=  std::fabs(solution0.row_value[iRow]-solution1.row_value[iRow]);
+    row_dual_dl +=  std::fabs(solution0.row_dual[iRow]-solution1.row_dual[iRow]);
   }
-  printf("\ncol_value ||IPX-HiPO|| = %11.4g\n", col_value_dl);
-  printf("col_dual  ||IPX-HiPO|| = %11.4g\n", col_dual_dl);
-  printf("row_value ||IPX-HiPO|| = %11.4g\n", row_value_dl);
-  printf("row_dual  ||IPX-HiPO|| = %11.4g\n", row_dual_dl);
+  printf("\ncol_value ||%s-%s|| = %11.4g\n", solver0.c_str(), solver1.c_str(),  col_value_dl);
+  printf("col_dual  ||%s-%s|| = %11.4g\n", solver0.c_str(), solver1.c_str(),  col_dual_dl);
+  printf("row_value ||%s-%s|| = %11.4g\n", solver0.c_str(), solver1.c_str(),  row_value_dl);
+  printf("row_dual  ||%s-%s|| = %11.4g\n", solver0.c_str(), solver1.c_str(),  row_dual_dl);
+  };
+  
+  compareSolverInfo(kIpxString, kHipoString, ipx_model_status, hipo_model_status, ipx_info, hipo_info);
+  compareSolverSolution(lp, kIpxString, kHipoString, ipx_solution, hipo_solution);
+
+  compareSolverInfo(kIpxString, use_pdlp, ipx_model_status, pdlp_model_status, ipx_info, pdlp_info);
+  compareSolverSolution(lp, kIpxString, use_pdlp, ipx_solution, pdlp_solution);
+
+  highsPrintStringAsHeading("After postsolve");
+  
+  h.postsolve(ipx_solution);
+  ipx_model_status = h1.getModelStatus();
+  ipx_info = h1.getInfo();
+  ipx_solution = h1.getSolution();
+
+  h.postsolve(hipo_solution);
+  hipo_model_status = h1.getModelStatus();
+  hipo_info = h1.getInfo();
+  hipo_solution = h1.getSolution();
+
+  h.postsolve(pdlp_solution);
+  pdlp_model_status = h1.getModelStatus();
+  pdlp_info = h1.getInfo();
+  pdlp_solution = h1.getSolution();
+
+  compareSolverInfo(kIpxString, kHipoString, ipx_model_status, hipo_model_status, ipx_info, hipo_info);
+
+  compareSolverInfo(kIpxString, use_pdlp, ipx_model_status, pdlp_model_status, ipx_info, pdlp_info);
+
   h.resetThreadScheduler(true);
 }
 
