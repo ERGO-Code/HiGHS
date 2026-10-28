@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "metislib.h"
+#include "metis_mangle.h"
 
 #ifdef __cplusplus
 extern "C" {
