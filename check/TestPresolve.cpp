@@ -2040,5 +2040,5 @@ TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(h.getInfo().objective_function_value == 2);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
