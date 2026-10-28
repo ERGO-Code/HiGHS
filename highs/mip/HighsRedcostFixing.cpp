@@ -225,13 +225,24 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
   }
   HighsInt maxNumSteps = static_cast<HighsInt>(1ULL << maxNumStepsExp);
 
+  // bounds whose absolute value is at least this are not handled: they
+  // cannot be cast to HighsInt (kHighsIInf) or, for 64-bit HighsInt, leave
+  // no room for the integer arithmetic in findLurkingBounds and are not
+  // exact integers in double precision (kHighsInvMacheps)
+  const double maxBound =
+      std::min(static_cast<double>(kHighsIInf), kHighsInvMacheps);
+
   // lambda for finding lurking bounds
   auto findLurkingBounds =
-      [&](HighsInt col, HighsInt direction, HighsInt bound, HighsInt otherBound,
-          bool isOtherBoundFinite, double lpObjective, double redCost,
+      [&](HighsInt col, HighsInt direction, double inputBound,
+          double inputOtherBound, double lpObjective, double redCost,
           HighsInt maxNumSteps, HighsInt maxNumStepsExp,
           std::multimap<double, HighsInt>& lurkingBounds,
           std::multimap<double, HighsInt>& otherLurkingBounds) {
+        // bounds whose absolute value is at least maxBound cannot be handled
+        if (std::abs(inputBound) >= maxBound) return;
+        HighsInt bound = static_cast<HighsInt>(inputBound);
+
         if (direction * redCost == kHighsInf) {
           lurkingBounds.clear();
           otherLurkingBounds.clear();
@@ -240,11 +251,15 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         }
 
         int64_t lastBound;
-        if (!isOtherBoundFinite)
+        if (direction * inputOtherBound >= maxBound) {
+          // other bound cannot be handled, treat it as infinite
           lastBound = static_cast<int64_t>(bound) + direction * maxNumSteps;
-        else
-          lastBound = static_cast<int64_t>(otherBound) - direction;
-
+          // keep the lurking bounds in the range of HighsInt
+          lastBound = direction * std::min(direction * lastBound,
+                                           static_cast<int64_t>(kHighsIInf));
+        } else {
+          lastBound = static_cast<int64_t>(inputOtherBound) - direction;
+        }
         int64_t step = 1;
         int64_t range = direction * (lastBound - static_cast<int64_t>(bound));
         if (range > maxNumSteps)
@@ -273,8 +288,8 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
 
           // we have no better lurking bound stored; store this lurking bound
           // and check if it dominates one that is already stored
-          auto it = lurkingBounds.emplace_hint(pos, requiredCutoffBound,
-                                               lurkingBound);
+          auto it = lurkingBounds.emplace_hint(
+              pos, requiredCutoffBound, static_cast<HighsInt>(lurkingBound));
 
           auto i = lurkingBounds.begin();
           while (i != it) {
@@ -292,35 +307,23 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
     double lb = mipsolver.mipdata_->getDomain().col_lower_[col];
     double ub = mipsolver.mipdata_->getDomain().col_upper_[col];
 
-    if (lpredcost[col] > mipsolver.mipdata_->feastol &&
-        lb > -static_cast<double>(kHighsIInf)) {
+    if (lpredcost[col] > mipsolver.mipdata_->feastol) {
       // col <= (cutoffbound - lpobj)/redcost + lb
       // so for lurkub = lb to ub - 1 we can compute the necessary cutoff
       // bound to reach this bound which is:
       //  lurkub = (cutoffbound - lpobj)/redcost + lb
       //  cutoffbound = (lurkub - lb) * redcost + lpobj
-      // only cast ub to HighsInt if it is finite, since an infinite
-      // (or huge) value is out of range for HighsInt
-      const bool ubFinite = ub < static_cast<double>(kHighsIInf);
-      findLurkingBounds(col, HighsInt{1}, static_cast<HighsInt>(lb),
-                        ubFinite ? static_cast<HighsInt>(ub) : HighsInt{0},
-                        ubFinite, lpobjective, lpredcost[col], maxNumSteps,
-                        maxNumStepsExp, lurkingColUpper[col],
+      findLurkingBounds(col, HighsInt{1}, lb, ub, lpobjective, lpredcost[col],
+                        maxNumSteps, maxNumStepsExp, lurkingColUpper[col],
                         lurkingColLower[col]);
-    } else if (lpredcost[col] < -mipsolver.mipdata_->feastol &&
-               ub < static_cast<double>(kHighsIInf)) {
+    } else if (lpredcost[col] < -mipsolver.mipdata_->feastol) {
       // col >= (cutoffbound - lpobj)/redcost + ub
       // so for lurklb = lb + 1 to ub we can compute the necessary cutoff
       // bound to reach this bound which is:
       //  lurklb = (cutoffbound - lpobj)/redcost + ub
       //  cutoffbound = (lurklb - ub) * redcost + lpobj
-      // only cast lb to HighsInt if it is finite, since an infinite
-      // (or huge) value is out of range for HighsInt
-      const bool lbFinite = lb > -static_cast<double>(kHighsIInf);
-      findLurkingBounds(col, HighsInt{-1}, static_cast<HighsInt>(ub),
-                        lbFinite ? static_cast<HighsInt>(lb) : HighsInt{0},
-                        lbFinite, lpobjective, lpredcost[col], maxNumSteps,
-                        maxNumStepsExp, lurkingColLower[col],
+      findLurkingBounds(col, HighsInt{-1}, ub, lb, lpobjective, lpredcost[col],
+                        maxNumSteps, maxNumStepsExp, lurkingColLower[col],
                         lurkingColUpper[col]);
     }
   }
