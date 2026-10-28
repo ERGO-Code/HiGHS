@@ -48,6 +48,7 @@ enum iClockPresolve {
   kPresolveClockDependentEquations,
   kPresolveClockDependentFreeCol,
   kPresolveClockShrinkProblem,
+  kPresolveClockKnapsack,
   //  kPresolveClock@,
   kNumPresolveClock  //!< Number of PRESOLVE clocks
 };
@@ -122,6 +123,7 @@ class PresolveTimer {
         timer_pointer->clock_def("Dependent free columns");
     clock[kPresolveClockShrinkProblem] =
         timer_pointer->clock_def("Shrink problem");
+    clock[kPresolveClockKnapsack] = timer_pointer->clock_def("Knapsack");
     //    clock[kPresolveClock@] = timer_pointer->clock_def("@");
   };
 

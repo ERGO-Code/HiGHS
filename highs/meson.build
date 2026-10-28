@@ -310,6 +310,7 @@ _srcs = [
     'presolve/HPresolveFourierMotzkin.cpp',
     'presolve/HPresolveImpliedInts.cpp',
     'presolve/HPresolveInitialSweep.cpp',
+    'presolve/HPresolveKnapsack.cpp',
     'presolve/HPresolveParallelRowsAndCols.cpp',
     'presolve/HPresolveProbing.cpp',
     'presolve/HPresolveProbingUtil.cpp',
