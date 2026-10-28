@@ -1760,33 +1760,29 @@ HighsStatus changeLpIntegrality(HighsLp& lp,
     HighsInt usr_col = -1;
     for (HighsInt k = from_k; k < to_k + 1; k++) {
       if (interval || mask) {
-	lp_col = k;
+        lp_col = k;
       } else {
-	lp_col = col_set[k];
+        lp_col = col_set[k];
       }
       HighsInt col = lp_col;
       if (interval) {
-	usr_col++;
+        usr_col++;
       } else {
-	usr_col = k;
+        usr_col = k;
       }
       if (mask && !col_mask[col]) continue;
       if (find_non_continuous) {
-	if (new_integrality[usr_col] != HighsVarType::kContinuous) return true;
+        if (new_integrality[usr_col] != HighsVarType::kContinuous) return true;
       } else {
-	lp.integrality_[col] = new_integrality[usr_col];
-      }	
+        lp.integrality_[col] = new_integrality[usr_col];
+      }
     }
     return false;
   };
 
-  auto hasNonContinuous = [&]() {
-    return passThroughNewIntegrality(true);
-  };
-  auto assignNewIntegrality = [&]() {
-    passThroughNewIntegrality(false);
-  };
-  
+  auto hasNonContinuous = [&]() { return passThroughNewIntegrality(true); };
+  auto assignNewIntegrality = [&]() { passThroughNewIntegrality(false); };
+
   // If changing integrality for a problem without an integrality
   // vector (ie an LP), check whether it is needed before creating it
   // for the incumbent columns - which are naturally continuous -
