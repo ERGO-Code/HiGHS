@@ -67,6 +67,7 @@ set(metis_sources
   metis/libmetis/refine.c
   metis/libmetis/separator.c
   metis/libmetis/sfm.c
+  metis/libmetis/sort.cpp
   metis/libmetis/srefine.c
   metis/libmetis/util.c
   metis/libmetis/wspace.c)
@@ -79,7 +80,6 @@ set(metis_headers
   metis/GKlib/gk_mkmemory.h
   metis/GKlib/gk_mkpqueue.h
   metis/GKlib/gk_mkrandom.h
-  metis/GKlib/gk_mksort.h
   metis/GKlib/gk_ms_inttypes.h
   metis/GKlib/gk_ms_stat.h
   metis/GKlib/gk_ms_stdint.h
@@ -92,6 +92,7 @@ set(metis_headers
   metis/libmetis/macros.h
   metis/libmetis/metislib.h
   metis/libmetis/proto.h
+  metis/libmetis/sort.h
   metis/libmetis/stdheaders.h
   metis/libmetis/struct.h
   metis/metis.h)
