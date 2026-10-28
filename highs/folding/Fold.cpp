@@ -124,6 +124,7 @@ HighsInt Folder::findInitialColour(HighsInt n, HighsInt* colour,
 
 void Folder::findInitialColour() {
   assert(data_);
+  if (info_.status != Status::kNotRun) return;
 
   if (checkTimeLimit()) return;
   info_.initial_row_colours =
@@ -136,6 +137,7 @@ void Folder::findInitialColour() {
 
 void Folder::foldModel() {
   assert(data_);
+  if (info_.status != Status::kNotRun) return;
 
   if (checkTimeLimit()) return;
   ColourRefinement CR(data_->lp.a_matrix_, data_->At, data_->Q, row_colour_,
@@ -208,6 +210,7 @@ void Folder::buildFoldedModel() {
   // rows of colour i and columns of colour j.
 
   if (!data_ || !success()) return;
+  if (checkTimeLimit()) return;
 
   const HighsInt num_row_colours = info_.num_row_colours;
   const HighsInt num_col_colours = info_.num_col_colours;
