@@ -146,6 +146,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     if (!eligible || !hasGeneralIntCoefficients) continue;
     knapsack.capacity = static_cast<int64_t>(
         static_cast<double>(floor(capacity + primal_feastol)));
+    changed |= capacity != static_cast<double>(knapsack.capacity);
     if (knapsack.capacity < 0) return Result::kPrimalInfeasible;
     if (knapsack.weightsum <= knapsack.capacity) {
       postsolve_stack.redundantRow(row);

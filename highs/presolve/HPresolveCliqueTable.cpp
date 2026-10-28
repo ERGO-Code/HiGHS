@@ -310,8 +310,9 @@ bool HPresolveCliqueTable::substituteCol(
 
 void HPresolveCliqueTable::recordLiteralNeighbourhood(
     const HighsInt literal, const int64_t weight,
-    std::vector<int64_t>& removedWeight, std::vector<HighsInt>& seenItem,
-    std::vector<HighsInt>& candidates, const HighsInt maxCliqueSize) const {
+    std::vector<int64_t>& removedWeight,
+    std::vector<HighsInt>& lastLiteralSource, std::vector<HighsInt>& candidates,
+    const HighsInt maxCliqueSize) const {
   if (table->colDeleted[literal / 2]) return;
   auto scanNeighbourhood = [&](const HighsInt cliqueId) {
     const Clique& clique = table->cliques[cliqueId];
@@ -320,10 +321,10 @@ void HPresolveCliqueTable::recordLiteralNeighbourhood(
       const CliqueVar& v = table->cliqueentries[i];
       if (v.col != literal / 2 && !table->colDeleted[v.col]) {
         const HighsInt vLiteral = v.index();
-        if (vLiteral == literal || seenItem[vLiteral] == literal) {
+        if (vLiteral == literal || lastLiteralSource[vLiteral] == literal) {
           continue;
         }
-        seenItem[vLiteral] = literal;
+        lastLiteralSource[vLiteral] = literal;
         if (removedWeight[vLiteral] == 0) candidates.push_back(vLiteral);
         removedWeight[vLiteral] += weight;
       }

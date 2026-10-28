@@ -57,7 +57,7 @@ class HPresolveCliqueTable {
 
   void recordLiteralNeighbourhood(HighsInt literal, int64_t weight,
                                   std::vector<int64_t>& removedWeight,
-                                  std::vector<HighsInt>& seenItem,
+                                  std::vector<HighsInt>& lastLiteralSource,
                                   std::vector<HighsInt>& candidates,
                                   HighsInt maxCliqueSize) const;
 };
