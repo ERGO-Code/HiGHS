@@ -415,3 +415,90 @@ bool testSolveDense() {
 
   return true;
 }
+
+TEST_CASE("factor-hints", "[highs_test_factor]") {
+
+  HighsInt dim = 3;
+  HighsRandom random;
+  double epsilon;
+  HighsSparseMatrix matrix;
+  matrix.num_col_ = 6;
+  matrix.num_row_ = dim;
+  matrix.start_ = {0, 2, 4, 6, 8, 10, 13};
+  matrix.index_ = {0, 1, 1, 2, 0, 2, 0, 2, 0, 2, 0, 2};
+  matrix.value_ = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1};
+  const HighsInt kParallelTo2 = dim;
+  const HighsInt kAlmostParallelTo2 = kParallelTo2 + 1;
+  const HighsInt kOrthogonalTo2 = kAlmostParallelTo2 + 1;
+  for (HighsInt iEl = matrix.start_[kAlmostParallelTo2]; iEl < matrix.start_[kAlmostParallelTo2+1]; iEl++)
+    matrix.value_[iEl] = 1+epsilon*random.fraction();
+  HVector a_q, e_p, rhs;
+  a_q.setup(dim);
+  e_p.setup(dim);
+  rhs.setup(dim);
+  std::vector<HighsInt>basis = {0, 1, 2};
+  HFactor factor;
+  factor.setup(matrix, basis);
+  factor.build();
+
+  auto testInvert = [&]() {
+    std::vector<double> solution;
+    rhs.clear();
+    for (HighsInt iCol = 0; iCol < dim; iCol++) {
+      double value = random.fraction();
+      solution.push_back(value);
+      HighsInt iVar = basis[iCol];
+      if (iVar < matrix.num_col_) {
+	for (HighsInt iEl = matrix.start_[iVar]; iEl < matrix.start_[iVar+1]; iEl++)
+	  rhs.array[matrix.index_[iEl]] += matrix.value_[iEl] * value;
+      } else {
+	rhs.array[iVar-matrix.num_col_] += value;
+      }
+    }
+    rhs.count = dim;
+    factor.ftranCall(rhs, 1);
+    double error = 0;
+    for (HighsInt iCol = 0; iCol < dim; iCol++) 
+      error += std::fabs(rhs.array[iCol] - solution[iCol]);
+    printf("Random solve error = %g\n", error);
+  };
+
+  HighsInt hint;
+
+  for (HighsInt iRow = 0; iRow < dim; iRow++) {
+    HighsInt iVar = matrix.num_col_ + iRow;
+    a_q.clear();
+    matrix.collectAj(a_q, iVar, 1);
+    a_q.packFlag = true;
+    factor.ftranCall(a_q, 1);
+
+    e_p.clear();
+    e_p.count = 1;
+    e_p.index[0] = iRow;
+    e_p.array[iRow] = 1;
+    e_p.packFlag = true;
+    factor.btranCall(e_p, 1);
+
+    factor.update(&a_q, &e_p, &iRow, &hint);
+    testInvert();
+  }
+
+  for (HighsInt iRow = 0; iRow < dim; iRow++) {
+    HighsInt iVar = iRow;
+    a_q.clear();
+    matrix.collectAj(a_q, iVar, 1);
+    a_q.packFlag = true;
+    factor.ftranCall(a_q, 1);
+
+    e_p.clear();
+    e_p.count = 1;
+    e_p.index[0] = iRow;
+    e_p.array[iRow] = 1;
+    e_p.packFlag = true;
+    factor.btranCall(e_p, 1);
+
+    factor.update(&a_q, &e_p, &iRow, &hint);
+    testInvert();
+  }
+}
+
