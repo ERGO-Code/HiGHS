@@ -942,6 +942,7 @@ HighsStatus Highs::writeIisModel(const std::string& filename) {
 
 HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
+  this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   HighsLp& lp = model.lp_;
@@ -3739,6 +3740,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
 
 HighsStatus Highs::writeSolution(const std::string& filename,
                                  const HighsInt style) {
+  this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   FILE* file;
