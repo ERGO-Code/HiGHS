@@ -32,8 +32,13 @@ void highsLogHeader(const HighsLogOptions& log_options,
                HighsExternalApi::thirdPartyNoticeHeader().c_str());
 
   if (HighsExternalApi::isAvailable<HighsExtras::blas>()) {
-    highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s \n",
-                 HighsExtras::blas::getInfo()->provider);
+    const HighsExtrasFeatureInfo* info = HighsExtras::blas::getInfo();
+    const std::string version =
+        info->version ? std::string(info->version) : std::string();
+    const bool known_version = !version.empty() && version != "unknown";
+    highsLogUser(log_options, HighsLogType::kInfo, "Using BLAS: %s%s%s\n",
+                 info->provider, known_version ? " " : "",
+                 known_version ? version.c_str() : "");
   }
 }
 

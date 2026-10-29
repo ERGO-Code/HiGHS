@@ -108,6 +108,7 @@ extern "C" {
 #if defined(HIPO_USES_OPENBLAS)
 void openblas_set_num_threads(int num_threads);
 int openblas_get_num_threads(void);
+char* openblas_get_config(void);
 #endif
 
 int highs_openblas_set_num_threads(int num_threads);
