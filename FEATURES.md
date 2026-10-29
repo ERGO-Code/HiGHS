@@ -32,17 +32,7 @@ Hessian ([PR #3153](https://github.com/ERGO-Code/HiGHS/pull/3153)).
 Callbacks for the first feasible point and user interrupts were added
 to the QP active set method in
 [PR #3214](https://github.com/ERGO-Code/HiGHS/pull/3214).
-
-Following [PR #3083](https://github.com/ERGO-Code/HiGHS/pull/3083),
-HiPDLP can now run on AMD GPUs using ROCm/HIP. This requires a ROCm
-installation providing the HIP compiler and the hipBLAS and hipSPARSE
-libraries, and is enabled with the CMake option `-DHIPDLP_HIP=ON`;
-ROCm 10.0 or newer is recommended. A missing GPU is now handled
-gracefully ([PR #3388](https://github.com/ERGO-Code/HiGHS/pull/3388)).
-See the
-[installation documentation](https://ergo-code.github.io/HiGHS/dev/installation/#gpu-build-amd)
-for details. HiPDLP now also handles maximization
-([PR #3469](https://github.com/ERGO-Code/HiGHS/pull/3469)).
+ HiPDLP now also handles maximization ([PR #3469](https://github.com/ERGO-Code/HiGHS/pull/3469)).
 
 HiPO now performs parallel solves
 ([PR #3200](https://github.com/ERGO-Code/HiGHS/pull/3200)), constructs
@@ -147,6 +137,16 @@ wheels are now built
 ([PR #3158](https://github.com/ERGO-Code/HiGHS/pull/3158)), and
 `highspy` can be built from the sdist with HiPO off
 ([PR #3480](https://github.com/ERGO-Code/HiGHS/pull/3480)).
+
+Following [PR #3083](https://github.com/ERGO-Code/HiGHS/pull/3083),
+HiPDLP can now run on AMD GPUs using ROCm/HIP. This requires a ROCm
+installation providing the HIP compiler and the hipBLAS and hipSPARSE
+libraries, and is enabled with the CMake option `-DHIPDLP_HIP=ON`;
+ROCm 10.0 or newer is recommended. A missing GPU is now handled
+gracefully ([PR #3388](https://github.com/ERGO-Code/HiGHS/pull/3388)).
+See the
+[installation documentation](https://ergo-code.github.io/HiGHS/dev/installation/#gpu-build-amd)
+for details.
 
 OpenBLAS is built with `-mfma` for its AVX2 `DYNAMIC_ARCH` kernels on
 Linux ([PR #3399](https://github.com/ERGO-Code/HiGHS/pull/3399)), and on
