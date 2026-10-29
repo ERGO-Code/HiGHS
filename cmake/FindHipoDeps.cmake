@@ -622,6 +622,23 @@ function(highs_configure_blas)
     set(HIGHS_BLAS_CONFIGURED TRUE)
     highs_configure_blas_target()
     highs_configure_blas_metadata()
+
+    # the reference BLAS makes HiPO several times slower, so refuse it. On
+    # Debian/Ubuntu libblas.so is either the reference BLAS or, via the
+    # alternatives system, OpenBLAS, so check where it resolves to
+    if(NOT HIGHS_BLAS_VENDOR MATCHES "OpenBLAS|Intel oneMKL|Apple Accelerate")
+        foreach(_highs_blas_lib ${BLAS_LIBRARIES})
+            get_filename_component(_highs_blas_name "${_highs_blas_lib}" NAME)
+            get_filename_component(_highs_blas_real "${_highs_blas_lib}" REALPATH)
+            if(_highs_blas_name MATCHES "^libblas\\." AND
+               NOT _highs_blas_real MATCHES "openblas")
+                message(FATAL_ERROR "HiPO does not support the reference BLAS "
+                    "(${_highs_blas_lib} -> ${_highs_blas_real}): install OpenBLAS "
+                    "(e.g. libopenblas-dev) or use -DBUILD_OPENBLAS=ON")
+            endif()
+        endforeach()
+    endif()
+
     highs_export_blas_state()
 endfunction()
 
