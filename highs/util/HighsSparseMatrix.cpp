@@ -130,14 +130,15 @@ void HighsSparseMatrix::ensureColwise() {
   if (isColwise()) return;
 
   HighsInt num_nz = numNz();
-  *this = oppositeFormat();
   (void)num_nz;  // avoid unused variable warning
+
+  *this = oppositeFormat();
 
   assert(isColwise());
   assert(numNz() == num_nz);
-  assert(static_cast<HighsInt>(start_.size()) >= num_col_ + 1);
-  assert(static_cast<HighsInt>(index_.size()) >= numNz());
-  assert(static_cast<HighsInt>(value_.size()) >= numNz());
+  assert(static_cast<HighsInt>(start_.size()) == num_col_ + 1);
+  assert(static_cast<HighsInt>(index_.size()) == numNz());
+  assert(static_cast<HighsInt>(value_.size()) == numNz());
 }
 void HighsSparseMatrix::ensureRowwise() {
   // If a change of format is needed, the result of oppositeFormat() is built
@@ -147,14 +148,15 @@ void HighsSparseMatrix::ensureRowwise() {
   if (isRowwise()) return;
 
   HighsInt num_nz = numNz();
-  *this = oppositeFormat();
   (void)num_nz;  // avoid unused variable warning
+
+  *this = oppositeFormat();
 
   assert(isRowwise());
   assert(numNz() == num_nz);
-  assert(static_cast<HighsInt>(start_.size()) >= num_row_ + 1);
-  assert(static_cast<HighsInt>(index_.size()) >= numNz());
-  assert(static_cast<HighsInt>(value_.size()) >= numNz());
+  assert(static_cast<HighsInt>(start_.size()) == num_row_ + 1);
+  assert(static_cast<HighsInt>(index_.size()) == numNz());
+  assert(static_cast<HighsInt>(value_.size()) == numNz());
 }
 
 void HighsSparseMatrix::addVec(const HighsInt num_nz, const HighsInt* index,
