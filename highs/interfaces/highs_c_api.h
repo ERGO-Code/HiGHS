@@ -492,6 +492,13 @@ HighsInt Highs_presolve(void* highs);
  * Optimize a model. The algorithm used by HiGHS depends on the options that
  * have been set.
  *
+ * If this function returns `kHighsStatusError`, the solve failed. If this
+ * function returns `kHighsStatusWarning`, something unusual happened, but the
+ * model may have been solved correctly. In each case, look at the log for an
+ * explanation, and use information such as the model and solution status, and
+ * the number of primal and dual infeasibilities to understand the quality of
+ * the solution (if one is available).
+ *
  * @param highs     A pointer to the Highs instance.
  *
  * @returns A `kHighsStatus` constant indicating whether the call succeeded.
