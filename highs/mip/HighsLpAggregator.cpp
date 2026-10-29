@@ -9,6 +9,7 @@
 #include "mip/HighsLpAggregator.h"
 
 #include "mip/HighsLpRelaxation.h"
+#include "mip/HighsMipSolverData.h"
 
 HighsLpAggregator::HighsLpAggregator(const HighsLpRelaxation& lprelaxation)
     : lprelaxation(lprelaxation) {
@@ -32,15 +33,18 @@ void HighsLpAggregator::getCurrentAggregation(std::vector<HighsInt>& inds,
                                               bool negate) {
   const double droptol =
       lprelaxation.getMipSolver().options_mip_->small_matrix_value;
+  const HighsDomain& domain = lprelaxation.getMipSolver().mipdata_->getDomain();
   const HighsInt numCol = lprelaxation.numCols();
-  vectorsum.cleanup([droptol, numCol](HighsInt col, double val) {
+  vectorsum.cleanup([&](const HighsInt col, const double val) {
     // only drop values for columns and not for slack variables of rows as the
     // former are the only ones which might be subject to numerical error. The
     // values for row slack variables are exact copies of the weights used
     // (assuming that separators only add each row once). Also all the
     // separators will only allow rows that do have meaningful coefficient
     // contributions with the used weight
-    return col < numCol && std::fabs(val) <= droptol;
+    return col < numCol &&
+           HighsDomain::termIsZero(val, domain.col_lower_[col],
+                                   domain.col_upper_[col], droptol);
   });
 
   inds = vectorsum.getNonzeros();
