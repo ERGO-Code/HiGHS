@@ -60,7 +60,18 @@ cmake -S. -B build -DHIPO=ON
 cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON
 ```
 
-On Windows x64 and ARM64, MSVC cannot build OpenBLAS's optimised kernels. When building natively on such a machine, HiGHS therefore builds OpenBLAS separately with `clang-cl` and Ninja (HiGHS itself is still compiled with MSVC). On x64 this makes HiPO several times faster, and OpenBLAS selects the kernels for the CPU at runtime. Pass `-DBUILD_OPENBLAS_CLANG_CL=OFF` to build OpenBLAS with MSVC instead. `clang-cl` is found in the Visual Studio "C++ Clang Compiler for Windows" component or an LLVM installation, or can be set explicitly with `-DHIGHS_OPENBLAS_C_COMPILER=<path to clang-cl>`. If `clang-cl` or Ninja is not available, OpenBLAS falls back to generic C kernels, which are several times slower; add `-DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON` to make this a configure error instead.
+##### [Windows: clang-cl](@id install-blas-clang-cl)
+
+MSVC can only compile OpenBLAS's generic C kernels, not the optimised ones, which makes HiPO several times slower. `clang-cl`, the MSVC-compatible driver of Clang, can compile them, and its libraries can be linked into an MSVC build. So, on Windows x64 and ARM64, HiGHS builds OpenBLAS separately with `clang-cl` and Ninja, while HiGHS itself is still compiled with MSVC. On x64, OpenBLAS then selects the best kernels for the CPU at runtime.
+
+`clang-cl` is included in the Visual Studio component "C++ Clang Compiler for Windows" and in [LLVM](https://github.com/llvm/llvm-project/releases) for Windows. Ninja is included in Visual Studio's "C++ CMake tools for Windows" component.
+
+Related CMake options:
+- `-DHIGHS_OPENBLAS_C_COMPILER=<path to clang-cl>` selects a specific `clang-cl`.
+- `-DBUILD_OPENBLAS_CLANG_CL=OFF` builds OpenBLAS with MSVC instead.
+- If `clang-cl` or Ninja cannot be found, HiGHS warns and builds OpenBLAS with MSVC. With `-DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON`, this is a configure error instead.
+
+If HiGHS itself is compiled with `clang-cl`, for example with `cmake -S. -B build -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DHIPO=ON -DBUILD_OPENBLAS=ON`, OpenBLAS is built with the same compiler as part of the HiGHS build.
 
 #### Linux and Windows: Link with BLAS installatied on your machine
 
@@ -88,6 +99,66 @@ On Windows, you also need to specify the path to OpenBLAS. If it was installed w
 ```
 cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 ```
+
+##### Windows: OpenBLAS from vcpkg, built with clang-cl
+
+vcpkg's standard Windows triplets, such as `x64-windows-static`, build OpenBLAS with MSVC. That gives only the generic kernels, which make HiPO several times slower (see [Windows: clang-cl](@ref install-blas-clang-cl)). With `clang-cl` installed, a custom vcpkg triplet can build OpenBLAS with `clang-cl` instead. The vcpkg port is used unchanged, and HiGHS can still be compiled with MSVC.
+
+1. Create a directory for the triplet, e.g. `C:/vcpkg-triplets`, containing the two files below.
+
+`x64-windows-clang.cmake` defines the triplet:
+```cmake
+set(VCPKG_TARGET_ARCHITECTURE x64)
+set(VCPKG_CRT_LINKAGE dynamic)
+set(VCPKG_LIBRARY_LINKAGE dynamic)
+set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/clang-cl-toolchain.cmake")
+# Still use the MSVC environment (linker, Windows SDK); this is off by default
+# with a chainloaded toolchain
+set(VCPKG_LOAD_VCVARS_ENV ON)
+
+if(PORT STREQUAL "openblas")
+    if(VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+        # There is no runtime CPU detection for ARM64 on Windows
+        list(APPEND VCPKG_CMAKE_CONFIGURE_OPTIONS -DTARGET=ARMV8)
+    else()
+        # Select the kernels for the CPU at runtime
+        list(APPEND VCPKG_CMAKE_CONFIGURE_OPTIONS -DDYNAMIC_ARCH=ON)
+    endif()
+    # Recent clang reports incompatible pointer types in some kernels as errors
+    set(VCPKG_C_FLAGS "-Wno-error=incompatible-pointer-types -w")
+    set(VCPKG_CXX_FLAGS "")
+endif()
+```
+`clang-cl-toolchain.cmake` makes the vcpkg build use `clang-cl` as its compiler:
+```cmake
+find_program(CLANG_CL_EXECUTABLE clang-cl
+    PATHS "$ENV{ProgramFiles}/LLVM/bin" REQUIRED)
+set(CMAKE_C_COMPILER "${CLANG_CL_EXECUTABLE}")
+set(CMAKE_CXX_COMPILER "${CLANG_CL_EXECUTABLE}")
+# Ninja would pass rc.exe flags to clang-cl when scanning .rc files
+set(CMAKE_NINJA_CMCLDEPS_RC OFF)
+
+# Keep vcpkg's usual Windows compiler settings
+list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES _VCPKG_ROOT_DIR)
+include("${_VCPKG_ROOT_DIR}/scripts/toolchains/windows.cmake")
+```
+
+2. Install OpenBLAS with the new triplet:
+```
+vcpkg install openblas[threads]:x64-windows-clang --overlay-triplets=C:/vcpkg-triplets --host-triplet=x64-windows-clang
+```
+OpenBLAS needs a copy of itself for the host as a build tool. Using the new triplet for the host too means vcpkg does not also build that copy with MSVC.
+
+3. Configure HiGHS with the same triplet:
+```
+cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-clang -DVCPKG_OVERLAY_TRIPLETS=C:/vcpkg-triplets
+```
+
+Notes:
+- For Windows ARM64, save the triplet as `arm64-windows-clang.cmake`, set `VCPKG_TARGET_ARCHITECTURE` to `arm64`, and use `arm64-windows-clang` in place of `x64-windows-clang` above.
+- This triplet builds DLLs. For static libraries like `x64-windows-static`, set both `VCPKG_LIBRARY_LINKAGE` and `VCPKG_CRT_LINKAGE` to `static`, and add `-DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"` when configuring HiGHS so that it uses the static runtime too.
+- The triplet builds every port with `clang-cl`. To use `clang-cl` for OpenBLAS only, move the `VCPKG_CHAINLOAD_TOOLCHAIN_FILE` and `VCPKG_LOAD_VCVARS_ENV` lines into the `if(PORT STREQUAL "openblas")` block.
+- `clang-cl` is searched for on `PATH` and in the default LLVM install location. Edit `find_program` in the toolchain file if it is installed elsewhere.
 
 ##### Path to BLAS
 

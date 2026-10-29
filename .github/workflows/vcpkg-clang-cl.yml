@@ -1,0 +1,216 @@
+name: vcpkg-clang-cl
+
+# Tests building OpenBLAS with clang-cl through a custom vcpkg triplet, as
+# documented in docs/src/installation.md ("Windows: OpenBLAS from vcpkg, built
+# with clang-cl"), and building HiGHS with HiPO against it.
+#
+# The triplet is taken from the documentation, so that what is documented is
+# what is tested, and each job adapts it to one configuration:
+#   arch:    x64 (DYNAMIC_ARCH) or arm64 (TARGET=ARMV8)
+#   linkage: dynamic (DLLs, as documented) or static
+#   scope:   all-ports (as documented) or openblas-only (other ports use MSVC)
+#
+# Each job writes its configuration and results to the job summary.
+
+on:
+  push:
+    paths:
+      - ".github/workflows/vcpkg-clang-cl.yml"
+      - ".github/scripts/vcpkg_clang_cl_triplet.py"
+      - "docs/src/installation.md"
+      - "cmake/FindHipoDeps.cmake"
+  pull_request:
+    paths:
+      - ".github/workflows/vcpkg-clang-cl.yml"
+      - ".github/scripts/vcpkg_clang_cl_triplet.py"
+      - "docs/src/installation.md"
+      - "cmake/FindHipoDeps.cmake"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  x64:
+    name: x64 (${{ matrix.linkage }}, ${{ matrix.scope }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [dynamic, static]
+        scope: [all-ports, openblas-only]
+    env:
+      ARCH: x64
+      LINKAGE: ${{ matrix.linkage }}
+      SCOPE: ${{ matrix.scope }}
+      TRIPLET: x64-windows-clang
+
+    steps: &steps
+      - uses: actions/checkout@v6
+
+      - name: Set up vcpkg
+        shell: pwsh
+        run: |
+          $vcpkg = "$env:RUNNER_TEMP/vcpkg"
+          "VCPKG_ROOT=$vcpkg" >> $env:GITHUB_ENV
+          "TRIPLET_DIR=$env:RUNNER_TEMP/triplets" >> $env:GITHUB_ENV
+          git clone --depth 1 https://github.com/microsoft/vcpkg $vcpkg
+          & "$vcpkg/bootstrap-vcpkg.bat" -disableMetrics
+
+      - name: Write triplet from the documentation
+        shell: pwsh
+        run: |
+          python .github/scripts/vcpkg_clang_cl_triplet.py `
+            $env:ARCH $env:LINKAGE $env:SCOPE $env:TRIPLET_DIR
+
+      - name: Install OpenBLAS and zlib with vcpkg
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_ROOT/vcpkg.exe" install `
+            "openblas[threads]:$env:TRIPLET" "zlib:$env:TRIPLET" `
+            --overlay-triplets=$env:TRIPLET_DIR `
+            --host-triplet=$env:TRIPLET
+          exit $LASTEXITCODE
+
+      - name: Check which compiler built each port
+        shell: pwsh
+        run: |
+          # vcpkg keeps each port's CMake configure output, which names the compiler,
+          # e.g. "Clang 23.1.2 with MSVC-like command-line" or "MSVC 19.50.35717.0"
+          function Get-Compiler($port) {
+            $log = "$env:VCPKG_ROOT/buildtrees/$port/config-$env:TRIPLET-out.log"
+            $line = Select-String -Path $log -Pattern 'The C compiler identification is (.*)$' | Select-Object -First 1
+            $line.Matches[0].Groups[1].Value
+          }
+          $openblas = Get-Compiler openblas
+          $zlib = Get-Compiler zlib
+          $openblasLog = Get-Content "$env:VCPKG_ROOT/buildtrees/openblas/config-$env:TRIPLET-out.log" -Raw
+          $kernels = if ($env:ARCH -eq 'arm64') { 'TARGET: ARMV8 (user-defined)' } else { 'DYNAMIC_ARCH: ON' }
+
+          "OPENBLAS_COMPILER=$openblas" >> $env:GITHUB_ENV
+          "ZLIB_COMPILER=$zlib" >> $env:GITHUB_ENV
+          Write-Host "OpenBLAS: $openblas"
+          Write-Host "zlib:     $zlib"
+
+          $errors = @()
+          if ($openblas -notmatch '^Clang') {
+            $errors += 'OpenBLAS was not built with clang-cl'
+          }
+          if ($env:SCOPE -eq 'all-ports' -and $zlib -notmatch '^Clang') {
+            $errors += 'zlib was not built with clang-cl, but the triplet should build every port with it'
+          }
+          if ($env:SCOPE -eq 'openblas-only' -and $zlib -match '^Clang') {
+            $errors += 'zlib was built with clang-cl, but the triplet should only use it for OpenBLAS'
+          }
+          if ($openblasLog.Contains($kernels)) {
+            "OPENBLAS_KERNELS=$kernels" >> $env:GITHUB_ENV
+          } else {
+            $errors += "OpenBLAS was not configured with '$kernels'"
+          }
+          foreach ($e in $errors) { Write-Host "::error::$e" }
+          exit $errors.Count
+
+      - name: Configure HiGHS
+        shell: pwsh
+        run: |
+          $options = @(
+            '-DHIPO=ON',
+            '-DALL_TESTS=OFF',
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake",
+            "-DVCPKG_TARGET_TRIPLET=$env:TRIPLET",
+            "-DVCPKG_OVERLAY_TRIPLETS=$env:TRIPLET_DIR"
+          )
+          if ($env:LINKAGE -eq 'static') {
+            $options += '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>'
+          }
+          cmake -S . -B build @options | Tee-Object -Variable output
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # FindHipoDeps reports where it found OpenBLAS
+          if (-not ($output -match "OpenBLAS CMake config path: .*/installed/$env:TRIPLET/")) {
+            Write-Host "::error::HiGHS did not use OpenBLAS from the $env:TRIPLET triplet"
+            exit 1
+          }
+
+      - name: Build Release
+        run: cmake --build build --parallel --config Release
+
+      - name: Solve with HiPO (Release)
+        shell: pwsh
+        run: |
+          .\build\Release\bin\highs.exe --solver=hipo check/instances/afiro.mps | Tee-Object -FilePath hipo-release.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # If OpenBLAS is not thread safe, HiPO gets wrong results and hands over to IPX
+          $output = Get-Content hipo-release.log
+          if (-not ($output -match 'HiPO iterations') -or -not ($output -match 'IPX iterations:\s+0$')) {
+            Write-Host "::error::HiPO did not solve the problem by itself"
+            exit 1
+          }
+
+      - name: Ctest (Release)
+        run: ctest --test-dir build --parallel --timeout 300 --output-on-failure -C Release
+
+      - name: Build Debug
+        run: cmake --build build --parallel --config Debug
+
+      - name: Solve with HiPO (Debug)
+        run: .\build\Debug\bin\highs.exe --solver=hipo check/instances/afiro.mps
+
+      - name: Summary
+        if: always()
+        shell: pwsh
+        run: |
+          $triplet = Get-Content "$env:TRIPLET_DIR/$env:TRIPLET.cmake" -Raw -ErrorAction SilentlyContinue
+          $hipo = if (Test-Path hipo-release.log) {
+            (Get-Content hipo-release.log | Select-String 'Model status|HiPO iterations|IPX iterations|HiGHS run time') -join "`n"
+          }
+          $summary = @"
+          ## $env:ARCH, $env:LINKAGE linkage, $env:SCOPE
+
+          | | |
+          |---|---|
+          | Triplet | ``$env:TRIPLET`` |
+          | OpenBLAS compiler | $env:OPENBLAS_COMPILER |
+          | zlib compiler | $env:ZLIB_COMPILER |
+          | OpenBLAS kernels | $env:OPENBLAS_KERNELS |
+
+          ### HiPO on afiro (Release)
+          ``````
+          $hipo
+          ``````
+
+          ### Triplet ``$env:TRIPLET.cmake``
+          ``````cmake
+          $triplet
+          ``````
+          "@
+          Write-Host $summary
+          $summary >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload vcpkg logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vcpkg-logs-${{ env.ARCH }}-${{ env.LINKAGE }}-${{ env.SCOPE }}
+          path: |
+            ${{ runner.temp }}/vcpkg/buildtrees/*/*.log
+            ${{ runner.temp }}/triplets
+          if-no-files-found: ignore
+
+  arm64:
+    name: arm64 (${{ matrix.linkage }}, ${{ matrix.scope }})
+    runs-on: windows-11-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [dynamic, static]
+        scope: [all-ports, openblas-only]
+    env:
+      ARCH: arm64
+      LINKAGE: ${{ matrix.linkage }}
+      SCOPE: ${{ matrix.scope }}
+      TRIPLET: arm64-windows-clang
+
+    steps: *steps

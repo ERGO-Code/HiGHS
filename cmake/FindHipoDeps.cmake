@@ -255,11 +255,14 @@ int main(int argc, char** argv) {
     else()
         # There is no runtime CPU detection for ARM64 on Windows (DYNAMIC_ARCH
         # always selects the baseline), so build the ARMV8 kernels directly.
-        # Do not set USE_TLS: with it, OpenBLAS's exit-time cleanup races its
-        # worker threads and intermittently segfaults on process exit.
+        # As for x64, build without the thread pool, which HiPO never uses and
+        # which intermittently segfaults when highs_extras.dll is unloaded at
+        # exit, and with locking, since HiPO calls BLAS from several threads.
         set(_arch_cache_args
             -DTARGET:STRING=ARMV8
-            -DDYNAMIC_ARCH:BOOL=OFF)
+            -DDYNAMIC_ARCH:BOOL=OFF
+            -DUSE_THREAD:BOOL=OFF
+            -DUSE_LOCKING:BOOL=ON)
     endif()
 
     include(ExternalProject)
