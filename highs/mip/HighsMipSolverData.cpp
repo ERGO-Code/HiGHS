@@ -2821,19 +2821,22 @@ void HighsMipSolverData::queryExternalSolution(
       double row_violation_ = 0;
       double integrality_violation_ = 0;
       violation.copy(bound_violation_, row_violation_, integrality_violation_);
-      double user_solution_objective_value =
-          double(user_solution_quad_objective_value);
       if (!feasible) {
         violation.log(mipsolver.options_mip_->log_options,
-                      user_solution_objective_value, "User-supplied solution");
+                      double(user_solution_quad_objective_value),
+                      "User-supplied solution");
         return;
       }
       std::vector<double> reduced_user_solution;
       reduced_user_solution =
           postSolveStack.getReducedPrimalSolution(user_solution);
+      const double reduced_user_solution_objective_value =
+          double(HighsInt(mipsolver.orig_model_->sense_) *
+                     user_solution_quad_objective_value -
+                 mipsolver.model_->offset_);
       const bool print_display_line = true;
       const bool is_user_solution = true;
-      addIncumbent(reduced_user_solution, user_solution_objective_value,
+      addIncumbent(reduced_user_solution, reduced_user_solution_objective_value,
                    kSolutionSourceUserSolution, print_display_line,
                    is_user_solution);
     }

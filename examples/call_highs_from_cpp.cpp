@@ -172,7 +172,7 @@ int main() {
     cout << endl;
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return 0;
 }

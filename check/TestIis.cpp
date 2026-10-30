@@ -161,7 +161,7 @@ TEST_CASE("lp-incompatible-bounds", "[iis]") {
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
     REQUIRE(iis.row_status_[iRow] == kIisStatusNotInConflict);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-empty-infeasible-row", "[iis]") {
@@ -233,7 +233,7 @@ TEST_CASE("lp-empty-infeasible-row", "[iis]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-light", "[iis]") {
@@ -319,7 +319,7 @@ TEST_CASE("lp-get-iis-light", "[iis]") {
     }
     highs.passModel(lp);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-get-iis", "[iis]") {
@@ -398,7 +398,7 @@ TEST_CASE("lp-get-iis", "[iis]") {
     highs.ensureRowwise();
     REQUIRE(highs_lp.a_matrix_.isRowwise());
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-woodinfe", "[iis]") {
@@ -525,7 +525,7 @@ TEST_CASE("lp-get-iis-time-limit-feasible", "[iis]") {
   // simplex times are all zero
   reportIisInfo(highs.getOptions().log_options, iis.info_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
@@ -568,7 +568,7 @@ TEST_CASE("lp-get-iis-time-limit-infeasible", "[iis]") {
   // simplex iteration counts and min/sum/max simplex times
   reportIisInfo(highs.getOptions().log_options, iis.info_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-time-limit", "[iis]") {
@@ -612,7 +612,7 @@ TEST_CASE("lp-get-iis-time-limit", "[iis]") {
   REQUIRE(iis.col_index_.size() == 0);
   REQUIRE(iis.row_index_.size() == 0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-partial", "[iis]") {
@@ -645,7 +645,7 @@ TEST_CASE("lp-get-iis-partial", "[iis]") {
   REQUIRE(iis.col_index_.size() > 0);
   REQUIRE(iis.row_index_.size() > 0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
@@ -693,7 +693,7 @@ TEST_CASE("lp-get-iis-time-limit-deletion", "[iis]") {
   REQUIRE(iis.col_index_.size() > 0);
   REQUIRE(iis.row_index_.size() > 0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-feasibility-relaxation", "[iis]") {
@@ -845,7 +845,7 @@ TEST_CASE("lp-feasibility-relaxation", "[iis]") {
   model = "avgas";
   testFeasibilityRelaxation(model, 1, 1, 1, 0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 void testMps(std::string& model, const HighsInt iis_strategy,
@@ -962,7 +962,7 @@ TEST_CASE("feasible-lp-iis", "[iis]") {
   REQUIRE(iis.row_status_[0] == kIisStatusNotInConflict);
   REQUIRE(iis.row_status_[1] == kIisStatusNotInConflict);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("write-iis_model-file", "[iis]") {
@@ -1020,7 +1020,7 @@ TEST_CASE("write-iis_model-file", "[iis]") {
   }
   std::remove(test_mps.c_str());
   std::remove(test_sol.c_str());
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 char iis_printed_log[kIoBufferSize];
@@ -1059,7 +1059,7 @@ TEST_CASE("iis-callback", "[highs-callback]") {
   HighsIis iis;
   REQUIRE(highs.getIis(iis) == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3368", "[highs-callback]") {
@@ -1091,5 +1091,5 @@ TEST_CASE("issue-3368", "[highs-callback]") {
     REQUIRE(h.getSolution().col_value[x] == 2.0);
     REQUIRE(h.getSolution().col_value[y] == 2.0);
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

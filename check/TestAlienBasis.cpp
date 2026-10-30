@@ -610,7 +610,7 @@ void testAlienBasis(const bool avgas, const HighsInt seed) {
     highs.run();
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
@@ -677,7 +677,7 @@ TEST_CASE("AlienBasis-reuse-basis", "[highs_test_alien_basis]") {
   highs.run();
   if (dev_run) highs.writeSolution("", 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("AlienBasis-singular-basis", "[highs_test_alien_basis]") {
@@ -716,5 +716,5 @@ TEST_CASE("AlienBasis-singular-basis", "[highs_test_alien_basis]") {
   return_status = highs.getBasicVariables(basic_variables.data());
   REQUIRE(return_status == HighsStatus::kError);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

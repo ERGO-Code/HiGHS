@@ -60,7 +60,7 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   REQUIRE(pdlp_iteration_count > 0);
   REQUIRE(pdlp_iteration_count == (pdlp_iteration_count_optimal / 2) - 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 #else
 // CUPDLP_GPU
@@ -112,7 +112,7 @@ TEST_CASE("pdlp-distillation-lp", "[pdlp]") {
   // REQUIRE(pdlp_iteration_count > 0);
   // REQUIRE(pdlp_iteration_count == 79);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 #endif
 
@@ -144,7 +144,7 @@ TEST_CASE("pdlp-3d-lp", "[pdlp]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("pdlp-boxed-row-lp", "[pdlp]") {
@@ -180,7 +180,7 @@ TEST_CASE("pdlp-boxed-row-lp", "[pdlp]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnknown);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("pdlp-infeasible-lp", "[pdlp]") {
@@ -205,7 +205,7 @@ TEST_CASE("pdlp-infeasible-lp", "[pdlp]") {
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnboundedOrInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
@@ -235,7 +235,7 @@ TEST_CASE("pdlp-unbounded-lp", "[pdlp]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void pdlpRestart(const std::string& model) {
@@ -323,5 +323,5 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   h.setSolution(solution);
   run_status = h.run();
   if (dev_run) h.writeSolution("", 1);
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

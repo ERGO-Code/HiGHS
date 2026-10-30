@@ -31,8 +31,9 @@ class HighsSparseMatrix {
   HighsSparseMatrix() { clear(); }
 
   // Explicitly default the special member functions so that the move
-  // operations (relied on by getRowwise/getColwise) can't silently vanish
-  // if a copy operation or the destructor is ever customized in the future.
+  // operations (relied on by getRowwise, getColwise, ensureRowwise,
+  // ensureColwise) can't silently vanish if a copy operation or the destructor
+  // is ever customized in the future.
   HighsSparseMatrix(const HighsSparseMatrix&) = default;
   HighsSparseMatrix& operator=(const HighsSparseMatrix&) = default;
   HighsSparseMatrix(HighsSparseMatrix&&) = default;
@@ -59,6 +60,9 @@ class HighsSparseMatrix {
   void setFormat(const MatrixFormat desired_format);
   void ensureColwise();
   void ensureRowwise();
+  HighsSparseMatrix getRowwise() const;
+  HighsSparseMatrix getColwise() const;
+  HighsSparseMatrix oppositeFormat() const;
 
   void addVec(const HighsInt num_nz, const HighsInt* index, const double* value,
               const double multiple = 1);
@@ -139,10 +143,6 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
-
-  HighsSparseMatrix oppositeFormat() const;
-  HighsSparseMatrix getRowwise() const;
-  HighsSparseMatrix getColwise() const;
 
  private:
   void priceByRowDenseResult(
