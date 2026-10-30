@@ -625,7 +625,9 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
             addBoundExceedingConflict();
 
             bool pruned = solobj > getCutoffBound();
-            if (pruned) mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+            if (pruned)
+              mipsolver.mipdata_->debugSolution.nodePruned(localdom,
+                                                           getCutoffBound());
 
             localdom.backtrack();
             lp->flushDomain(localdom);
@@ -663,7 +665,8 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
           }
         }
       } else if (status == HighsLpRelaxation::Status::kInfeasible) {
-        mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+        mipsolver.mipdata_->debugSolution.nodePruned(localdom,
+                                                     getCutoffBound());
         addInfeasibleConflict();
         pseudocost.addCutoffObservation(col, upbranch);
         localdom.backtrack();
@@ -748,7 +751,7 @@ void HighsSearch::stashCurrentNode() {
                                   localdom.getObjectiveLowerBound()),
                          nodestack.back().estimate, getCurrentDepth());
   } else {
-    mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+    mipsolver.mipdata_->debugSolution.nodePruned(localdom, getCutoffBound());
     if (countTreeWeight) treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
   }
   nodestack.back().opensubtrees = 0;
@@ -784,7 +787,7 @@ void HighsSearch::stashOpenNodes() {
                                     localdom.getObjectiveLowerBound()),
                            nodestack.back().estimate, getCurrentDepth());
     } else {
-      mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+      mipsolver.mipdata_->debugSolution.nodePruned(localdom, getCutoffBound());
       if (countTreeWeight) treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     }
     nodestack.back().opensubtrees = 0;
@@ -1088,7 +1091,7 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
   }
 
   if (result != NodeResult::kOpen) {
-    mipsolver.mipdata_->debugSolution.nodePruned(localdom);
+    mipsolver.mipdata_->debugSolution.nodePruned(localdom, getCutoffBound());
     treeweight += std::ldexp(1.0, 1 - getCurrentDepth());
     currnode.opensubtrees = 0;
   } else if (!inheuristic) {
