@@ -2640,10 +2640,9 @@ TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
 
 TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
   HighsLp lp;
-  lp.sense_ = ObjSense::kMaximize;
   lp.num_col_ = 6;
   lp.num_row_ = 5;
-  lp.col_cost_ = {0, 0, 0, 0, 0, -1e6};
+  lp.col_cost_ = {0, 0, 0, 0, 0, 1e6};
   lp.col_lower_ = {0, 0, 0, -0.003, -0.003, 0};
   lp.col_upper_ = {1, 1, 1, 0, 0, inf};
   lp.integrality_ = {HighsVarType::kInteger,    HighsVarType::kInteger,
@@ -2675,7 +2674,7 @@ TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
   std::vector<double> start_value = {1, 1, 0};
 
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  // h.setOptionValue("output_flag", dev_run);
   // Fourier-Motzkin off was necessaary to expose the bug
   REQUIRE(
       h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin) ==
@@ -2690,7 +2689,7 @@ TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
     REQUIRE(h.run() == HighsStatus::kOk);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
     REQUIRE(h.getObjectiveValue() == 0);
-    lp.col_cost_[5] = -1.0;
+    lp.col_cost_[5] = 1.0;
   }
 
   h.resetGlobalScheduler(true);
