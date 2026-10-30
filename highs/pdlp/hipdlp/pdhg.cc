@@ -1774,8 +1774,7 @@ double PDLPSolver::powerMethodGpu() {
 }
 #endif
 
-HighsStatus PDLPSolver::setup(const HighsOptions& options,
-                              HighsTimer& timer) {
+HighsStatus PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.initialise(options.log_dev_level, options.log_options, &timer);
   logger_.printHeader();
   highs_timer_p_ = &timer;
