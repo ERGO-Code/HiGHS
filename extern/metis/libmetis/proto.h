@@ -174,4 +174,16 @@ idx_t *iwspacemalloc(ctrl_t *, idx_t);
 real_t *rwspacemalloc(ctrl_t *, idx_t);
 ikv_t *ikvwspacemalloc(ctrl_t *, idx_t);
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void isortd(size_t n, idx_t* base);
+void ikvsorti(size_t n, ikv_t* base);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

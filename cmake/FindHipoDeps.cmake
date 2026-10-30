@@ -537,6 +537,19 @@ function(highs_configure_blas)
     else()
         if(NOT BLAS_LIBRARIES AND NOT BLA_VENDOR)
             find_package(OpenBLAS CONFIG)
+            # OpenBLAS 0.3.29+ generates a config that assumes the library is in
+            # <prefix>/lib, so on multiarch systems (e.g. Ubuntu 26.04) it points
+            # at /usr/lib/lib/libopenblas.so: ignore it and use FindBLAS instead
+            if(OpenBLAS_FOUND AND NOT TARGET OpenBLAS::OpenBLAS)
+                foreach(_highs_openblas_lib ${OpenBLAS_LIBRARIES})
+                    if(NOT EXISTS "${_highs_openblas_lib}")
+                        message(STATUS "Ignoring OpenBLAS CMake config in ${OpenBLAS_DIR}: ${_highs_openblas_lib} does not exist")
+                        set(OpenBLAS_FOUND FALSE)
+                        break()
+                    endif()
+                endforeach()
+            endif()
+
             if(OpenBLAS_FOUND)
                 message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
 

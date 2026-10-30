@@ -655,3 +655,71 @@ TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
   REQUIRE(highs.getInfo().qp_iteration_count == 6);
   highs.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3340", "[highs_callback]") {
+  struct Offer {
+    std::vector<double> solution;
+    std::vector<double> primal_bound_at_query;
+  };
+
+  const HighsInt n = 40;
+  std::vector<double> cost(n + 1), lower(n + 1, 0), upper(n + 1, 1);
+  std::vector<HighsInt> index(n);
+  std::vector<double> weight(n);
+  for (int i = 0; i < n; i++) {
+    cost[i] = -(10 + (i * 37) % 23);
+    index[i] = i;
+    weight[i] = 5 + (i * 53) % 19;
+  }
+  // column n is fixed at 1: presolve moves its cost into the offset
+  cost[n] = 1e6;
+  lower[n] = 1;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_heuristic_effort", 0.0);
+  highs.setOptionValue("mip_heuristic_run_feasibility_jump", false);
+  highs.addCols(n + 1, cost.data(), lower.data(), upper.data(), 0, nullptr,
+                nullptr, nullptr);
+  std::vector<HighsVarType> integrality(n, HighsVarType::kInteger);
+  highs.changeColsIntegrality(0, n - 1, integrality.data());
+  highs.addRow(-kHighsInf, 97, n, index.data(), weight.data());
+
+  highs.run();
+  Offer offer;
+  offer.solution = highs.getSolution().col_value;
+  const double optimum = highs.getInfo().objective_function_value;
+  highs.clearSolver();
+
+  // Start from a poor solution: item 0 only.
+  HighsSolution start;
+  start.col_value.assign(n + 1, 0);
+  start.col_value[0] = 1;
+  start.col_value[n] = 1;
+  highs.setSolution(start);
+
+  // Offer the optimum at the first user-solution query; record the primal
+  // bound at each query.
+  highs.setCallback(
+      [](int, const std::string&, const HighsCallbackOutput* data_out,
+         HighsCallbackInput* data_in, void* user_data) {
+        auto& offer = *static_cast<Offer*>(user_data);
+        if (offer.primal_bound_at_query.empty()) {
+          data_in->user_has_solution = true;
+          data_in->user_solution = offer.solution;
+        }
+        offer.primal_bound_at_query.push_back(data_out->mip_primal_bound);
+      },
+      &offer);
+  highs.startCallback(kCallbackMipUserSolution);
+  highs.run();
+
+  if (dev_run) printf("optimum                      %.1f\n", optimum);
+  for (size_t q = 0; q < offer.primal_bound_at_query.size(); q++) {
+    if (dev_run)
+      printf("primal bound at query %zu      %.1f\n", q,
+             offer.primal_bound_at_query[q]);
+    if (q > 0) REQUIRE(offer.primal_bound_at_query[q] == optimum);
+  }
+
+  highs.resetThreadScheduler(true);
+}
