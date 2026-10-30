@@ -846,11 +846,19 @@ void HighsMipSolverData::runMipPresolve(
 void HighsMipSolverData::checkAddSolution() {
   if (mipsolver.solution_objective_ != kHighsInf) {
     // Assigning new incumbent
+    const bool reduced = postSolveStack.numReductions();
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
-    // return the objective value in the transformed space
-    double solobj =
-        mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
-        mipsolver.model_->offset_;
+    // return the objective value in the transformed space, but
+    // compute it locally in case the supplied solution
+    // (mipsolver.solution_) doesn't correspond to postsolve applied
+    // to incumbent (#3510)
+    HighsCDouble quad_solobj = mipsolver.model_->offset_;
+    for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
+      quad_solobj +=
+          (static_cast<HighsCDouble>(mipsolver.model_->col_cost_[iCol]) *
+           static_cast<HighsCDouble>(incumbent[iCol]));
+    double solobj = double(quad_solobj);
+    mipsolver.solution_objective_ = solobj;
     bool feasible = mipsolver.bound_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance &&
                     mipsolver.integrality_violation_ <=
@@ -859,8 +867,9 @@ void HighsMipSolverData::checkAddSolution() {
                         mipsolver.options_mip_->mip_feasibility_tolerance;
     if (numRestarts == 0) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "\nMIP start solution is %s, objective value is %.12g\n",
+                   "\nMIP start solution is %s%s: objective value is %.12g\n",
                    feasible ? "feasible" : "infeasible",
+                   reduced ? " in the reduced space" : "",
                    mipsolver.solution_objective_);
     }
     if (feasible && solobj < upper_bound) {

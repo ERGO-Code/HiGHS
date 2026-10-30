@@ -50,16 +50,24 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
   initialiseTerminator();
   assert(termination_status_ == HighsModelStatus::kNotset);
   if (solution.value_valid) {
+    bool feasible;
 #ifndef NDEBUG
     // MIP solver doesn't check row residuals, but they should be OK
     // so validate using assert
-    bool valid, integral, feasible;
+    bool valid, integral;
     assessLpPrimalSolution("For debugging: ", options, lp, solution, valid,
                            integral, feasible);
     assert(valid);
 #endif
-    // Initial solution can be infeasible, but need to set values for violation
-    // and objective
+    // (Where) can the initial solution be infeasible?
+    //
+    // Not in the original space, since that's tested externally
+    //
+    // If it's infeasible in the reduced space, then the primal bound
+    // given by its objective in the dual space is still valid?
+
+    // The initial solution be can be infeasible, but need to set values for
+    // violation and objective
     MipViolation violation;
     HighsCDouble quad_solution_objective_;
     solutionFeasible(orig_model_, solution.col_value, &solution.row_value,
@@ -67,6 +75,24 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
     violation.copy(bound_violation_, row_violation_, integrality_violation_);
     solution_objective_ = double(quad_solution_objective_);
     solution_ = solution.col_value;
+    feasible =
+        bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
+        integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
+        row_violation_ <= options_mip_->mip_feasibility_tolerance;
+    if (feasible) {
+      highsLogUser(
+          options_mip_->log_options, HighsLogType::kInfo,
+          "MIP start solution is feasible: objective value%s is %.12g\n",
+          solution_objective_);
+    } else {
+      highsLogUser(options_mip_->log_options, HighsLogType::kWarning,
+                   "MIP start solution has infeasible: objective value is "
+                   "%.12g with violations:"
+                   " variable bound = %.4g; constraint bound = %.4g; "
+                   "integrality = %.4g\n",
+                   solution_objective_, this->bound_violation_,
+                   this->row_violation_, this->integrality_violation_);
+    }
   }
 }
 

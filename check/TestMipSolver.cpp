@@ -2637,3 +2637,61 @@ TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
   REQUIRE(ranges[0].second - ranges[0].first == 1);
   REQUIRE(ranges[1].second - ranges[1].first == 0);
 }
+
+TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.num_col_ = 6;
+  lp.num_row_ = 5;
+  lp.col_cost_ = {0, 0, 0, 0, 0, -1e6};
+  lp.col_lower_ = {0, 0, 0, -0.003, -0.003, 0};
+  lp.col_upper_ = {1, 1, 1, 0, 0, inf};
+  lp.integrality_ = {HighsVarType::kInteger,    HighsVarType::kInteger,
+                     HighsVarType::kInteger,    HighsVarType::kContinuous,
+                     HighsVarType::kContinuous, HighsVarType::kContinuous};
+  lp.row_lower_ = {0, -inf, -inf, 0, 0.04};
+  lp.row_upper_ = {inf, 0.003, 0.0003, inf, inf};
+  lp.a_matrix_.start_ = {0, 4, 8, 9, 11, 15, 16};
+  lp.a_matrix_.index_ = {0, 1, 2, 4, 1, 2, 3, 4, 4, 1, 4, 0, 2, 3, 4, 4};
+  lp.a_matrix_.value_ = {0.000303,
+                         0.00265844244777602,
+                         0.0003,
+                         0.035,
+                         0.00265844244777602,
+                         0.0003,
+                         0.0003,
+                         0.007,
+                         0.08,
+                         1.0,
+                         2.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         -0.04,
+                         1.0};
+  lp.col_names_ = {"c0", "c1", "c2", "c3", "c4", "c5"};
+  lp.row_names_ = {"r0", "r1", "r2", "r3", "r4"};
+  std::vector<HighsInt> start_index = {0, 1, 2};
+  std::vector<double> start_value = {1, 1, 0};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  // Fourier-Motzkin off was necessaary to expose the bug
+  REQUIRE(
+      h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin) ==
+      HighsStatus::kOk);
+  // First pass uses large coefficient for c5, yielding a large
+  // objective in the original space, thus stressing its irrelevance
+  // to the reduced problem
+  for (HighsInt k = 0; k < 2; k++) {
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(h.setSolution(3, start_index.data(), start_value.data()) ==
+            HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(h.getObjectiveValue() == 0);
+    lp.col_cost_[5] = -1.0;
+  }
+
+  h.resetGlobalScheduler(true);
+}
