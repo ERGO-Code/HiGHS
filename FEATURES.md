@@ -162,7 +162,11 @@ jump and symmetry detection were fixed in
 [PR #3269](https://github.com/ERGO-Code/HiGHS/pull/3269) and
 [PR #3182](https://github.com/ERGO-Code/HiGHS/pull/3182), and MIPs with
 very large column bounds are handled more robustly
-([PR #3267](https://github.com/ERGO-Code/HiGHS/pull/3267)).
+([PR #3267](https://github.com/ERGO-Code/HiGHS/pull/3267)). The
+performance of feasibility jump was improved by fixing two bugs: jump
+candidates with negative constraint coefficients are no longer skipped,
+and the objective contribution now has the correct sign
+([PR #3310](https://github.com/ERGO-Code/HiGHS/pull/3310)).
 
 ## Build changes
 
