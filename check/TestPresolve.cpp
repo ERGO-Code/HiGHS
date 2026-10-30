@@ -2034,27 +2034,39 @@ TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {
 
 #ifdef HIPO
 TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
+  auto setPresolveRuleOff = [&]() {
+    // Allows more than one presolve rule to be switched off easily
+    HighsInt presolve_rule_off = 0;
+    //    presolve_rule_off += 1 << kPresolveRuleFreeColSubstitution;
+    //    presolve_rule_off += 1 << kPresolveRuleAggregator;
+    return presolve_rule_off;
+  };
   const std::string model = "bandm";  //"avgas";//
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
-  const bool logging = false;
+  const bool logging = false;  // true;  //
+  if (!logging) h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
   REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue("presolve_rule_off",
-                           1 << kPresolveRuleZeroCostSingleton) ==
+  // Solver must be specified before calling pure presolve so that
+  // rules are switched off appropriately
+  REQUIRE(h.setOptionValue(kSolverString, kIpmString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsChooseString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("presolve_rule_off", setPresolveRuleOff()) ==
           HighsStatus::kOk);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   h.presolve();
-  HighsLp lp = h.getPresolvedLp();
+  const HighsLp& lp = h.getLp();
+  const HighsLp& presolved_lp = h.getPresolvedLp();
 
   std::string use_pdlp = kPdlpString;
   const bool compare_pdlp = false;
 
   Highs h1;
-  h1.setOptionValue("output_flag", dev_run);
-  h1.passModel(lp);
-  REQUIRE(h1.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+  if (!logging) h1.setOptionValue("output_flag", dev_run);
+  h1.passModel(presolved_lp);
   REQUIRE(h1.setOptionValue(kPresolveString, kHighsOffString) ==
           HighsStatus::kOk);
   REQUIRE(h1.setOptionValue("run_crossover", kHighsChooseString) ==
@@ -2097,7 +2109,7 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
                            const double hipo) {
     if (!logging) return;
     if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
-    printf("%-35s %11.4g %11.4g %11.4f\n", name.c_str(), ipx, hipo, hipo / ipx);
+    printf("%-35s %11.4g %11.4g %11.2f\n", name.c_str(), ipx, hipo, hipo / ipx);
   };
 
   auto compareSolverInfo = [&](const std::string& solver0,
@@ -2223,13 +2235,13 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
 
   compareSolverInfo(kIpxString, kHipoString, ipx_model_status,
                     hipo_model_status, ipx_info, hipo_info);
-  compareSolverSolution(lp, kIpxString, kHipoString, ipx_solution,
+  compareSolverSolution(presolved_lp, kIpxString, kHipoString, ipx_solution,
                         hipo_solution);
 
   if (compare_pdlp) {
     compareSolverInfo(kIpxString, use_pdlp, ipx_model_status, pdlp_model_status,
                       ipx_info, pdlp_info);
-    compareSolverSolution(lp, kIpxString, use_pdlp, ipx_solution,
+    compareSolverSolution(presolved_lp, kIpxString, use_pdlp, ipx_solution,
                           pdlp_solution);
   }
 
@@ -2262,6 +2274,13 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
   if (compare_pdlp)
     compareSolverInfo(kIpxString, use_pdlp, ipx_model_status, pdlp_model_status,
                       ipx_info, pdlp_info);
+
+  if (logging)
+    printf(
+        "\nPresolve reductions: rows %d(%d); columns %d(%d); nonzeros %d(%d)\n",
+        int(presolved_lp.num_row_), int(presolved_lp.num_row_ - lp.num_row_),
+        int(presolved_lp.num_col_), int(presolved_lp.num_col_ - lp.num_col_),
+        int(presolved_lp.numNz()), int(presolved_lp.numNz() - lp.numNz()));
 
   h.resetThreadScheduler(true);
 }
