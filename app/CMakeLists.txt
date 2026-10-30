@@ -77,10 +77,13 @@ if(FAST_BUILD)
     endif()
 
     if(WIN32 AND HIPO AND BUILD_OPENBLAS AND BUILD_SHARED_LIBS)
+      # The openblas target only exists when OpenBLAS is built via
+      # FetchContent; when built with clang-cl it is a static library linked
+      # into highs_extras, so there is no DLL to copy. The target is created
+      # later (in extern), so check for it at generate time.
       add_custom_command(TARGET highs-bin POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          $<TARGET_FILE:openblas>
-          $<TARGET_FILE_DIR:highs-bin>
+          COMMAND "$<$<TARGET_EXISTS:openblas>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_FILE:openblas>;$<TARGET_FILE_DIR:highs-bin>>"
+          COMMAND_EXPAND_LISTS
       )
     endif()
 
