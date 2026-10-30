@@ -1689,12 +1689,23 @@ class Highs {
     double postsolve_time = -1;
     double solve_original_lp_time = -1;
     HighsInt postsolve_iteration_count = -1;
+
+    HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+
+    bool stop = false;
   };
-  HighsStatus optimizeModelQp(const HighsStatus from_return_status,
+  HighsStatus optimizeModelPreChecks(OptimizeModelContext context,
+                                     bool& undo_mods);
+  HighsStatus optimizeModelPrepare(OptimizeModelContext context,
+                                   bool& undo_mods);
+  HighsStatus optimizeModelQp(OptimizeModelContext context,
+                              const HighsStatus from_return_status,
                               bool& undo_mods);
-  HighsStatus optimizeModelMip(const HighsStatus from_return_status,
+  HighsStatus optimizeModelMip(OptimizeModelContext context,
+                               const HighsStatus from_return_status,
                                bool& undo_mods);
-  HighsStatus optimizeModelLp(const HighsStatus from_return_status);
+  HighsStatus optimizeModelLp(OptimizeModelContext context,
+                              const HighsStatus from_return_status);
   HighsStatus optimizeModelICrash();
   void optimizeModelReportTimes(const OptimizeModelContext& context);
 

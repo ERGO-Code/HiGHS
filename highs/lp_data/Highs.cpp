@@ -1304,11 +1304,46 @@ HighsStatus Highs::calledOptimizeModel() {
   this->logHeader();
   // Level 2b of Highs::run()
   //
-  HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+  // returnFromOptimizeModel() is a common exit method to ensure
+  // consistency of values set by optimizeModel() and many other
+  // things. It's important to be able to check that it's been called,
+  // and this is done with this->called_return_from_optimize_model
+  //
+  // Make sure here that returnFromOptimizeModel() has been called
+  // after any previous call to optimizeModel()
+
+  HighsStatus return_status;
+  bool undo_mods = false;
+  OptimizeModelContext context;
+
+  return_status = optimizeModelPreChecks(context, undo_mods);
+  if (context.stop) return return_status;
+
+  // Set this so that calls to returnFromOptimizeModel() can be checked: from
+  // here all return statements execute returnFromOptimizeModel()
+  called_return_from_optimize_model = false;
+
+  return_status = optimizeModelPrepare(context, undo_mods);
+  if (context.stop) return returnFromOptimizeModel(return_status, undo_mods);
+
+  if (model_.isQp()) {
+    return_status = optimizeModelQp(context, return_status, undo_mods);
+    return returnFromOptimizeModel(return_status, undo_mods);
+  } else if (model_.isMip()) {
+    return_status = optimizeModelMip(context, return_status, undo_mods);
+    return returnFromOptimizeModel(return_status, undo_mods);
+  }
+  return_status = optimizeModelLp(context, return_status);
+  return returnFromOptimizeModel(return_status, undo_mods);
+}
+
+HighsStatus Highs::optimizeModelPreChecks(OptimizeModelContext context,
+                                          bool& undo_mods) {
+  context.min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
-  if (options_.highs_debug_level < min_highs_debug_level)
-    options_.highs_debug_level = min_highs_debug_level;
+  if (options_.highs_debug_level < context.min_highs_debug_level)
+    options_.highs_debug_level = context.min_highs_debug_level;
 
   // As exposed by #1819, retaining the name hashes generated when
   // adding names using addColName/addRowName can lead to serious
@@ -1319,19 +1354,12 @@ HighsStatus Highs::calledOptimizeModel() {
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
 
-  // returnFromOptimizeModel() is a common exit method to ensure
-  // consistency of values set by optimizeModel() and many other
-  // things. It's important to be able to check that it's been called,
-  // and this is done with this->called_return_from_optimize_model
-  //
-  // Make sure here that returnFromOptimizeModel() has been called
-  // after any previous call to optimizeModel()
-
   assert(called_return_from_optimize_model);
   if (!called_return_from_optimize_model) {
     highsLogDev(options_.log_options, HighsLogType::kError,
                 "Highs::optimizeModel() called with "
                 "called_return_from_optimize_model false\n");
+    context.stop = true;
     return HighsStatus::kError;
   }
 
@@ -1347,7 +1375,7 @@ HighsStatus Highs::calledOptimizeModel() {
   //
   // Set undo_mods = false so that returnFromOptimizeModel() doesn't undo any
   // mods that must be preserved - such as when solving a MIP node
-  bool undo_mods = false;
+  undo_mods = false;
   if (model_.lp_.has_infinite_cost_) {
     // If the model has infinite costs, then try to remove them. The
     // return_status indicates the success of this operation and, if
@@ -1359,6 +1387,7 @@ HighsStatus Highs::calledOptimizeModel() {
     if (return_status != HighsStatus::kOk) {
       assert(return_status == HighsStatus::kError);
       setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kUnknown);
+      context.stop = true;
       return return_status;
     }
     // Modifications have been performed, so must be undone before
@@ -1379,12 +1408,23 @@ HighsStatus Highs::calledOptimizeModel() {
     // necessary) to achieve a feasible solution. Valuable in the case
     // where users make a heuristic (partial) assignment of discrete variables
     HighsStatus call_status = completeSolutionFromDiscreteAssignment();
-    if (call_status != HighsStatus::kOk) return HighsStatus::kError;
+    if (call_status != HighsStatus::kOk) {
+      context.stop = true;
+      return HighsStatus::kError;
+    }
   }
 
-  // Set this so that calls to returnFromOptimizeModel() can be checked: from
-  // here all return statements execute returnFromOptimizeModel()
-  called_return_from_optimize_model = false;
+  context.stop = false;
+  return HighsStatus::kOk;
+}
+
+HighsStatus Highs::optimizeModelPrepare(OptimizeModelContext context,
+                                        bool& undo_mods) {
+  auto returnFromPrepare = [&](HighsStatus status) {
+    context.stop = true;
+    return status;
+  };
+
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Initialise the HiGHS model status
@@ -1399,13 +1439,13 @@ HighsStatus Highs::calledOptimizeModel() {
   // Return immediately if the model has no columns
   if (!model_.lp_.num_col_) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kModelEmpty);
-    return returnFromOptimizeModel(HighsStatus::kOk, undo_mods);
+    return returnFromPrepare(HighsStatus::kOk);
   }
   // Return immediately if the model is infeasible due to inconsistent
   // bounds, modifying any bounds with tiny infeasibilities
   if (processedBoundsFindsInfeasibility()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
-    return returnFromOptimizeModel(return_status, undo_mods);
+    return returnFromPrepare(return_status);
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   model_.lp_.ensureColwise();
@@ -1415,9 +1455,9 @@ HighsStatus Highs::calledOptimizeModel() {
                  "Cannot solve a model with a |value| exceeding %g in "
                  "constraint matrix\n",
                  options_.large_matrix_value);
-    return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+    return returnFromPrepare(HighsStatus::kError);
   }
-  if (options_.highs_debug_level > min_highs_debug_level) {
+  if (options_.highs_debug_level > context.min_highs_debug_level) {
     // Shouldn't have to check validity of the LP since this is done when it is
     // loaded or modified
     call_status = assessLp(model_.lp_, options_);
@@ -1427,13 +1467,13 @@ HighsStatus Highs::calledOptimizeModel() {
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "assessLp");
     if (return_status == HighsStatus::kError)
-      return returnFromOptimizeModel(return_status, undo_mods);
+      return returnFromPrepare(return_status);
     // Shouldn't have to check that the options settings are legal,
     // since they are checked when modified
     if (checkOptions(options_.log_options, options_.records) !=
         OptionStatus::kOk) {
       return_status = HighsStatus::kError;
-      return returnFromOptimizeModel(return_status, undo_mods);
+      return returnFromPrepare(return_status);
     }
   }
 
@@ -1452,23 +1492,16 @@ HighsStatus Highs::calledOptimizeModel() {
     if (call_status == HighsStatus::kError) {
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kSolveError);
-      return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+      return returnFromPrepare(HighsStatus::kError);
     }
   }
 
-  // Choose method according to model class
-  if (model_.isQp()) {
-    return_status = optimizeModelQp(return_status, undo_mods);
-    return returnFromOptimizeModel(return_status, undo_mods);
-  } else if (model_.isMip()) {
-    return_status = optimizeModelMip(return_status, undo_mods);
-    return returnFromOptimizeModel(return_status, undo_mods);
-  }
-  return_status = optimizeModelLp(return_status);
-  return returnFromOptimizeModel(return_status, undo_mods);
+  context.stop = false;
+  return HighsStatus::kOk;
 }
 
-HighsStatus Highs::optimizeModelQp(const HighsStatus from_return_status,
+HighsStatus Highs::optimizeModelQp(OptimizeModelContext context,
+                                   const HighsStatus from_return_status,
                                    bool& undo_mods) {
   if (model_.isMip()) {
     if (options_.solve_relaxation) {
@@ -1504,7 +1537,8 @@ HighsStatus Highs::optimizeModelQp(const HighsStatus from_return_status,
                              from_return_status, "callSolveQp");
 }
 
-HighsStatus Highs::optimizeModelMip(const HighsStatus from_return_status,
+HighsStatus Highs::optimizeModelMip(OptimizeModelContext context,
+                                    const HighsStatus from_return_status,
                                     bool& undo_mods) {
   if (options_.solve_relaxation) {
     // Solving just the relaxation, so relax any semi-variables
@@ -1514,7 +1548,7 @@ HighsStatus Highs::optimizeModelMip(const HighsStatus from_return_status,
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Solving LP relaxation since solve_relaxation is true\n");
 
-    return optimizeModelLp(from_return_status);
+    return optimizeModelLp(context, from_return_status);
   }
 
   if (!solverValidForMip(options_.solver)) warnSolverInvalid(options_, "MIP");
@@ -1523,7 +1557,8 @@ HighsStatus Highs::optimizeModelMip(const HighsStatus from_return_status,
                              from_return_status, "callSolveMip");
 }
 
-HighsStatus Highs::optimizeModelLp(const HighsStatus from_return_status) {
+HighsStatus Highs::optimizeModelLp(OptimizeModelContext context,
+                                   const HighsStatus from_return_status) {
   const bool possibly_use_log_dev_level_2 = false;
   const HighsInt log_dev_level = options_.log_dev_level;
   const bool output_flag = options_.output_flag;
@@ -1548,8 +1583,6 @@ HighsStatus Highs::optimizeModelLp(const HighsStatus from_return_status) {
       use_output_flag = true;
     }
   }
-
-  OptimizeModelContext context;
 
   HighsStatus return_status = from_return_status;
   HighsStatus call_status;
