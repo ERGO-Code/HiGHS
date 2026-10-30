@@ -176,4 +176,10 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
                        const HighsInfo& highs_info,
                        const std::string& message = "");
 
+double primalDualCentringRatio(const HighsLp& lp,
+                               const HighsSolution& solution);
+
+HighsInt numNearlyActiveBounds(const HighsLp& lp, const HighsSolution& sol,
+                               double tol = 1e-6, bool include_rows = true);
+
 #endif  // LP_DATA_HIGHSSOLUTION_H_
