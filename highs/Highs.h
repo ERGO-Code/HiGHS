@@ -1399,6 +1399,8 @@ class Highs {
   HighsStatus optimizeModelTryCatch();
   HighsStatus calledOptimizeModel();
 
+  HighsStatus runICrash();
+
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
   }
