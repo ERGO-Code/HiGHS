@@ -1479,40 +1479,12 @@ HighsStatus Highs::calledOptimizeModel() {
       return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
     }
   }
+
   // Choose method according to model class
   if (model_.isQp()) {
-    if (model_.isMip()) {
-      if (options_.solve_relaxation) {
-        // Relax any semi-variables
-        bool made_semi_variable_mods = false;
-        relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-        undo_mods = undo_mods || made_semi_variable_mods;
-      } else {
-        highsLogUser(options_.log_options, HighsLogType::kError,
-                     "Cannot solve MIQP problems with HiGHS\n");
-        return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-      }
-    }
-    // Ensure that its diagonal entries are OK in the context of the
-    // objective sense. It's OK to be semi-definite
-    if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot solve non-convex QP problems with HiGHS\n");
-      return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-    }
-    if (!solverValidForQp(options_.solver)) warnSolverInvalid(options_, "QP");
-    try {
-      call_status = callSolveQp(this->model_, "Solve incumbent QP");
-    } catch (const std::exception& exception) {
-      model_status_ =
-          handleExceptionIsOom(options_.log_options, "callSolveQp", exception)
-              ? HighsModelStatus::kMemoryLimit
-              : HighsModelStatus::kSolveError;
-      call_status = HighsStatus::kError;
-    }
-    return_status = interpretCallStatus(options_.log_options, call_status,
-                                        return_status, "callSolveQp");
+    return_status = optimizeModelQp(return_status, undo_mods);
     return returnFromOptimizeModel(return_status, undo_mods);
+
   } else if (model_.isMip()) {
     // Model is MIP
     if (options_.solve_relaxation) {
@@ -1532,6 +1504,7 @@ HighsStatus Highs::calledOptimizeModel() {
       return returnFromOptimizeModel(return_status, undo_mods);
     }
   }
+
   // Solve the model as an LP
   HighsLp& incumbent_lp = model_.lp_;
   HighsLogOptions& log_options = options_.log_options;
@@ -2105,6 +2078,42 @@ HighsStatus Highs::calledOptimizeModel() {
   // whether anything worse has happened earlier
   return_status = highsStatusFromHighsModelStatus(model_status_);
   return returnFromOptimizeModel(return_status, undo_mods);
+}
+
+HighsStatus Highs::optimizeModelQp(const HighsStatus from_return_status,
+                                   bool& undo_mods) {
+  if (model_.isMip()) {
+    if (options_.solve_relaxation) {
+      // Relax any semi-variables
+      bool made_semi_variable_mods = false;
+      relaxSemiVariables(model_.lp_, made_semi_variable_mods);
+      undo_mods = undo_mods || made_semi_variable_mods;
+    } else {
+      highsLogUser(options_.log_options, HighsLogType::kError,
+                   "Cannot solve MIQP problems with HiGHS\n");
+      return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+    }
+  }
+  // Ensure that its diagonal entries are OK in the context of the
+  // objective sense. It's OK to be semi-definite
+  if (!okHessianDiagonal(options_, model_.hessian_, model_.lp_.sense_)) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot solve non-convex QP problems with HiGHS\n");
+    return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+  }
+  if (!solverValidForQp(options_.solver)) warnSolverInvalid(options_, "QP");
+  HighsStatus call_status;
+  try {
+    call_status = callSolveQp(this->model_, "Solve incumbent QP");
+  } catch (const std::exception& exception) {
+    model_status_ =
+        handleExceptionIsOom(options_.log_options, "callSolveQp", exception)
+            ? HighsModelStatus::kMemoryLimit
+            : HighsModelStatus::kSolveError;
+    call_status = HighsStatus::kError;
+  }
+  return interpretCallStatus(options_.log_options, call_status,
+                             from_return_status, "callSolveQp");
 }
 
 HighsStatus Highs::runICrash() {
