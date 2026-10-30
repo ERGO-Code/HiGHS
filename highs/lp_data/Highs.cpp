@@ -1850,7 +1850,6 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
         // can't return this. Use primal simplex solver on the original
         // LP
-        HighsStatus save_return_status = context.status;
         HighsOptions save_options = options_;
         options_.solver = "simplex";
         options_.simplex_strategy = kSimplexStrategyPrimal;
@@ -1880,7 +1879,6 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
                        modelStatusToString(model_status_).c_str());
 
           model_status_ = HighsModelStatus::kUnboundedOrInfeasible;
-          context.status = save_return_status;
           setHighsModelStatusAndClearSolutionAndBasis(
               HighsModelStatus::kUnboundedOrInfeasible);
         }
