@@ -1691,19 +1691,15 @@ class Highs {
     HighsInt postsolve_iteration_count = -1;
 
     HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+
+    bool undo_mods = false;
+    HighsStatus status = HighsStatus::kOk;
   };
-  bool optimizeModelPreChecks(OptimizeModelContext& context,
-                              HighsStatus& status, bool& undo_mods);
-  bool optimizeModelPrepare(OptimizeModelContext& context, HighsStatus& status,
-                            bool& undo_mods);
-  HighsStatus optimizeModelQp(OptimizeModelContext& context,
-                              const HighsStatus from_return_status,
-                              bool& undo_mods);
-  HighsStatus optimizeModelMip(OptimizeModelContext& context,
-                               const HighsStatus from_return_status,
-                               bool& undo_mods);
-  HighsStatus optimizeModelLp(OptimizeModelContext& context,
-                              const HighsStatus from_return_status);
+  bool optimizeModelPreChecks(OptimizeModelContext& context);
+  bool optimizeModelPrepare(OptimizeModelContext& context);
+  void optimizeModelQp(OptimizeModelContext& context);
+  void optimizeModelMip(OptimizeModelContext& context);
+  void optimizeModelLp(OptimizeModelContext& context);
   HighsStatus optimizeModelICrash();
   void optimizeModelReportTimes(const OptimizeModelContext& context);
 
