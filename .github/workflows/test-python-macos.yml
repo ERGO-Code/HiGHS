@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest]
-        python: [3.14]
+        python: ["3.14", "3.14t"]
 
     steps:
       - uses: actions/checkout@v6
@@ -28,6 +28,10 @@ jobs:
         run: |
           python3 -m pip install .
           pytest -v ./highspy
+
+      - name: Check GIL stays disabled (free-threaded)
+        if: endsWith(matrix.python, 't')
+        run: python3 -W error::RuntimeWarning -c "import sys, highspy; assert not sys._is_gil_enabled(), 'importing highspy re-enabled the GIL'"
 
       - name: Test Python Examples
         run: |
