@@ -1696,7 +1696,7 @@ class Highs {
                                bool& undo_mods);
   HighsStatus optimizeModelLp(const HighsStatus from_return_status);
   HighsStatus optimizeModelICrash();
-  void optimizeModelReportTimes(const OptimizeModelContext& record);
+  void optimizeModelReportTimes(const OptimizeModelContext& context);
 
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
   HighsStatus callSolveMip(HighsLp& lp, const std::string& message);

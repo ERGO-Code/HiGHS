@@ -1514,8 +1514,7 @@ HighsStatus Highs::optimizeModelMip(const HighsStatus from_return_status,
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Solving LP relaxation since solve_relaxation is true\n");
 
-    HighsStatus return_status = optimizeModelLp(from_return_status);
-    return returnFromOptimizeModel(return_status, undo_mods);
+    return optimizeModelLp(from_return_status);
   }
 
   if (!solverValidForMip(options_.solver)) warnSolverInvalid(options_, "MIP");
