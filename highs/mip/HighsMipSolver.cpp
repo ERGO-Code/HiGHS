@@ -79,6 +79,8 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
         bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
         integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
+    printf("HighsMipSolver::HighsMipSolver: Start solution has offset %.12g and objective %.12g\n",
+          model_->offset_, solution_objective_);
     if (feasible) {
       highsLogUser(
           options_mip_->log_options, HighsLogType::kInfo,

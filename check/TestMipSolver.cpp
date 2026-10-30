@@ -973,7 +973,7 @@ TEST_CASE("issue-2122", "[highs_test_mip_solver]") {
 TEST_CASE("issue-2171", "[highs_test_mip_solver]") {
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/2171.mps";
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
   highs.setOptionValue("mip_abs_gap", 0);
   highs.readModel(filename);
@@ -2589,7 +2589,7 @@ TEST_CASE("issue-3451", "[highs_test_mip_solver]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/issue-3451.mps";
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("mip_rel_gap", 0);
   highs.readModel(filename);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;

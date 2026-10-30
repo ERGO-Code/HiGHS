@@ -858,13 +858,22 @@ void HighsMipSolverData::checkAddSolution() {
           (static_cast<HighsCDouble>(mipsolver.model_->col_cost_[iCol]) *
            static_cast<HighsCDouble>(incumbent[iCol]));
     double solobj = double(quad_solobj);
-    mipsolver.solution_objective_ = solobj;
+
+    double original_solobj =
+        mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
+        mipsolver.model_->offset_;
+    printf("HighsMipSolverData::checkAddSolution: restart %d: solution_objective_ = %.12g; sense_ = %d; offset %.12g; original_solobj %.12g\n", int(numRestarts), mipsolver.solution_objective_, (int)mipsolver.orig_model_->sense_, mipsolver.model_->offset_, original_solobj);
+
+    solobj = original_solobj;
+    //    mipsolver.solution_objective_ = solobj;
     bool feasible = mipsolver.bound_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance &&
                     mipsolver.integrality_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance &&
                     mipsolver.row_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance;
+    printf("HighsMipSolverData::checkAddSolution: Start solution has offset %.12g and objective %.12g\n",
+	   mipsolver.model_->offset_, mipsolver.solution_objective_);
     if (numRestarts == 0) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "\nMIP start solution is %s%s: objective value is %.12g\n",
