@@ -201,6 +201,7 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
 }
 
 HighsStatus Highs::resetOptions() {
+  this->logHeader();
   resetLocalOptions(options_.records);
   return optionChangeAction();
 }
@@ -235,8 +236,14 @@ HighsStatus Highs::writeOptions(const std::string& filename,
 
 HighsStatus Highs::getOptionName(const HighsInt index,
                                  std::string* name) const {
-  if (index < 0 || index >= HighsInt(this->options_.records.size()))
+  HighsInt num_option = this->options_.records.size();
+  if (index < 0 || index >= num_option) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kInfo,
+        "Index %d passed to getOptionName is not in the valid range [0, %d)\n",
+        int(index), int(num_option));
     return HighsStatus::kError;
+  }
   *name = this->options_.records[index]->name;
   return HighsStatus::kOk;
 }

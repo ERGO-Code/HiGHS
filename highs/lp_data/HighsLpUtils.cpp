@@ -2318,22 +2318,23 @@ HighsStatus readSolutionFile(const std::string& filename,
     for (;;) {
       std::getline(in_file, column_section_line);
       std::stringstream column_section_line_ss(column_section_line);
-      if (column_section_line.empty() ||
-          !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
+      if (!readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
                                               num_col, qualifier_string,
                                               column_section_line_ss)) {
-        // If # hasn't been read, then it's "Objective_bound" or
-        // "MIP_rel_gap", so look at the next line
         if (hash != "#") {
-          assert(hash == "Objective_bound" || hash == "MIP_rel_gap");
-          continue;
+          // If # hasn't been read and is "Objective_bound" or
+          // "MIP_rel_gap", look at the next line
+          if (hash == "Objective_bound" || hash == "MIP_rel_gap") continue;
         }
+        // Something illegal has been read, or the file has ended
+        // after the objective line (#3499) - which is perversely
+        // invalid
         highsLogUser(log_options, HighsLogType::kError,
                      "readSolutionFile: Error reading line \"%s\"\n",
                      column_section_line.c_str());
         return readSolutionFileErrorReturn(in_file);
       }
-      // "# Columns" has been read correctly, to break
+      // "# Columns" has been read correctly, so break
       break;
     }
     assert(keyword == "Columns");
