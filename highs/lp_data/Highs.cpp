@@ -1304,21 +1304,25 @@ HighsStatus Highs::calledOptimizeModel() {
   this->logHeader();
   // Level 2b of Highs::run()
   //
+  OptimizeModelContext context;
+
   HighsInt min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
   if (options_.highs_debug_level < min_highs_debug_level)
     options_.highs_debug_level = min_highs_debug_level;
 
-  const bool possibly_use_log_dev_level_2 = false;
+  context.use_log_dev_level_2 = false;
   const HighsInt log_dev_level = options_.log_dev_level;
   const bool output_flag = options_.output_flag;
-  HighsInt use_log_dev_level = log_dev_level;
-  bool use_output_flag = output_flag;
+
+  context.use_log_dev_level = options_.log_dev_level;
+  context.use_output_flag = options_.output_flag;
+
   const HighsInt check_debug_run_call_num = -103757;
   const HighsInt check_num_col = -317;
   const HighsInt check_num_row = -714;
-  if (possibly_use_log_dev_level_2) {
+  if (context.use_log_dev_level_2) {
     if (this->debug_optimize_call_num_ == check_debug_run_call_num &&
         model_.lp_.num_col_ == check_num_col &&
         model_.lp_.num_row_ == check_num_row) {
@@ -1329,8 +1333,8 @@ HighsStatus Highs::calledOptimizeModel() {
                   int(this->debug_optimize_call_num_), int(model_.lp_.num_col_),
                   int(model_.lp_.num_row_));
       // highsPause(true, message);
-      use_log_dev_level = 2;
-      use_output_flag = true;
+      context.use_log_dev_level = 2;
+      context.use_output_flag = true;
     }
   }
 
@@ -1504,7 +1508,6 @@ HighsStatus Highs::calledOptimizeModel() {
 
   if (!solverValidForLp(options_.solver)) warnSolverInvalid(options_, "LP");
 
-  OptimizeModelContext context;
   context.initial_time = timer_.read();
 
   const bool may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
@@ -1544,18 +1547,18 @@ HighsStatus Highs::calledOptimizeModel() {
   auto timedSolveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
                           double& time) {
     time = -timer_.read(timer_.solve_clock);
-    if (possibly_use_log_dev_level_2) {
-      options_.log_dev_level = use_log_dev_level;
-      options_.output_flag = use_output_flag;
+    const HighsInt save_log_dev_level = options_.log_dev_level;
+    const bool save_output_flag = options_.output_flag;
+    if (context.use_log_dev_level_2) {
+      options_.log_dev_level = context.use_log_dev_level;
+      options_.output_flag = context.use_output_flag;
     }
     timer_.start(timer_.solve_clock);
     const bool as_mip = false;
     call_status = callSolveLp(lp, lpSolveDescription);
     timer_.stop(timer_.solve_clock);
-    if (possibly_use_log_dev_level_2) {
-      options_.log_dev_level = log_dev_level;
-      options_.output_flag = output_flag;
-    }
+    options_.log_dev_level = save_log_dev_level;
+    options_.output_flag = save_output_flag;
     time += timer_.read(timer_.solve_clock);
   };
 

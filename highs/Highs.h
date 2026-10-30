@@ -1689,6 +1689,10 @@ class Highs {
     double postsolve_time = -1;
     double solve_original_lp_time = -1;
     HighsInt postsolve_iteration_count = -1;
+
+    bool use_log_dev_level_2 = false;
+    HighsInt use_log_dev_level = 0;
+    bool use_output_flag = false;
   };
   HighsStatus optimizeModelQp(const HighsStatus from_return_status,
                               bool& undo_mods);
