@@ -2039,6 +2039,7 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   h.setOptionValue("output_flag", dev_run);
+  const bool logging = false;
   REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
   REQUIRE(h.setOptionValue("presolve_rule_off",
                            1 << kPresolveRuleZeroCostSingleton) ==
@@ -2086,6 +2087,7 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
 
   auto logIntegerInfo = [&](const std::string& name, const HighsInt ipx,
                             const HighsInt hipo) {
+    if (!logging) return;
     if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
     printf("%-35s   %9d   %9d   %9d\n", name.c_str(), int(ipx), int(hipo),
            int(ipx - hipo));
@@ -2093,6 +2095,7 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
 
   auto logDoubleInfo = [&](const std::string& name, const double ipx,
                            const double hipo) {
+    if (!logging) return;
     if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
     printf("%-35s %11.4g %11.4g %11.4f\n", name.c_str(), ipx, hipo, hipo / ipx);
   };
@@ -2102,6 +2105,7 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
                                const HighsModelStatus& model_status0,
                                const HighsModelStatus& model_status1,
                                const HighsInfo& info0, const HighsInfo& info1) {
+    if (!logging) return;
     printf("\n%-35s   %9s   %9s\n", "Model status",
            h.modelStatusToString(model_status0).c_str(),
            h.modelStatusToString(model_status1).c_str());
@@ -2190,6 +2194,7 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
       [&](const HighsLp& lp, const std::string& solver0,
           const std::string& solver1, const HighsSolution& solution0,
           const HighsSolution& solution1) {
+        if (!logging) return;
         double col_value_dl = 0;
         double col_dual_dl = 0;
         double row_value_dl = 0;
@@ -2228,14 +2233,14 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
                           pdlp_solution);
   }
 
-  highsPrintStringAsHeading("After postsolve");
+  if (logging) highsPrintStringAsHeading("After postsolve");
 
   //  h.clearSolver();
   h.postsolve(ipx_solution);
   ipx_model_status = h.getModelStatus();
   ipx_info = h.getInfo();
   ipx_solution = h.getSolution();
-  h.writeSolution("", 1);
+  //  h.writeSolution("", 1);
 
   //  h.clearSolver();
   h.postsolve(hipo_solution);
