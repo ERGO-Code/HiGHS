@@ -2094,7 +2094,7 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
   auto logDoubleInfo = [&](const std::string& name, const double ipx,
                            const double hipo) {
     if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
-    printf("%-35s %11.4g %11.4g %11.4g\n", name.c_str(), ipx, hipo, ipx / hipo);
+    printf("%-35s %11.4g %11.4g %11.4f\n", name.c_str(), ipx, hipo, hipo / ipx);
   };
 
   auto compareSolverInfo = [&](const std::string& solver0,
@@ -2180,10 +2180,10 @@ TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
     logDoubleInfo("primal_dual_objective_error",
                   info0.primal_dual_objective_error,
                   info1.primal_dual_objective_error);
-    logDoubleInfo("active_cost_norm", info0.active_cost_norm,
-                  info1.active_cost_norm);
-    logDoubleInfo("active_bound_norm", info0.active_bound_norm,
-                  info1.active_bound_norm);
+    REQUIRE(info0.active_cost_norm == info1.active_cost_norm);
+    REQUIRE(info0.active_bound_norm == info1.active_bound_norm);
+    printf("\nUsing active_cost_norm = %11.4g and active_bound_norm = %11.4g\n",
+           info0.active_cost_norm, info0.active_bound_norm);
   };
 
   auto compareSolverSolution =

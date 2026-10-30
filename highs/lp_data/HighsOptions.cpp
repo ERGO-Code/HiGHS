@@ -1160,14 +1160,7 @@ bool usePdlp(const std::string& solver) {
   return solver == kPdlpString || solver == kHiPdlpString;
 }
 
-bool mayRequireBasisPostsolve(const HighsOptions* options) {
-  if (usePdlp(options->solver)) return false;
-  if (useIpm(options->solver) && options->run_crossover == kHighsOffString)
-    return false;
-  return true;
-}
-
-bool mayRequirePrimalDualPostsolve(const HighsOptions* options) {
+bool mayRequireDualPostsolve(const HighsOptions* options) {
   if (usePdlp(options->solver)) return true;
   if (useIpm(options->solver)) {
     if (options->run_crossover == kHighsOffString) return true;
@@ -1180,4 +1173,11 @@ bool mayRequirePrimalDualPostsolve(const HighsOptions* options) {
     //    if (options->run_crossover == kHighsOnString) return true;
   }
   return false;
+}
+
+bool mayRequireBasisPostsolve(const HighsOptions* options) {
+  if (usePdlp(options->solver)) return false;
+  if (useIpm(options->solver) && options->run_crossover == kHighsOffString)
+    return false;
+  return true;
 }
