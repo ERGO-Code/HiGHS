@@ -1539,17 +1539,11 @@ HighsStatus Highs::calledOptimizeModel() {
 
   if (!solverValidForLp(options_.solver)) warnSolverInvalid(options_, "LP");
 
-  //
-  // Record the initial time and set the component times and postsolve
-  // iteration count to -1 to identify whether they are not required
-  double initial_time = timer_.read();
-  double this_presolve_time = -1;
-  double this_solve_presolved_lp_time = -1;
-  double this_postsolve_time = -1;
-  double this_solve_original_lp_time = -1;
-  HighsInt postsolve_iteration_count = -1;
+  OptimizeModelRecord record;
+  record.initial_time = timer_.read();
+
   const bool may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
-  
+
   if (options_.icrash) {
     HighsStatus icrash_status = runICrash();
     if (icrash_status != HighsStatus::kOk)
@@ -1638,10 +1632,10 @@ HighsStatus Highs::calledOptimizeModel() {
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
-    timedSolveLp(incumbent_lp, lp_solve, this_solve_original_lp_time);
+    timedSolveLp(incumbent_lp, lp_solve, record.solve_original_lp_time);
     return_status = interpretCallStatus(options_.log_options, call_status,
                                         return_status, "callSolveLp");
-    this->run_data_.solve_time = this_solve_original_lp_time;
+    this->run_data_.solve_time = record.solve_original_lp_time;
     if (return_status == HighsStatus::kError)
       return returnFromOptimizeModel(return_status, undo_mods);
   } else {
@@ -1650,15 +1644,15 @@ HighsStatus Highs::calledOptimizeModel() {
     // If solving the relaxation of a MIP, make sure that LP presolve
     // is used - so that rules assuming MIP properties are not applied.
     const double from_presolve_time = timer_.read(timer_.presolve_clock);
-    this_presolve_time = -from_presolve_time;
+    record.presolve_time = -from_presolve_time;
     timer_.start(timer_.presolve_clock);
     const bool force_lp_presolve = true;
     model_presolve_status_ = runPresolve(force_lp_presolve);
     timer_.stop(timer_.presolve_clock);
     const double to_presolve_time = timer_.read(timer_.presolve_clock);
-    this_presolve_time += to_presolve_time;
-    presolve_.info_.presolve_time = this_presolve_time;
-    this->run_data_.presolve_time = this_presolve_time;
+    record.presolve_time += to_presolve_time;
+    presolve_.info_.presolve_time = record.presolve_time;
+    this->run_data_.presolve_time = record.presolve_time;
 
     // Set an illegal local pivot threshold value that's updated after
     // solving the presolved LP - if simplex is used
@@ -1685,8 +1679,8 @@ HighsStatus Highs::calledOptimizeModel() {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
         timedSolveLp(incumbent_lp, "Not presolved: solving the LP",
-                     this_solve_original_lp_time);
-        this->run_data_.solve_time = this_solve_original_lp_time;
+                     record.solve_original_lp_time);
+        this->run_data_.solve_time = record.solve_original_lp_time;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1698,8 +1692,8 @@ HighsStatus Highs::calledOptimizeModel() {
         // Log the presolve reductions
         timedSolveLp(incumbent_lp,
                      "Problem not reduced by presolve: solving the LP",
-                     this_solve_original_lp_time);
-        this->run_data_.solve_time = this_solve_original_lp_time;
+                     record.solve_original_lp_time);
+        this->run_data_.solve_time = record.solve_original_lp_time;
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         if (return_status == HighsStatus::kError)
@@ -1746,8 +1740,8 @@ HighsStatus Highs::calledOptimizeModel() {
         const double save_objective_bound = options_.objective_bound;
         options_.objective_bound = kHighsInf;
         timedSolveLp(reduced_lp, "Solving the presolved LP",
-                     this_solve_presolved_lp_time);
-        this->run_data_.solve_time = this_solve_presolved_lp_time;
+                     record.solve_presolved_lp_time);
+        this->run_data_.solve_time = record.solve_presolved_lp_time;
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
@@ -1823,7 +1817,7 @@ HighsStatus Highs::calledOptimizeModel() {
         timedSolveLp(incumbent_lp,
                      "Solving the original LP with primal simplex "
                      "to determine infeasible or unbounded",
-                     this_solve_original_lp_time);
+                     record.solve_original_lp_time);
         // Recover the options
         options_ = save_options;
         // Primal simplex doesn't necessarily resolve the
@@ -1933,13 +1927,13 @@ HighsStatus Highs::calledOptimizeModel() {
       if (model_presolve_status_ == HighsPresolveStatus::kReduced)
         this->callLpKktCheck(presolve_.getReducedProblem(), "Before postsolve");
 
-      this_postsolve_time = -timer_.read(timer_.postsolve_clock);
+      record.postsolve_time = -timer_.read(timer_.postsolve_clock);
       timer_.start(timer_.postsolve_clock);
       HighsPostsolveStatus postsolve_status = runPostsolve();
       timer_.stop(timer_.postsolve_clock);
-      this_postsolve_time += timer_.read(timer_.postsolve_clock);
-      presolve_.info_.postsolve_time = this_postsolve_time;
-      this->run_data_.postsolve_time = this_postsolve_time;
+      record.postsolve_time += timer_.read(timer_.postsolve_clock);
+      presolve_.info_.postsolve_time = record.postsolve_time;
+      this->run_data_.postsolve_time = record.postsolve_time;
 
       if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
         // Indicate that nontrivial postsolve has been performed
@@ -2008,14 +2002,14 @@ HighsStatus Highs::calledOptimizeModel() {
           // Set up the iteration count and timing records so that
           // adding the corresponding values after callSolveLp gives
           // difference
-          postsolve_iteration_count = -info_.simplex_iteration_count;
+          record.postsolve_iteration_count = -info_.simplex_iteration_count;
           timedSolveLp(
               incumbent_lp,
               "Solving the original LP from the solution after postsolve",
-              this_solve_original_lp_time);
-          this->run_data_.postsolve_time += this_solve_original_lp_time;
+              record.solve_original_lp_time);
+          this->run_data_.postsolve_time += record.solve_original_lp_time;
           // Determine the iteration count
-          postsolve_iteration_count += info_.simplex_iteration_count;
+          record.postsolve_iteration_count += info_.simplex_iteration_count;
           //
           return_status = HighsStatus::kOk;
           return_status = interpretCallStatus(log_options, call_status,
@@ -2025,11 +2019,11 @@ HighsStatus Highs::calledOptimizeModel() {
           if (return_status == HighsStatus::kError)
             return returnFromOptimizeModel(return_status, undo_mods);
           this->run_data_.num_simplex_iterations_after_postsolve =
-              postsolve_iteration_count;
-          if (postsolve_iteration_count > 0)
+              record.postsolve_iteration_count;
+          if (record.postsolve_iteration_count > 0)
             highsLogUser(log_options, HighsLogType::kInfo,
                          "Required %d simplex iterations after postsolve\n",
-                         int(postsolve_iteration_count));
+                         int(record.postsolve_iteration_count));
         }
       } else {
         // Postsolve has failed, so any simplex data for the presolved
@@ -2079,7 +2073,7 @@ HighsStatus Highs::calledOptimizeModel() {
             incumbent_lp,
             "Using PDLP to solve the original LP from the solution after "
             "postsolve",
-            this_solve_original_lp_time);
+            record.solve_original_lp_time);
         // Recover solver and time limit option values
         options_.solver = solver;
         options_.pdlp_iteration_limit = pdlp_iteration_limit;
@@ -2105,69 +2099,8 @@ HighsStatus Highs::calledOptimizeModel() {
     info_.valid = true;
   }
 
-  double lp_solve_final_time = timer_.read();
-  double this_solve_time = lp_solve_final_time - initial_time;
-  if (postsolve_iteration_count < 0) {
-    highsLogDev(log_options, HighsLogType::kInfo, "Postsolve  : \n");
-  } else {
-    highsLogDev(log_options, HighsLogType::kInfo,
-                "Postsolve  : %" HIGHSINT_FORMAT "\n",
-                postsolve_iteration_count);
-  }
-  if (this_solve_time > 0)
-    highsLogDev(log_options, HighsLogType::kInfo, "Time           : %8.2f\n",
-                this_solve_time);
-  if (this_presolve_time > 0)
-    highsLogDev(log_options, HighsLogType::kInfo, "Time Pre       : %8.2f\n",
-                this_presolve_time);
-  if (this_solve_presolved_lp_time > 0)
-    highsLogDev(log_options, HighsLogType::kInfo, "Time PreLP     : %8.2f\n",
-                this_solve_presolved_lp_time);
-  if (this_solve_original_lp_time > 0)
-    highsLogDev(log_options, HighsLogType::kInfo, "Time OriginalLP: %8.2f\n",
-                this_solve_original_lp_time);
-  if (this_solve_time > 0) {
-    highsLogDev(log_options, HighsLogType::kInfo, "For LP %16s",
-                incumbent_lp.model_name_.c_str());
-    double sum_time = 0;
-    if (this_presolve_time > 0) {
-      sum_time += this_presolve_time;
-      HighsInt pct = (100 * this_presolve_time) / this_solve_time;
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "    : Presolve %8.2f (%3" HIGHSINT_FORMAT "%%)",
-                  this_presolve_time, pct);
-    }
-    if (this_solve_presolved_lp_time > 0) {
-      sum_time += this_solve_presolved_lp_time;
-      HighsInt pct = (100 * this_solve_presolved_lp_time) / this_solve_time;
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "    : Solve presolved LP %8.2f (%3" HIGHSINT_FORMAT "%%)",
-                  this_solve_presolved_lp_time, pct);
-    }
-    if (this_postsolve_time > 0) {
-      sum_time += this_postsolve_time;
-      HighsInt pct = (100 * this_postsolve_time) / this_solve_time;
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "    : Postsolve %8.2f (%3" HIGHSINT_FORMAT "%%)",
-                  this_postsolve_time, pct);
-    }
-    if (this_solve_original_lp_time > 0) {
-      sum_time += this_solve_original_lp_time;
-      HighsInt pct = (100 * this_solve_original_lp_time) / this_solve_time;
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "    : Solve original LP %8.2f (%3" HIGHSINT_FORMAT "%%)",
-                  this_solve_original_lp_time, pct);
-    }
-    highsLogDev(log_options, HighsLogType::kInfo, "\n");
-    double rlv_time_difference =
-        fabs(sum_time - this_solve_time) / this_solve_time;
-    if (rlv_time_difference > 0.1) {
-      highsLogDev(log_options, HighsLogType::kInfo,
-                  "Strange: Solve time = %g; Sum times = %g: relative "
-                  "difference = %g\n",
-                  this_solve_time, sum_time, rlv_time_difference);
-    }
-  }
+  reportLpTimes(record);
+
   // Assess success according to the model status, regardless of
   // whether anything worse has happened earlier
   return_status = highsStatusFromHighsModelStatus(model_status_);
@@ -2210,6 +2143,72 @@ HighsStatus Highs::runICrash() {
   assert(options_.simplex_strategy == kSimplexStrategyPrimal);
 
   return HighsStatus::kOk;
+}
+
+void Highs::reportLpTimes(const OptimizeModelRecord& record) {
+  double solve_time = timer_.read() - record.initial_time;
+
+  HighsLogOptions& log_options = options_.log_options;
+  if (record.postsolve_iteration_count < 0) {
+    highsLogDev(log_options, HighsLogType::kInfo, "Postsolve  : \n");
+  } else {
+    highsLogDev(log_options, HighsLogType::kInfo,
+                "Postsolve  : %" HIGHSINT_FORMAT "\n",
+                record.postsolve_iteration_count);
+  }
+  if (solve_time > 0)
+    highsLogDev(log_options, HighsLogType::kInfo, "Time           : %8.2f\n",
+                solve_time);
+  if (record.presolve_time > 0)
+    highsLogDev(log_options, HighsLogType::kInfo, "Time Pre       : %8.2f\n",
+                record.presolve_time);
+  if (record.solve_presolved_lp_time > 0)
+    highsLogDev(log_options, HighsLogType::kInfo, "Time PreLP     : %8.2f\n",
+                record.solve_presolved_lp_time);
+  if (record.solve_original_lp_time > 0)
+    highsLogDev(log_options, HighsLogType::kInfo, "Time OriginalLP: %8.2f\n",
+                record.solve_original_lp_time);
+  if (solve_time > 0) {
+    highsLogDev(log_options, HighsLogType::kInfo, "For LP %16s",
+                model_.lp_.model_name_.c_str());
+    double sum_time = 0;
+    if (record.presolve_time > 0) {
+      sum_time += record.presolve_time;
+      HighsInt pct = (100 * record.presolve_time) / solve_time;
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "    : Presolve %8.2f (%3" HIGHSINT_FORMAT "%%)",
+                  record.presolve_time, pct);
+    }
+    if (record.solve_presolved_lp_time > 0) {
+      sum_time += record.solve_presolved_lp_time;
+      HighsInt pct = (100 * record.solve_presolved_lp_time) / solve_time;
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "    : Solve presolved LP %8.2f (%3" HIGHSINT_FORMAT "%%)",
+                  record.solve_presolved_lp_time, pct);
+    }
+    if (record.postsolve_time > 0) {
+      sum_time += record.postsolve_time;
+      HighsInt pct = (100 * record.postsolve_time) / solve_time;
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "    : Postsolve %8.2f (%3" HIGHSINT_FORMAT "%%)",
+                  record.postsolve_time, pct);
+    }
+    if (record.solve_original_lp_time > 0) {
+      sum_time += record.solve_original_lp_time;
+      HighsInt pct = (100 * record.solve_original_lp_time) / solve_time;
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "    : Solve original LP %8.2f (%3" HIGHSINT_FORMAT "%%)",
+                  record.solve_original_lp_time, pct);
+    }
+    highsLogDev(log_options, HighsLogType::kInfo, "\n");
+    double rlv_time_difference = fabs(sum_time - solve_time) / solve_time;
+    if (rlv_time_difference > 0.1) {
+      highsLogDev(log_options, HighsLogType::kInfo,
+                  "Strange: Solve time = %g; Sum times = %g: relative "
+                  "difference = %g\n",
+                  solve_time, sum_time, rlv_time_difference);
+    }
+  }
 }
 
 HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,

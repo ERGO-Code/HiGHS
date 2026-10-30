@@ -1399,7 +1399,19 @@ class Highs {
   HighsStatus optimizeModelTryCatch();
   HighsStatus calledOptimizeModel();
 
+  // Phases of calledOptimizeModel
+
+  struct OptimizeModelRecord {
+    double initial_time = -1;
+    double presolve_time = -1;
+    double solve_presolved_lp_time = -1;
+    double postsolve_time = -1;
+    double solve_original_lp_time = -1;
+    HighsInt postsolve_iteration_count = -1;
+  };
+
   HighsStatus runICrash();
+  void reportLpTimes(const OptimizeModelRecord& record);
 
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
