@@ -1484,25 +1484,17 @@ HighsStatus Highs::calledOptimizeModel() {
   if (model_.isQp()) {
     return_status = optimizeModelQp(return_status, undo_mods);
     return returnFromOptimizeModel(return_status, undo_mods);
-
   } else if (model_.isMip()) {
-    // Model is MIP
-    if (options_.solve_relaxation) {
-      // Solving just the relaxation, so relax any semi-variables
-      bool made_semi_variable_mods = false;
-      relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-      undo_mods = undo_mods || made_semi_variable_mods;
-      highsLogUser(options_.log_options, HighsLogType::kInfo,
-                   "Solving LP relaxation since solve_relaxation is true\n");
-    } else {
-      // Solve model as a MIP
-      if (!solverValidForMip(options_.solver))
-        warnSolverInvalid(options_, "MIP");
-      call_status = callSolveMip(model_.lp_, "Solve incumbent MIP");
-      return_status = interpretCallStatus(options_.log_options, call_status,
-                                          return_status, "callSolveMip");
+    if (!options_.solve_relaxation) {
+      return_status = optimizeModelMip(return_status);
       return returnFromOptimizeModel(return_status, undo_mods);
     }
+    // Solving just the relaxation, so relax any semi-variables
+    bool made_semi_variable_mods = false;
+    relaxSemiVariables(model_.lp_, made_semi_variable_mods);
+    undo_mods = undo_mods || made_semi_variable_mods;
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Solving LP relaxation since solve_relaxation is true\n");
   }
 
   // Solve the model as an LP
@@ -2114,6 +2106,13 @@ HighsStatus Highs::optimizeModelQp(const HighsStatus from_return_status,
   }
   return interpretCallStatus(options_.log_options, call_status,
                              from_return_status, "callSolveQp");
+}
+
+HighsStatus Highs::optimizeModelMip(const HighsStatus from_return_status) {
+  if (!solverValidForMip(options_.solver)) warnSolverInvalid(options_, "MIP");
+  HighsStatus call_status = callSolveMip(model_.lp_, "Solve incumbent MIP");
+  return interpretCallStatus(options_.log_options, call_status,
+                             from_return_status, "callSolveMip");
 }
 
 HighsStatus Highs::runICrash() {

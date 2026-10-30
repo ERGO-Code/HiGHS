@@ -1412,8 +1412,7 @@ class Highs {
 
   HighsStatus optimizeModelQp(const HighsStatus from_return_status,
                               bool& undo_mods);
-  HighsStatus optimizeModelMip(const HighsStatus from_return_status,
-                               bool& undo_mods);
+  HighsStatus optimizeModelMip(const HighsStatus from_return_status);
 
   HighsStatus runICrash();
   void reportLpTimes(const OptimizeModelRecord& record);
