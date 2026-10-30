@@ -17,47 +17,45 @@
 #include <cstdint>
 #include <vector>
 
+#include "mip/HighsTransformedLp.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsRandom.h"
 #include "util/HighsType.h"
 
 class HighsLpRelaxation;
-class HighsTransformedLp;
 class HighsCutPool;
 class HighsDomain;
 
-/// Helper class to compute single-row relaxations from the current LP
-/// relaxation by substituting bounds and aggregating rows
+/// Helper class to generate cuts from base inequalities in the transformed
+/// space and to add them to the cut pool
 class HighsCutGeneration {
  private:
+  using Row = HighsTransformedLp::Row;
+  using TransformedVar = HighsTransformedLp::TransformedVar;
+  using TransformedRow = HighsTransformedLp::TransformedRow;
+
   const HighsLpRelaxation& lpRelaxation;
   HighsCutPool& cutpool;
   HighsRandom randgen;
   std::vector<HighsInt> cover;
-  HighsCDouble coverweight;
   HighsCDouble lambda;
-  std::vector<double> upper;
-  std::vector<double> solval;
-  std::vector<HighsBool> complementation;
-  std::vector<HighsBool> isintegral;
   const double feastol;
   const double epsilon;
 
-  double* vals;
-  HighsInt* inds;
-  HighsCDouble rhs;
   bool integralSupport;
   bool integralCoefficients;
-  HighsInt rowlen;
   double initialScale;
 
   std::vector<HighsInt> integerinds;
   std::vector<double> deltas;
 
-  std::vector<double> tmpVals;
-  std::vector<HighsInt> tmpInds;
-  std::vector<HighsBool> tmpComplementation;
-  std::vector<double> tmpSolval;
+  // base inequality in the transformed space, overwritten in place by the cut,
+  // and a copy used in tryGenerateCut
+  TransformedRow cut;
+  TransformedRow tmpCut;
+
+  // cut in the original space
+  Row cutRow;
 
   bool determineCover(bool lpSol = true);
 
@@ -70,22 +68,21 @@ class HighsCutGeneration {
   bool cmirCutGenerationHeuristic(double minEfficacy,
                                   bool onlyInitialCMIRScale = false);
 
-  double scale(double val);
+  bool postprocessCut(Row& row, const HighsDomain& globaldom);
 
-  bool postprocessCut(const HighsDomain& globaldom);
+  bool postprocessAndAddCut(Row& row, const HighsDomain& globaldom,
+                            bool checkViolation = true,
+                            bool isConflict = false);
 
   bool preprocessBaseInequality(bool& hasUnboundedInts, bool& hasGeneralInts,
                                 bool& hasContinuous);
 
-  void flipComplementation(HighsInt index);
+  template <typename T>
+  void updateViolationAndNorm(const TransformedVar& var, T aj,
+                              HighsCDouble& violation,
+                              HighsCDouble& norm) const;
 
-  void removeComplementation();
-
-  void updateViolationAndNorm(HighsInt index, double aj, double& violation,
-                              double& norm) const;
-
-  bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
-                      bool hasUnboundedInts, bool hasGeneralInts,
+  bool tryGenerateCut(bool hasUnboundedInts, bool hasGeneralInts,
                       bool hasContinuous, double minEfficacy,
                       bool onlyInitialCMIRScale = false,
                       bool allowRejectCut = true, bool lpSol = true);
@@ -95,22 +92,22 @@ class HighsCutGeneration {
                      HighsCutPool& cutpool);
 
   /// separates the LP solution for the given single row relaxation
-  bool generateCut(HighsTransformedLp& transLp, std::vector<HighsInt>& inds,
-                   std::vector<double>& vals, double& rhs,
+  bool generateCut(HighsTransformedLp& transLp,
+                   const std::vector<HighsInt>& inds,
+                   const std::vector<double>& vals, double rhs,
                    bool onlyInitialCMIRScale = false);
 
   /// generate a conflict from the given proof constraint which cuts of the
   /// given local domain
   bool generateConflict(const HighsDomain& localdom,
                         const HighsDomain& globaldom,
-                        std::vector<HighsInt>& proofinds,
-                        std::vector<double>& proofvals, double& proofrhs);
+                        const std::vector<HighsInt>& proofinds,
+                        const std::vector<double>& proofvals, double proofrhs);
 
   /// applies postprocessing to an externally generated cut and adds it to the
   /// cutpool if it is violated enough
   bool finalizeAndAddCut(const HighsDomain& globaldom,
-                         std::vector<HighsInt>& inds, std::vector<double>& vals,
-                         double& rhs);
+                         HighsTransformedLp::Row& row);
 };
 
 #endif

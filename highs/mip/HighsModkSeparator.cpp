@@ -81,13 +81,11 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   vals.reserve(lp.num_col_);
   scaleVals.reserve(lp.num_col_);
 
-  std::vector<double> upper;
-  std::vector<double> solval;
-  double rhs;
+  HighsTransformedLp::TransformedRow transformedRow;
 
   const HighsSolution& lpSolution = lpRelaxation.getSolution();
   HighsInt numNonzeroRhs = 0;
-  HighsInt maxIntRowLen = 1000 + 0.1 * lp.num_col_;
+  HighsInt maxIntRowLen = 1000 + lp.num_col_ / 10;
 
   for (HighsInt row = 0; row != lp.num_row_; ++row) {
     if (skipRow[row]) continue;
@@ -109,32 +107,31 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     lpRelaxation.getRow(row, rowlen, rowinds, rowvals);
 
+    const double rowRhs = leqRow ? lp.row_upper_[row] : -lp.row_lower_[row];
     if (leqRow) {
-      rhs = lp.row_upper_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.assign(rowvals, rowvals + rowlen);
     } else {
       assert(lpSolution.row_value[row] - lp.row_lower_[row] <=
              mipsolver.mipdata_->feastol);
 
-      rhs = -lp.row_lower_[row];
       inds.assign(rowinds, rowinds + rowlen);
       vals.resize(rowlen);
       std::transform(rowvals, rowvals + rowlen, vals.begin(),
                      [](double x) { return -x; });
     }
 
-    bool integralPositive = false;
-    if (!transLp.transform(vals, upper, solval, inds, rhs, integralPositive,
+    bool integersPositive = false;
+    if (!transLp.transform(inds, vals, rowRhs, transformedRow, integersPositive,
                            true))
       continue;
+    const double rhs = static_cast<double>(transformedRow.rhs);
 
-    rowlen = inds.size();
-    if (rowlen > maxIntRowLen) {
+    if (static_cast<HighsInt>(transformedRow.vars.size()) > maxIntRowLen) {
       HighsInt intRowLen = 0;
-      for (HighsInt i = 0; i < rowlen; ++i) {
-        if (solval[i] <= mipsolver.mipdata_->feastol) continue;
-        if (mipsolver.isColContinuous(inds[i])) continue;
+      for (const auto& var : transformedRow.vars) {
+        if (var.solval <= mipsolver.mipdata_->feastol) continue;
+        if (mipsolver.isColContinuous(var.col)) continue;
         ++intRowLen;
       }
 
@@ -149,10 +146,10 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
     if (!lpRelaxation.isRowIntegral(row)) {
       scaleVals.clear();
-      for (HighsInt i = 0; i != rowlen; ++i) {
-        if (mipsolver.isColContinuous(inds[i])) continue;
-        if (solval[i] > mipsolver.mipdata_->feastol) {
-          scaleVals.push_back(vals[i]);
+      for (const auto& var : transformedRow.vars) {
+        if (mipsolver.isColContinuous(var.col)) continue;
+        if (var.solval > mipsolver.mipdata_->feastol) {
+          scaleVals.push_back(var.val);
         }
       }
 
@@ -165,22 +162,22 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
 
       intrhs = HighsIntegers::nearestInteger(intscale * rhs);
 
-      for (HighsInt i = 0; i != rowlen; ++i) {
-        if (mipsolver.isColContinuous(inds[i])) continue;
-        if (solval[i] > mipsolver.mipdata_->feastol) {
-          intSystemIndex.push_back(inds[i]);
+      for (const auto& var : transformedRow.vars) {
+        if (mipsolver.isColContinuous(var.col)) continue;
+        if (var.solval > mipsolver.mipdata_->feastol) {
+          intSystemIndex.push_back(var.col);
           intSystemValue.push_back(
-              HighsIntegers::nearestInteger(intscale * vals[i]));
+              HighsIntegers::nearestInteger(intscale * var.val));
         }
       }
     } else {
       intscale = 1.0;
       intrhs = HighsIntegers::nearestInteger(rhs);
 
-      for (HighsInt i = 0; i != rowlen; ++i) {
-        if (solval[i] > mipsolver.mipdata_->feastol) {
-          intSystemIndex.push_back(inds[i]);
-          intSystemValue.push_back(HighsIntegers::nearestInteger(vals[i]));
+      for (const auto& var : transformedRow.vars) {
+        if (var.solval > mipsolver.mipdata_->feastol) {
+          intSystemIndex.push_back(var.col);
+          intSystemValue.push_back(HighsIntegers::nearestInteger(var.val));
         }
       }
     }
@@ -194,9 +191,6 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
   }
 
   if (integralScales.empty() || numNonzeroRhs == 0) return;
-
-  std::vector<HighsInt> tmpinds;
-  std::vector<double> tmpvals;
 
   HighsHashTable<std::vector<HighsGFkSolve::SolutionEntry>> usedWeights;
   // std::unordered_set<std::vector<HighsGFkSolve::SolutionEntry>,
@@ -215,29 +209,28 @@ void HighsModkSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
     assert(lpAggregator.isEmpty());
     for (const auto& w : weights) {
       double weight = integralScales[w.index].second *
-                      (double((w.weight * (k - 1)) % k) / k);
+                      (static_cast<double>((w.weight * (k - 1)) % k) / k);
       HighsInt row = integralScales[w.index].first;
       lpAggregator.addRow(row, weight);
     }
 
     lpAggregator.getCurrentAggregation(inds, vals, false);
-
-    rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs, true);
+    // the aggregation of rows (including their slacks) has right-hand side 0
+    cutGen.generateCut(transLp, inds, vals, 0.0, true);
 
     if (k != 2) {
       lpAggregator.clear();
       for (const auto& w : weights) {
-        double weight = integralScales[w.index].second * (double(w.weight) / k);
+        double weight = integralScales[w.index].second *
+                        (static_cast<double>(w.weight) / k);
         HighsInt row = integralScales[w.index].first;
         lpAggregator.addRow(row, weight);
       }
     }
 
     lpAggregator.getCurrentAggregation(inds, vals, true);
-
-    rhs = 0.0;
-    cutGen.generateCut(transLp, inds, vals, rhs, true);
+    // the aggregation of rows (including their slacks) has right-hand side 0
+    cutGen.generateCut(transLp, inds, vals, 0.0, true);
 
     lpAggregator.clear();
   };
