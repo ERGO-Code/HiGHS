@@ -28,8 +28,6 @@ GK_MKALLOC_PROTO(ikv, ikv_t)
 GK_MKALLOC_PROTO(rkv, rkv_t)
 GK_MKPQUEUE_PROTO(rpq, rpq_t, real_t, idx_t)
 GK_MKRANDOM_PROTO(i, idx_t, idx_t)
-void isortd(size_t n, idx_t *base);
-void ikvsorti(size_t n, ikv_t *base);
 
 
 #endif

@@ -68,7 +68,7 @@ class HVectorBase {
    */
   void reIndex();
 
-  bool packFlag;               //!< Flag to indicate whether to pack or not
+  bool packFlag = false;       //!< Flag to indicate whether to pack or not
   HighsInt packCount;          //!< Number of nonzeros packed
   vector<HighsInt> packIndex;  //!< Packed indices
   vector<Real> packValue;      //!< Packed values
