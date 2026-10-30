@@ -1419,7 +1419,6 @@ bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
     return true;
   };
 
-  HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   // Initialise the HiGHS model status
   model_status_ = HighsModelStatus::kNotset;
@@ -1439,7 +1438,7 @@ bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
   // bounds, modifying any bounds with tiny infeasibilities
   if (processedBoundsFindsInfeasibility()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
-    return returnAndStop(return_status);
+    return returnAndStop(HighsStatus::kOk);
   }
   // Ensure that the LP (and any simplex LP) has the matrix column-wise
   model_.lp_.ensureColwise();
@@ -1458,16 +1457,15 @@ bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
     // If any errors have been found or normalisation carried out,
     // call_status will be kError or kWarning, so only valid return is OK.
     assert(call_status == HighsStatus::kOk);
-    return_status = interpretCallStatus(options_.log_options, call_status,
-                                        return_status, "assessLp");
-    if (return_status == HighsStatus::kError)
-      return returnAndStop(return_status);
+
+    if (interpretCallStatus(options_.log_options, call_status, context.status,
+                            "assessLp") == HighsStatus::kError)
+      return returnAndStop(HighsStatus::kError);
     // Shouldn't have to check that the options settings are legal,
     // since they are checked when modified
     if (checkOptions(options_.log_options, options_.records) !=
         OptionStatus::kOk) {
-      return_status = HighsStatus::kError;
-      return returnAndStop(return_status);
+      return returnAndStop(HighsStatus::kError);
     }
   }
 
