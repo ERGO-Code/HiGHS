@@ -1399,24 +1399,6 @@ class Highs {
   HighsStatus optimizeModelTryCatch();
   HighsStatus calledOptimizeModel();
 
-  // Phases of calledOptimizeModel
-
-  struct OptimizeModelRecord {
-    double initial_time = -1;
-    double presolve_time = -1;
-    double solve_presolved_lp_time = -1;
-    double postsolve_time = -1;
-    double solve_original_lp_time = -1;
-    HighsInt postsolve_iteration_count = -1;
-  };
-
-  HighsStatus optimizeModelQp(const HighsStatus from_return_status,
-                              bool& undo_mods);
-  HighsStatus optimizeModelMip(const HighsStatus from_return_status);
-
-  HighsStatus runICrash();
-  void reportLpTimes(const OptimizeModelRecord& record);
-
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
   }
@@ -1698,6 +1680,21 @@ class Highs {
   }
 
   HighsStatus completeSolutionFromDiscreteAssignment();
+
+  // Phases of calledOptimizeModel
+  struct OptimizeModelContext {
+    double initial_time = -1;
+    double presolve_time = -1;
+    double solve_presolved_lp_time = -1;
+    double postsolve_time = -1;
+    double solve_original_lp_time = -1;
+    HighsInt postsolve_iteration_count = -1;
+  };
+  HighsStatus optimizeModelQp(const HighsStatus from_return_status,
+                              bool& undo_mods);
+  HighsStatus optimizeModelMip(const HighsStatus from_return_status);
+  HighsStatus optimizeModelICrash();
+  void optimizeModelReportTimes(const OptimizeModelContext& record);
 
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
   HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
