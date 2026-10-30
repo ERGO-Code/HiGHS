@@ -273,5 +273,5 @@ TEST_CASE("test-hipo-serial-blas", "[highs_hipo]") {
   }
 
   HighsExtras::blas::openblas_set_num_threads(initial_threads);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

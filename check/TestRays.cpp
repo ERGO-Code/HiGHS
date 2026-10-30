@@ -962,7 +962,7 @@ TEST_CASE("Rays-2415", "[highs_test_rays]") {
   REQUIRE(h.getInfo().primal_solution_status != kSolutionStatusFeasible);
   REQUIRE(h.getInfo().primal_solution_status == kSolutionStatusNone);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
@@ -1009,7 +1009,7 @@ TEST_CASE("Rays-2415-primal", "[highs_test_rays]") {
     if (dev_run) printf("\nFor unbounded MIP\n");
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3413", "[highs_test_rays]") {
@@ -1073,5 +1073,5 @@ TEST_CASE("issue-3413", "[highs_test_rays]") {
   h.getPrimalRay(has_primal_ray, primal_ray_value.data());
   REQUIRE(primal_ray_value[0] == 0);
   REQUIRE(primal_ray_value[1] == 1);
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

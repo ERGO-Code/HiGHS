@@ -1448,7 +1448,6 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Model status changed from \"Unknown\" to \"Optimal\"\n");
   }
-  highsLogUser(log_options, HighsLogType::kInfo, "\n");
   return;
 }
 
