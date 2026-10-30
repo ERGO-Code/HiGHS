@@ -745,3 +745,21 @@ TEST_CASE("issue-3317", "[highs_check_solution]") {
 
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3499", "[highs_check_solution]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string sol_file = test_name + ".sol";
+
+  FILE* file = fopen(sol_file.c_str(), "w");
+  REQUIRE(file != nullptr);
+  std::string file_content =
+      "Model status\nOptimal\n\n# Primal solution values\nFeasible\nObjective "
+      "2\n";
+  fprintf(file, "%s", file_content.c_str());
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readSolution(sol_file) == HighsStatus::kError);
+
+  std::remove(sol_file.c_str());
+}

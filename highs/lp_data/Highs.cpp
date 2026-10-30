@@ -201,6 +201,7 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
 }
 
 HighsStatus Highs::resetOptions() {
+  this->logHeader();
   resetLocalOptions(options_.records);
   return optionChangeAction();
 }
@@ -235,8 +236,14 @@ HighsStatus Highs::writeOptions(const std::string& filename,
 
 HighsStatus Highs::getOptionName(const HighsInt index,
                                  std::string* name) const {
-  if (index < 0 || index >= HighsInt(this->options_.records.size()))
+  HighsInt num_option = this->options_.records.size();
+  if (index < 0 || index >= num_option) {
+    highsLogUser(
+        options_.log_options, HighsLogType::kInfo,
+        "Index %d passed to getOptionName is not in the valid range [0, %d)\n",
+        int(index), int(num_option));
     return HighsStatus::kError;
+  }
   *name = this->options_.records[index]->name;
   return HighsStatus::kOk;
 }
@@ -2312,6 +2319,7 @@ HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
 }
 
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
+  this->logHeader();
   HighsProfiling profiling;
   const bool already_profiling = this->profiling_;
   if (!already_profiling) this->initializeSingleThreadedProfiling(&profiling);
@@ -2327,6 +2335,7 @@ HighsStatus Highs::feasibilityRelaxation(const double global_lower_penalty,
                                          const double* local_lower_penalty,
                                          const double* local_upper_penalty,
                                          const double* local_rhs_penalty) {
+  this->logHeader();
   std::vector<HighsInt> infeasible_row_subset;
   return elasticityFilter(global_lower_penalty, global_upper_penalty,
                           global_rhs_penalty, local_lower_penalty,
@@ -2337,6 +2346,7 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
                                       const bool constraint,
                                       const HighsInt method,
                                       const double ill_conditioning_bound) {
+  this->logHeader();
   if (!basis_.valid) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Cannot get ill-conditioning without a valid basis\n");
@@ -2359,6 +2369,7 @@ HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
 }
 
 HighsStatus Highs::getIis(HighsIis& iis) {
+  this->logHeader();
   HighsStatus return_status = this->getIisInterface();
   iis = this->iis_;
   return return_status;
@@ -3787,6 +3798,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
 
 HighsStatus Highs::readSolution(const std::string& filename,
                                 const HighsInt style) {
+  this->logHeader();
   return readSolutionFile(filename, options_, model_.lp_, basis_, solution_,
                           style);
 }
