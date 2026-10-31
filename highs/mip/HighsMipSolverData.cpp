@@ -857,38 +857,17 @@ void HighsMipSolverData::checkAddSolution() {
     for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
       mipsolver_quad_objective_value +=
           static_cast<HighsCDouble>(mipsolver.model_->col_cost_[iCol] * incumbent[iCol]);
-    double mipsolver_objective_value = double(mipsolver_quad_objective_value);
-    mipsolver_objective_value *= (int)mipsolver.orig_model_->sense_;
-    double solobj = mipsolver_objective_value * (int)mipsolver.orig_model_->sense_ -
-      mipsolver.model_->offset_;
-    double original_solobj =
+    mipsolver_quad_objective_value *= (int)mipsolver.orig_model_->sense_;
+    mipsolver.solution_objective_ = double(mipsolver_quad_objective_value);
+    double solobj =
         mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
         mipsolver.model_->offset_;
-    printf("HighsMipSolverData::checkAddSolution: restart %d: "
-	   "\n   mipsolver_objective_value %.12g; "
-	   "\n   solution_objective_       %.12g; "
-	   "\n   sense_ = %d; "
-	   "\n   offset                    %.12g; "
-	   "\n   solobj                    %.12g"
-	   "\n   original_solobj           %.12g\n", int(numRestarts),
-	   mipsolver_objective_value,
-	   mipsolver.solution_objective_,
-	   (int)mipsolver.orig_model_->sense_,
-	   mipsolver.model_->offset_,
-	   solobj,
-	   original_solobj);
-    //    assert(solobj == original_solobj);    solobj = original_solobj;
-    mipsolver.solution_objective_ = mipsolver_objective_value;
     bool feasible = mipsolver.bound_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance &&
                     mipsolver.integrality_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance &&
                     mipsolver.row_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance;
-    printf("HighsMipSolverData::checkAddSolution: "
-	   "\n   Start solution has offset %.12g"
-	   "\n   objective                 %.12g\n",
-	   mipsolver.model_->offset_, mipsolver.solution_objective_);
     if (numRestarts == 0) {
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "\nMIP start solution is %s%s: objective value is %.12g\n",
