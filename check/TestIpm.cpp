@@ -278,3 +278,27 @@ TEST_CASE("test-3397", "[highs_ipm]") {
     h.resetThreadScheduler(true);
   }
 }
+
+TEST_CASE("test-3512", "[highs_ipm]") {
+  const std::vector<std::string> models = {"3512-feasible", "3512-solve-error", "3512-dual-cancellation"};
+  const std::vector<double> objectives = {0, -499999991, 128};
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+    h.setOptionValue("solver", kIpxString);
+  HighsInt num_models = models.size();
+  for (HighsInt iModel = 0; iModel < num_models; iModel++) {
+    std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/" + models[iModel] + ".lp";
+    REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    double objective = h.getObjectiveValue();
+    double objective_error = std::fabs(objective - objectives[iModel]) / (1+std::fabs(objective));
+    REQUIRE(objective_error < 1e-8);
+  }
+  
+  h.resetThreadScheduler(true);
+  
+}
+
+    
