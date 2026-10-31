@@ -18,6 +18,7 @@
 #include "pdlp/HiPdlpWrapper.h"
 #include "qpsolver/QpAsmWrapper.h"
 #include "simplex/HApp.h"
+#include "util/HighsUndoStack.h"
 
 #define SOLVE_CATCH_CALL(Solve, SolveString)                                  \
   do {                                                                        \
@@ -971,8 +972,8 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   HighsModelStatus& model_status = solver_object.model_status_;
 
   // Run the MIP solver
-  HighsInt log_dev_level = options.log_dev_level;
-  //  options.log_dev_level = kHighsLogDevLevelInfo;
+  HighsUndoStack options_undo;
+  //  options_undo.set(options.log_dev_level, kHighsLogDevLevelInfo);
   // Check that the model isn't row-wise
   assert(lp.a_matrix_.format_ != MatrixFormat::kRowwise);
   const bool has_semi_variables = lp.hasSemiVariables();
@@ -1000,7 +1001,7 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
     solver.modelstatus_ = HighsModelStatus::kSolveError;
   }
   profiling->stop(kSubSolverMip);
-  options.log_dev_level = log_dev_level;
+  options_undo.reset();
   // Set the return_status, model status and, for completeness, scaled
   // model status
   HighsStatus return_status =
@@ -1040,13 +1041,12 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   // Remember to judge primal feasibility according to
   // mip_feasibility_tolerance, so take a copy of the original
   // value...
-  const double primal_feasibility_tolerance =
-      options.getMipPrimalFeasibilityTolerance();
-  options.primal_feasibility_tolerance = primal_feasibility_tolerance;
+  options_undo.set(options.primal_feasibility_tolerance,
+                   options.getMipPrimalFeasibilityTolerance());
   // NB getKktFailures sets the primal and dual solution status
   getLpKktFailures(options, lp, solution, basis, info);
   // Recover the primal feasibility tolerance
-  options.primal_feasibility_tolerance = primal_feasibility_tolerance;
+  options_undo.reset();
   // Set the MIP-specific values of info
   info.mip_node_count = solver.node_count_;
   info.mip_dual_bound = solver.dual_bound_;

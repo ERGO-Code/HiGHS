@@ -4383,8 +4383,8 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   if (call_run) {
     // Solve the model, using mip_max_start_nodes for
     // mip_max_nodes...
-    const HighsInt mip_max_nodes = options_.mip_max_nodes;
-    options_.mip_max_nodes = options_.mip_max_start_nodes;
+    HighsUndoStack options_undo;
+    options_undo.set(options_.mip_max_nodes, options_.mip_max_start_nodes);
     // Solve the model
     basis_.clear();
     if (this->profiling_) {
@@ -4396,7 +4396,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     // Reset any profiling data
     if (this->profiling_) this->resetProfiling();
     // ... remembering to recover the original value of mip_max_nodes
-    options_.mip_max_nodes = mip_max_nodes;
+    options_undo.reset();
   }
   // Recover the column bounds and integrality
   lp.col_lower_ = save_col_lower;
@@ -4629,11 +4629,11 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
       if (basis_.valid) {
         // Save the options to allow the best simplex strategy to be
         // used
-        HighsOptions save_options = options_;
-        options_.simplex_strategy = kSimplexStrategyChoose;
+        HighsUndoStack options_undo;
+        options_undo.set(options_.simplex_strategy, kSimplexStrategyChoose);
         // Ensure that the parallel solver isn't used
-        options_.simplex_min_concurrency = 1;
-        options_.simplex_max_concurrency = 1;
+        options_undo.set(options_.simplex_min_concurrency, 1);
+        options_undo.set(options_.simplex_max_concurrency, 1);
         // Use any pivot threshold resulting from solving the presolved LP
         // if (factor_pivot_threshold > 0)
         //    options_.factor_pivot_threshold = factor_pivot_threshold;
@@ -4653,7 +4653,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         return_status = interpretCallStatus(options_.log_options, call_status,
                                             return_status, "callSolveLp");
         // Recover the options
-        options_ = save_options;
+        options_undo.reset();
         const bool is_qp = this->model_.isQp();
         assert(!is_qp);
         const bool get_residuals = true;
