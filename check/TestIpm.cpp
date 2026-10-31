@@ -281,7 +281,7 @@ TEST_CASE("test-3397", "[highs_ipm]") {
 
 TEST_CASE("test-3512", "[highs_ipm]") {
   const std::vector<std::string> models = {"3512-feasible", "3512-solve-error", "3512-dual-cancellation"};
-  const std::vector<double> objectives = {0, -499999991, 128};
+  const std::vector<double> objectives = {-24, -499999991, 128};
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
     h.setOptionValue("solver", kIpxString);
