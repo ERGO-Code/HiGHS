@@ -2640,57 +2640,6 @@ TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
 
 TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
   HighsLp lp;
-  lp.num_col_ = 2;
-  lp.num_row_ = 2;
-  lp.sense_ = ObjSense::kMaximize;
-  lp.col_cost_ = {10, 25};
-  lp.col_lower_ = {0, 0};
-  lp.col_upper_ = {inf, inf};
-  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
-  lp.row_lower_ = {0, 0};
-  lp.row_upper_ = {80, 120};
-  lp.a_matrix_.start_ = {0, 2, 4};
-  lp.a_matrix_.index_ = {0, 1, 0, 1};
-  lp.a_matrix_.value_ = {1, 1, 2, 4};
-
-  lp.col_names_ = {"Tables", "Sets-of-chairs"};
-  lp.row_names_ = {"Assembly", "Finishing"};
-
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
-  
-  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(h.getObjectiveValue() == 900);
-  HighsSolution start;
-  start.col_value = h.getSolution().col_value;
-
-  // Add a column to the model corresponding to employing an extra
-  // assembler and finisher (both 40 hours at a total cost of 360).
-  double cost = -360;
-  std::vector<HighsInt> index = {0, 1};
-  std::vector<double> value = {-40, -40};
-  REQUIRE(h.addCol(cost, 0, 1, 2, index.data(), value.data()) == HighsStatus::kOk);
-  REQUIRE(h.changeColIntegrality(2, HighsVarType::kInteger) == HighsStatus::kOk);
-  REQUIRE(h.passColName(2, "Employ-extra-assembler-and-finisher") == HighsStatus::kOk);
-  // Although it's worth employing an extra assembler and finisher -
-  // identified in presolve, so there is an offset in the presolved
-  // MIP - start from the original optimal solution without employing
-  // an extra assembler and finisher
-  start.col_value.push_back(0);
-  REQUIRE(h.setSolution(start) == HighsStatus::kOk);
-
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(h.getObjectiveValue() == 940);
-  
-   h.resetThreadScheduler(true);
-
-}
-
-TEST_CASE("issue-3510a", "[highs_test_mip_solver]") {
-  HighsLp lp;
   lp.num_col_ = 6;
   lp.num_row_ = 5;
   lp.col_cost_ = {0, 0, 0, 0, 0, 1e6};
@@ -2745,3 +2694,99 @@ TEST_CASE("issue-3510a", "[highs_test_mip_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3510a", "[highs_test_mip_solver]") {
+  // Although this test doesn't yield a failure without the fix, it
+  // illustrates very clearly that when the start solution contradicts
+  // values fixed in presolve,
+  //
+  // 1. The objective from the start solution can be the wrong value
+  // to use as the objective in the original space for the incumbent
+  //
+  // 2. The start solution may be feasible in the original space, but
+  // not in the reduced space
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {0, 0};
+  lp.row_upper_ = {80, 120};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4};
+
+  lp.col_names_ = {"Tables", "Sets-of-chairs"};
+  lp.row_names_ = {"Assembly", "Finishing"};
+
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  // Optimal solution is (40, 20) with objective 900
+  REQUIRE(h.getObjectiveValue() == 900);
+  //  if (dev_run)
+    h.writeSolution("", 1);
+  // Extract the optimal solution to be used to construct a start
+  // solution for the modified problem
+  HighsSolution start;
+  start.col_value = h.getSolution().col_value;
+
+  // Add a column to the model corresponding to employing an extras
+  // assembler and finisher (both 40 hours at a total cost of 360).
+  HighsInt employ_extras = lp.num_col_;
+  double cost = -360;
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {-40, -40};
+  REQUIRE(h.addCol(cost, 0, 1, 2, index.data(), value.data()) == HighsStatus::kOk);
+  REQUIRE(h.changeColIntegrality(employ_extras, HighsVarType::kInteger) == HighsStatus::kOk);
+  REQUIRE(h.passColName(employ_extras, "Employ-extras") == HighsStatus::kOk);
+
+  // Although it's worth employing an extra assembler and finisher -
+  // identified in presolve, so there is an offset in the presolved
+  // MIP - start from the original optimal solution without employing
+  // an extra assembler and finisher
+  start.col_value.push_back(0);
+  REQUIRE(h.setSolution(start) == HighsStatus::kOk);
+
+  // The start solution (40, 20, 0) in the original space corresponds
+  // to (40, 20) in the reduced space since Employ-extras is fixed to
+  // 1 in presolve. However, (40, 20) in the reduced space corresponds
+  // to (40, 20, 1) in the original space. Hence the objective value
+  // of 900 for the starting solution (stated before presolve) is not
+  // correct in the reduced space. Its value should be 540, since the
+  // offset due to fixing Employ-extras to 1 must be applied. This is
+  // now done, and reported.
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getObjectiveValue() == 940);
+  //  if (dev_run)
+    h.writeSolution("", 1);
+
+  // Now change the cost so that it's not worth employing an extra
+  // assembler and finisher, but start from the previous optimal
+  // solution (). Employ-extras is fixed to 0 in presolve the reduced
+  // MIP is the initial 2-variable problem (above). Hence, although
+  // the start solution is feasible in the original space, it maps to
+  // () in the reduced space, so is infeasible.
+  
+  start.col_value = h.getSolution().col_value;
+  
+  cost = -1e4;
+  REQUIRE(h.changeColCost(employ_extras, cost) == HighsStatus::kOk);
+
+  REQUIRE(h.setSolution(start) == HighsStatus::kOk);
+   REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  //  REQUIRE(h.getObjectiveValue() == 940);
+  //  if (dev_run)
+    h.writeSolution("", 1);
+ 
+  h.resetThreadScheduler(true);
+}
+
