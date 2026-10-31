@@ -1310,6 +1310,11 @@ HighsStatus Highs::calledOptimizeModel() {
   // and this is done with this->called_return_from_optimize_model
   //
 
+  // Any change to options_ during the optimization should be made via
+  // context.options_undo.set(options_.xxx, value). For a temporary change,
+  // take m = context.options_undo.mark() first and call
+  // context.options_undo.resetTo(m) when done. Changes still recorded are
+  // undone when context is destroyed, after returnFromOptimizeModel()
   OptimizeModelContext context;
 
   if (optimizeModelPreChecks(context)) return context.status;
@@ -1336,7 +1341,8 @@ bool Highs::optimizeModelPreChecks(OptimizeModelContext& context) {
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
   if (options_.highs_debug_level < context.min_highs_debug_level)
-    options_.highs_debug_level = context.min_highs_debug_level;
+    context.options_undo.set(options_.highs_debug_level,
+                             context.min_highs_debug_level);
 
   // As exposed by #1819, retaining the name hashes generated when
   // adding names using addColName/addRowName can lead to serious
@@ -1548,6 +1554,9 @@ void Highs::optimizeModelMip(OptimizeModelContext& context) {
 }
 
 void Highs::optimizeModelLp(OptimizeModelContext& context) {
+  HighsUndoStack& options_undo = context.options_undo;
+  size_t options_mark = 0;
+
   const bool possibly_use_log_dev_level_2 = false;
   const HighsInt log_dev_level = options_.log_dev_level;
   const bool output_flag = options_.output_flag;
@@ -1620,18 +1629,16 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
   auto timedSolveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
                           double& time) {
     time = -timer_.read(timer_.solve_clock);
+    options_mark = options_undo.mark();
     if (possibly_use_log_dev_level_2) {
-      options_.log_dev_level = use_log_dev_level;
-      options_.output_flag = use_output_flag;
+      options_undo.set(options_.log_dev_level, use_log_dev_level);
+      options_undo.set(options_.output_flag, use_output_flag);
     }
     timer_.start(timer_.solve_clock);
     const bool as_mip = false;
     call_status = callSolveLp(lp, lpSolveDescription);
     timer_.stop(timer_.solve_clock);
-    if (possibly_use_log_dev_level_2) {
-      options_.log_dev_level = log_dev_level;
-      options_.output_flag = output_flag;
-    }
+    options_undo.resetTo(options_mark);
     time += timer_.read(timer_.solve_clock);
   };
 
@@ -1778,8 +1785,8 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         ekk_instance_.lp_name_ = "Presolved LP";
         // Don't try dual cut-off when solving the presolved LP, as the
         // objective values aren't correct
-        const double save_objective_bound = options_.objective_bound;
-        options_.objective_bound = kHighsInf;
+        options_mark = options_undo.mark();
+        options_undo.set(options_.objective_bound, kHighsInf);
         timedSolveLp(reduced_lp, "Solving the presolved LP",
                      context.solve_presolved_lp_time);
         this->run_data_.solve_time = context.solve_presolved_lp_time;
@@ -1789,7 +1796,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
           factor_pivot_threshold = ekk_instance_.info_.factor_pivot_threshold;
         }
         // Restore the dual objective cut-off
-        options_.objective_bound = save_objective_bound;
+        options_undo.resetTo(options_mark);
         context.status = interpretCallStatus(options_.log_options, call_status,
                                              context.status, "callSolveLp");
         if (context.status == HighsStatus::kError) return;
@@ -1850,15 +1857,15 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         // Presolve has returned kUnboundedOrInfeasible, but HiGHS
         // can't return this. Use primal simplex solver on the original
         // LP
-        HighsOptions save_options = options_;
-        options_.solver = "simplex";
-        options_.simplex_strategy = kSimplexStrategyPrimal;
+        options_mark = options_undo.mark();
+        options_undo.set(options_.solver, "simplex");
+        options_undo.set(options_.simplex_strategy, kSimplexStrategyPrimal);
         timedSolveLp(incumbent_lp,
                      "Solving the original LP with primal simplex "
                      "to determine infeasible or unbounded",
                      context.solve_original_lp_time);
         // Recover the options
-        options_ = save_options;
+        options_undo.resetTo(options_mark);
         // Primal simplex doesn't necessarily resolve the
         // kUnboundedOrInfeasible case, as it may time out or reach
         // the iteration count (#3383), or even fail
@@ -2012,31 +2019,34 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
             // Possibly force debug to perform KKT check on what's
             // returned from postsolve
             const bool force_debug = false;
-            HighsInt save_highs_debug_level = options_.highs_debug_level;
+            options_mark = options_undo.mark();
             if (force_debug)
-              options_.highs_debug_level = kHighsDebugLevelCostly;
+              options_undo.set(options_.highs_debug_level,
+                               kHighsDebugLevelCostly);
             if (debugHighsSolution("After returning from postsolve", options_,
                                    model_, solution_,
                                    basis_) == HighsDebugStatus::kLogicalError) {
               context.status = HighsStatus::kError;
               return;
             }
-            options_.highs_debug_level = save_highs_debug_level;
+            options_undo.resetTo(options_mark);
           }
           // Save the options to allow the best simplex strategy to
           // be used
-          HighsOptions save_options = options_;
+          options_mark = options_undo.mark();
           const bool full_logging = false;
-          if (full_logging) options_.log_dev_level = kHighsLogDevLevelVerbose;
+          if (full_logging)
+            options_undo.set(options_.log_dev_level, kHighsLogDevLevelVerbose);
           // Force the use of simplex to clean up
-          options_.solver = kSimplexString;
-          options_.simplex_strategy = kSimplexStrategyChoose;
+          options_undo.set(options_.solver, kSimplexString);
+          options_undo.set(options_.simplex_strategy, kSimplexStrategyChoose);
           // Ensure that the parallel solver isn't used
-          options_.simplex_min_concurrency = 1;
-          options_.simplex_max_concurrency = 1;
+          options_undo.set(options_.simplex_min_concurrency, 1);
+          options_undo.set(options_.simplex_max_concurrency, 1);
           // Use any pivot threshold resulting from solving the presolved LP
           if (factor_pivot_threshold > 0)
-            options_.factor_pivot_threshold = factor_pivot_threshold;
+            options_undo.set(options_.factor_pivot_threshold,
+                             factor_pivot_threshold);
           // The basis returned from postsolve is just basic/nonbasic
           // and EKK expects a refined basis, so set it up now
           refineBasis(incumbent_lp, solution_, basis_);
@@ -2059,7 +2069,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
           context.status = interpretCallStatus(log_options, call_status,
                                                context.status, "callSolveLp");
           // Recover the options
-          options_ = save_options;
+          options_undo.resetTo(options_mark);
           if (context.status == HighsStatus::kError) return;
           this->run_data_.num_simplex_iterations_after_postsolve =
               context.postsolve_iteration_count;
@@ -2101,9 +2111,8 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         // both leading to model_status_ == HighsModelStatus::kUnknown,
         // so run PDLP on the original problem, starting from the
         // incumbent solution
-        const std::string solver = options_.solver;
-        const HighsInt pdlp_iteration_limit = options_.pdlp_iteration_limit;
-        assert(useIpm(solver) || solver == kPdlpString);
+        options_mark = options_undo.mark();
+        assert(useIpm(options_.solver) || options_.solver == kPdlpString);
         highsLogUser(
             log_options, HighsLogType::kInfo,
             "Unknown model status and no basis after initial solve "
@@ -2111,16 +2120,16 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
             "solve "
             "the original LP from the incumbent solution after postsolve\n",
             options_.kkt_tolerance, int(pdlp_cleanup_iteration_limit));
-        options_.solver = kPdlpString;
-        options_.pdlp_iteration_limit = pdlp_cleanup_iteration_limit;
+        options_undo.set(options_.solver, kPdlpString);
+        options_undo.set(options_.pdlp_iteration_limit,
+                         pdlp_cleanup_iteration_limit);
         timedSolveLp(
             incumbent_lp,
             "Using PDLP to solve the original LP from the solution after "
             "postsolve",
             context.solve_original_lp_time);
         // Recover solver and time limit option values
-        options_.solver = solver;
-        options_.pdlp_iteration_limit = pdlp_iteration_limit;
+        options_undo.resetTo(options_mark);
         context.status = HighsStatus::kOk;
         context.status = interpretCallStatus(log_options, call_status,
                                              context.status, "callSolveLp");

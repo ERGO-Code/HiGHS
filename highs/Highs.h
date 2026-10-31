@@ -22,6 +22,7 @@
 #include "model/HighsModel.h"
 #include "presolve/ICrash.h"
 #include "presolve/PresolveComponent.h"
+#include "util/HighsUndoStack.h"
 
 /**
  * @brief Return the version
@@ -1694,6 +1695,7 @@ class Highs {
 
     bool undo_mods = false;
     HighsStatus status = HighsStatus::kOk;
+    HighsUndoStack options_undo;
   };
   bool optimizeModelPreChecks(OptimizeModelContext& context);
   bool optimizeModelPrepare(OptimizeModelContext& context);
