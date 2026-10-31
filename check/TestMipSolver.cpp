@@ -2640,6 +2640,57 @@ TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
 
 TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
   HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {10, 25};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {0, 0};
+  lp.row_upper_ = {80, 120};
+  lp.a_matrix_.start_ = {0, 2, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 2, 4};
+
+  lp.col_names_ = {"Tables", "Sets-of-chairs"};
+  lp.row_names_ = {"Assembly", "Finishing"};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getObjectiveValue() == 900);
+  HighsSolution start;
+  start.col_value = h.getSolution().col_value;
+
+  // Add a column to the model corresponding to employing an extra
+  // assembler and finisher (both 40 hours at a total cost of 360).
+  double cost = -360;
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> value = {-40, -40};
+  REQUIRE(h.addCol(cost, 0, 1, 2, index.data(), value.data()) == HighsStatus::kOk);
+  REQUIRE(h.changeColIntegrality(2, HighsVarType::kInteger) == HighsStatus::kOk);
+  REQUIRE(h.passColName(2, "Employ-extra-assembler-and-finisher") == HighsStatus::kOk);
+  // Although it's worth employing an extra assembler and finisher -
+  // identified in presolve, so there is an offset in the presolved
+  // MIP - start from the original optimal solution without employing
+  // an extra assembler and finisher
+  start.col_value.push_back(0);
+  REQUIRE(h.setSolution(start) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getObjectiveValue() == 940);
+  
+   h.resetThreadScheduler(true);
+
+}
+
+TEST_CASE("issue-3510a", "[highs_test_mip_solver]") {
+  HighsLp lp;
   lp.num_col_ = 6;
   lp.num_row_ = 5;
   lp.col_cost_ = {0, 0, 0, 0, 0, 1e6};
