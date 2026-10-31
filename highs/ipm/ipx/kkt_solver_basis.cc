@@ -148,7 +148,7 @@ void KKTSolverBasis::_Solve(const Vector& a, const Vector& b, double tol,
     cr.Solve(splitted_normal_matrix_, work, tol, nullptr, maxiter_, lhs);
     if ((cr.errflag() == IPX_ERROR_cr_matrix_not_posdef ||
          cr.errflag() == IPX_ERROR_cr_iter_limit) &&
-        splitted_normal_matrix_.UseExtendedPrecision()) {
+        splitted_normal_matrix_.useExtendedPrecision()) {
         // Restart the recurrence; its earlier products used double precision.
         info->kktiter2 += cr.iter();
         info->time_cr2 += cr.time();

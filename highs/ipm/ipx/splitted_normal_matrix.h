@@ -31,7 +31,7 @@ public:
     // scaling factors for the columns of AI. The scaling factors are copied.
     void Prepare(const Basis& basis, const double* colscale);
     // Return true only when upgrading, so the caller retries at most once.
-    bool UseExtendedPrecision() {
+    bool useExtendedPrecision() {
       if (precise_) return false;
       precise_ = true;
       return true;
