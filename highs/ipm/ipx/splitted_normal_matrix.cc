@@ -1,10 +1,35 @@
 #include "ipm/ipx/splitted_normal_matrix.h"
 #include <cassert>
 #include <cmath>
+
 #include "ipm/ipx/timer.h"
 #include "ipm/ipx/utils.h"
+#include "util/HighsCDouble.h"
 
 namespace ipx {
+
+
+// Accumulate each triangular solve in double-double precision.
+static void PreciseSolve(const SparseMatrix& A, std::vector<HighsCDouble>& x,
+			 bool transpose, bool lower, bool unit) {
+  const bool forward = transpose != lower;
+  for (Int step = 0; step < A.cols(); ++step) {
+    const Int j = forward ? step : A.cols() - 1 - step;
+    const Int begin = A.begin(j) + (lower && !unit);
+    const Int end = A.end(j) - (!lower && !unit);
+    const Int diagonal = lower ? begin - 1 : end;
+    if (transpose) {
+      HighsCDouble sum = 0;
+      for (Int k = begin; k < end; ++k)
+	sum += x[A.index(k)] * A.value(k);
+      x[j] -= sum;
+    }
+    if (!unit) x[j] /= A.value(diagonal);
+    if (!transpose)
+      for (Int k = begin; k < end; ++k)
+	x[A.index(k)] -= x[j] * A.value(k);
+  }
+}
 
 SplittedNormalMatrix::SplittedNormalMatrix(const Model& model) : model_(model) {
     Int m = model_.rows();
@@ -87,6 +112,8 @@ void SplittedNormalMatrix::reset_time() {
 
 void SplittedNormalMatrix::_Apply(const Vector& rhs, Vector& lhs,
                                   double* rhs_dot_lhs) {
+    if (precise_) return ApplyPrecise(rhs, lhs, rhs_dot_lhs);
+
     assert(prepared_);
     Timer timer;
 
@@ -114,4 +141,40 @@ void SplittedNormalMatrix::_Apply(const Vector& rhs, Vector& lhs,
         *rhs_dot_lhs = Dot(rhs,lhs);
 }
 
+void SplittedNormalMatrix::ApplyPrecise(const Vector& rhs, Vector& lhs,
+					double* rhs_dot_lhs) {
+  assert(prepared_);
+  Timer timer;
+  std::vector<HighsCDouble> w(rhs.size(), 0.0), z(rhs.size(), 0.0);
+  for (size_t i=0; i<rhs.size(); ++i) w[i]=rhs[i];
+  timer.Reset();
+  PreciseSolve(U_, w, true, false, false);
+  PreciseSolve(L_, w, true, true, true);
+  time_Bt_ += timer.Elapsed();
+  timer.Reset();
+  HighsCDouble energy = 0;
+  for (Int j=0; j<N_.cols(); ++j) {
+    HighsCDouble d = 0;
+    for (Int k=N_.colptr()[j]; k<N_.colptr()[j+1]; ++k)
+      d += w[N_.rowidx()[k]] * N_.values()[k];
+    // Accumulation can leave cancelling high/low parts; normalize
+    // before multiplying two HighsCDouble values.
+    d.renormalize();
+    energy += d*d;
+    for (Int k=N_.colptr()[j]; k<N_.colptr()[j+1]; ++k)
+      z[N_.rowidx()[k]] += d * N_.values()[k];
+  }
+  time_NNt_ += timer.Elapsed();
+  timer.Reset();
+  PreciseSolve(L_, z, false, true, true);
+  PreciseSolve(U_, z, false, false, false);
+  time_B_ += timer.Elapsed();
+  for (size_t i=0; i<rhs.size(); ++i) {
+    lhs[i] = double(z[i]+rhs[i]);
+    energy += static_cast<HighsCDouble>(rhs[i])*rhs[i];
+  }
+  for (Int i: free_positions_) lhs[i]=0.0;
+  if (rhs_dot_lhs) *rhs_dot_lhs = double(energy);
+}
+  
 }  // namespace ipx
