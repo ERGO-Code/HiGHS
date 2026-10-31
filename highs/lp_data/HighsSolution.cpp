@@ -1486,7 +1486,8 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
     // is passed if this is necessary
     HighsCDouble extended_quad_value = 0;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      HighsCDouble extended_coefficient = HighsCDouble(lp.col_cost_[iCol]) - HighsCDouble(gradient[iCol]);
+      HighsCDouble extended_coefficient =
+          HighsCDouble(lp.col_cost_[iCol]) - HighsCDouble(gradient[iCol]);
       extended_quad_value += extended_coefficient * solution.col_value[iCol];
     }
     extended_dual_objective_value += 0.5 * extended_quad_value;

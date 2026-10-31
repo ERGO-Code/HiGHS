@@ -30,7 +30,12 @@ public:
     // Prepares object for subsequent calls to Apply(). @colscale must hold n+m
     // scaling factors for the columns of AI. The scaling factors are copied.
     void Prepare(const Basis& basis, const double* colscale);
-
+    // Return true only when upgrading, so the caller retries at most once.
+    bool UseExtendedPrecision() {
+      if (precise_) return false;
+      precise_ = true;
+      return true;
+    }
     // Returns the column permutation from the LU factorization of the basis
     // matrix. The permutation was stored in the object by Prepare().
     const Int* colperm() const;
@@ -43,7 +48,7 @@ public:
 
 private:
     void _Apply(const Vector& rhs, Vector& lhs, double* rhs_dot_lhs) override;
-
+    void ApplyPrecise(const Vector& rhs, Vector& lhs, double* rhs_dot_lhs);
     const Model& model_;
     SparseMatrix L_;           // lower triangular factor without unit diagonal
     SparseMatrix U_;           // upper triangular factor with scaled columns
@@ -52,6 +57,7 @@ private:
     std::vector<Int> colperm_;        // column permutation from LU factor
     std::vector<Int> rowperm_inv_;    // inverse row permutation from LU factor
     Vector work_;                     // size m workspace
+    bool precise_{false};             // retain precision after roundoff failure
     bool prepared_{false};            // operator prepared?
     double time_B_{0.0};              // time solves with B
     double time_Bt_{0.0};             // time solves with B'
