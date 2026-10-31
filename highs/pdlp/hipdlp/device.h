@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cuda_runtime.h>
-#include <cusparse.h>
+#include "cuda_to_hip.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -46,9 +45,17 @@ inline void Cuda(cudaError_t error) {
 // Lane groups: `lanes` consecutive threads that cooperate on one row. It is the hardware warp
 // (32 on NVIDIA; 32 or 64 on AMD) and the only place the width enters; kBlock must be a multiple
 // of it. A group narrower than 32 needs the mask of its own lanes, a full warp needs all of them.
+#ifdef USE_HIP
+// HIP takes a 64-bit mask, and a wavefront has warpSize (32 or 64) lanes.
+__device__ inline unsigned long long GroupMask(int lanes) {
+  if (lanes >= warpSize) return warpSize == 64 ? ~0ull : (1ull << warpSize) - 1;
+  return ((1ull << lanes) - 1) << ((threadIdx.x % warpSize) / lanes * lanes);
+}
+#else
 __device__ inline unsigned GroupMask(int lanes) {
   return lanes >= 32 ? 0xffffffffu : ((1u << lanes) - 1u) << ((threadIdx.x % 32) / lanes * lanes);
 }
+#endif
 __device__ inline int GroupBroadcast(int value, int lanes) {
   return __shfl_sync(GroupMask(lanes), value, 0, lanes);
 }

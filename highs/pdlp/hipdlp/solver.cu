@@ -1,12 +1,7 @@
-#include <cuda_runtime.h>
-#include <cusparse.h>
-#include <nvtx3/nvToolsExt.h>
-
 #include <algorithm>
 #include <chrono>
 #include <climits>
 #include <cmath>
-#include <cub/block/block_reduce.cuh>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -23,6 +18,32 @@ constexpr double kCertificateTolerance = 1e-8;
 constexpr int64_t kMinBalanceEpoch = 400; 
 
 constexpr double kDeviationLevel = 1e-5;
+constexpr int kCheckInterval = 40;  // iterations between two checks
+
+// HIP has no conditional graph nodes, so there the host drives the control flow: every IF /
+// WHILE body is a graph of its own, the decision kernels write their branch into a flag in
+// device memory, and the host reads the flags between launches. A chunk graph runs
+// kCheckInterval iterations and the check, so the host waits once per check. The same kernels
+// serve both builds, only SetBranch differs. -DHIPDLP_HOST_LOOP builds this path with CUDA, to
+// test it against the conditional-node graph.
+#if !defined(HIPDLP_HOST_LOOP) && defined(USE_HIP)
+#define HIPDLP_HOST_LOOP
+#endif
+#ifdef HIPDLP_HOST_LOOP
+using Branch = unsigned*;
+static __device__ void SetBranch(Branch b, bool value) { *b = value; }
+// True when branch a or b (null: none) is taken.
+static __device__ bool Taken(const unsigned* a, const unsigned* b = nullptr) {
+  return (a && *a) || (b && *b);
+}
+// A check fell due inside a chunk (time or iteration limit, nonfinite values): the iterate stays
+// put until the check that ends the chunk. The products in between recompute the same values.
+static __device__ bool Held(const DeviceState* s) { return s->hold; }
+#else
+using Branch = cudaGraphConditionalHandle;
+static __device__ void SetBranch(Branch b, bool value) { cudaGraphSetConditional(b, value); }
+static __device__ bool Held(const DeviceState*) { return false; }
+#endif
 
 using Clock = std::chrono::steady_clock;
 static double Seconds(Clock::time_point start) {
@@ -36,11 +57,19 @@ static int WarpBlocks(int rows, int lanes) {
   return std::max(1, int(std::min(int64_t(4096), (int64_t(rows) + groups - 1) / groups)));
 }
 
+#ifdef USE_HIP
+// Nanoseconds per wall_clock64() tick, set by CheckDevice from the device's wall clock rate.
+__device__ double wall_clock_ns;
+static __device__ unsigned long long DeviceTime() {
+  return (unsigned long long)(double(wall_clock64()) * wall_clock_ns);
+}
+#else
 static __device__ unsigned long long DeviceTime() {
   unsigned long long value;
   asm volatile("mov.u64 %0, %%globaltimer;" : "=l"(value));
   return value;
 }
+#endif
 
 static __device__ bool Expired(const DeviceState* s) {
   return double(DeviceTime() - s->begin) * 1e-9 >= s->remaining_seconds;
@@ -170,6 +199,7 @@ __global__ void Begin(DeviceState* s) {
   s->balance_epoch_limit = 0;
   s->balance_direction = 0;
   s->deviation = s->deviation_next = 0;
+  s->hold = 0;
   s->integral = 0;
   s->previous_fpe = INFINITY;
   s->reference_fpe = s->fpe = 0;
@@ -259,7 +289,7 @@ __global__ void Initialize(DeviceLp lp, Vectors v, DeviceState* s)  {
 
 __global__ void PrimalStep(DeviceLp lp, Vectors v, DeviceState* s) {
   int j = blockIdx.x * blockDim.x + threadIdx.x;
-  if (j >= lp.n || s->status != Status::kRunning) return;
+  if (j >= lp.n || s->status != Status::kRunning || Held(s)) return;
   double raw;
   if (s->deviation) {
     raw = v.x[j] - (kEta / s->omega) * (v.ga[j] - v.aty[j]);
@@ -275,7 +305,7 @@ __global__ void PrimalStep(DeviceLp lp, Vectors v, DeviceState* s) {
 
 __global__ void DualStep(DeviceLp lp, Vectors v, DeviceState* s, bool blend) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (s->status != Status::kRunning) return;
+  if (s->status != Status::kRunning || Held(s)) return;
   double alpha = 1 / (double(s->epoch) + 2);
   if (i < lp.m) {
     double sigma = kEta * s->omega;
@@ -304,14 +334,18 @@ __global__ void DualStep(DeviceLp lp, Vectors v, DeviceState* s, bool blend) {
   if (blend && i < lp.n && !isfinite(v.x[i])) atomicOr(&s->bad, 1);
 }
 
-__global__ void StepControl(DeviceState* s, cudaGraphConditionalHandle check) {
-  if (s->status == Status::kRunning) {
+__global__ void StepControl(DeviceState* s, Branch check) {
+  if (s->status == Status::kRunning && !Held(s)) {
     ++s->iterations;
     ++s->epoch;
     s->spmv_count += 2;
   }
-  cudaGraphSetConditional(check, s->bad || s->iterations % 40 == 0 ||
-                                     s->iterations >= s->iteration_limit || Expired(s));
+  bool due = s->bad || s->iterations % kCheckInterval == 0 ||
+             s->iterations >= s->iteration_limit || Expired(s);
+  SetBranch(check, due);
+#ifdef HIPDLP_HOST_LOOP
+  s->hold = due;
+#endif
 }
 
 __global__ void FpeStats(DeviceLp lp, Vectors v, Stats* partial) {
@@ -736,12 +770,15 @@ __global__ void RestartState(DeviceState* s) {
 }
 
 __global__ void ReferenceCount(DeviceState* s) { s->spmv_count += 2; }
-__global__ void Decide(DeviceState* s, cudaGraphConditionalHandle restart,
-                       cudaGraphConditionalHandle cert, bool initial, bool after_cert) {
+static __device__ void DecideImpl(DeviceState* s, Branch restart, Branch cert, bool initial,
+                                  bool after_cert) {
   if (!after_cert) {
     bool do_cert =
         initial || s->iterations % 200 == 0 || s->iterations >= s->iteration_limit || Expired(s);
-    cudaGraphSetConditional(cert, do_cert);
+    SetBranch(cert, do_cert);
+#ifdef HIPDLP_HOST_LOOP
+    s->hold = 0;  // the check is running
+#endif
     return;
   }
   // Contradictions are an error, never resolved by enumeration order.
@@ -760,8 +797,8 @@ __global__ void Decide(DeviceState* s, cudaGraphConditionalHandle restart,
     s->status = Status::kIterationLimit;
   // A balance deadline only interrupts an epoch whose FPE has not fallen by half.
   bool trigger = !initial && s->status == Status::kRunning && s->epoch > 0 &&
-                 s->iterations % 40 == 0 && s->reference_fpe > 0 &&
-                 (s->iterations == 40 || s->fpe <= 0.2 * s->reference_fpe ||
+                 s->iterations % kCheckInterval == 0 && s->reference_fpe > 0 &&
+                 (s->iterations == kCheckInterval || s->fpe <= 0.2 * s->reference_fpe ||
                   (s->fpe <= 0.5 * s->reference_fpe && s->fpe > s->previous_fpe) ||
                   double(s->epoch) >= 0.36 * double(s->iterations) ||
                   (s->balance_epoch_limit > 0 && s->epoch >= s->balance_epoch_limit &&
@@ -776,13 +813,28 @@ __global__ void Decide(DeviceState* s, cudaGraphConditionalHandle restart,
                  s->omega,          s->fpe,          s->reference_fpe, s->balance_epoch_limit,
                  s->metrics.primal, s->metrics.dual, s->metrics.gap};
   }
-  cudaGraphSetConditional(restart, trigger);
+  SetBranch(restart, trigger);
 }
-__global__ void LoopCondition(DeviceState* s, cudaGraphConditionalHandle loop) {
+__global__ void Decide(DeviceState* s, Branch restart, Branch cert, bool initial,
+                       bool after_cert) {
+  DecideImpl(s, restart, cert, initial, after_cert);
+}
+static __device__ void LoopConditionImpl(DeviceState* s, Branch loop) {
   if (s->status == Status::kRunning && s->bad) s->status = Status::kNumericalError;
   if (s->status == Status::kRunning && Expired(s)) s->status = Status::kTimeLimit;
-  cudaGraphSetConditional(loop, s->status == Status::kRunning);
+  SetBranch(loop, s->status == Status::kRunning);
 }
+__global__ void LoopCondition(DeviceState* s, Branch loop) { LoopConditionImpl(s, loop); }
+#ifdef HIPDLP_HOST_LOOP
+// The tail of the check inside the chunk graph, skipped when the host has to launch the
+// certificate or restart graph first (each of those ends with the same tail).
+__global__ void DecideUnless(DeviceState* s, Branch restart, Branch cert) {
+  if (!Taken(cert)) DecideImpl(s, restart, cert, false, true);
+}
+__global__ void LoopConditionUnless(DeviceState* s, Branch loop, Branch a, Branch b) {
+  if (!Taken(a, b)) LoopConditionImpl(s, loop);
+}
+#endif
 __global__ void Mark(DeviceState* s, int phase) {
   auto now = DeviceTime();
   if (phase == 0)
@@ -837,7 +889,8 @@ static Spmv PrepareSpmv(Resources& r, int rows, int cols, int nnz, const int* st
   Sparse(cusparseSpMV_bufferSize(r.sparse, CUSPARSE_OPERATION_NON_TRANSPOSE, ab, op.matrix,
                                  op.input, ab + 1, op.output, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
                                  &bytes));
-  op.workspace = r.AllocateZero<char>(bytes);
+  // rocSPARSE rejects a buffer when it asks for none (cudaMalloc(0) gives null as well).
+  op.workspace = bytes ? r.AllocateZero<char>(bytes) : nullptr;
   if (!iterative) return op;
   Sparse(cusparseSpMV_preprocess(r.sparse, CUSPARSE_OPERATION_NON_TRANSPOSE, ab, op.matrix,
                                  op.input, ab + 1, op.output, CUDA_R_64F, CUSPARSE_SPMV_CSR_ALG2,
@@ -855,6 +908,7 @@ static void Multiply(Resources& r, const Spmv& op, double* ab) {
     EmptyProduct<<<Blocks(op.rows), kBlock, 0, r.stream>>>(op.empty_output, op.rows);
 }
 
+#ifndef HIPDLP_HOST_LOOP
 static std::vector<cudaGraphNode_t> FinishCapture(Resources& r) {
   const cudaGraphNode_t* deps;
   size_t size;
@@ -893,6 +947,22 @@ static cudaGraph_t AddConditional(Resources& r, cudaGraph_t graph,
 #endif
   return p.conditional.phGraph_out[0];
 }
+#else
+// Captures what `body` enqueues on the stream into an executable graph the session owns.
+template <typename Body>
+static cudaGraphExec_t CaptureGraph(Resources& r, Body&& body) {
+  cudaGraph_t graph;
+  Cuda(cudaStreamBeginCapture(r.stream, cudaStreamCaptureModeGlobal));
+  body();
+  Cuda(cudaGetLastError());
+  Cuda(cudaStreamEndCapture(r.stream, &graph));
+  r.graphs.push_back(graph);
+  cudaGraphExec_t exec;
+  Cuda(cudaGraphInstantiate(&exec, graph, 0));
+  r.execs.push_back(exec);
+  return exec;
+}
+#endif
 
 static std::string CheckOptions(const SolveOptions& options) {
   if (!std::isfinite(options.tolerance) || options.tolerance <= 0 ||
@@ -1046,6 +1116,13 @@ static bool CheckDevice(SolveResult* result, DeviceInfo* info) {
     return unsupported("This build has no code for " + name +
                        "; add its architecture to CMAKE_CUDA_ARCHITECTURES");
   }
+#ifdef USE_HIP
+  int wall_clock_khz = 0;
+  Cuda(hipDeviceGetAttribute(&wall_clock_khz, hipDeviceAttributeWallClockRate, device));
+  if (wall_clock_khz <= 0) return unsupported("No device wall clock on " + name);
+  double tick_ns = 1e6 / wall_clock_khz;
+  Cuda(hipMemcpyToSymbol(HIP_SYMBOL(wall_clock_ns), &tick_ns, sizeof(tick_ns)));
+#endif
   if (!TimerAdvances()) return unsupported("The device timer does not advance on " + name);
   info->lanes = properties.warpSize;
   return true;
@@ -1270,10 +1347,19 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     auto ax_anchor =
         PrepareSpmv(r, m, n, nnz, lp.row_start, lp.column, lp.a, v.xa, row_scratch, ab);
     Cuda(cudaStreamSynchronize(stream));
+#ifdef HIPDLP_HOST_LOOP
+    // One flag per branch: written by the decision kernels, read by the host between graphs.
+    enum { kLoop, kCheck, kRestart, kCert, kInitialCert, kReference, kBranches };
+    unsigned* flags = r.AllocateZero<unsigned>(kBranches);
+    Branch loop = flags + kLoop, check = flags + kCheck, restart = flags + kRestart,
+           cert = flags + kCert, initial_cert = flags + kInitialCert,
+           reference = flags + kReference;
+#else
     Cuda(cudaGraphCreate(&r.graph, 0));
     cudaGraphConditionalHandle loop, check, restart, cert, initial_cert, reference;
     for (auto* h : {&loop, &check, &restart, &cert, &initial_cert, &reference})
       Cuda(cudaGraphConditionalHandleCreate(h, r.graph, 0, cudaGraphCondAssignDefault));
+#endif
     auto reduce = [&](int mode) {
       ReduceStats<<<1, kBlock, 0, stream>>>(partial, blocks, s, mode);
     };
@@ -1329,28 +1415,82 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
         }
     };
     // Prefix includes GPU scaling and initial original-space validation.
+    auto prefix = [&]() {
+      Begin<<<1, 1, 0, stream>>>(s);
+      FillOne<<<Blocks(m), kBlock, 0, stream>>>(lp.dr, m);
+      FillOne<<<Blocks(n), kBlock, 0, stream>>>(lp.dc, n);
+      for (int sweep = 0; sweep < 11; ++sweep) {
+        ScalingFactors<<<WarpBlocks(m, lanes), kBlock, 0, stream>>>(
+            m, lp.row_start, lp.a, lp.fr, lp.dr, sweep == 10, lanes, s);
+        ScalingFactors<<<WarpBlocks(n, lanes), kBlock, 0, stream>>>(
+            n, lp.transpose_start, lp.at, lp.fc, lp.dc, sweep == 10, lanes, s);
+        ScaleMatrix<<<WarpBlocks(m, lanes), kBlock, 0, stream>>>(m, lp.row_start, lp.column, lp.a,
+                                                                 lp.fr, lp.fc, lanes, s);
+        ScaleMatrix<<<WarpBlocks(n, lanes), kBlock, 0, stream>>>(n, lp.transpose_start, lp.row, lp.at,
+                                                                 lp.fc, lp.fr, lanes, s);
+        ScalingGuard<<<1, 1, 0, stream>>>(s);
+      }
+      Initialize<<<blocks, kBlock, 0, stream>>>(lp, v, s);
+      Mark<<<1, 1, 0, stream>>>(s, 0);
+      LineNorms<<<Blocks(m), kBlock, 0, stream>>>(m, lp.row_start, lp.original_a, lp.row_norm, s);
+      LineNorms<<<Blocks(n), kBlock, 0, stream>>>(n, lp.transpose_start, lp.original_at,
+                                                  lp.column_norm, s);
+      kkt();
+      Decide<<<1, 1, 0, stream>>>(s, restart, initial_cert, true, false);
+    };
+    auto step = [&]() {
+      PrimalStep<<<Blocks(n), kBlock, 0, stream>>>(lp, v, s);
+      Multiply(r, axr, ab);
+      DualStep<<<blocks, kBlock, 0, stream>>>(lp, v, s, true);
+      Multiply(r, aty, ab);
+      StepControl<<<1, 1, 0, stream>>>(s, check);
+    };
+    auto check_body = [&]() {
+      fpe(1);
+      kkt();
+      Decide<<<1, 1, 0, stream>>>(s, restart, cert, false, false);
+    };
+    auto restart_body = [&]() {
+      WeightStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, s);
+      UpdateWeight<<<1, kBlock, 0, stream>>>(partial, blocks, s);
+      RestartVectors<<<blocks, kBlock, 0, stream>>>(lp, v, s);
+      anchor();
+      RestartState<<<1, 1, 0, stream>>>(s);
+      reference_eval();
+    };
+#ifdef HIPDLP_HOST_LOOP
+    auto prefix_graph = CaptureGraph(r, prefix);
+    auto initial_cert_graph = CaptureGraph(r, certificates);
+    auto initial_decision = CaptureGraph(r, [&]() {
+      Decide<<<1, 1, 0, stream>>>(s, restart, initial_cert, true, true);
+      LoopCondition<<<1, 1, 0, stream>>>(s, reference);
+    });
+    auto reference_graph = CaptureGraph(r, reference_eval);
+    auto loop_entry = CaptureGraph(r, [&]() {
+      LoopCondition<<<1, 1, 0, stream>>>(s, loop);
+      Mark<<<1, 1, 0, stream>>>(s, 1);
+    });
+    // Iterations are a multiple of kCheckInterval at every chunk start: a check falls due at the
+    // chunk's last step, or earlier only for a terminal reason (the iterate is then Held).
+    auto chunk = CaptureGraph(r, [&]() {
+      for (int k = 0; k < kCheckInterval; ++k) step();
+      check_body();
+      DecideUnless<<<1, 1, 0, stream>>>(s, restart, cert);
+      LoopConditionUnless<<<1, 1, 0, stream>>>(s, loop, cert, restart);
+    });
+    auto cert_graph = CaptureGraph(r, [&]() {
+      certificates();
+      Decide<<<1, 1, 0, stream>>>(s, restart, cert, false, true);
+      LoopConditionUnless<<<1, 1, 0, stream>>>(s, loop, restart, nullptr);
+    });
+    auto restart_graph = CaptureGraph(r, [&]() {
+      restart_body();
+      LoopCondition<<<1, 1, 0, stream>>>(s, loop);
+    });
+    auto loop_exit = CaptureGraph(r, [&]() { Mark<<<1, 1, 0, stream>>>(s, 2); });
+#else
     StartCapture(r, r.graph);
-    Begin<<<1, 1, 0, stream>>>(s);
-    FillOne<<<Blocks(m), kBlock, 0, stream>>>(lp.dr, m);
-    FillOne<<<Blocks(n), kBlock, 0, stream>>>(lp.dc, n);
-    for (int sweep = 0; sweep < 11; ++sweep) {
-      ScalingFactors<<<WarpBlocks(m, lanes), kBlock, 0, stream>>>(
-          m, lp.row_start, lp.a, lp.fr, lp.dr, sweep == 10, lanes, s);
-      ScalingFactors<<<WarpBlocks(n, lanes), kBlock, 0, stream>>>(
-          n, lp.transpose_start, lp.at, lp.fc, lp.dc, sweep == 10, lanes, s);
-      ScaleMatrix<<<WarpBlocks(m, lanes), kBlock, 0, stream>>>(m, lp.row_start, lp.column, lp.a,
-                                                               lp.fr, lp.fc, lanes, s);
-      ScaleMatrix<<<WarpBlocks(n, lanes), kBlock, 0, stream>>>(n, lp.transpose_start, lp.row, lp.at,
-                                                               lp.fc, lp.fr, lanes, s);
-      ScalingGuard<<<1, 1, 0, stream>>>(s);
-    }
-    Initialize<<<blocks, kBlock, 0, stream>>>(lp, v, s);
-    Mark<<<1, 1, 0, stream>>>(s, 0);
-    LineNorms<<<Blocks(m), kBlock, 0, stream>>>(m, lp.row_start, lp.original_a, lp.row_norm, s);
-    LineNorms<<<Blocks(n), kBlock, 0, stream>>>(n, lp.transpose_start, lp.original_at,
-                                                lp.column_norm, s);
-    kkt();
-    Decide<<<1, 1, 0, stream>>>(s, restart, initial_cert, true, false);
+    prefix();
     auto deps = FinishCapture(r);
     cudaGraphNode_t cert_node, reference_node, loop_node, check_node, restart_node;
     auto cert_graph =
@@ -1373,17 +1513,11 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     deps = FinishCapture(r);
     auto body = AddConditional(r, r.graph, deps, loop, cudaGraphCondTypeWhile, &loop_node);
     StartCapture(r, body);
-    PrimalStep<<<Blocks(n), kBlock, 0, stream>>>(lp, v, s);
-    Multiply(r, axr, ab);
-    DualStep<<<blocks, kBlock, 0, stream>>>(lp, v, s, true);
-    Multiply(r, aty, ab);
-    StepControl<<<1, 1, 0, stream>>>(s, check);
+    step();
     deps = FinishCapture(r);
     auto check_graph = AddConditional(r, body, deps, check, cudaGraphCondTypeIf, &check_node);
     StartCapture(r, check_graph);
-    fpe(1);
-    kkt();
-    Decide<<<1, 1, 0, stream>>>(s, restart, cert, false, false);
+    check_body();
     deps = FinishCapture(r);
     auto nested_cert = AddConditional(r, check_graph, deps, cert, cudaGraphCondTypeIf, &cert_node);
     StartCapture(r, nested_cert);
@@ -1395,12 +1529,7 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     auto restart_graph =
         AddConditional(r, check_graph, deps, restart, cudaGraphCondTypeIf, &restart_node);
     StartCapture(r, restart_graph);
-    WeightStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, s);
-    UpdateWeight<<<1, kBlock, 0, stream>>>(partial, blocks, s);
-    RestartVectors<<<blocks, kBlock, 0, stream>>>(lp, v, s);
-    anchor();
-    RestartState<<<1, 1, 0, stream>>>(s);
-    reference_eval();
+    restart_body();
     FinishCapture(r);
     StartCapture(r, body, {check_node});
     LoopCondition<<<1, 1, 0, stream>>>(s, loop);
@@ -1409,6 +1538,7 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     Mark<<<1, 1, 0, stream>>>(s, 2);
     FinishCapture(r);
     Cuda(cudaGraphInstantiate(&r.exec, r.graph, 0));
+#endif
     initial.remaining_seconds = std::max(0.0, options.time_limit_seconds - Seconds(start));
     Cuda(cudaMemcpyAsync(s, &initial, sizeof(initial), cudaMemcpyHostToDevice, stream));
     r.h2d_bytes += sizeof(initial);
@@ -1430,10 +1560,45 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     result.times.setup = Seconds(start);
     nvtxRangePushA("SOLVE_BEGIN/END");
     session_started = true;
+#ifdef HIPDLP_HOST_LOOP
+    // The host takes the branches the conditional nodes take on the device (see the #else
+    // graph): one wait per check, one more after certificates or a restart.
+    unsigned taken[kBranches];
+    auto launch = [&](cudaGraphExec_t exec) { Cuda(cudaGraphLaunch(exec, stream)); };
+    auto read = [&]() {
+      Cuda(cudaMemcpyAsync(taken, flags, sizeof(taken), cudaMemcpyDeviceToHost, stream));
+      Cuda(cudaStreamSynchronize(stream));
+      r.d2h_bytes += sizeof(taken);
+    };
+    launch(prefix_graph);
+    read();
+    if (taken[kInitialCert]) launch(initial_cert_graph);
+    launch(initial_decision);
+    read();
+    if (taken[kReference]) launch(reference_graph);
+    launch(loop_entry);
+    read();
+    while (taken[kLoop]) {
+      launch(chunk);
+      read();
+      if (taken[kCert]) {
+        launch(cert_graph);
+        read();
+      }
+      if (taken[kRestart]) {
+        launch(restart_graph);
+        read();
+      }
+    }
+    launch(loop_exit);
+    Cuda(cudaEventRecord(r.event_end, stream));
+    Cuda(cudaStreamSynchronize(stream));
+#else
     Cuda(cudaGraphLaunch(r.exec, stream));
     Cuda(cudaEventRecord(r.event_end, stream));
     // The only wait in a session. No copies, callbacks, polling or allocation above it.
     Cuda(cudaStreamSynchronize(stream));
+#endif
     nvtxRangePop();
     float gpu_ms;
     Cuda(cudaEventElapsedTime(&gpu_ms, r.event_start, r.event_end));

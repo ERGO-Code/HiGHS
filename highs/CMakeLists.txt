@@ -28,6 +28,12 @@ if(NOT FAST_BUILD)
       CUDA_STANDARD 17
       CUDA_STANDARD_REQUIRED ON)
     target_link_libraries(libhighs ${HIGHS_HIPDLP_CUDA_LIBRARIES})
+    if(HIPDLP_HIP)
+      # HIP marks its error returns nodiscard, the cleanup calls ignore them as in CUDA.
+      set_source_files_properties(pdlp/hipdlp/device_matrix.cu pdlp/hipdlp/solver.cu
+        PROPERTIES LANGUAGE HIP COMPILE_OPTIONS -Wno-unused-value)
+      set_target_properties(libhighs PROPERTIES HIP_STANDARD 17 HIP_STANDARD_REQUIRED ON)
+    endif()
   endif()
 
   if(APPLE)
@@ -206,6 +212,12 @@ else()
       CUDA_STANDARD 17
       CUDA_STANDARD_REQUIRED ON)
     target_link_libraries(highs PRIVATE ${HIGHS_HIPDLP_CUDA_LIBRARIES})
+    if(HIPDLP_HIP)
+      # HIP marks its error returns nodiscard, the cleanup calls ignore them as in CUDA.
+      set_source_files_properties(pdlp/hipdlp/device_matrix.cu pdlp/hipdlp/solver.cu
+        PROPERTIES LANGUAGE HIP COMPILE_OPTIONS -Wno-unused-value)
+      set_target_properties(highs PROPERTIES HIP_STANDARD 17 HIP_STANDARD_REQUIRED ON)
+    endif()
   endif()
 
   # Optional GPU (CUDA or HIP)

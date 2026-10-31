@@ -213,6 +213,16 @@ if (HIGHS_HIPDLP_CUDA)
   set(HIGHS_HIPDLP_CUDA_LIBRARIES CUDA::cudart CUDA::cusparse)
   set(HIGHS_HIPDLP_CUDA_DETECTED ON)
 endif()
+
+# HIP has no conditional graph nodes: there the host drives the solver loop between
+# graphs (always on with HIP). Testing only: builds the same path with CUDA, to compare
+# it with the conditional-node graph on NVIDIA.
+option(HIGHS_HIPDLP_HOST_LOOP
+  "HiPDLP (testing): drive the loop from the host instead of conditional graph nodes" OFF)
+mark_as_advanced(HIGHS_HIPDLP_HOST_LOOP)
+if (HIGHS_HIPDLP_HOST_LOOP)
+  add_compile_definitions(HIPDLP_HOST_LOOP)
+endif()
 message(STATUS
   "HiPDLP rewrite CUDA compiler detected: ${HIGHS_HIPDLP_CUDA_DETECTED}")
 
@@ -306,6 +316,13 @@ if (CUPDLP_GPU OR HIPDLP_GPU)
 
     set(GPU_LIBRARY roc::hipblas roc::hipsparse)
     set(GPU_COMPILE_DEFINITIONS USE_HIP)
+
+    # The HiPDLP GPU solver: its CUDA sources build as HIP through cuda_to_hip.h.
+    find_package(hipcub REQUIRED)
+    find_package(rocprofiler-sdk-roctx REQUIRED)
+    set(HIGHS_HIPDLP_CUDA_LIBRARIES roc::hipsparse hip::hipcub
+      rocprofiler-sdk-roctx::rocprofiler-sdk-roctx)
+    set(HIGHS_HIPDLP_CUDA_DETECTED ON)
 
   else()
     message(NOTICE "Set build cuPDLP with CUDA")

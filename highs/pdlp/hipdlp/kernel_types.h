@@ -82,6 +82,7 @@ struct DeviceState {
   int bad, feasible_valid, optimal, farkas_valid, ray_valid, restart;
   int fixed_weight, cert_source, exposure_check;
   int deviation, deviation_next;  // deviation form active / requested from the next restart
+  int hold;  // HIPDLP_HOST_LOOP: a check is due, the iterate waits for the end of the chunk
   int64_t iterations, epoch, restarts, kkt_checks, certificate_checks, spmv_count, iteration_limit;
   double tolerance, remaining_seconds, omega, best_omega, integral;
   double cost_scale;  // dual residual denominator 1 + cost_scale (CostScale)
@@ -190,6 +191,8 @@ struct Resources {
     if (event_end) cudaEventDestroy(event_end);
     if (exec) cudaGraphExecDestroy(exec);
     if (graph) cudaGraphDestroy(graph);
+    for (auto e : execs) cudaGraphExecDestroy(e);
+    for (auto g : graphs) cudaGraphDestroy(g);
     for (auto p : dense) cusparseDestroyDnVec(p);
     for (auto p : matrices) cusparseDestroySpMat(p);
     if (sparse) cusparseDestroy(sparse);
@@ -234,6 +237,8 @@ struct Resources {
   cusparseHandle_t sparse = nullptr;
   cudaGraph_t graph = nullptr;
   cudaGraphExec_t exec = nullptr;
+  std::vector<cudaGraph_t> graphs;  // HIPDLP_HOST_LOOP: one graph per branch
+  std::vector<cudaGraphExec_t> execs;
   cudaEvent_t event_start = nullptr, event_end = nullptr;
   std::vector<cusparseDnVecDescr_t> dense;
   std::vector<cusparseSpMatDescr_t> matrices;
