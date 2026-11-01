@@ -45,7 +45,7 @@ class HPresolve {
   HPresolveCliqueTable presolveCliqueTable;
   double primal_feastol;
   bool may_require_basis_postsolve_;
-  bool may_require_primal_dual_postsolve_;
+  bool may_require_dual_postsolve_;
   std::vector<HighsBool> allow_rule_;
 
   // triplet storage
