@@ -844,7 +844,7 @@ void HighsMipSolverData::runMipPresolve(
 }
 
 void HighsMipSolverData::checkAddSolution() {
-  // Run when (re-)starting the MIP solver 
+  // Run when (re-)starting the MIP solver
   if (mipsolver.solution_objective_ != kHighsInf) {
     // Assigning new incumbent
     const bool reduced = postSolveStack.numReductions();
@@ -853,15 +853,12 @@ void HighsMipSolverData::checkAddSolution() {
     // compute it locally in case the supplied solution
     // (mipsolver.solution_) doesn't correspond to postsolve applied
     // to incumbent (#3510)
-     HighsCDouble mipsolver_quad_objective_value = mipsolver.model_->offset_;
-    for (HighsInt iCol = 0; iCol < mipsolver.model_->num_col_; iCol++)
-      mipsolver_quad_objective_value +=
-          static_cast<HighsCDouble>(mipsolver.model_->col_cost_[iCol] * incumbent[iCol]);
-    mipsolver_quad_objective_value *= (int)mipsolver.orig_model_->sense_;
-    mipsolver.solution_objective_ = double(mipsolver_quad_objective_value);
-    double solobj =
-        mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
-        mipsolver.model_->offset_;
+    double mipsolver_objective =
+        double(mipsolver.model_->objectiveCDoubleValue(incumbent));
+    mipsolver.solution_objective_ =
+        int(mipsolver.orig_model_->sense_) * mipsolver_objective;
+    // Bounds etc are determined without the objective offset
+    double solobj = mipsolver_objective - mipsolver.model_->offset_;
     bool feasible = mipsolver.bound_violation_ <=
                         mipsolver.options_mip_->mip_feasibility_tolerance &&
                     mipsolver.integrality_violation_ <=
