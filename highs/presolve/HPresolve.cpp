@@ -964,6 +964,11 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   for (size_t i = 0; i != Avalue.size(); ++i) {
     if (Avalue[i] == 0) continue;
     assert(newColIndex[Acol[i]] != -1);
+    if (newRowIndex[Arow[i]] == -1) {
+      printf("Arow[%d] = %d\n", int(i), int(Arow[i]));
+      for (HighsInt iX =0; iX < HighsInt(newColIndex.size()); iX++)
+	printf("newColIndex[%2d] = %d\n", int(iX), int(newRowIndex[iX]));      
+    }
     assert(newRowIndex[Arow[i]] != -1);
     Acol[i] = newColIndex[Acol[i]];
     Arow[i] = newRowIndex[Arow[i]];
