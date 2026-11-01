@@ -3875,7 +3875,7 @@ bool Highs::processedBoundsFindsInfeasibility() {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Model has %d significant inconsistent bound(s): infeasible\n",
                  int(num_true_infeasible_bound));
-  return num_true_infeasible_bound == 0;
+  return num_true_infeasible_bound > 0;
 }
 
 bool Highs::validLinearObjective(const HighsLinearObjective& linear_objective,

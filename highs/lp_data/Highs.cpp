@@ -1449,7 +1449,7 @@ HighsStatus Highs::calledOptimizeModel() {
   }
   // Return immediately if the model is infeasible due to inconsistent
   // bounds, modifying any bounds with tiny infeasibilities
-  if (!processedBoundsFindsInfeasibility()) {
+  if (processedBoundsFindsInfeasibility()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
     return returnFromOptimizeModel(return_status, undo_mods);
   }
