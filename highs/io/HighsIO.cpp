@@ -102,6 +102,11 @@ std::array<char, 32> highsDoubleToString(const double val,
   return printString;
 }
 
+std::array<char, 32> highsGapToString(const double gap) {
+  return highsDoubleToString(100.0 * gap,
+                             std::max(std::min(1e-2, 1e-1 * gap), 1e-6));
+}
+
 void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                   const char* format, ...) {
   if (!*log_options_.output_flag) return;
@@ -289,6 +294,11 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
          highsBoolToString(*log_options_.log_to_console).c_str());
   printf("   log_dev_level = %" HIGHSINT_FORMAT "\n\n",
          *log_options_.log_dev_level);
+}
+
+void highsPrintStringAsHeading(const std::string& text) {
+  printf("\n%s\n %s\n%s\n", std::string(text.length() + 2, '=').c_str(),
+         text.c_str(), std::string(text.length() + 2, '=').c_str());
 }
 
 std::string highsFormatToString(const char* format, ...) {

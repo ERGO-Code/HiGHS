@@ -1360,6 +1360,7 @@ Int Analyse::run(Symbolic& S) {
   // After Run returns, the Analyse object is not valid.
 
   if (!ready_) return kRetGeneric;
+  if (n_ == 0) return kRetOk;
 
   HIPO_CLOCK_CREATE;
 

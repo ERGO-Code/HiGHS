@@ -175,7 +175,7 @@ class HighsMipSolver {
   void setParallelLock(bool lock) const;
   void setProfiling(HighsProfiling* profiling);
   HighsInt getMaxNumWorkers() const {
-    if (options_mip_->parallel != kHighsOnString || submip) {
+    if (options_mip_->parallel == kHighsOffString || submip) {
       return 1;
     }
     return highs::parallel::num_threads();

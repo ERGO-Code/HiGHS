@@ -118,8 +118,4 @@ void reportSubproblem(const ICrashOptions& options, const Quadratic& idata,
                       const int iteration);
 void reportOptions(const ICrashOptions& options);
 
-bool callCrossover(const HighsLp& lp, const HighsOptions& options,
-                   const std::vector<double>& x_values, HighsSolution& solution,
-                   HighsBasis& basis, HighsCallback& callback);
-
 #endif

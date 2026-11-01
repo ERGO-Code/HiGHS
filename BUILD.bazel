@@ -212,6 +212,7 @@ TEST_NAMES = [
     "TestHighsModel",
     "TestHighsParallel",
     "TestHighsRbTree",
+    "TestHiPdlp",
     "TestHSet",
     "TestICrash",
     "TestInfo",

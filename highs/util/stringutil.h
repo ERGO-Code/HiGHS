@@ -149,4 +149,31 @@ bool is_end(std::string& str, size_t end,
 std::string first_word(std::string& str, size_t start);
 size_t first_word_end(std::string& str, size_t start);
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <string.h>  // _strnicmp
+#else
+#include <strings.h>  // strncasecmp
+#endif
+
+// check if substring is contained in str, case insensitive
+inline bool is_substring_case(const char* str, const char* substring) {
+  if (!str || !substring) return false;
+
+  const size_t substring_len = strlen(substring);
+  if (substring_len == 0) return true;
+
+  const size_t str_len = strlen(str);
+  if (substring_len > str_len) return false;
+
+  const char* str_last_possible = str + str_len - substring_len;
+  for (; str <= str_last_possible; ++str) {
+#if defined(_WIN32) || defined(_WIN64)
+    if (_strnicmp(str, substring, substring_len) == 0) return true;
+#else
+    if (strncasecmp(str, substring, substring_len) == 0) return true;
+#endif
+  }
+  return false;
+}
+
 #endif

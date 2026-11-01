@@ -63,6 +63,16 @@ This defines the nature of any basis information:
  * `kBasisValidityInvalid`: There is no basisn information
  * `kBasisValidityValid`: The basis information is valid
 
+## CentringStatus
+
+This defines the outcome of any centring by the interior point
+solver. The model status only indicates whether the LP is solved, so
+it can be optimal even if the solution is not centred:
+
+ * `kCentringStatusNone`: Centring was not performed, either because it was not requested or because the interior point solver did not reach optimality
+ * `kCentringStatusFailed`: Centring was performed, but the solution could not be centred
+ * `kCentringStatusSuccess`: The solution is centred
+
 ## HighsModelStatus
 
 This defines the status of the model after a call to `run`

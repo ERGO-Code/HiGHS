@@ -6,6 +6,51 @@
 
 const bool dev_run = false;
 
+const std::vector<std::string> solvers{kHighsChooseString, kPdlpString,
+                                       kHiPdlpString, kIpxString
+#ifdef HIPO
+                                       ,
+                                       kHipoString
+#endif
+};
+
+void testAllLpSolversCrossoverOption(
+    Highs& highs, const HighsModelStatus require_model_status,
+    const std::string& run_crossover, const bool write_solution = false) {
+  for (auto& solver : solvers) {
+    if (dev_run) {
+      std::string text = "Running with solver = \"" + solver +
+                         "\" and run_crossover = \"" + run_crossover + "\"";
+      highsPrintStringAsHeading(text);
+    }
+    highs.clearSolver();
+    highs.setOptionValue(kSolverString, solver);
+    highs.setOptionValue("run_crossover", run_crossover);
+    HighsStatus status = highs.run();
+    REQUIRE(status == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == require_model_status);
+    if (dev_run && write_solution) highs.writeSolution("", 1);
+  }
+}
+
+void testAllLpSolversCrossoverOn(Highs& highs,
+                                 const HighsModelStatus require_model_status,
+                                 const bool write_solution = false) {
+  testAllLpSolversCrossoverOption(highs, require_model_status, kHighsOnString);
+}
+
+void testAllLpSolversCrossoverChoose(
+    Highs& highs, const HighsModelStatus require_model_status,
+    const bool write_solution = false) {
+  testAllLpSolversCrossoverOption(highs, require_model_status,
+                                  kHighsChooseString);
+}
+
+bool hasBasisPostsolve(const std::string& solver) {
+  if (solver == kPdlpString || solver == kHiPdlpString) return false;
+  return true;
+}
+
 bool doubleEqual(const double v0, const double v1) {
   return std::fabs(v0 - v1) < 1e-8;
 }
@@ -88,7 +133,7 @@ TEST_CASE("postsolve-no-basis", "[highs_test_presolve]") {
     solution.row_dual.clear();
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-solve-postsolve-mip", "[highs_test_presolve]") {
@@ -182,7 +227,7 @@ TEST_CASE("empty-row", "[highs_test_presolve]") {
   REQUIRE(HighsInt(solution.row_value.size()) == lp.num_row_);
   REQUIRE(HighsInt(basis.row_status.size()) == lp.num_row_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void presolveSolvePostsolve(const std::string& model_file,
@@ -203,38 +248,47 @@ void presolveSolvePostsolve(const std::string& model_file,
   }
   REQUIRE(model_presolve_status != HighsPresolveStatus::kUnboundedOrInfeasible);
   HighsLp lp = highs0.getPresolvedLp();
-  highs1.passModel(lp);
-  highs1.setOptionValue("solve_relaxation", solve_relaxation);
-  highs1.setOptionValue("presolve", kHighsOffString);
-  highs1.run();
-  REQUIRE(highs1.getModelStatus() == HighsModelStatus::kOptimal);
-  HighsSolution solution = highs1.getSolution();
-  const double objective_value = highs1.getInfo().objective_function_value;
-  if (lp.isMip() && !solve_relaxation) {
-    return_status = highs0.postsolve(solution);
-    REQUIRE(return_status == HighsStatus::kWarning);
-    HighsModelStatus model_status = highs0.getModelStatus();
-    REQUIRE(model_status == HighsModelStatus::kUnknown);
-    const double dl_objective_value =
-        std::fabs(highs0.getInfo().objective_function_value - objective_value);
-    REQUIRE(dl_objective_value < 1e-9);
-    REQUIRE(highs0.getInfo().primal_solution_status == kSolutionStatusFeasible);
-    double mip_feasibility_tolerance;
-    highs0.getOptionValue("mip_feasibility_tolerance",
-                          mip_feasibility_tolerance);
-    REQUIRE(highs0.getInfo().max_integrality_violation <=
-            mip_feasibility_tolerance);
-  } else {
-    HighsBasis basis = highs1.getBasis();
-    REQUIRE(basis.valid);
-    return_status = highs0.postsolve(solution, basis);
-    REQUIRE(return_status == HighsStatus::kOk);
-    HighsModelStatus model_status = highs0.getModelStatus();
-    REQUIRE(model_status == HighsModelStatus::kOptimal);
-    REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
+  const bool use_mip_solver = lp.isMip() && !solve_relaxation;
+  for (auto& solver : solvers) {
+    // This tests basis postsolve, so ensure that we skip solvers that
+    // don't have crossover
+    if (!hasBasisPostsolve(solver)) continue;
+    highs1.passModel(lp);
+    highs1.setOptionValue("solve_relaxation", solve_relaxation);
+    highs1.setOptionValue("presolve", kHighsOffString);
+    if (!use_mip_solver) highs1.setOptionValue(kSolverString, solver);
+    highs1.run();
+    REQUIRE(highs1.getModelStatus() == HighsModelStatus::kOptimal);
+    HighsSolution solution = highs1.getSolution();
+    const double objective_value = highs1.getInfo().objective_function_value;
+    if (use_mip_solver) {
+      return_status = highs0.postsolve(solution);
+      REQUIRE(return_status == HighsStatus::kWarning);
+      HighsModelStatus model_status = highs0.getModelStatus();
+      REQUIRE(model_status == HighsModelStatus::kUnknown);
+      const double dl_objective_value = std::fabs(
+          highs0.getInfo().objective_function_value - objective_value);
+      REQUIRE(dl_objective_value < 1e-9);
+      REQUIRE(highs0.getInfo().primal_solution_status ==
+              kSolutionStatusFeasible);
+      double mip_feasibility_tolerance;
+      highs0.getOptionValue("mip_feasibility_tolerance",
+                            mip_feasibility_tolerance);
+      REQUIRE(highs0.getInfo().max_integrality_violation <=
+              mip_feasibility_tolerance);
+      break;
+    } else {
+      HighsBasis basis = highs1.getBasis();
+      REQUIRE(basis.valid);
+      return_status = highs0.postsolve(solution, basis);
+      REQUIRE(return_status == HighsStatus::kOk);
+      HighsModelStatus model_status = highs0.getModelStatus();
+      REQUIRE(model_status == HighsModelStatus::kOptimal);
+      REQUIRE(highs0.getInfo().simplex_iteration_count <= 0);
+    }
   }
 
-  highs1.resetGlobalScheduler(true);
+  highs1.resetThreadScheduler(true);
 }
 
 HighsStatus zeroCostColSing() {
@@ -272,7 +326,7 @@ HighsStatus zeroCostColSing() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -331,7 +385,7 @@ HighsStatus colSingDoubletonEquality() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -389,7 +443,7 @@ HighsStatus colSingDoubletonInequality() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -430,7 +484,7 @@ HighsStatus twoColSingDoubletonEquality() {
 
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
@@ -472,49 +526,53 @@ HighsStatus twoColSingDoubletonInequality() {
   highs.run();
   status = highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 
   return status;
 }
 
 // No commas in test case name.
-TEST_CASE("zero-cost", "[presolve-col-sing]") {
+TEST_CASE("zero-cost", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 1." << std::endl;
   HighsStatus status = zeroCostColSing();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("col-sing-doubleton-eq", "[presolve-col-sing]") {
+TEST_CASE("col-sing-doubleton-eq", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 2." << std::endl;
   HighsStatus status = colSingDoubletonEquality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("col-sing-doubleton-ineq", "[presolve-col-sing]") {
+TEST_CASE("col-sing-doubleton-ineq", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 3." << std::endl;
   HighsStatus status = colSingDoubletonInequality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("two-col-sing-doubleton-eq", "[presolve-col-sing]") {
+TEST_CASE("two-col-sing-doubleton-eq", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 4." << std::endl;
   HighsStatus status = twoColSingDoubletonEquality();
   std::string str = highsStatusToString(status);
   CHECK(str == "OK");
 }
 
-TEST_CASE("two-col-sing-doubleton-ineq", "[presolve-col-sing]") {
+TEST_CASE("two-col-sing-doubleton-ineq", "[highs_test_presolve]") {
   if (dev_run) std::cout << "Presolve 5." << std::endl;
   HighsStatus status = twoColSingDoubletonInequality();
   std::string str = highsStatusToString(status);
   REQUIRE(str == "OK");
 }
 
-// test case failing
-HighsStatus issue425() {
+TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
+  if (dev_run) {
+    std::cout << std::endl;
+    std::cout << "Presolve issue 425." << std::endl;
+  }
+  // Infeasible LP
   HighsLp lp;
   lp.num_col_ = 4;
   lp.num_row_ = 4;
@@ -562,19 +620,9 @@ HighsStatus issue425() {
   REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();
-
-  highs.resetGlobalScheduler(true);
-
-  return status;
-}
-
-TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
-  if (dev_run) {
-    std::cout << std::endl;
-    std::cout << "Presolve issue 425." << std::endl;
-  }
-  HighsStatus status = issue425();
   REQUIRE(status == HighsStatus::kOk);
+
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("postsolve-reduced-to-empty", "[highs_test_presolve]") {
@@ -640,10 +688,11 @@ TEST_CASE("write-presolved-model", "[highs_test_presolve]") {
   REQUIRE(highs.getInfo().simplex_iteration_count == -1);
   std::remove(presolved_model_file.c_str());
 
-  highs1.resetGlobalScheduler(true);
+  highs1.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
+  // Exposed a segfault in presolve
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2095.mps";
   Highs highs;
@@ -652,7 +701,7 @@ TEST_CASE("presolve-issue-2095", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kReduced);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
@@ -665,7 +714,7 @@ TEST_CASE("presolve-only-at-root", "[highs_test_presolve]") {
   highs.readModel(model_file);
   REQUIRE(highs.run() == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {
@@ -681,6 +730,7 @@ TEST_CASE("lifting-for-probing", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-issue-2388", "[highs_test_presolve]") {
+  // Exposed incorrectly declaring infeasibility in MIP presolve
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2388.lp";
   Highs highs;
@@ -692,6 +742,8 @@ TEST_CASE("presolve-issue-2388", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-issue-2402", "[highs_test_presolve]") {
+  // Exposed incorrectly declaring optimal when infeasible due to bug
+  // in MIP presolve
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2402.mps";
   Highs highs;
@@ -702,6 +754,7 @@ TEST_CASE("presolve-issue-2402", "[highs_test_presolve]") {
 }
 
 TEST_CASE("presolve-issue-2446", "[highs_test_presolve]") {
+  // Exposed incorrectly declaring infeasibility in MIP presolve
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2446.mps";
   Highs highs;
@@ -734,13 +787,16 @@ TEST_CASE("presolve-solve-postsolve-no-col-dual", "[highs_test_presolve]") {
   solution.col_dual.clear();
   REQUIRE(highs.postsolve(solution) == HighsStatus::kError);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   // Tests the case where, for this model when run_crossover is off,
   // sparsify is used to reduce the LP to empty. However, when
   // starting from an empty LP, basis postsolve is always used
+  //
+  // Since no longer reducing egout-ac.mps to empty, this test is of
+  // no value
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/egout-ac.mps";
   Highs h;
@@ -794,10 +850,11 @@ TEST_CASE("presolve-egout-ac", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getPresolveLog().rule[kPresolveRuleSparsify].call > 0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-bound-tightening", "[highs_test_presolve]") {
+  // MIP
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/gesa2.mps";
 
@@ -842,8 +899,7 @@ TEST_CASE("presolve-rule-off", "[highs_test_presolve]") {
                int(full_presolve_num_col), int(full_presolve_num_row));
       HighsPresolveLog presolve_log = h.getPresolveLog();
       REQUIRE(presolve_log.rule[kPresolveRuleAggregator].col_removed > 0);
-      HighsInt presolve_rule_off =
-          std::pow(int(2), int(kPresolveRuleAggregator));
+      HighsInt presolve_rule_off = 1 << kPresolveRuleAggregator;
       h.setOptionValue("presolve_rule_off", presolve_rule_off);
     } else if (k > 0) {
       HighsInt presolve_num_col = h.getPresolvedLp().num_col_;
@@ -855,10 +911,11 @@ TEST_CASE("presolve-rule-off", "[highs_test_presolve]") {
                int(presolve_num_col), int(presolve_num_row));
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
+  // MIP triggered a crash
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/issue-2874-3.mps";
   Highs highs;
@@ -867,7 +924,7 @@ TEST_CASE("presolve-issue-2874", "[highs_test_presolve]") {
   REQUIRE(highs.presolve() == HighsStatus::kOk);
   REQUIRE(highs.getModelPresolveStatus() == HighsPresolveStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-light", "[highs_test_presolve]") {
@@ -899,7 +956,7 @@ TEST_CASE("presolve-light", "[highs_test_presolve]") {
     highs.setOptionValue("presolve_light", kHighsOnString);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-initial-sweep-postsolve", "[highs_test_presolve]") {
@@ -923,20 +980,60 @@ TEST_CASE("presolve-initial-sweep-postsolve", "[highs_test_presolve]") {
   highs.passModel(lp);
   // Presolved to empty, so no simplex iterations if postsolve is correct
   highs.run();
+  REQUIRE(highs.getRunData().presolved_model_num_col == 0);
+  REQUIRE(highs.getRunData().presolved_model_num_row == 0);
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
   if (dev_run) highs.writeSolution("", 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("presolve_light", kHighsOnString);
   if (dev_run) {
     highs.setOptionValue("log_dev_level", 1);
     highs.setOptionValue("presolve_rule_logging", true);
   }
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {-1, 1};
+  lp.col_lower_ = {1, 0};
+  lp.col_upper_ = {1, kHighsInf};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {5};
+  lp.a_matrix_.start_ = {0, 1, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {3};
+  HighsStatus pass_model_status = HighsStatus::kOk;
+  for (HighsInt k = 0; k < 2; k++) {
+    if (dev_run) printf("\nPass k = %d\n==========\n", int(k));
+    REQUIRE(highs.passModel(lp) == pass_model_status);
+    highs.run();
+    REQUIRE(highs.getRunData().presolved_model_num_col == 0);
+    REQUIRE(highs.getRunData().presolved_model_num_row == 0);
+    if (k == 0) {
+      // Remove the empty column
+      lp.num_col_ = 1;
+      lp.col_cost_ = {-1};
+      lp.col_lower_ = {1};
+      lp.col_upper_ = {1};
+      lp.a_matrix_.start_ = {0, 1};
+    } else if (k == 1) {
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    }
+    if (dev_run) highs.writeSolution("", 1);
+  }
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
+  // Tests all cases in initial sweep
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_light", kHighsOnString);
+  if (dev_run) highs.setOptionValue("presolve_rule_logging", true);
   HighsLp lp;
   lp.num_col_ = 7;
   lp.num_row_ = 4;
@@ -953,8 +1050,7 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   // Rows 0 and 3 singletons; row 1 empty
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
 
-  highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  testAllLpSolversCrossoverChoose(highs, HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", 1);
 
   // Add a redundant row
@@ -962,15 +1058,14 @@ TEST_CASE("presolve-initial-sweep", "[highs_test_presolve]") {
   std::vector<double> value = {1, 1, 1};
   highs.addRow(-kHighsInf, 4, 3, index.data(), value.data());
 
-  highs.setOptionValue("use_warm_start", false);
-  highs.run();
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  testAllLpSolversCrossoverChoose(highs, HighsModelStatus::kOptimal);
   if (dev_run) highs.writeSolution("", 1);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("bound_implied", "[highs_test_presolve]") {
+  // MIP
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/bound_implied.mps";
   Highs highs;
@@ -978,6 +1073,8 @@ TEST_CASE("bound_implied", "[highs_test_presolve]") {
   highs.readModel(model_file);
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2962", "[highs_test_presolve]") {
@@ -988,13 +1085,12 @@ TEST_CASE("issue-2962", "[highs_test_presolve]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("solve_relaxation", true);
-  h.setOptionValue("log_dev_level", 1);
   h.setOptionValue("presolve_rule_logging", true);
 
   h.readModel(model_file);
-  REQUIRE(h.run() == HighsStatus::kOk);
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
@@ -1055,7 +1151,7 @@ TEST_CASE("add-to-matrix", "[highs_test_presolve]") {
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(h.getInfo().objective_function_value == 2.0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
@@ -1112,14 +1208,16 @@ TEST_CASE("max-lp-dual-postsolve", "[highs_test_presolve]") {
     REQUIRE(
         doubleEqual(solution.row_dual[iRow], h.getSolution().row_dual[iRow]));
 
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3140", "[highs_test_presolve]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) {
+    highs.setOptionValue("log_dev_level", 1);
+    highs.setOptionValue("presolve_rule_logging", true);
+  }
   HighsLp lp;
   lp.num_col_ = 9;
   lp.num_row_ = 5;
@@ -1140,10 +1238,13 @@ TEST_CASE("issue-3140", "[highs_test_presolve]") {
   //
   // HighsPresolveStatus::kReducedToEmpty);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-bound-relaxation-unbounded", "[highs_test_presolve]") {
+  // LP: Primal infeasible or unbounded in presolve leads to solving
+  // the original LP with primal simplex to determine infeasible or
+  // unbounded
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 2;
@@ -1163,6 +1264,8 @@ TEST_CASE("dual-bound-relaxation-unbounded", "[highs_test_presolve]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
@@ -1180,17 +1283,14 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
 
   REQUIRE(h.setOptionValue("presolve_light", kHighsOnString) ==
           HighsStatus::kOk);
-  const std::string solver = kIpxString;  // kHipoString;  //
-  REQUIRE(h.setOptionValue("solver", solver) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue("run_crossover", kHighsOffString) ==
-          HighsStatus::kOk);
   REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
-  h.run();
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
+  // Exposed error if initial sweep is interrupted
   HighsLp lp;
   lp.num_col_ = 3;
   lp.num_row_ = 1;
@@ -1216,7 +1316,7 @@ TEST_CASE("test-non-stop-initial-sweep", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-sparsify-primal-dual-postsolve", "[highs_test_presolve]") {
@@ -1243,7 +1343,12 @@ TEST_CASE("test-sparsify-primal-dual-postsolve", "[highs_test_presolve]") {
 
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
-  h.setOptionValue("presolve_rule_logging", true);
+  if (dev_run) {
+    h.setOptionValue("log_dev_level", 1);
+    h.setOptionValue("presolve_rule_logging", true);
+  }
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
+
   h.setOptionValue(kSolverString, kIpxString);
   h.setOptionValue("run_crossover", kHighsOffString);
 
@@ -1252,7 +1357,7 @@ TEST_CASE("test-sparsify-primal-dual-postsolve", "[highs_test_presolve]") {
   REQUIRE(status == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-duplicate-row-postsolve", "[highs_test_presolve]") {
@@ -1323,21 +1428,16 @@ TEST_CASE("test-duplicate-row-postsolve", "[highs_test_presolve]") {
       // computeRowDualAndStatus - and test the correctness of both
       // primal-dual and basis postsolve.
       //
-      h.setOptionValue("run_crossover", kHighsOnString);
-      for (HighsInt k = 0; k < 2; k++) {
-        REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-        REQUIRE(h.run() == HighsStatus::kOk);
-
-        REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-        h.setOptionValue("run_crossover", kHighsOffString);
-      }
+      REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+      testAllLpSolversCrossoverOn(h, HighsModelStatus::kOptimal);
+      testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
       lp.a_matrix_.value_ = {-1, 4, 1, -4, -3, 12};
     }
     lp.row_lower_ = {0, 0};
     lp.row_upper_ = {kHighsInf, 4};
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
@@ -1419,14 +1519,9 @@ TEST_CASE("test-weakly-dominated-column-primal-dual-postsolve",
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue(kSolverString, kIpxString);
-  h.setOptionValue("run_crossover", kHighsOffString);
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  if (dev_run) h.writeSolution("", 1);
-
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-dual-fixing-primal-dual-postsolve", "[highs_test_presolve]") {
@@ -1510,14 +1605,9 @@ TEST_CASE("test-dual-fixing-primal-dual-postsolve", "[highs_test_presolve]") {
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   h.setOptionValue("presolve_rule_logging", true);
-  h.setOptionValue(kSolverString, kIpxString);
-  h.setOptionValue("run_crossover", kHighsOffString);
+  testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
-  if (dev_run) h.writeSolution("", 1);
-  REQUIRE(h.run() == HighsStatus::kOk);
-  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 /*
   TEST_CASE("test-fuzzing", "[highs_test_presolve]") {
@@ -1595,7 +1685,7 @@ HighsStatus::kOk); options.run_crossover = kHighsOnString;
   h.run();
   h.writeSolution("", 1);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
 
@@ -1635,7 +1725,7 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
             HighsStatus::kOk);
 
     REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-    REQUIRE(h.run() == HighsStatus::kOk);
+    testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
 
     if (k == 0) {
       REQUIRE(run_data.presolved_model_num_row == 1);
@@ -1669,7 +1759,7 @@ TEST_CASE("presolve-rules-off", "[highs_test_presolve]") {
     }
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3342", "[highs_test_presolve]") {
@@ -1776,7 +1866,7 @@ TEST_CASE("issue-3359", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3391", "[highs_test_presolve]") {
@@ -1811,7 +1901,7 @@ TEST_CASE("issue-3391", "[highs_test_presolve]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
@@ -1826,8 +1916,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
   options.presolve_rule_logging = true;
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
 
-  if (debugging)
-    printf("\n====================\nWithout presolve\n====================\n");
+  if (debugging) highsPrintStringAsHeading("Without presolve");
 
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
@@ -1843,8 +1932,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
   }
 
   if (!reduces_to_empty) {
-    if (debugging)
-      printf("\n====================\nPresolved LP\n====================\n");
+    if (debugging) highsPrintStringAsHeading("Presolved LP");
 
     REQUIRE(h.passOptions(options) == HighsStatus::kOk);
     REQUIRE(h.setOptionValue(kSolverString, kIpxString) == HighsStatus::kOk);
@@ -1863,10 +1951,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
     if (debugging) h.writeSolution("", 1);
   }
 
-  if (debugging)
-    printf(
-        "\n====================\nPresolve no "
-        "crossover\n====================\n");
+  if (debugging) highsPrintStringAsHeading("Presolve no crossover");
 
   h.passModel(lp);
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
@@ -1883,10 +1968,7 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
     REQUIRE(status == HighsStatus::kOk);
   }
 
-  if (debugging)
-    printf(
-        "\n====================\nPresolve with "
-        "crossover\n====================\n");
+  if (debugging) highsPrintStringAsHeading("Presolve with crossover");
 
   h.passModel(lp);
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
@@ -1902,5 +1984,307 @@ void debugPrimalDualPresolve(const HighsLp& lp, const bool reduces_to_empty,
     REQUIRE(h.getRunData().num_simplex_iterations_after_postsolve == 0);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
+
+TEST_CASE("initial-sweep-empty-fixed-col", "[highs_test_presolve]") {
+  // with the empty column rule switched off, the fixed column rule removes
+  // the last column, which is fixed and empty, so that its matrix entries
+  // start at the end of the matrix, which used to be accessed out of range
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 3};
+  lp.col_lower_ = {0, 2};
+  lp.col_upper_ = {10, 2};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 1};
+  lp.a_matrix_.index_ = {0};
+  lp.a_matrix_.value_ = {1};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleEmptyCol) ==
+          HighsStatus::kOk);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 7);
+  REQUIRE(h.getSolution().col_value[1] == 2);
+
+  h.resetThreadScheduler(true);
+}
+
+TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {
+  // fixing a column while checking a row for dominated columns led to
+  // storeRow being called on a modified row, shrinking the stored row
+  // positions that were still being iterated over
+  const std::string model = "dominated-cols-container-overflow";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 2);
+
+  h.resetThreadScheduler(true);
+}
+
+#ifdef HIPO
+TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
+  auto setPresolveRuleOff = [&]() {
+    // Allows more than one presolve rule to be switched off easily
+    HighsInt presolve_rule_off = 0;
+    //    presolve_rule_off += 1 << kPresolveRuleFreeColSubstitution;
+    //    presolve_rule_off += 1 << kPresolveRuleAggregator;
+    return presolve_rule_off;
+  };
+  const std::string model = "bandm";  //"avgas";//
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  const bool logging = false;  // true;  //
+  if (!logging) h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.setOptionValue("log_dev_level", 1) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
+  // Solver must be specified before calling pure presolve so that
+  // rules are switched off appropriately
+  REQUIRE(h.setOptionValue(kSolverString, kIpmString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("run_crossover", kHighsChooseString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("presolve_rule_off", setPresolveRuleOff()) ==
+          HighsStatus::kOk);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.presolve();
+  const HighsLp& lp = h.getLp();
+  const HighsLp& presolved_lp = h.getPresolvedLp();
+
+  std::string use_pdlp = kPdlpString;
+  const bool compare_pdlp = false;
+
+  Highs h1;
+  if (!logging) h1.setOptionValue("output_flag", dev_run);
+  h1.passModel(presolved_lp);
+  REQUIRE(h1.setOptionValue(kPresolveString, kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(h1.setOptionValue("run_crossover", kHighsChooseString) ==
+          HighsStatus::kOk);
+
+  REQUIRE(h1.setOptionValue(kSolverString, kIpxString) == HighsStatus::kOk);
+  REQUIRE(h1.run() == HighsStatus::kOk);
+  HighsModelStatus ipx_model_status = h1.getModelStatus();
+  HighsInfo ipx_info = h1.getInfo();
+  HighsSolution ipx_solution = h1.getSolution();
+
+  h1.clearSolver();
+  REQUIRE(h1.setOptionValue(kSolverString, kHipoString) == HighsStatus::kOk);
+  REQUIRE(h1.run() == HighsStatus::kOk);
+  HighsModelStatus hipo_model_status = h1.getModelStatus();
+  HighsInfo hipo_info = h1.getInfo();
+  HighsSolution hipo_solution = h1.getSolution();
+
+  HighsModelStatus pdlp_model_status;
+  HighsInfo pdlp_info;
+  HighsSolution pdlp_solution;
+  if (compare_pdlp) {
+    h1.clearSolver();
+    REQUIRE(h1.setOptionValue(kSolverString, use_pdlp) == HighsStatus::kOk);
+    REQUIRE(h1.run() == HighsStatus::kOk);
+    pdlp_model_status = h1.getModelStatus();
+    pdlp_info = h1.getInfo();
+    pdlp_solution = h1.getSolution();
+  }
+
+  auto logIntegerInfo = [&](const std::string& name, const HighsInt ipx,
+                            const HighsInt hipo) {
+    if (!logging) return;
+    if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
+    printf("%-35s   %9d   %9d   %9d\n", name.c_str(), int(ipx), int(hipo),
+           int(ipx - hipo));
+  };
+
+  auto logDoubleInfo = [&](const std::string& name, const double ipx,
+                           const double hipo) {
+    if (!logging) return;
+    if ((ipx == 0 && hipo == 0) || ipx == hipo) return;
+    printf("%-35s %11.4g %11.4g %11.2f\n", name.c_str(), ipx, hipo, hipo / ipx);
+  };
+
+  auto compareSolverInfo = [&](const std::string& solver0,
+                               const std::string& solver1,
+                               const HighsModelStatus& model_status0,
+                               const HighsModelStatus& model_status1,
+                               const HighsInfo& info0, const HighsInfo& info1) {
+    if (!logging) return;
+    printf("\n%-35s   %9s   %9s\n", "Model status",
+           h.modelStatusToString(model_status0).c_str(),
+           h.modelStatusToString(model_status1).c_str());
+    printf(
+        "Measure                                  %6s      %6s     Compare\n",
+        solver0.c_str(), solver1.c_str());
+    logIntegerInfo("simplex_iteration_count", info0.simplex_iteration_count,
+                   info1.simplex_iteration_count);
+    logIntegerInfo("ipm_iteration_count", info0.ipm_iteration_count,
+                   info1.ipm_iteration_count);
+    logIntegerInfo("pdlp_iteration_count", info0.pdlp_iteration_count,
+                   info1.pdlp_iteration_count);
+    logIntegerInfo("crossover_iteration_count", info0.crossover_iteration_count,
+                   info1.crossover_iteration_count);
+    logIntegerInfo("primal_solution_status", info0.primal_solution_status,
+                   info1.primal_solution_status);
+    logIntegerInfo("dual_solution_status", info0.dual_solution_status,
+                   info1.dual_solution_status);
+    logIntegerInfo("centring_status", info0.centring_status,
+                   info1.centring_status);
+    logDoubleInfo("objective_function_value", info0.objective_function_value,
+                  info1.objective_function_value);
+    logIntegerInfo("num_primal_infeasibilities",
+                   info0.num_primal_infeasibilities,
+                   info1.num_primal_infeasibilities);
+    logDoubleInfo("max_primal_infeasibility", info0.max_primal_infeasibility,
+                  info1.max_primal_infeasibility);
+    logDoubleInfo("sum_primal_infeasibilities",
+                  info0.sum_primal_infeasibilities,
+                  info1.sum_primal_infeasibilities);
+    logIntegerInfo("num_dual_infeasibilities", info0.num_dual_infeasibilities,
+                   info1.num_dual_infeasibilities);
+    logDoubleInfo("max_dual_infeasibility", info0.max_dual_infeasibility,
+                  info1.max_dual_infeasibility);
+    logDoubleInfo("sum_dual_infeasibilities", info0.sum_dual_infeasibilities,
+                  info1.sum_dual_infeasibilities);
+    logIntegerInfo("num_relative_primal_infeasibilities",
+                   info0.num_relative_primal_infeasibilities,
+                   info1.num_relative_primal_infeasibilities);
+    logDoubleInfo("max_relative_primal_infeasibility",
+                  info0.max_relative_primal_infeasibility,
+                  info1.max_relative_primal_infeasibility);
+    logIntegerInfo("num_relative_dual_infeasibilities",
+                   info0.num_relative_dual_infeasibilities,
+                   info1.num_relative_dual_infeasibilities);
+    logDoubleInfo("max_relative_dual_infeasibility",
+                  info0.max_relative_dual_infeasibility,
+                  info1.max_relative_dual_infeasibility);
+    logIntegerInfo("num_primal_residual_errors",
+                   info0.num_primal_residual_errors,
+                   info1.num_primal_residual_errors);
+    logDoubleInfo("max_primal_residual_error", info0.max_primal_residual_error,
+                  info1.max_primal_residual_error);
+    logIntegerInfo("num_dual_residual_errors", info0.num_dual_residual_errors,
+                   info1.num_dual_residual_errors);
+    logDoubleInfo("max_dual_residual_error", info0.max_dual_residual_error,
+                  info1.max_dual_residual_error);
+    logIntegerInfo("num_relative_primal_residual_errors",
+                   info0.num_relative_primal_residual_errors,
+                   info1.num_relative_primal_residual_errors);
+    logDoubleInfo("max_relative_primal_residual_error",
+                  info0.max_relative_primal_residual_error,
+                  info1.max_relative_primal_residual_error);
+    logIntegerInfo("num_relative_dual_residual_errors",
+                   info0.num_relative_dual_residual_errors,
+                   info1.num_relative_dual_residual_errors);
+    logDoubleInfo("max_relative_dual_residual_error",
+                  info0.max_relative_dual_residual_error,
+                  info1.max_relative_dual_residual_error);
+    logIntegerInfo("num_complementarity_violations",
+                   info0.num_complementarity_violations,
+                   info1.num_complementarity_violations);
+    logDoubleInfo("max_complementarity_violation",
+                  info0.max_complementarity_violation,
+                  info1.max_complementarity_violation);
+    logDoubleInfo("primal_dual_objective_error",
+                  info0.primal_dual_objective_error,
+                  info1.primal_dual_objective_error);
+    REQUIRE(info0.active_cost_norm == info1.active_cost_norm);
+    REQUIRE(info0.active_bound_norm == info1.active_bound_norm);
+    printf("\nUsing active_cost_norm = %11.4g and active_bound_norm = %11.4g\n",
+           info0.active_cost_norm, info0.active_bound_norm);
+  };
+
+  auto compareSolverSolution =
+      [&](const HighsLp& lp, const std::string& solver0,
+          const std::string& solver1, const HighsSolution& solution0,
+          const HighsSolution& solution1) {
+        if (!logging) return;
+        double col_value_dl = 0;
+        double col_dual_dl = 0;
+        double row_value_dl = 0;
+        double row_dual_dl = 0;
+        for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+          col_value_dl +=
+              std::fabs(solution0.col_value[iCol] - solution1.col_value[iCol]);
+          col_dual_dl +=
+              std::fabs(solution0.col_dual[iCol] - solution1.col_dual[iCol]);
+        }
+        for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
+          row_value_dl +=
+              std::fabs(solution0.row_value[iRow] - solution1.row_value[iRow]);
+          row_dual_dl +=
+              std::fabs(solution0.row_dual[iRow] - solution1.row_dual[iRow]);
+        }
+        printf("\ncol_value ||%s-%s|| = %11.4g\n", solver0.c_str(),
+               solver1.c_str(), col_value_dl);
+        printf("col_dual  ||%s-%s|| = %11.4g\n", solver0.c_str(),
+               solver1.c_str(), col_dual_dl);
+        printf("row_value ||%s-%s|| = %11.4g\n", solver0.c_str(),
+               solver1.c_str(), row_value_dl);
+        printf("row_dual  ||%s-%s|| = %11.4g\n", solver0.c_str(),
+               solver1.c_str(), row_dual_dl);
+      };
+
+  compareSolverInfo(kIpxString, kHipoString, ipx_model_status,
+                    hipo_model_status, ipx_info, hipo_info);
+  compareSolverSolution(presolved_lp, kIpxString, kHipoString, ipx_solution,
+                        hipo_solution);
+
+  if (compare_pdlp) {
+    compareSolverInfo(kIpxString, use_pdlp, ipx_model_status, pdlp_model_status,
+                      ipx_info, pdlp_info);
+    compareSolverSolution(presolved_lp, kIpxString, use_pdlp, ipx_solution,
+                          pdlp_solution);
+  }
+
+  if (logging) highsPrintStringAsHeading("After postsolve");
+
+  //  h.clearSolver();
+  h.postsolve(ipx_solution);
+  ipx_model_status = h.getModelStatus();
+  ipx_info = h.getInfo();
+  ipx_solution = h.getSolution();
+  //  h.writeSolution("", 1);
+
+  //  h.clearSolver();
+  h.postsolve(hipo_solution);
+  hipo_model_status = h.getModelStatus();
+  hipo_info = h.getInfo();
+  hipo_solution = h.getSolution();
+
+  if (compare_pdlp) {
+    //    h.clearSolver();
+    h.postsolve(pdlp_solution);
+    pdlp_model_status = h.getModelStatus();
+    pdlp_info = h.getInfo();
+    pdlp_solution = h.getSolution();
+  }
+
+  compareSolverInfo(kIpxString, kHipoString, ipx_model_status,
+                    hipo_model_status, ipx_info, hipo_info);
+
+  if (compare_pdlp)
+    compareSolverInfo(kIpxString, use_pdlp, ipx_model_status, pdlp_model_status,
+                      ipx_info, pdlp_info);
+
+  if (logging)
+    printf(
+        "\nPresolve reductions: rows %d(%d); columns %d(%d); nonzeros %d(%d)\n",
+        int(presolved_lp.num_row_), int(presolved_lp.num_row_ - lp.num_row_),
+        int(presolved_lp.num_col_), int(presolved_lp.num_col_ - lp.num_col_),
+        int(presolved_lp.numNz()), int(presolved_lp.numNz() - lp.numNz()));
+
+  h.resetThreadScheduler(true);
+}
+
+#endif

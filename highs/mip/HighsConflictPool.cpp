@@ -201,7 +201,10 @@ void HighsConflictPool::syncConflictPool(HighsConflictPool& syncpool) {
     HighsInt start = conflictRanges_[i].first;
     HighsInt end = conflictRanges_[i].second;
     assert(start >= 0 && end >= 0);
-    syncpool.addConflictFromOtherPool(&conflictEntries_[start], end - start);
+    // use pointer arithmetic since start equals the number of entries for an
+    // empty conflict at the end of the entries
+    syncpool.addConflictFromOtherPool(conflictEntries_.data() + start,
+                                      end - start);
     removeConflict(i);
   }
   deletedConflicts_.clear();

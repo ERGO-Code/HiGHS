@@ -253,7 +253,8 @@ class HighsSearch {
 
   const HighsPseudocost& getPseudoCost() const { return pseudocost; }
 
-  void solveDepthFirst(int64_t maxbacktracks = 1);
+  void solveDepthFirst(int64_t maxbacktracks = 1,
+                       int64_t maxnodes = std::numeric_limits<int64_t>::max());
 
   double getFeasTol() const;
   double getUpperLimit() const;

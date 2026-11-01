@@ -49,7 +49,7 @@ void solve(Highs& highs, std::string presolve, std::string solver,
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
   highs.setOptionValue("output_flag", dev_run);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void distillation(Highs& highs) {
@@ -617,7 +617,7 @@ void singularStartingBasis(Highs& highs) {
 
   special_lps.reportSolution(highs, dev_run);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void unconstrained(Highs& highs) {
@@ -651,7 +651,7 @@ void unconstrained(Highs& highs) {
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void smallValue(Highs& highs) {
@@ -663,7 +663,7 @@ void smallValue(Highs& highs) {
           HighsStatus::kWarning);
   REQUIRE(highs.run() == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("LP-distillation", "[highs_test_special_lps]") {

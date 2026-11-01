@@ -48,6 +48,7 @@ jobs:
           - [macos-14, macosx_arm64]
           - [windows-2022, win_amd64]
           - [windows-2022, win32]
+          - [windows-11-arm, win_arm64]
         python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp314", "cp314t"]
         exclude:
           # numpy (pulled in by the test suite) has no 32-bit linux free-threaded wheels
@@ -55,6 +56,11 @@ jobs:
             python: "cp314t"
           - buildplat: [ubuntu-24.04, musllinux_i686]
             python: "cp314t"
+          # CPython for Windows ARM64 is only available from 3.11
+          - buildplat: [windows-11-arm, win_arm64]
+            python: "cp39"
+          - buildplat: [windows-11-arm, win_arm64]
+            python: "cp310"
     steps:
       - uses: actions/checkout@v6
       - name: Build wheels
@@ -85,6 +91,7 @@ jobs:
           - [macos-14, macosx_arm64]
           - [windows-2022, win_amd64]
           - [windows-2022, win32]
+          - [windows-11-arm, win_arm64]
         python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp314", "cp314t"]
         exclude:
           # numpy (pulled in by the test suite) has no 32-bit linux free-threaded wheels
@@ -92,6 +99,11 @@ jobs:
             python: "cp314t"
           - buildplat: [ubuntu-24.04, musllinux_i686]
             python: "cp314t"
+          # CPython for Windows ARM64 is only available from 3.11
+          - buildplat: [windows-11-arm, win_arm64]
+            python: "cp39"
+          - buildplat: [windows-11-arm, win_arm64]
+            python: "cp310"
     steps:
       - uses: actions/checkout@v6
 

@@ -266,28 +266,6 @@ bool HPresolve::isStrictlyImpliedForDual(HighsInt col,
                       : isUpperStrictlyImplied(col, &impliedMargin);
 }
 
-bool HPresolve::isRowDualLowerImplied(HighsInt row) const {
-  return isRowDualLowerImplied(row, implRowDualLower[row]);
-}
-
-bool HPresolve::isRowDualLowerImplied(HighsInt row, double implLower) const {
-  // checks whether the given implied lower bound on the row dual implies the
-  // row dual's lower bound
-  return (rowDualLower[row] == -kHighsInf ||
-          implLower >= rowDualLower[row] - options->dual_feasibility_tolerance);
-}
-
-bool HPresolve::isRowDualUpperImplied(HighsInt row) const {
-  return isRowDualUpperImplied(row, implRowDualUpper[row]);
-}
-
-bool HPresolve::isRowDualUpperImplied(HighsInt row, double implUpper) const {
-  // checks whether the given implied upper bound on the row dual implies the
-  // row dual's upper bound
-  return (rowDualUpper[row] == kHighsInf ||
-          implUpper <= rowDualUpper[row] + options->dual_feasibility_tolerance);
-}
-
 bool HPresolve::isBinary(HighsInt col) const {
   return model->integrality_[col] == HighsVarType::kInteger &&
          model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
@@ -302,17 +280,25 @@ bool HPresolve::isDualImpliedFree(HighsInt row) const {
 }
 
 bool HPresolve::isDualImpliedLeq(HighsInt row) const {
-  // checks whether the row has a finite upper bound and the row dual is
-  // implied to be non-positive
+  return isDualImpliedLeq(row, implRowDualUpper[row]);
+}
+
+bool HPresolve::isDualImpliedLeq(HighsInt row, double implUpper) const {
+  // checks whether the row has a finite upper bound and the given implied
+  // upper bound implies that the row dual is non-positive
   return (model->row_upper_[row] != kHighsInf &&
-          implRowDualUpper[row] <= options->dual_feasibility_tolerance);
+          implUpper <= options->dual_feasibility_tolerance);
 }
 
 bool HPresolve::isDualImpliedGeq(HighsInt row) const {
-  // checks whether the row has a finite lower bound and the row dual is
-  // implied to be non-negative
+  return isDualImpliedGeq(row, implRowDualLower[row]);
+}
+
+bool HPresolve::isDualImpliedGeq(HighsInt row, double implLower) const {
+  // checks whether the row has a finite lower bound and the given implied
+  // lower bound implies that the row dual is non-negative
   return (model->row_lower_[row] != -kHighsInf &&
-          implRowDualLower[row] >= -options->dual_feasibility_tolerance);
+          implLower >= -options->dual_feasibility_tolerance);
 }
 
 void HPresolve::dualImpliedFreeGetRhsAndRowType(
@@ -402,6 +388,19 @@ void HPresolve::chooseRules() {
                  utilPresolveRuleTypeToString(rule_type).c_str());
   };
 
+  auto ruleOffForPostsolve = [&](const std::string& postsolve_type,
+                                 const HighsInt rule) {
+    // If the rule is already switched off (by user action etc) then
+    // no action is needed
+    if (!allow_rule_[rule]) return;
+    allow_rule_[rule] = false;
+    if (!silent && options->log_dev_level)
+      highsLogUser(options->log_options, HighsLogType::kWarning,
+                   "May require %s postsolve, so switched off \"%s\" rule\n",
+                   postsolve_type.c_str(),
+                   utilPresolveRuleTypeToString(rule).c_str());
+  };
+
   if (!silent && options->log_dev_level) {
     // State which rules can be off, and what bit to set
     highsLogUser(options->log_options, HighsLogType::kInfo,
@@ -466,31 +465,35 @@ void HPresolve::chooseRules() {
   }
 
   may_require_basis_postsolve_ = false;
-  may_require_primal_dual_postsolve_ = false;
+  may_require_dual_postsolve_ = false;
+
   if (mipsolver == nullptr) {
-    // Record whether one or both of basis and primal-dual postsolve
-    // may be required, and switch off rules that are correspondingly
+    // Record whether one or both of dual and basis postsolve may be
+    // required, and switch off rules that are correspondingly
     // incompatible
+    if (mayRequireDualPostsolve(options)) {
+      may_require_dual_postsolve_ = true;
+      // Cannot use weakly dominated column rule (see
+      // test-weakly-dominated-column-dual-postsolve)
+      ruleOffForPostsolve("dual", kPresolveRuleWeaklyDominatedCol);
+      // Cannot use kPresolveRuleDualFixing rule (see
+      // test-dual-fixing-dual-postsolve)
+      ruleOffForPostsolve("dual", kPresolveRuleDualFixing);
+      // Cannot use kPresolveRuleZeroCostSingleton (see
+      // hipo-ipx-pdlp-no-crossover)
+      ruleOffForPostsolve("dual", kPresolveRuleZeroCostSingleton);
+    }
     if (mayRequireBasisPostsolve(options)) {
       may_require_basis_postsolve_ = true;
       // Cannot use sparsify or any parallel row rule using
       // EqualityRowAddition(s). Latter are avoided logically in
       // HPresolve::detectParallelRowsAndCols
-      allow_rule_[kPresolveRuleSparsify] = false;
+      ruleOffForPostsolve("basis", kPresolveRuleSparsify);
     }
-    if (mayRequirePrimalDualPostsolve(options)) {
-      may_require_primal_dual_postsolve_ = true;
-      // Cannot use weakly dominated column rule (see
-      // test-weakly-dominated-column-primal-dual-postsolve)
-      allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
-      // Cannot use kPresolveRuleDualFixing rule (see
-      // test-dual-fixing-primal-dual-postsolve)
-      allow_rule_[kPresolveRuleDualFixing] = false;
-    }
-    if (may_require_basis_postsolve_ || may_require_primal_dual_postsolve_) {
-      // Cannot use dominated column rule for either basis or
-      // primal-dual postsolve (see issue-3342)
-      allow_rule_[kPresolveRuleDominatedCol] = false;
+    if (may_require_dual_postsolve_ || may_require_basis_postsolve_) {
+      // Cannot use dominated column rule for either dual or basis
+      // postsolve (see issue-3342)
+      ruleOffForPostsolve("dual or basis", kPresolveRuleDominatedCol);
     }
   }
   // If dominated column rule is off, weakly dominated column rule
@@ -1658,11 +1661,12 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
     markChangedRow(row);
 
   // the row becomes dual implied free if it was not dual implied free before
-  // and the new implied bound implies the row dual's upper bound (zero for <=
-  // rows); then implied free columns in the row are substitution candidates
-  bool newDualImplied = !isDualImpliedFree(row) &&
-                        !isRowDualUpperImplied(row) &&
-                        isRowDualUpperImplied(row, newUpper);
+  // and the new implied bound implies that the row dual is non-positive; then
+  // implied free columns in the row are substitution candidates. note that
+  // this includes ranged rows, and never holds for free rows, which cannot be
+  // dual implied free
+  bool newDualImplied =
+      !isDualImpliedFree(row) && isDualImpliedLeq(row, newUpper);
 
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
@@ -1704,11 +1708,12 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
     markChangedRow(row);
 
   // the row becomes dual implied free if it was not dual implied free before
-  // and the new implied bound implies the row dual's lower bound (zero for >=
-  // rows); then implied free columns in the row are substitution candidates
-  bool newDualImplied = !isDualImpliedFree(row) &&
-                        !isRowDualLowerImplied(row) &&
-                        isRowDualLowerImplied(row, newLower);
+  // and the new implied bound implies that the row dual is non-negative; then
+  // implied free columns in the row are substitution candidates. note that
+  // this includes ranged rows, and never holds for free rows, which cannot be
+  // dual implied free
+  bool newDualImplied =
+      !isDualImpliedFree(row) && isDualImpliedGeq(row, newLower);
 
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination

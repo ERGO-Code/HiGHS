@@ -755,13 +755,15 @@ void assessExcessiveObjectiveBoundScaling(const HighsOptions& options,
 
   // Assess the reationship between extreme objective/bound values and
   // feasibility tolerances
-  double use_primal_feasibility_tolerance =
-      options.primal_feasibility_tolerance;
-  double use_dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  if (model.isMip() && !options.solve_relaxation) {
-    use_primal_feasibility_tolerance = options.mip_feasibility_tolerance;
-    use_dual_feasibility_tolerance = options.mip_feasibility_tolerance * 0.1;
-  }
+  const bool use_mip_feasibility_tolerances =
+      model.isMip() && !options.solve_relaxation;
+  const double use_primal_feasibility_tolerance =
+      use_mip_feasibility_tolerances
+          ? options.getMipPrimalFeasibilityTolerance()
+          : options.primal_feasibility_tolerance;
+  const double use_dual_feasibility_tolerance =
+      use_mip_feasibility_tolerances ? options.getMipDualFeasibilityTolerance()
+                                     : options.dual_feasibility_tolerance;
   const double max_objective =
       std::max(max_effective_col_cost, max_hessian_value);
   const double max_bound =
@@ -1038,10 +1040,13 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   // Remember to judge primal feasibility according to
   // mip_feasibility_tolerance, so take a copy of the original
   // value...
-  double primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-  options.primal_feasibility_tolerance = options.mip_feasibility_tolerance;
+  const double primal_feasibility_tolerance =
+      options.getMipPrimalFeasibilityTolerance();
+  options.primal_feasibility_tolerance = primal_feasibility_tolerance;
   // NB getKktFailures sets the primal and dual solution status
   getLpKktFailures(options, lp, solution, basis, info);
+  // Recover the primal feasibility tolerance
+  options.primal_feasibility_tolerance = primal_feasibility_tolerance;
   // Set the MIP-specific values of info
   info.mip_node_count = solver.node_count_;
   info.mip_dual_bound = solver.dual_bound_;
@@ -1075,7 +1080,5 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
     if (info.max_integrality_violation > options.mip_feasibility_tolerance)
       info.primal_solution_status = kSolutionStatusInfeasible;
   }
-  // ... and remember to recover the primal feasibility tolerance
-  options.primal_feasibility_tolerance = primal_feasibility_tolerance;
   return return_status;
 }

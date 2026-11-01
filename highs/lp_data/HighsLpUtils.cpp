@@ -1620,34 +1620,49 @@ HighsStatus changeLpIntegrality(HighsLp& lp,
   const vector<HighsInt>& col_set = index_collection.set_;
   const vector<HighsInt>& col_mask = index_collection.mask_;
 
-  // Change the integrality to the user-supplied integrality, according to the
-  // technique
-  HighsInt lp_col;
-  HighsInt usr_col = -1;
+  auto passThroughNewIntegrality = [&](const bool find_non_continuous) {
+    HighsInt lp_col;
+    HighsInt usr_col = -1;
+    for (HighsInt k = from_k; k < to_k + 1; k++) {
+      if (interval || mask) {
+        lp_col = k;
+      } else {
+        lp_col = col_set[k];
+      }
+      HighsInt col = lp_col;
+      if (interval) {
+        usr_col++;
+      } else {
+        usr_col = k;
+      }
+      if (mask && !col_mask[col]) continue;
+      if (find_non_continuous) {
+        if (new_integrality[usr_col] != HighsVarType::kContinuous) return true;
+      } else {
+        lp.integrality_[col] = new_integrality[usr_col];
+      }
+    }
+    return false;
+  };
+
+  auto hasNonContinuous = [&]() { return passThroughNewIntegrality(true); };
+  auto assignNewIntegrality = [&]() { passThroughNewIntegrality(false); };
 
   // If changing integrality for a problem without an integrality
-  // vector (ie an LP), have to create it for the incumbent columns -
-  // which are naturally continuous
-  if (lp.integrality_.size() == 0)
+  // vector (ie an LP), check whether it is needed before creating it
+  // for the incumbent columns - which are naturally continuous -
+  // otherwise (#3476) n repeated calls setting single columns to
+  // HighsVarType::kContinuous costs O(n^2)
+  if (lp.integrality_.size() == 0) {
+    if (!hasNonContinuous()) return return_status;
     lp.integrality_.assign(lp.num_col_, HighsVarType::kContinuous);
-
-  assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
-  for (HighsInt k = from_k; k < to_k + 1; k++) {
-    if (interval || mask) {
-      lp_col = k;
-    } else {
-      lp_col = col_set[k];
-    }
-    HighsInt col = lp_col;
-    if (interval) {
-      usr_col++;
-    } else {
-      usr_col = k;
-    }
-    if (mask && !col_mask[col]) continue;
-    lp.integrality_[col] = new_integrality[usr_col];
   }
-  // If integrality_ contains only HighsVarType::kContinuous then
+  assert(HighsInt(lp.integrality_.size()) == lp.num_col_);
+  // Change the integrality to the user-supplied integrality, according to the
+  // technique
+  assignNewIntegrality();
+
+  // If integrality_ now contains only HighsVarType::kContinuous then
   // clear it
   if (!lp.isMip()) lp.integrality_.clear();
   return return_status;
@@ -2160,19 +2175,31 @@ HighsStatus readSolutionFile(const std::string& filename,
       return readSolutionFileErrorReturn(in_file);  // EOL
     if (!readSolutionFileIgnoreLineOk(in_file))
       return readSolutionFileErrorReturn(in_file);  // Objective
-    // Next line should be "Columns", correct number and possibly a
-    // qualifier string, so can't be read (easily) as a std::ifstream
+    // Next line, possibly after ignoring lines giving the
+    // "Objective_bound"and "MIP_rel_gap", should be "# Columns",
+    // correct number and possibly a qualifier string, so can't be
+    // read (easily) as a std::ifstream
     std::string column_section_line;
-    std::getline(in_file, column_section_line);
-    std::stringstream column_section_line_ss(column_section_line);
-    if (column_section_line.empty() ||
-        !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
-                                            num_col, qualifier_string,
-                                            column_section_line_ss)) {
-      highsLogUser(log_options, HighsLogType::kError,
-                   "readSolutionFile: Error reading line \"%s\"\n",
-                   column_section_line.c_str());
-      return readSolutionFileErrorReturn(in_file);
+    for (;;) {
+      std::getline(in_file, column_section_line);
+      std::stringstream column_section_line_ss(column_section_line);
+      if (column_section_line.empty() ||
+          !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
+                                              num_col, qualifier_string,
+                                              column_section_line_ss)) {
+        // If # hasn't been read, then it's "Objective_bound" or
+        // "MIP_rel_gap", so look at the next line
+        if (hash != "#") {
+          assert(hash == "Objective_bound" || hash == "MIP_rel_gap");
+          continue;
+        }
+        highsLogUser(log_options, HighsLogType::kError,
+                     "readSolutionFile: Error reading line \"%s\"\n",
+                     column_section_line.c_str());
+        return readSolutionFileErrorReturn(in_file);
+      }
+      // "# Columns" has been read correctly, to break
+      break;
     }
     assert(keyword == "Columns");
     // The default style parameter is kSolutionStyleRaw, and this

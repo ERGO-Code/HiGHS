@@ -80,7 +80,7 @@ TEST_CASE("Basis-file", "[highs_basis_file]") {
   std::remove(basis_file.c_str());
   std::remove(invalid_basis_file.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("Basis-data", "[highs_basis_data]") {
@@ -110,7 +110,7 @@ TEST_CASE("Basis-data", "[highs_basis_data]") {
   testBasisRestart(highs, basis_file, false);
   testBasisReloadModel(highs, basis_file, false);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
@@ -147,7 +147,7 @@ TEST_CASE("set-pathological-basis", "[highs_basis_data]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("Basis-no-basic", "[highs_basis_data]") {
@@ -173,7 +173,7 @@ TEST_CASE("Basis-no-basic", "[highs_basis_data]") {
   REQUIRE(highs.getInfo().objective_function_value == -0.5);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("Basis-singular", "[highs_basis_data]") {
@@ -352,6 +352,6 @@ TEST_CASE("Basis-read", "[highs_basis_data]") {
   REQUIRE(basis2.col_status[0] == status_after);
 
   std::remove(basis_file.c_str());
-  h1.resetGlobalScheduler(true);
-  h2.resetGlobalScheduler(true);
+  h1.resetThreadScheduler(true);
+  h2.resetThreadScheduler(true);
 }

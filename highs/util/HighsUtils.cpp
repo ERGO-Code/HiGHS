@@ -67,7 +67,7 @@ void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
   // Make a AR copy
   std::vector<HighsInt> iwork(numRow, 0);
   ARstart.resize(numRow + 1, 0);
-  HighsInt AcountX = Aindex.size();
+  HighsInt AcountX = Astart[numCol];
   ARindex.resize(AcountX);
   ARvalue.resize(AcountX);
   for (HighsInt k = 0; k < AcountX; k++) {

@@ -357,7 +357,8 @@ jobs:
           -A ${{ matrix.arch }} `
           -DHIPO=ON `
           -DALL_TESTS=${{ matrix.all_tests }} `
-          -DBUILD_OPENBLAS=ON
+          -DBUILD_OPENBLAS=ON `
+          -DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON
 
       - name: Build
         shell: pwsh
@@ -377,7 +378,9 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: |
           ctest --parallel --timeout 300 --output-on-failure -C ${{ matrix.config }} `
+          --repeat until-fail:10 `
           -E "openblas_utest|openblas_utest_ext|xscblat|xdcblat|xccblat|xzcblat"
+
 
   # linux shared is default, static build tested in the release artifacts
   # windows static is default so test shared

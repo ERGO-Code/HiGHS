@@ -51,7 +51,7 @@ The choice of IIS strategy is defined by the [iis_strategy](@ref option-iis-stra
 - 0 => "light strategy", which is always performed when Highs::getIis is called
 - 1 => From dual ray, which is currently unavailable
 - 2 => From the whole LP (solving an elasticity LP repeatedly (fixing positive elastic variables at zero) until no more elastic variables are positive, and using the fixed elastic variables to determine a set of infeasible rows, for which there is a corresponding set of columns with nonzeros in those rows that form an infeasibility set (IS)
-- 4 => Attempt to reduce the IS to an ISS
+- 4 => Attempt to reduce the IS to an IIS
 - 8 => Prioritize low numbers of columns (rather than low numbers of rows) when reducing the IS
 
 Hence, by just setting the 2-bit, an IS is formed reliably, and at no great expense (for an LP)

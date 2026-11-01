@@ -87,7 +87,7 @@ TEST_CASE("semi-variable-model", "[highs_test_semi_variables]") {
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {
@@ -139,7 +139,7 @@ TEST_CASE("semi-variable-lower-bound", "[highs_test_semi_variables]") {
   // Check that the lower bound of the semi-variable has been restored
   REQUIRE(highs.getLp().col_lower_[semi_col] == semi_col_lower);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
@@ -206,7 +206,7 @@ TEST_CASE("semi-variable-upper-bound", "[highs_test_semi_variables]") {
   if (dev_run) highs.writeSolution("", 1);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
@@ -247,7 +247,7 @@ TEST_CASE("semi-variable-file", "[highs_test_semi_variables]") {
   REQUIRE(fabs(info.objective_function_value -
                optimal_objective_function_value) < double_equal_tolerance);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
@@ -280,7 +280,7 @@ TEST_CASE("semi-variable-inconsistent-bounds", "[highs_test_semi_variables]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
@@ -310,7 +310,7 @@ TEST_CASE("semi-variable-inf-upper", "[highs_test_semi_variables]") {
   REQUIRE(obj0 == obj1);
   std::remove(test_mps.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("semi-variable-fixed-write", "[highs_test_semi_variables]") {
@@ -353,7 +353,7 @@ TEST_CASE("semi-variable-fixed-write", "[highs_test_semi_variables]") {
     REQUIRE(highs.getObjectiveValue() == 0);
     std::remove(test_file.c_str());
 
-    highs.resetGlobalScheduler(true);
+    highs.resetThreadScheduler(true);
   }
 }
 
@@ -397,5 +397,5 @@ TEST_CASE("3015", "[highs_test_semi_variables]") {
   REQUIRE(status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

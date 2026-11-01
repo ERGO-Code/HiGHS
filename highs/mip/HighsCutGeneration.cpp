@@ -960,7 +960,10 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
       hasContinuous = true;
     } else {
-      if (upper[i] == kHighsInf) {
+      if (upper[i] != kHighsInf &&
+          std::abs(vals[i] * upper[i]) > kHighsInvMacheps)
+        return false;
+      if (upper[i] >= kHighsIInf) {
         hasUnboundedInts = true;
         hasGeneralInts = true;
       } else if (upper[i] != 1.0) {

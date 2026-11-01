@@ -200,7 +200,7 @@ class Highs(_Highs):
 
             # avoid potential deadlock in Windows
             # can remove once HiGHS is updated to handle this internally
-            _Highs.resetGlobalScheduler(False)
+            _Highs.resetThreadScheduler(False)
         finally:
             self.__solver_stopped.release()
 

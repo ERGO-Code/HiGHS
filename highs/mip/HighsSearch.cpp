@@ -1806,13 +1806,14 @@ HighsSearch::NodeResult HighsSearch::dive(int64_t nodeLim) {
   } while (true);
 }
 
-void HighsSearch::solveDepthFirst(int64_t maxbacktracks) {
+void HighsSearch::solveDepthFirst(int64_t maxbacktracks, int64_t maxnodes) {
   do {
     if (maxbacktracks == 0) break;
 
-    NodeResult result = dive();
+    NodeResult result = dive(maxnodes);
     // if a limit was reached the result might be open
     if (result == NodeResult::kOpen) break;
+    if (nnodes >= maxnodes) break;
 
     --maxbacktracks;
 
