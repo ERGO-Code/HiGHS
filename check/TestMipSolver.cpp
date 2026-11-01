@@ -2729,9 +2729,9 @@ TEST_CASE("issue-3510a", "[highs_test_mip_solver]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   // Optimal solution is (40, 20) with objective 900
-  REQUIRE(h.getObjectiveValue() == 900);
   //  if (dev_run)
     h.writeSolution("", 1);
+  REQUIRE(h.getObjectiveValue() == 900);
   // Extract the optimal solution to be used to construct a start
   // solution for the modified problem
   HighsSolution start;
@@ -2743,7 +2743,8 @@ TEST_CASE("issue-3510a", "[highs_test_mip_solver]") {
   double cost = -360;
   std::vector<HighsInt> index = {0, 1};
   std::vector<double> value = {-40, -40};
-  REQUIRE(h.addCol(cost, 0, 1, 2, index.data(), value.data()) == HighsStatus::kOk);
+  HighsInt num_nz = index.size();
+  REQUIRE(h.addCol(cost, 0, 1, num_nz, index.data(), value.data()) == HighsStatus::kOk);
   REQUIRE(h.changeColIntegrality(employ_extras, HighsVarType::kInteger) == HighsStatus::kOk);
   REQUIRE(h.passColName(employ_extras, "Employ-extras") == HighsStatus::kOk);
 
@@ -2764,28 +2765,29 @@ TEST_CASE("issue-3510a", "[highs_test_mip_solver]") {
   // now done, and reported.
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(h.getObjectiveValue() == 940);
   //  if (dev_run)
     h.writeSolution("", 1);
+  REQUIRE(h.getObjectiveValue() == 940);
 
   // Now change the cost so that it's not worth employing an extra
   // assembler and finisher, but start from the previous optimal
-  // solution (). Employ-extras is fixed to 0 in presolve the reduced
-  // MIP is the initial 2-variable problem (above). Hence, although
-  // the start solution is feasible in the original space, it maps to
-  // () in the reduced space, so is infeasible.
-  
+  // solution (80, 20, 1)  
   start.col_value = h.getSolution().col_value;
   
-  cost = -1e4;
+  cost = -1e8;
   REQUIRE(h.changeColCost(employ_extras, cost) == HighsStatus::kOk);
 
   REQUIRE(h.setSolution(start) == HighsStatus::kOk);
-   REQUIRE(h.run() == HighsStatus::kOk);
+
+  // I'm puzzled why Employ-extras isn't fixed to 0 in presolve, so
+  // the reduced MIP is the initial 2-variable problem (above). Hence,
+  // although the start solution is feasible in the original space, it
+  // would map to (80, 20) in the reduced space, so is infeasible.
+  REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  //  REQUIRE(h.getObjectiveValue() == 940);
   //  if (dev_run)
     h.writeSolution("", 1);
+  REQUIRE(h.getObjectiveValue() == 900);
  
   h.resetThreadScheduler(true);
 }
