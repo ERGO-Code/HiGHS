@@ -1182,10 +1182,8 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
     optimality_tolerance = options.kkt_tolerance;
   }
   info.objective_function_value = lp.objectiveValue(solution.col_value);
-  HighsPrimalDualErrors primal_dual_errors;
   const bool get_residuals = !basis.valid;
-  getLpKktFailures(options, lp, solution, basis, info, &primal_dual_errors,
-                   get_residuals);
+  getLpKktFailures(options, lp, solution, basis, info, nullptr, get_residuals);
   if (model_status == HighsModelStatus::kOptimal)
     reportKktFailures(lp, options, info, message);
   // get_residuals is false when there is a valid basis, since
@@ -1448,7 +1446,6 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Model status changed from \"Unknown\" to \"Optimal\"\n");
   }
-  highsLogUser(log_options, HighsLogType::kInfo, "\n");
   return;
 }
 
