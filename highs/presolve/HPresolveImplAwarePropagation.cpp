@@ -159,7 +159,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     }
   };
 
-  // bound on a row non-binary implied by a binary
+  // bound on a non-binary implied by a binary
   struct CachedBound {
     HighsInt binCol;
     HighsInt binVal;
@@ -167,7 +167,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     double ub;
   };
 
-  // bounds on a row non-binary implied by binaries. they do not depend on the
+  // bounds on a non-binary implied by binaries. they do not depend on the
   // row, and the variable bounds and implications do not change during the
   // call, so they are collected once
   struct CachedColumn {
@@ -185,7 +185,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   std::vector<Breakpoint> breakpoints;
   // bounds on non-binaries implied by binaries
   HighsHashTable<ImpliedBoundKey, HighsImplications::Implication> impliedBounds;
-  // implied bounds on row non-binaries, indexed by column
+  // implied bounds on non-binaries, indexed by column
   std::vector<CachedColumn> cachedColumns;
   std::vector<Lift> lifts;
   std::vector<HighsInt> liftedBins;
@@ -433,7 +433,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   };
 
   auto cacheImpliedBounds = [&](HighsInt col, CachedColumn& cached) {
-    // bounds on a row non-binary implied by variable bound constraints and
+    // bounds on a non-binary implied by variable bound constraints and
     // implications, collected unless they are cached already
     if (cached.numVisits >= 0) return;
     cached.numVisits = 0;
@@ -469,36 +469,20 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     });
   };
 
-  auto addDiscoveredVarBounds = [&](HighsInt col,
-                                    HighsInt& numDiscoveryVisits) {
-    // bounds on a discovered non-binary implied by variable bound
-    // constraints. the visits count towards the discovery budget, which is
-    // added to the work at the end of collectImpliedBounds
-    auto isOverBudget = [&]() {
-      if (numDiscoveryVisits >= maxDiscoveryVisits) return true;
-      numDiscoveryVisits++;
-      return false;
-    };
-    implications.getVlbs(col).for_each(
-        [&](HighsInt binCol, const HighsImplications::VarBound& vlb) {
-          if (isOverBudget()) return true;
-          if (colDeleted[binCol] || !isBinary(binCol)) return false;
-          // x_bin = val --> x_j >= coef * val + constant
-          for (HighsInt val = 1; val >= 0; --val)
-            addImpliedBound(binCol, val, col, varBoundValue(vlb, val),
-                            kHighsInf);
-          return false;
-        });
-    implications.getVubs(col).for_each(
-        [&](HighsInt binCol, const HighsImplications::VarBound& vub) {
-          if (isOverBudget()) return true;
-          if (colDeleted[binCol] || !isBinary(binCol)) return false;
-          // x_bin = val --> x_j <= coef * val + constant
-          for (HighsInt val = 1; val >= 0; --val)
-            addImpliedBound(binCol, val, col, -kHighsInf,
-                            varBoundValue(vub, val));
-          return false;
-        });
+  auto addDiscoveredBounds = [&](HighsInt col, HighsInt& numDiscoveryVisits) {
+    // bounds on a discovered non-binary implied by binaries. as for row
+    // non-binaries, the variable bounds and reverse implications visited to
+    // collect them count as work; here, they count towards the discovery
+    // budget, which is added to the work at the end of collectImpliedBounds
+    if (numDiscoveryVisits >= maxDiscoveryVisits) return;
+    CachedColumn& cached = cachedColumns[col];
+    cacheImpliedBounds(col, cached);
+    numDiscoveryVisits += cached.numVisits;
+    for (const CachedBound& bound : cached.bounds) {
+      // binaries may have been fixed since the bounds were cached
+      if (colDeleted[bound.binCol] || !isBinary(bound.binCol)) continue;
+      addImpliedBound(bound.binCol, bound.binVal, col, bound.lb, bound.ub);
+    }
   };
 
   auto discoverNonBinaries = [&](HighsInt binCol,
@@ -524,7 +508,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
                       model->col_upper_[targetCol] >= kHighsInf)
                     return false;
                   nonBinNonZeros[targetCol] = VariableData(0.0);
-                  addDiscoveredVarBounds(targetCol, numDiscoveryVisits);
+                  addDiscoveredBounds(targetCol, numDiscoveryVisits);
                 }
                 addImpliedBound(binCol, val, targetCol, impl.lb, impl.ub);
                 return false;
