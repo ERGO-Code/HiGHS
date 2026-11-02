@@ -1214,14 +1214,15 @@ HighsStatus Highs::run() {
 
   // Optimize the model in the Highs instance
   status = optimizeHighs();
+
+  // Undo any user objective and bound scaling, even if optimizeHighs()
+  // has returned an error, so that the incumbent model isn't left scaled
+  const HighsStatus unscale_status = this->userUnscale(user_scale_data);
   if (status == HighsStatus::kError) return status;
+  if (unscale_status == HighsStatus::kError) return HighsStatus::kError;
 
   // Assume that run data are valid
   this->run_data_.valid = true;
-
-  // Undo any user objective and bound scaling
-  if (this->userUnscale(user_scale_data) == HighsStatus::kError)
-    return HighsStatus::kError;
 
   if (this->options_.write_iis_model_file != "")
     status = this->writeIisModel(this->options_.write_iis_model_file);
@@ -1238,7 +1239,8 @@ HighsStatus Highs::optimizeHighs() {
   this->logHeader();
   // Level 1 of Highs::run()
   //
-  // Move the "mods" to here
+  // Any "mods" are applied in calledOptimizeModel(), since they
+  // depend on the objective of each optimization
   return this->multi_linear_objective_.size() ? this->multiobjectiveSolve()
                                               : this->optimizeModel();
 }
@@ -1274,14 +1276,23 @@ HighsStatus Highs::optimizeModelTryCatch() {
   this->logHeader();
   // Wrap the call to Highs::calledOptimizeModel() in a try-catch
   // block
+  //
+  // Any change to options_ during the optimization should be made via
+  // context.options_undo.set(options_.xxx, value). For a temporary change,
+  // take m = context.options_undo.mark() first and call
+  // context.options_undo.resetTo(m) when done. Changes still recorded are
+  // undone when context is destroyed, after returnFromOptimizeModel()
+  OptimizeModelContext context;
   HighsStatus status;
   auto handleCatch = [&]() {
     // Clear all solver data, since there may be nothing useful
     this->clearSolver();
     status = HighsStatus::kError;
+    // Ensure that the incumbent model isn't left modified
+    optimizeModelUndoMods(context, status);
   };
   try {
-    status = calledOptimizeModel();
+    status = calledOptimizeModel(context);
   } catch (const std::exception& exception) {
     model_status_ = handleExceptionIsOom(options_.log_options,
                                          "calledOptimizeModel", exception)
@@ -1300,31 +1311,51 @@ HighsStatus Highs::optimizeModelTryCatch() {
 // Checks the options calls presolve and postsolve if needed.
 //
 // LP solvers are called with callSolveLp(..)
-HighsStatus Highs::calledOptimizeModel() {
+HighsStatus Highs::calledOptimizeModel(OptimizeModelContext& context) {
   this->logHeader();
   // Level 2b of Highs::run()
-  //
+
+  if (optimizeModelPreChecks(context)) return context.status;
+
+  // Apply all "mods" to the incumbent model, so that what follows
+  // solves a model with no infinite costs, and semi-variables that
+  // have either been relaxed or assessed. The mods are undone by
+  // returnFromOptimizeModel() or, if returning before
+  // returnFromOptimizeModel() is reached, by optimizeModelUndoMods()
+  if (optimizeModelApplyMods(context)) return context.status;
+
+  if (model_.isMip() && solution_.value_valid) {
+    // Determine whether the current (partial) solution of a MIP is
+    // feasible and, if not, try to complete the assignment with
+    // integer values (if necessary) and continuous values (if
+    // necessary) to achieve a feasible solution. Valuable in the case
+    // where users make a heuristic (partial) assignment of discrete
+    // variables
+    //
+    // Since completeSolutionFromDiscreteAssignment() may require a
+    // call to optimizeModel() - with initial check that
+    // called_return_from_optimize_model is true -
+    // called_return_from_optimize_model cannot yet be set false. That
+    // call sees the model with mods already applied, so doesn't apply
+    // or undo any itself
+    HighsStatus call_status = completeSolutionFromDiscreteAssignment();
+    if (call_status != HighsStatus::kOk) {
+      context.status = HighsStatus::kError;
+      optimizeModelUndoMods(context, context.status);
+      return context.status;
+    }
+  }
+
   // returnFromOptimizeModel() is a common exit method to ensure
   // consistency of values set by optimizeModel() and many other
   // things. It's important to be able to check that it's been called,
   // and this is done with this->called_return_from_optimize_model
-  //
-
-  // Any change to options_ during the optimization should be made via
-  // context.options_undo.set(options_.xxx, value). For a temporary change,
-  // take m = context.options_undo.mark() first and call
-  // context.options_undo.resetTo(m) when done. Changes still recorded are
-  // undone when context is destroyed, after returnFromOptimizeModel()
-  OptimizeModelContext context;
-
-  if (optimizeModelPreChecks(context)) return context.status;
-
   // Set this so that calls to returnFromOptimizeModel() can be checked: from
   // here all return statements execute returnFromOptimizeModel()
   called_return_from_optimize_model = false;
 
   if (optimizeModelPrepare(context))
-    return returnFromOptimizeModel(context.status, context.undo_mods);
+    return returnFromOptimizeModel(context.status, &context);
 
   if (model_.isQp())
     optimizeModelQp(context);
@@ -1333,7 +1364,7 @@ HighsStatus Highs::calledOptimizeModel() {
   else
     optimizeModelLp(context);
 
-  return returnFromOptimizeModel(context.status, context.undo_mods);
+  return returnFromOptimizeModel(context.status, &context);
 }
 
 bool Highs::optimizeModelPreChecks(OptimizeModelContext& context) {
@@ -1364,59 +1395,96 @@ bool Highs::optimizeModelPreChecks(OptimizeModelContext& context) {
     return true;
   }
 
-  // HiGHS solvers require models with no infinite costs, and no semi-variables
+  // Ensure that all vectors in the model have exactly the right size
+  exactResizeModel();
+
+  context.status = HighsStatus::kOk;
+  return false;
+}
+
+bool Highs::optimizeModelApplyMods(OptimizeModelContext& context) {
+  // HiGHS solvers require models with no infinite costs, and
+  // semi-variables that have either been relaxed or assessed. All
+  // such modifications of the incumbent model are made here, and
+  // recorded in model_.lp_.mods_ so that optimizeModelUndoMods() can
+  // undo them
   //
-  // Since completeSolutionFromDiscreteAssignment() may require a call
-  // to optimizeModel() - with initial check that
-  // called_return_from_optimize_model is true
-  // - called_return_from_optimize_model cannot yet be set false.
-  //
-  // This possible call to optimizeModel() means that any need to modify the
-  // problem to remove infinite costs must be done first.
-  //
-  // Set undo_mods = false so that returnFromOptimizeModel() doesn't undo any
-  // mods that must be preserved - such as when solving a MIP node
+  // Set undo_mods = false so that returnFromOptimizeModel() doesn't
+  // undo any mods unless they are applied by this call
   context.undo_mods = false;
-  if (model_.lp_.has_infinite_cost_) {
+  if (model_mods_applied_) {
+    // Nested call to optimizeModel() from
+    // completeSolutionFromDiscreteAssignment(), so the mods are
+    // already applied, and must be preserved
+    assert(!model_.lp_.has_infinite_cost_);
+    context.status = HighsStatus::kOk;
+    return false;
+  }
+  auto returnAndStop = [&](HighsStatus return_status) {
+    optimizeModelUndoMods(context, return_status);
+    context.status = return_status;
+    return true;
+  };
+  HighsLp& lp = model_.lp_;
+  // Lambda to record that the mods have been applied, so must be
+  // undone
+  auto recordMods = [&]() {
+    model_mods_applied_ = true;
+    context.undo_mods = true;
+  };
+  if (lp.has_infinite_cost_) {
     // If the model has infinite costs, then try to remove them. The
     // return_status indicates the success of this operation and, if
     // it's unsuccessful, the model will not have been modified and
     // optimizeModel() can simply return an error with model status
     // HighsModelStatus::kUnknown
-    assert(model_.lp_.hasInfiniteCost(options_.infinite_cost));
+    assert(lp.hasInfiniteCost(options_.infinite_cost));
     HighsStatus inf_cost_status = handleInfCost();
     if (inf_cost_status != HighsStatus::kOk) {
       assert(inf_cost_status == HighsStatus::kError);
       setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kUnknown);
-      context.status = inf_cost_status;
-      return true;
+      return returnAndStop(inf_cost_status);
     }
-    // Modifications have been performed, so must be undone before
-    // this call to optimizeModel() returns
-    assert(!model_.lp_.has_infinite_cost_);
-    context.undo_mods = true;
+    assert(!lp.has_infinite_cost_);
+    recordMods();
   } else {
-    assert(!model_.lp_.hasInfiniteCost(options_.infinite_cost));
+    assert(!lp.hasInfiniteCost(options_.infinite_cost));
   }
 
-  // Ensure that all vectors in the model have exactly the right size
-  exactResizeModel();
-
-  if (model_.isMip() && solution_.value_valid) {
-    // Determine whether the current (partial) solution of a MIP is
-    // feasible and, if not, try to complete the assignment with
-    // integer values (if necessary) and continuous values (if
-    // necessary) to achieve a feasible solution. Valuable in the case
-    // where users make a heuristic (partial) assignment of discrete variables
-    HighsStatus call_status = completeSolutionFromDiscreteAssignment();
-    if (call_status != HighsStatus::kOk) {
-      context.status = HighsStatus::kError;
-      return true;
+  bool made_semi_variable_mods = false;
+  if (options_.solve_relaxation) {
+    // Solving just the relaxation, so relax any semi-variables
+    relaxSemiVariables(lp, made_semi_variable_mods);
+  } else {
+    // Not solving the relaxation, so check validity of any
+    // integrality, keeping a record of any bound and type
+    // modifications for semi-variables
+    HighsStatus call_status =
+        assessSemiVariables(lp, options_, made_semi_variable_mods);
+    if (call_status == HighsStatus::kError) {
+      // No semi-variable mods are made when there is an error, but
+      // any infinite cost mods must be undone
+      assert(!made_semi_variable_mods);
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kSolveError);
+      return returnAndStop(HighsStatus::kError);
     }
   }
+  if (made_semi_variable_mods) recordMods();
 
   context.status = HighsStatus::kOk;
   return false;
+}
+
+void Highs::optimizeModelUndoMods(OptimizeModelContext& context,
+                                  HighsStatus& return_status) {
+  if (!context.undo_mods) return;
+  // Restore any infinite costs
+  this->restoreInfCost(return_status);
+  // Unapply any semi-variable modifications
+  this->model_.lp_.unapplyMods();
+  model_mods_applied_ = false;
+  context.undo_mods = false;
 }
 
 bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
@@ -1479,38 +1547,18 @@ bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
     highsLogDev(options_.log_options, HighsLogType::kVerbose,
                 "Solving model: %s\n", model_.lp_.model_name_.c_str());
 
-  if (!options_.solve_relaxation) {
-    // Not solving the relaxation, so check validity of any
-    // integrality, keeping a record of any bound and type
-    // modifications for semi-variables
-    bool made_semi_variable_mods = false;
-    call_status =
-        assessSemiVariables(model_.lp_, options_, made_semi_variable_mods);
-    context.undo_mods = context.undo_mods || made_semi_variable_mods;
-    if (call_status == HighsStatus::kError) {
-      setHighsModelStatusAndClearSolutionAndBasis(
-          HighsModelStatus::kSolveError);
-      return returnAndStop(HighsStatus::kError);
-    }
-  }
-
   context.status = HighsStatus::kOk;
   return false;
 }
 
 void Highs::optimizeModelQp(OptimizeModelContext& context) {
-  if (model_.isMip()) {
-    if (options_.solve_relaxation) {
-      // Relax any semi-variables
-      bool made_semi_variable_mods = false;
-      relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-      context.undo_mods = context.undo_mods || made_semi_variable_mods;
-    } else {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "Cannot solve MIQP problems with HiGHS\n");
-      context.status = HighsStatus::kError;
-      return;
-    }
+  // Any semi-variables have been relaxed by optimizeModelApplyMods()
+  // if solving the relaxation
+  if (model_.isMip() && !options_.solve_relaxation) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Cannot solve MIQP problems with HiGHS\n");
+    context.status = HighsStatus::kError;
+    return;
   }
   // Ensure that its diagonal entries are OK in the context of the
   // objective sense. It's OK to be semi-definite
@@ -1537,10 +1585,8 @@ void Highs::optimizeModelQp(OptimizeModelContext& context) {
 
 void Highs::optimizeModelMip(OptimizeModelContext& context) {
   if (options_.solve_relaxation) {
-    // Solving just the relaxation, so relax any semi-variables
-    bool made_semi_variable_mods = false;
-    relaxSemiVariables(model_.lp_, made_semi_variable_mods);
-    context.undo_mods = context.undo_mods || made_semi_variable_mods;
+    // Solving just the relaxation, with any semi-variables relaxed by
+    // optimizeModelApplyMods()
     highsLogUser(options_.log_options, HighsLogType::kInfo,
                  "Solving LP relaxation since solve_relaxation is true\n");
     optimizeModelLp(context);
@@ -4660,12 +4706,8 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
         getKktFailures(this->options_, is_qp, this->model_.lp_,
                        this->model_.lp_.col_cost_, this->solution_, this->info_,
                        get_residuals);
-        if (return_status == HighsStatus::kError) {
-          // Set undo_mods = false, since passing models requiring
-          // modification to Highs::presolve is illegal
-          const bool undo_mods = false;
-          return returnFromOptimizeModel(return_status, undo_mods);
-        }
+        if (return_status == HighsStatus::kError)
+          return returnFromOptimizeModel(return_status);
       } else {
         this->basis_.clear();
         // callLpKktCheck will set LPs with model status
@@ -4698,10 +4740,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                    utilPostsolveStatusToString(postsolve_status).c_str());
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPostsolveError);
-      // Set undo_mods = false, since passing models requiring
-      // modification to Highs::presolve is illegal
-      const bool undo_mods = false;
-      return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+      return returnFromOptimizeModel(HighsStatus::kError);
     }
   }
   call_status = highsStatusFromHighsModelStatus(model_status_);
@@ -4828,7 +4867,7 @@ HighsStatus Highs::returnFromWriteSolution(FILE* file,
 
 // Applies checks before returning from optimizeModel()
 HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
-                                           const bool undo_mods) {
+                                           OptimizeModelContext* context) {
   assert(!called_return_from_optimize_model);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   if (return_status != run_return_status) {
@@ -4997,14 +5036,10 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
   // Record that returnFromOptimizeModel() has been called
   called_return_from_optimize_model = true;
 
-  if (undo_mods) {
-    // Restore any infinite costs
-    this->restoreInfCost(return_status);
-
-    // Unapply any modifications that have not yet been unapplied
-    this->model_.lp_.unapplyMods();
-    //    undo_mods = false;
-  }
+  // Undo any mods applied by optimizeModelApplyMods(). Note that
+  // models passed to Highs::postsolve() cannot require mods, so it
+  // has no context
+  if (context) optimizeModelUndoMods(*context, return_status);
 
   // Unless solved as a MIP, report on the solution
   const bool solved_as_mip = model_.isMip() && !options_.solve_relaxation;

@@ -3921,6 +3921,7 @@ HighsStatus Highs::returnFromLexicographicOptimization(
     info_.invalidateDualKkt();
     this->solution_.value_valid = true;
     this->model_.lp_.col_cost_.assign(this->model_.lp_.num_col_, 0);
+    this->model_.lp_.has_infinite_cost_ = false;
   }
   return return_status;
 }
@@ -3995,6 +3996,8 @@ HighsStatus Highs::multiobjectiveSolve() {
                               multi_linear_objective.coefficients[iCol];
     }
     lp.sense_ = ObjSense::kMinimize;
+    // The costs have changed, so determine whether any are infinite
+    lp.has_infinite_cost_ = lp.hasInfiniteCost(options_.infinite_cost);
 
     multi_objective_log =
         std::unique_ptr<std::stringstream>(new std::stringstream());
@@ -4040,6 +4043,7 @@ HighsStatus Highs::multiobjectiveSolve() {
   // Clear LP objective
   lp.offset_ = 0;
   lp.col_cost_.assign(lp.num_col_, 0);
+  lp.has_infinite_cost_ = false;
   const HighsInt original_lp_num_row = lp.num_row_;
   std::vector<HighsInt> index(lp.num_col_);
   std::vector<double> value(lp.num_col_);
@@ -4054,6 +4058,8 @@ HighsStatus Highs::multiobjectiveSolve() {
         this->multi_linear_objective_[iObj];
     lp.offset_ = linear_objective.offset;
     lp.col_cost_ = linear_objective.coefficients;
+    // The costs have changed, so determine whether any are infinite
+    lp.has_infinite_cost_ = lp.hasInfiniteCost(options_.infinite_cost);
     lp.sense_ =
         linear_objective.weight > 0 ? ObjSense::kMinimize : ObjSense::kMaximize;
     if (lp.isMip() && solution.value_valid) {

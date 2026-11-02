@@ -1398,7 +1398,6 @@ class Highs {
   HighsStatus optimizeLp();
   HighsStatus optimizeModel();
   HighsStatus optimizeModelTryCatch();
-  HighsStatus calledOptimizeModel();
 
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
@@ -1671,6 +1670,10 @@ class Highs {
   // Highs::optimizeModel() and, assuming that this is always done, it checks
   // whether Highs::optimizeModel() is called recursively.
   bool called_return_from_optimize_model = true;
+  // Set when optimizeModelApplyMods() has modified the incumbent
+  // model, so that nested calls to Highs::optimizeModel() (from
+  // completeSolutionFromDiscreteAssignment()) don't apply or undo mods
+  bool model_mods_applied_ = false;
   HighsInt debug_optimize_call_num_ = 0;
 
   void reportModelStats() const;
@@ -1697,7 +1700,11 @@ class Highs {
     HighsStatus status = HighsStatus::kOk;
     HighsUndoStack options_undo;
   };
+  HighsStatus calledOptimizeModel(OptimizeModelContext& context);
   bool optimizeModelPreChecks(OptimizeModelContext& context);
+  bool optimizeModelApplyMods(OptimizeModelContext& context);
+  void optimizeModelUndoMods(OptimizeModelContext& context,
+                             HighsStatus& return_status);
   bool optimizeModelPrepare(OptimizeModelContext& context);
   void optimizeModelQp(OptimizeModelContext& context);
   void optimizeModelMip(OptimizeModelContext& context);
@@ -1794,7 +1801,7 @@ class Highs {
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
   HighsStatus returnFromOptimizeModel(const HighsStatus return_status,
-                                      const bool undo_mods);
+                                      OptimizeModelContext* context = nullptr);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
