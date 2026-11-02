@@ -1703,6 +1703,14 @@ class Highs {
     // problem, since the iteration count is reset to zero if PDLP is
     // used to clean up after postsolve
     HighsInt presolved_lp_pdlp_iteration_count = 0;
+
+    // Postsolve recovered a solution and basis, so the simplex
+    // solver is hot-started on the original LP
+    bool postsolve_recovered_basis = false;
+
+    // Copy of the HighsInfo for the presolved LP to determine whether
+    // a PDLP clean-up should be carried out
+    HighsInfo presolved_lp_info;
   };
 
   // Phases of calledOptimizeModel
@@ -1746,6 +1754,9 @@ class Highs {
   bool optimizeModelLpPrepareReducedLp(OptimizeModelContext& context,
                                        HighsLp& lp);
   void optimizeModelLpSetReducedToEmptySolution();
+  bool optimizeModelLpSolveReduced(OptimizeModelContext& context, const HighsPresolveStatus presolve_status, HighsLp& lp);
+  bool optimizeModelLpPostsolve(OptimizeModelContext& context, PresolveComponent& presolve, const HighsPresolveStatus presolve_status, HighsLp& lp);
+  bool optimizeModelLpCleanupOriginal(OptimizeModelContext& context, HighsLp& incumbent_lp);
   void optimizeModelLpFinish(OptimizeModelContext& context, const HighsLp& lp);
   HighsStatus optimizeModelLpTimedSolve(OptimizeModelContext& context,
                                         HighsLp& lp,

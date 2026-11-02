@@ -1600,311 +1600,340 @@ void Highs::optimizeModelMip(OptimizeModelContext& context) {
 void Highs::optimizeModelLp(OptimizeModelContext& context) {
   if (optimizeModelLpSetup(context)) return;
 
-  HighsUndoStack& options_undo = context.options_undo;
-  size_t options_mark = 0;
-  OptimizeModelLpState& lp_state = context.lp_state;
-  HighsStatus call_status;
   HighsLp& incumbent_lp = model_.lp_;
-  HighsLogOptions& log_options = options_.log_options;
 
   if (!optimizeModelLpUsePresolve(context, incumbent_lp)) {
     if (optimizeModelLpSolveUnreduced(context, incumbent_lp)) return;
   } else {
     if (optimizeModelLpPresolve(context, presolve_, incumbent_lp)) return;
-    switch (model_presolve_status_) {
-      case HighsPresolveStatus::kNotPresolved: {
-        ekk_instance_.lp_name_ = "Original LP";
-        call_status = optimizeModelLpTimedSolve(context, incumbent_lp,
-                                           "Not presolved: solving the LP",
-                                           context.solve_original_lp_time);
-        this->run_data_.solve_time = context.solve_original_lp_time;
-        context.status = interpretCallStatus(options_.log_options, call_status,
-                                             context.status, "callSolveLp");
-        if (context.status == HighsStatus::kError) return;
-        break;
-      }
-      case HighsPresolveStatus::kNotReduced: {
-        ekk_instance_.lp_name_ = "Unreduced LP";
-        // Log the presolve reductions
-        call_status = optimizeModelLpTimedSolve(
-            context, incumbent_lp,
-            "Problem not reduced by presolve: solving the LP",
-            context.solve_original_lp_time);
-        this->run_data_.solve_time = context.solve_original_lp_time;
-        context.status = interpretCallStatus(options_.log_options, call_status,
-                                             context.status, "callSolveLp");
-        if (context.status == HighsStatus::kError) return;
-        break;
-      }
-      case HighsPresolveStatus::kReduced: {
-        HighsLp& reduced_lp = presolve_.getReducedProblem();
-        // Solving the presolved LP with strictly reduced dimensions
-        // so ensure that the Ekk instance is cleared
-        ekk_instance_.clear();
-        ekk_instance_.lp_name_ = "Presolved LP";
-        // Don't try dual cut-off when solving the presolved LP, as the
-        // objective values aren't correct
-        options_mark = options_undo.mark();
-        options_undo.set(options_.objective_bound, kHighsInf);
-        call_status = optimizeModelLpTimedSolve(context, reduced_lp,
-                                           "Solving the presolved LP",
-                                           context.solve_presolved_lp_time);
-        this->run_data_.solve_time = context.solve_presolved_lp_time;
-        if (ekk_instance_.status_.initialised_for_solve) {
-          // Record the pivot threshold resulting from solving the presolved LP
-          // with simplex
-          lp_state.factor_pivot_threshold =
-              ekk_instance_.info_.factor_pivot_threshold;
-        }
-        // Restore the dual objective cut-off
-        options_undo.resetTo(options_mark);
-        context.status = interpretCallStatus(options_.log_options, call_status,
-                                             context.status, "callSolveLp");
-        if (context.status == HighsStatus::kError) return;
-        lp_state.presolved_lp_pdlp_iteration_count = info_.pdlp_iteration_count;
-        lp_state.no_incumbent_lp_solution_or_basis =
-            model_status_ == HighsModelStatus::kInfeasible ||
-            model_status_ == HighsModelStatus::kUnbounded ||
-            model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
-            model_status_ == HighsModelStatus::kTimeLimit ||
-            model_status_ == HighsModelStatus::kIterationLimit ||
-            model_status_ == HighsModelStatus::kInterrupt;
-        if (lp_state.no_incumbent_lp_solution_or_basis) {
-          // Postsolve won't be performed, so clear the HEkk data
-          // corresponding to the (strictly reduced) presolved LP here
-          ekk_instance_.clear();
-          setHighsModelStatusAndClearSolutionAndBasis(model_status_);
-        }
-        break;
-      }
-      case HighsPresolveStatus::kReducedToEmpty: {
-        this->run_data_.solve_time = 0;
-        break;
-      }
-      default:
-        break;
-    }
-    // End of presolve
-    //
-    // Cases of infeasibility/unboundedness timeout and memory errors
-    // all handled, so just the successes remain
-    assert(model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
-           model_presolve_status_ == HighsPresolveStatus::kNotReduced ||
-           model_presolve_status_ == HighsPresolveStatus::kReduced ||
-           model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty);
-
-    // Postsolve. Does nothing if there were no reductions during presolve.
-
-    // If presolve has been run assuming that there's no basis
-    // postsolve - allowing sparsify to be used in presolve -
-    // invalidate any basis
-    if (!lp_state.may_require_basis_postsolve) this->invalidateBasis();
-    const bool have_optimal_reduced_solution =
-        model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
-        (model_presolve_status_ == HighsPresolveStatus::kReduced &&
-         model_status_ == HighsModelStatus::kOptimal);
-    const bool have_unknown_reduced_solution =
-        model_presolve_status_ == HighsPresolveStatus::kReduced &&
-        model_status_ == HighsModelStatus::kUnknown;
-    // Take a copy of the HighsInfo and HighsModelStatus for the
-    // presolved LP to determine whether a PDLP clean-up should be
-    // carried out
-    const HighsInfo presolved_lp_info = this->info_;
-    const HighsModelStatus presolved_lp_model_status = this->model_status_;
-    if (have_optimal_reduced_solution || have_unknown_reduced_solution) {
-      // ToDo Put this in a separate method
-      assert(model_status_ == HighsModelStatus::kOptimal ||
-             model_status_ == HighsModelStatus::kUnknown ||
-             model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty);
-      assert(model_presolve_status_ == HighsPresolveStatus::kReduced ||
-             model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty);
-      if (have_unknown_reduced_solution)
-        highsLogUser(
-            options_.log_options, HighsLogType::kWarning,
-            "Running postsolve on non-optimal solution of reduced LP\n\n");
-      // If presolve is nontrivial, extract the optimal solution
-      // and (any) basis for the presolved problem in order to generate
-      // the solution and basis for postsolve to use to generate a
-      // solution and basis that is, hopefully, optimal.
-      //
-      // If there is a basis, optimality is confirmed or corrected by
-      // hot-starting the simplex solver
-      //
-      // If there is no basis, then a KKT check is carried out, and
-      // used to determine whether a PDLP clean-up should be done
-      presolve_.data_.recovered_solution_ = solution_;
-      presolve_.data_.recovered_basis_ = basis_;
-
-      if (model_presolve_status_ == HighsPresolveStatus::kReduced)
-        this->callLpKktCheck(presolve_.getReducedProblem(), "Before postsolve");
-
-      context.postsolve_time = -timer_.read(timer_.postsolve_clock);
-      timer_.start(timer_.postsolve_clock);
-      HighsPostsolveStatus postsolve_status = runPostsolve();
-      timer_.stop(timer_.postsolve_clock);
-      context.postsolve_time += timer_.read(timer_.postsolve_clock);
-      presolve_.info_.postsolve_time = context.postsolve_time;
-      this->run_data_.postsolve_time = context.postsolve_time;
-
-      if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
-        // Indicate that nontrivial postsolve has been performed
-        if (model_presolve_status_ == HighsPresolveStatus::kReduced ||
-            model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty)
-          highsLogUser(log_options, HighsLogType::kInfo,
-                       "Performed postsolve\n");
-        // Set solution and its status
-        solution_.clear();
-        solution_ = presolve_.data_.recovered_solution_;
-        solution_.value_valid = true;
-        if (!basis_.valid) {
-          // Have a primal-dual solution, but no basis, since PDLP or
-          // IPX without crossover were used. In the case of IPX, this
-          // was because either run_crossover was "off" or "choose"
-          // and IPX determined optimality
-          solution_.dual_valid = true;
-          this->invalidateBasis();
-        } else {
-          //
-          // Hot-start the simplex solver for the incumbent LP
-          //
-          solution_.dual_valid = true;
-          // Set basis and its status
-          basis_.valid = true;
-          basis_.useful = true;
-          basis_.col_status = presolve_.data_.recovered_basis_.col_status;
-          basis_.row_status = presolve_.data_.recovered_basis_.row_status;
-          basis_.debug_origin_name += ": after postsolve";
-          // Basic primal activities are wrong after postsolve, so
-          // possibly skip KKT check
-          const bool perform_kkt_check = true;
-          if (perform_kkt_check) {
-            // Possibly force debug to perform KKT check on what's
-            // returned from postsolve
-            const bool force_debug = false;
-            options_mark = options_undo.mark();
-            if (force_debug)
-              options_undo.set(options_.highs_debug_level,
-                               kHighsDebugLevelCostly);
-            if (debugHighsSolution("After returning from postsolve", options_,
-                                   model_, solution_,
-                                   basis_) == HighsDebugStatus::kLogicalError) {
-              context.status = HighsStatus::kError;
-              return;
-            }
-            options_undo.resetTo(options_mark);
-          }
-          // Save the options to allow the best simplex strategy to
-          // be used
-          options_mark = options_undo.mark();
-          const bool full_logging = false;
-          if (full_logging)
-            options_undo.set(options_.log_dev_level, kHighsLogDevLevelVerbose);
-          // Force the use of simplex to clean up
-          options_undo.set(options_.solver, kSimplexString);
-          options_undo.set(options_.simplex_strategy, kSimplexStrategyChoose);
-          // Ensure that the parallel solver isn't used
-          options_undo.set(options_.simplex_min_concurrency, 1);
-          options_undo.set(options_.simplex_max_concurrency, 1);
-          // Use any pivot threshold resulting from solving the presolved LP
-          if (lp_state.factor_pivot_threshold > 0)
-            options_undo.set(options_.factor_pivot_threshold,
-                             lp_state.factor_pivot_threshold);
-          // The basis returned from postsolve is just basic/nonbasic
-          // and EKK expects a refined basis, so set it up now
-          refineBasis(incumbent_lp, solution_, basis_);
-          // Scrap the EKK data from solving the presolved LP
-          ekk_instance_.invalidate();
-          ekk_instance_.lp_name_ = "Postsolve LP";
-          // Set up the iteration count and timing records so that
-          // adding the corresponding values after callSolveLp gives
-          // difference
-          context.postsolve_iteration_count = -info_.simplex_iteration_count;
-          call_status = optimizeModelLpTimedSolve(
-              context, incumbent_lp,
-              "Solving the original LP from the solution after postsolve",
-              context.solve_original_lp_time);
-          this->run_data_.postsolve_time += context.solve_original_lp_time;
-          // Determine the iteration count
-          context.postsolve_iteration_count += info_.simplex_iteration_count;
-          //
-          context.status = HighsStatus::kOk;
-          context.status = interpretCallStatus(log_options, call_status,
-                                               context.status, "callSolveLp");
-          // Recover the options
-          options_undo.resetTo(options_mark);
-          if (context.status == HighsStatus::kError) return;
-          this->run_data_.num_simplex_iterations_after_postsolve =
-              context.postsolve_iteration_count;
-          if (context.postsolve_iteration_count > 0)
-            highsLogUser(log_options, HighsLogType::kInfo,
-                         "Required %d simplex iterations after postsolve\n",
-                         int(context.postsolve_iteration_count));
-        }
-      } else {
-        // Postsolve has failed, so any simplex data for the presolved
-        // problem is useless
-        ekk_instance_.clear();
-        highsLogUser(log_options, HighsLogType::kError,
-                     "Postsolve return status: %s\n",
-                     utilPostsolveStatusToString(postsolve_status).c_str());
-        setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kPostsolveError);
-        context.status = HighsStatus::kError;
-        return;
-      }
-    } else {
-      this->run_data_.postsolve_time = 0;
-    }
-    // Final chance to resolve model_status_ ==
-    // HighsModelStatus::kUnknown after solver that doesn't yield a
-    // basis
-    //
-    // Possibly clean up using PDLP
-    const bool consider_pdlp_cleanup = false;
-    /*
-      !basis_.valid && model_status_ == HighsModelStatus::kUnknown &&
-      options_.allow_pdlp_cleanup && !options_.run_centring;
-    */
-    if (consider_pdlp_cleanup) {
-      HighsInt pdlp_cleanup_iteration_limit = 0;
-      if (tryPdlpCleanup(pdlp_cleanup_iteration_limit, presolved_lp_info)) {
-        // Primal/dual infeasibilities/residuals can be magnified in
-        // postsolve after PDLP, and IPX without crossover can fail,
-        // both leading to model_status_ == HighsModelStatus::kUnknown,
-        // so run PDLP on the original problem, starting from the
-        // incumbent solution
-        options_mark = options_undo.mark();
-        assert(useIpm(options_.solver) || options_.solver == kPdlpString);
-        highsLogUser(
-            log_options, HighsLogType::kInfo,
-            "Unknown model status and no basis after initial solve "
-            "so use PDLP with KKT tolerance = %g and iteration limit = %d to "
-            "solve "
-            "the original LP from the incumbent solution after postsolve\n",
-            options_.kkt_tolerance, int(pdlp_cleanup_iteration_limit));
-        options_undo.set(options_.solver, kPdlpString);
-        options_undo.set(options_.pdlp_iteration_limit,
-                         pdlp_cleanup_iteration_limit);
-        call_status = optimizeModelLpTimedSolve(
-            context, incumbent_lp,
-            "Using PDLP to solve the original LP from the solution after "
-            "postsolve",
-            context.solve_original_lp_time);
-        // Recover solver and time limit option values
-        options_undo.resetTo(options_mark);
-        context.status = HighsStatus::kOk;
-        context.status = interpretCallStatus(log_options, call_status,
-                                             context.status, "callSolveLp");
-        if (context.status == HighsStatus::kError) return;
-        // Update the number of PDLP, iterations, since the
-        // iteration count is reset to zero if PDLP is used to
-        // clean up after postsolve
-        info_.pdlp_iteration_count +=
-            lp_state.presolved_lp_pdlp_iteration_count;
-      }
-    }
+    HighsLp& presolved_lp =
+        model_presolve_status_ == HighsPresolveStatus::kReduced
+            ? presolve_.getReducedProblem()
+            : incumbent_lp;
+    if (optimizeModelLpSolveReduced(context, model_presolve_status_, presolved_lp))
+      return;
+    if (optimizeModelLpPostsolve(context, presolve_, model_presolve_status_, incumbent_lp))
+      return;
+    if (optimizeModelLpCleanupOriginal(context, incumbent_lp)) return;
   }
   optimizeModelLpFinish(context, incumbent_lp);
+}
+
+bool Highs::optimizeModelLpSolveReduced(OptimizeModelContext& context, const HighsPresolveStatus presolve_status, HighsLp& lp) {
+  HighsUndoStack& options_undo = context.options_undo;
+  size_t options_mark = 0;
+  OptimizeModelLpState& lp_state = context.lp_state;
+  HighsStatus call_status;
+  switch (presolve_status) {
+    case HighsPresolveStatus::kNotPresolved: {
+      ekk_instance_.lp_name_ = "Original LP";
+      call_status = optimizeModelLpTimedSolve(context, lp,
+                                         "Not presolved: solving the LP",
+                                         context.solve_original_lp_time);
+      this->run_data_.solve_time = context.solve_original_lp_time;
+      context.status = interpretCallStatus(options_.log_options, call_status,
+                                           context.status, "callSolveLp");
+      if (context.status == HighsStatus::kError) return true;
+      break;
+    }
+    case HighsPresolveStatus::kNotReduced: {
+      ekk_instance_.lp_name_ = "Unreduced LP";
+      // Log the presolve reductions
+      call_status = optimizeModelLpTimedSolve(
+          context, lp,
+          "Problem not reduced by presolve: solving the LP",
+          context.solve_original_lp_time);
+      this->run_data_.solve_time = context.solve_original_lp_time;
+      context.status = interpretCallStatus(options_.log_options, call_status,
+                                           context.status, "callSolveLp");
+      if (context.status == HighsStatus::kError) return true;
+      break;
+    }
+    case HighsPresolveStatus::kReduced: {
+      // Solving the presolved LP with strictly reduced dimensions
+      // so ensure that the Ekk instance is cleared
+      ekk_instance_.clear();
+      ekk_instance_.lp_name_ = "Presolved LP";
+      // Don't try dual cut-off when solving the presolved LP, as the
+      // objective values aren't correct
+      options_mark = options_undo.mark();
+      options_undo.set(options_.objective_bound, kHighsInf);
+      call_status = optimizeModelLpTimedSolve(context, lp,
+                                         "Solving the presolved LP",
+                                         context.solve_presolved_lp_time);
+      this->run_data_.solve_time = context.solve_presolved_lp_time;
+      if (ekk_instance_.status_.initialised_for_solve) {
+        // Record the pivot threshold resulting from solving the presolved LP
+        // with simplex
+        lp_state.factor_pivot_threshold =
+            ekk_instance_.info_.factor_pivot_threshold;
+      }
+      // Restore the dual objective cut-off
+      options_undo.resetTo(options_mark);
+      context.status = interpretCallStatus(options_.log_options, call_status,
+                                           context.status, "callSolveLp");
+      if (context.status == HighsStatus::kError) return true;
+      lp_state.presolved_lp_pdlp_iteration_count = info_.pdlp_iteration_count;
+      lp_state.no_incumbent_lp_solution_or_basis =
+          model_status_ == HighsModelStatus::kInfeasible ||
+          model_status_ == HighsModelStatus::kUnbounded ||
+          model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
+          model_status_ == HighsModelStatus::kTimeLimit ||
+          model_status_ == HighsModelStatus::kIterationLimit ||
+          model_status_ == HighsModelStatus::kInterrupt;
+      if (lp_state.no_incumbent_lp_solution_or_basis) {
+        // Postsolve won't be performed, so clear the HEkk data
+        // corresponding to the (strictly reduced) presolved LP here
+        ekk_instance_.clear();
+        setHighsModelStatusAndClearSolutionAndBasis(model_status_);
+      }
+      break;
+    }
+    case HighsPresolveStatus::kReducedToEmpty: {
+      this->run_data_.solve_time = 0;
+      break;
+    }
+    default:
+      break;
+  }
+  return false;
+}
+
+bool Highs::optimizeModelLpPostsolve(OptimizeModelContext& context, PresolveComponent& presolve, const HighsPresolveStatus presolve_status, HighsLp& lp) {
+  OptimizeModelLpState& lp_state = context.lp_state;
+  HighsLogOptions& log_options = options_.log_options;
+  // End of presolve
+  //
+  // Cases of infeasibility/unboundedness timeout and memory errors
+  // all handled, so just the successes remain
+  assert(presolve_status == HighsPresolveStatus::kNotPresolved ||
+         presolve_status == HighsPresolveStatus::kNotReduced ||
+         presolve_status == HighsPresolveStatus::kReduced ||
+         presolve_status == HighsPresolveStatus::kReducedToEmpty);
+
+  // Postsolve. Does nothing if there were no reductions during presolve.
+
+  // If presolve has been run assuming that there's no basis
+  // postsolve - allowing sparsify to be used in presolve -
+  // invalidate any basis
+  if (!lp_state.may_require_basis_postsolve) this->invalidateBasis();
+  const bool have_optimal_reduced_solution =
+      presolve_status == HighsPresolveStatus::kReducedToEmpty ||
+      (presolve_status == HighsPresolveStatus::kReduced &&
+       model_status_ == HighsModelStatus::kOptimal);
+  const bool have_unknown_reduced_solution =
+      presolve_status == HighsPresolveStatus::kReduced &&
+      model_status_ == HighsModelStatus::kUnknown;
+  // Take a copy of the HighsInfo and HighsModelStatus for the
+  // presolved LP to determine whether a PDLP clean-up should be
+  // carried out
+  lp_state.presolved_lp_info = this->info_;
+  const HighsModelStatus presolved_lp_model_status = this->model_status_;
+  if (have_optimal_reduced_solution || have_unknown_reduced_solution) {
+    // ToDo Put this in a separate method
+    assert(model_status_ == HighsModelStatus::kOptimal ||
+           model_status_ == HighsModelStatus::kUnknown ||
+           presolve_status == HighsPresolveStatus::kReducedToEmpty);
+    assert(presolve_status == HighsPresolveStatus::kReduced ||
+           presolve_status == HighsPresolveStatus::kReducedToEmpty);
+    if (have_unknown_reduced_solution)
+      highsLogUser(
+          options_.log_options, HighsLogType::kWarning,
+          "Running postsolve on non-optimal solution of reduced LP\n\n");
+    // If presolve is nontrivial, extract the optimal solution
+    // and (any) basis for the presolved problem in order to generate
+    // the solution and basis for postsolve to use to generate a
+    // solution and basis that is, hopefully, optimal.
+    //
+    // If there is a basis, optimality is confirmed or corrected by
+    // hot-starting the simplex solver
+    //
+    // If there is no basis, then a KKT check is carried out, and
+    // used to determine whether a PDLP clean-up should be done
+    presolve.data_.recovered_solution_ = solution_;
+    presolve.data_.recovered_basis_ = basis_;
+
+    if (presolve_status == HighsPresolveStatus::kReduced)
+      this->callLpKktCheck(presolve.getReducedProblem(), "Before postsolve");
+
+    context.postsolve_time = -timer_.read(timer_.postsolve_clock);
+    timer_.start(timer_.postsolve_clock);
+    HighsPostsolveStatus postsolve_status = runPostsolve(presolve, lp);
+    timer_.stop(timer_.postsolve_clock);
+    context.postsolve_time += timer_.read(timer_.postsolve_clock);
+    presolve.info_.postsolve_time = context.postsolve_time;
+    this->run_data_.postsolve_time = context.postsolve_time;
+
+    if (postsolve_status == HighsPostsolveStatus::kSolutionRecovered) {
+      // Indicate that nontrivial postsolve has been performed
+      if (presolve_status == HighsPresolveStatus::kReduced ||
+          presolve_status == HighsPresolveStatus::kReducedToEmpty)
+        highsLogUser(log_options, HighsLogType::kInfo,
+                     "Performed postsolve\n");
+      // Set solution and its status
+      solution_.clear();
+      solution_ = presolve.data_.recovered_solution_;
+      solution_.value_valid = true;
+      if (!basis_.valid) {
+        // Have a primal-dual solution, but no basis, since PDLP or
+        // IPX without crossover were used. In the case of IPX, this
+        // was because either run_crossover was "off" or "choose"
+        // and IPX determined optimality
+        solution_.dual_valid = true;
+        this->invalidateBasis();
+      } else {
+        solution_.dual_valid = true;
+        // Set basis and its status
+        basis_.valid = true;
+        basis_.useful = true;
+        basis_.col_status = presolve.data_.recovered_basis_.col_status;
+        basis_.row_status = presolve.data_.recovered_basis_.row_status;
+        basis_.debug_origin_name += ": after postsolve";
+        lp_state.postsolve_recovered_basis = true;
+      }
+    } else {
+      // Postsolve has failed, so any simplex data for the presolved
+      // problem is useless
+      ekk_instance_.clear();
+      highsLogUser(log_options, HighsLogType::kError,
+                   "Postsolve return status: %s\n",
+                   utilPostsolveStatusToString(postsolve_status).c_str());
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kPostsolveError);
+      context.status = HighsStatus::kError;
+      return true;
+    }
+  } else {
+    this->run_data_.postsolve_time = 0;
+  }
+  return false;
+}
+
+bool Highs::optimizeModelLpCleanupOriginal(OptimizeModelContext& context, HighsLp& incumbent_lp) {
+  HighsUndoStack& options_undo = context.options_undo;
+  size_t options_mark = 0;
+  OptimizeModelLpState& lp_state = context.lp_state;
+  HighsStatus call_status;
+  HighsLogOptions& log_options = options_.log_options;
+  if (lp_state.postsolve_recovered_basis) {
+    //
+    // Hot-start the simplex solver for the incumbent LP
+    //
+    // Basic primal activities are wrong after postsolve, so
+    // possibly skip KKT check
+    const bool perform_kkt_check = true;
+    if (perform_kkt_check) {
+      // Possibly force debug to perform KKT check on what's
+      // returned from postsolve
+      const bool force_debug = false;
+      options_mark = options_undo.mark();
+      if (force_debug)
+        options_undo.set(options_.highs_debug_level,
+                         kHighsDebugLevelCostly);
+      if (debugHighsSolution("After returning from postsolve", options_,
+                             model_, solution_,
+                             basis_) == HighsDebugStatus::kLogicalError) {
+        context.status = HighsStatus::kError;
+        return true;
+      }
+      options_undo.resetTo(options_mark);
+    }
+    // Save the options to allow the best simplex strategy to
+    // be used
+    options_mark = options_undo.mark();
+    const bool full_logging = false;
+    if (full_logging)
+      options_undo.set(options_.log_dev_level, kHighsLogDevLevelVerbose);
+    // Force the use of simplex to clean up
+    options_undo.set(options_.solver, kSimplexString);
+    options_undo.set(options_.simplex_strategy, kSimplexStrategyChoose);
+    // Ensure that the parallel solver isn't used
+    options_undo.set(options_.simplex_min_concurrency, 1);
+    options_undo.set(options_.simplex_max_concurrency, 1);
+    // Use any pivot threshold resulting from solving the presolved LP
+    if (lp_state.factor_pivot_threshold > 0)
+      options_undo.set(options_.factor_pivot_threshold,
+                       lp_state.factor_pivot_threshold);
+    // The basis returned from postsolve is just basic/nonbasic
+    // and EKK expects a refined basis, so set it up now
+    refineBasis(incumbent_lp, solution_, basis_);
+    // Scrap the EKK data from solving the presolved LP
+    ekk_instance_.invalidate();
+    ekk_instance_.lp_name_ = "Postsolve LP";
+    // Set up the iteration count and timing records so that
+    // adding the corresponding values after callSolveLp gives
+    // difference
+    context.postsolve_iteration_count = -info_.simplex_iteration_count;
+    call_status = optimizeModelLpTimedSolve(
+        context, incumbent_lp,
+        "Solving the original LP from the solution after postsolve",
+        context.solve_original_lp_time);
+    this->run_data_.postsolve_time += context.solve_original_lp_time;
+    // Determine the iteration count
+    context.postsolve_iteration_count += info_.simplex_iteration_count;
+    //
+    context.status = HighsStatus::kOk;
+    context.status = interpretCallStatus(log_options, call_status,
+                                         context.status, "callSolveLp");
+    // Recover the options
+    options_undo.resetTo(options_mark);
+    if (context.status == HighsStatus::kError) return true;
+    this->run_data_.num_simplex_iterations_after_postsolve =
+        context.postsolve_iteration_count;
+    if (context.postsolve_iteration_count > 0)
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Required %d simplex iterations after postsolve\n",
+                   int(context.postsolve_iteration_count));
+  }
+  // Final chance to resolve model_status_ ==
+  // HighsModelStatus::kUnknown after solver that doesn't yield a
+  // basis
+  //
+  // Possibly clean up using PDLP
+  const bool consider_pdlp_cleanup = false;
+  /*
+    !basis_.valid && model_status_ == HighsModelStatus::kUnknown &&
+    options_.allow_pdlp_cleanup && !options_.run_centring;
+  */
+  if (consider_pdlp_cleanup) {
+    HighsInt pdlp_cleanup_iteration_limit = 0;
+    if (tryPdlpCleanup(pdlp_cleanup_iteration_limit, lp_state.presolved_lp_info)) {
+      // Primal/dual infeasibilities/residuals can be magnified in
+      // postsolve after PDLP, and IPX without crossover can fail,
+      // both leading to model_status_ == HighsModelStatus::kUnknown,
+      // so run PDLP on the original problem, starting from the
+      // incumbent solution
+      options_mark = options_undo.mark();
+      assert(useIpm(options_.solver) || options_.solver == kPdlpString);
+      highsLogUser(
+          log_options, HighsLogType::kInfo,
+          "Unknown model status and no basis after initial solve "
+          "so use PDLP with KKT tolerance = %g and iteration limit = %d to "
+          "solve "
+          "the original LP from the incumbent solution after postsolve\n",
+          options_.kkt_tolerance, int(pdlp_cleanup_iteration_limit));
+      options_undo.set(options_.solver, kPdlpString);
+      options_undo.set(options_.pdlp_iteration_limit,
+                       pdlp_cleanup_iteration_limit);
+      call_status = optimizeModelLpTimedSolve(
+          context, incumbent_lp,
+          "Using PDLP to solve the original LP from the solution after "
+          "postsolve",
+          context.solve_original_lp_time);
+      // Recover solver and time limit option values
+      options_undo.resetTo(options_mark);
+      context.status = HighsStatus::kOk;
+      context.status = interpretCallStatus(log_options, call_status,
+                                           context.status, "callSolveLp");
+      if (context.status == HighsStatus::kError) return true;
+      // Update the number of PDLP, iterations, since the
+      // iteration count is reset to zero if PDLP is used to
+      // clean up after postsolve
+      info_.pdlp_iteration_count +=
+          lp_state.presolved_lp_pdlp_iteration_count;
+    }
+  }
+  return false;
 }
 
 bool Highs::optimizeModelLpPresolve(OptimizeModelContext& context, PresolveComponent& presolve, HighsLp& lp) {
