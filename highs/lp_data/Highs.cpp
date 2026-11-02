@@ -1454,8 +1454,11 @@ HighsStatus Highs::calledOptimizeModel() {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kModelEmpty);
     return returnFromOptimizeModel(HighsStatus::kOk, undo_mods);
   }
-  // Return immediately if the model is infeasible due to inconsistent
-  // bounds, modifying any bounds with tiny infeasibilities
+  // Process the bounds, performing inward rounding of bounds on any
+  // integer variables and modifying any bounds with inconsistencies
+  // less than the primal feasibility tolerance, but returning
+  // infeasibility if the model is has any bounds with larger
+  // inconsistencies
   if (processedBoundsFindsInfeasibility()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
     return returnFromOptimizeModel(return_status, undo_mods);
