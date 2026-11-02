@@ -815,6 +815,8 @@ void HighsMipSolverData::init() {
   worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
                                   std::memory_order_relaxed);
   primal_dual_integral.initialise();
+  // The P-D integral is measured from the start of the MIP solver
+  primal_dual_integral.prev_time = mipsolver.timer_.read();
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -2987,46 +2989,42 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
       }
     }
   }
-  if (pdi.value > -kHighsInf) {
-    // updatePrimalDualIntegral has been called previously, so can
-    // usually test housekeeping, even if gap is still inf
-    //
-    // The one case where the checking can't be done comes after restart, where
-    // the
-    //
-    if (check_prev_data) {
-      // These housekeeping tests check that the previous saved
-      // lower/upper bounds and gap are very close to the "from"
-      // lower/upper bounds and corresponding gap. They are usually
-      // identical, but rounding error can occur when passing through
-      // reset, when the old/new offsets are added/subtracted from the
-      // bounds due to changes in offset during presolve.
-      const double lb_inconsistency =
-          possInfRelDiff(from_lb, pdi.prev_lb, pdi.prev_lb);
-      const bool lb_consistent = lb_inconsistency < 1e-12;
-      const double ub_inconsistency =
-          possInfRelDiff(from_ub, pdi.prev_ub, pdi.prev_ub);
-      const bool ub_consistent = ub_inconsistency < 1e-12;
-      const double gap_inconsistency =
-          possInfRelDiff(from_gap, pdi.prev_gap, 1.0);
-      const bool gap_consistent = gap_inconsistency < 1e-12;
-      assert(lb_consistent);
-      assert(ub_consistent);
-      assert(gap_consistent);
-    }
-    if (to_gap < kHighsInf) {
-      double time = mipsolver.timer_.read();
-      if (from_gap < kHighsInf) {
-        // Need to update the P-D integral
-        double time_diff = time - pdi.prev_time;
-        assert(time_diff >= 0);
-        pdi.value += time_diff * pdi.prev_gap;
-      }
-      pdi.prev_time = time;
-    }
-  } else {
+  if (pdi.value <= -kHighsInf) {
+    // First call, so zero the P-D integral and no housekeeping to
+    // test
     pdi.value = 0;
+    pdi.prev_gap = 1.0;
+  } else if (check_prev_data) {
+    // updatePrimalDualIntegral has been called previously, so can
+    // test housekeeping, except after restart
+    //
+    // These housekeeping tests check that the previous saved
+    // lower/upper bounds and gap are very close to the "from"
+    // lower/upper bounds and corresponding gap. They are usually
+    // identical, but rounding error can occur when passing through
+    // reset, when the old/new offsets are added/subtracted from the
+    // bounds due to changes in offset during presolve.
+    const double lb_inconsistency =
+        possInfRelDiff(from_lb, pdi.prev_lb, pdi.prev_lb);
+    const bool lb_consistent = lb_inconsistency < 1e-12;
+    const double ub_inconsistency =
+        possInfRelDiff(from_ub, pdi.prev_ub, pdi.prev_ub);
+    const bool ub_consistent = ub_inconsistency < 1e-12;
+    const double gap_inconsistency =
+        possInfRelDiff(from_gap, pdi.prev_gap, 1.0);
+    const bool gap_consistent = gap_inconsistency < 1e-12;
+    assert(lb_consistent);
+    assert(ub_consistent);
+    assert(gap_consistent);
   }
+  // Update the P-D integral using the gap capped at 1, so an infinite
+  // gap (no incumbent, no lower bound, or gap bigger than 1)
+  // contributes 1
+  double time = mipsolver.timer_.read();
+  double time_diff = time - pdi.prev_time;
+  assert(time_diff >= 0);
+  pdi.value += time_diff * std::min(pdi.prev_gap, 1.0);
+  pdi.prev_time = time;
   pdi.prev_lb = to_lb;
   pdi.prev_ub = to_ub;
   pdi.prev_gap = to_gap;
