@@ -676,15 +676,8 @@ void HighsSparseMatrix::deleteRows(
 
 HighsStatus HighsSparseMatrix::assessStart(const HighsLogOptions& log_options) {
   // Identify main dimensions
-  HighsInt vec_dim;
-  HighsInt num_vec;
-  if (this->isColwise()) {
-    vec_dim = this->num_row_;
-    num_vec = this->num_col_;
-  } else {
-    vec_dim = this->num_col_;
-    num_vec = this->num_row_;
-  }
+  const HighsInt vec_dim = this->vecDim();
+  const HighsInt num_vec = this->numVec();
   if (this->start_[0]) {
     highsLogUser(log_options, HighsLogType::kError,
                  "Matrix start[0] = %d, not 0\n", int(this->start_[0]));
@@ -712,15 +705,7 @@ HighsStatus HighsSparseMatrix::assessStart(const HighsLogOptions& log_options) {
 HighsStatus HighsSparseMatrix::assessIndexBounds(
     const HighsLogOptions& log_options) {
   // Identify main dimensions
-  HighsInt vec_dim;
-  HighsInt num_vec;
-  if (this->isColwise()) {
-    vec_dim = this->num_row_;
-    //    num_vec = this->num_col_;
-  } else {
-    vec_dim = this->num_col_;
-    //    num_vec = this->num_row_;
-  }
+  const HighsInt vec_dim = this->vecDim();
   for (HighsInt iEl = 0; iEl < this->numNz(); iEl++) {
     if (this->index_[iEl] < 0 || this->index_[iEl] >= vec_dim) {
       highsLogUser(log_options, HighsLogType::kError,
@@ -745,21 +730,12 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                                       const std::string* col_names,
                                       const std::string* row_names) {
   assert(this->formatOk());
-  // Identify main dimensions
-  HighsInt vec_dim;
-  HighsInt num_vec;
-  if (this->isColwise()) {
-    vec_dim = this->num_row_;
-    num_vec = this->num_col_;
-  } else {
-    vec_dim = this->num_col_;
-    num_vec = this->num_row_;
-  }
-  const bool partitioned = this->format_ == MatrixFormat::kRowwisePartitioned;
-  return assessMatrix(log_options, "HighsSparseMatrix", this->name_, vec_dim,
-                      num_vec, partitioned, this->start_, this->p_end_,
-                      this->index_, this->value_, small_matrix_value,
-                      large_matrix_value, sum_duplicates, col_names, row_names);
+  return assessMatrix(log_options, "HighsSparseMatrix", this->name_,
+                      this->vecDim(), this->numVec(),
+                      this->format_ == MatrixFormat::kRowwisePartitioned,
+                      this->start_, this->p_end_, this->index_, this->value_,
+                      small_matrix_value, large_matrix_value, sum_duplicates,
+                      col_names, row_names);
 }
 
 void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,
