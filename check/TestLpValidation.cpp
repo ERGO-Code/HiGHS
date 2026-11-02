@@ -955,10 +955,9 @@ TEST_CASE("issue-3366", "[highs_test_lp_validation]") {
   options.output_flag = dev_run;
 
   // Test out the class-specific assess methods - that users may run
-  // before passing a HighsLp or HighsSparseMatrix - which require
-  // matrix dimensions
-  lp.a_matrix_.num_col_ = lp.num_col_;
-  lp.a_matrix_.num_row_ = lp.num_row_;
+  // before passing a HighsLp or HighsSparseMatrix., motivating the
+  // addition of a call to HighsLp::setMatrixDimensions() in
+  // HighsLp::assess()
 
   if (dev_run) printf("For matrix_copy.assess\n");
   HighsSparseMatrix matrix_copy = lp.a_matrix_;

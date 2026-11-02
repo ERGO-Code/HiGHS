@@ -1575,7 +1575,7 @@ class Highs {
 
   const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
-  void logHeader(const bool log_header = true) const;
+  void logHeader() const;
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;

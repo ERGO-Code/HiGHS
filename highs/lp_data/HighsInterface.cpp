@@ -3219,8 +3219,6 @@ HighsStatus Highs::computeIllConditioning(
   Highs conditioning;
   const bool dev_conditioning = false;
   conditioning.setOptionValue("output_flag", false);  // dev_conditioning);
-  // Ensure that logging header is never written for this Highs instance
-  conditioning.logHeader(false);
   std::vector<HighsInt> basic_var;
   HighsLp& ill_conditioning_lp = conditioning.model_.lp_;
   // Form the ill-conditioning LP according to method
