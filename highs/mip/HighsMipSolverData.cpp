@@ -844,6 +844,7 @@ void HighsMipSolverData::runMipPresolve(
 }
 
 void HighsMipSolverData::checkAddSolution() {
+  // Run when (re-)starting the MIP solver
   if (mipsolver.solution_objective_ != kHighsInf) {
     // Assigning new incumbent
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
@@ -851,16 +852,30 @@ void HighsMipSolverData::checkAddSolution() {
     double solobj =
         mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
         mipsolver.model_->offset_;
-    bool feasible = mipsolver.bound_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance &&
-                    mipsolver.integrality_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance &&
-                    mipsolver.row_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance;
     if (numRestarts == 0) {
+      // Since the supplied solution (mipsolver.solution_) may not
+      // correspond to postsolve applied to incumbent (#3510), compute
+      // the objective locally using incumbent
+      double mipsolver_objective =
+          double(mipsolver.model_->objectiveCDoubleValue(incumbent));
+      mipsolver.solution_objective_ =
+          int(mipsolver.orig_model_->sense_) * mipsolver_objective;
+      // Bounds etc are determined without the objective offset
+      solobj = mipsolver_objective - mipsolver.model_->offset_;
+    }
+    const bool feasible =
+        mipsolver.bound_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance &&
+        mipsolver.integrality_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance &&
+        mipsolver.row_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance;
+    if (numRestarts == 0) {
+      const bool reduced = postSolveStack.numReductions() > 0;
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "\nMIP start solution is %s, objective value is %.12g\n",
+                   "\nMIP start solution is %s%s: objective value is %.12g\n",
                    feasible ? "feasible" : "infeasible",
+                   reduced ? " in the reduced space" : "",
                    mipsolver.solution_objective_);
     }
     if (feasible && solobj < upper_bound) {
