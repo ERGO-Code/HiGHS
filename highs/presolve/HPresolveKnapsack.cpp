@@ -16,16 +16,108 @@ namespace {
 
 struct KnapsackTerm {
   HighsInt literal;
-  int64_t weight;
+  double weight;
 };
 
 struct KnapsackRow {
   HighsInt row;
   HighsInt direction;
-  int64_t capacity;
-  int64_t weightsum;
+  HighsCDouble capacity;
+  HighsCDouble weightsum;
   std::vector<KnapsackTerm> terms;
 };
+
+bool gcdAllButOne(std::vector<int64_t>& weights, int64_t& b,
+                  bool& hasZeroWeight, const HighsInt numTerms) {
+  HighsInt numOnes = 0;
+  HighsInt numZeros = 0;
+  HighsInt numMaxWeight = 0;
+  for (const int64_t& weight : weights) {
+    if (weight == 1) numOnes++;
+    if (weight == 0) numZeros++;
+    if (weight == b) numMaxWeight++;
+  }
+  if (numOnes >= 2 || numZeros + numMaxWeight + numOnes >= numTerms - 2) {
+    return false;
+  }
+  int64_t gcd = 0;
+  HighsInt candidate = -1;
+  for (HighsInt i = 0; i != numTerms; ++i) {
+    if (weights[i] == b || weights[i] == 0) continue;
+    const int64_t oldGcd = gcd;
+    gcd = HighsIntegers::gcd(gcd, weights[i]);
+    if (gcd != 1) continue;
+    if (candidate == -1) {
+      candidate = i;
+      gcd = oldGcd;
+    } else {
+      return false;
+    }
+  }
+  assert(gcd > 1);
+  const int64_t remainderCapacity = b % gcd;
+  if (candidate == -1) {
+    // Found a GCD for the entire knapsack
+    if (remainderCapacity >= 1) {
+      const int64_t oldB = b;
+      b -= remainderCapacity;
+      if (numMaxWeight >= 1) {
+        for (HighsInt i = 0; i != numTerms; ++i) {
+          if (weights[i] == oldB) weights[i] = b;
+        }
+      }
+    }
+  } else {
+    // Found a GCD for all terms but one
+    int64_t newWeight = 0;
+    const int64_t remainderWeight = weights[candidate] % gcd;
+    if (remainderWeight > remainderCapacity) {
+      newWeight = weights[candidate] - remainderWeight + gcd;
+    } else {
+      newWeight = weights[candidate] - remainderWeight;
+    }
+    if (newWeight == 0 && numMaxWeight >= 1) return false;
+    if (newWeight == 0) hasZeroWeight = true;
+    weights[candidate] = newWeight;
+    if (remainderCapacity > 0) {
+      const int64_t oldB = b;
+      b -= remainderCapacity;
+      if (numMaxWeight >= 1) {
+        for (HighsInt i = 0; i != numTerms; ++i) {
+          if (weights[i] == oldB) weights[i] = b;
+        }
+      }
+    }
+  }
+  b /= gcd;
+  for (HighsInt i = 0; i != numTerms; ++i) {
+    weights[i] /= gcd;
+  }
+  return true;
+}
+
+void gcdSimplify(KnapsackRow& knapsack, bool& changed, bool& hasZeroWeight) {
+  // Heuristically try recursive all-but-one GCD calls
+  const HighsInt numTerms = static_cast<HighsInt>(knapsack.terms.size());
+  std::vector<int64_t> weights;
+  weights.reserve(numTerms);
+  for (const KnapsackTerm& term : knapsack.terms) {
+    weights.push_back(static_cast<int64_t>(term.weight));
+  }
+  int64_t b = static_cast<int64_t>(static_cast<double>(knapsack.capacity));
+  while (gcdAllButOne(weights, b, hasZeroWeight, numTerms)) {
+    changed = true;
+  }
+  if (b != static_cast<int64_t>(static_cast<double>(knapsack.capacity))) {
+    HighsCDouble newWeightSum = 0;
+    for (HighsInt i = 0; i != numTerms; ++i) {
+      knapsack.terms[i].weight = static_cast<double>(weights[i]);
+      newWeightSum += knapsack.terms[i].weight;
+    }
+    knapsack.weightsum = newWeightSum;
+    knapsack.capacity = static_cast<double>(b);
+  }
+}
 
 }  // namespace
 
@@ -33,8 +125,8 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     HighsPostsolveStack& postsolve_stack, bool& strengthenedKnapsacks) {
   strengthenedKnapsacks = false;
 
-  constexpr HighsInt maxRowSize = 1000;
-  const int64_t maxValue = std::min<int64_t>(kHighsIInf, int64_t{1} << 50);
+  const HighsInt maxRowSize =
+      std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
   const HighsInt numRows = model->num_row_;
   const HighsInt numCols = model->num_col_;
   HighsInt numNormalized = 0;
@@ -57,7 +149,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     while (i != knapsack.terms.size()) {
       const HighsInt& col = knapsack.terms[i].literal / 2;
       const bool positive = knapsack.terms[i].literal % 2 == 1;
-      const double weight = static_cast<double>(knapsack.terms[i].weight);
+      const double weight = knapsack.terms[i].weight;
       // Some term may have been fixed by clique table propagation
       // and still have non-zero knapsack weight
       if (model->col_lower_[col] == model->col_upper_[col])
@@ -68,9 +160,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
         ++j;
       }
       const double delta =
-          knapsack.direction *
-              static_cast<double>(positive ? weight : -weight) -
-          oldRow[j].second;
+          knapsack.direction * (positive ? weight : -weight) - oldRow[j].second;
       if (delta != 0) {
         addToMatrix(knapsack.row, col, delta);
       }
@@ -87,66 +177,64 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       changeRowLower(knapsack.row, -static_cast<double>(rhs));
   };
 
-  // Iterate over all rows. Only interested in knapsack rows, i.e.
-  // row of pure binary columns with integer coefficients where at least one
-  // coefficient > 1
+  // Iterate over all rows. Only interested in rows of pure binaries
+  // where at least one coefficient differs.
+  // Will transform to make all coefficients positive, i.e., a knapsack.
   for (HighsInt row = 0; row < numRows; ++row) {
     if (rowDeleted[row] || rowsize[row] <= 2 || rowsize[row] > maxRowSize ||
-        isRanged(row))
+        rowsizeInteger[row] + rowsizeImplInt[row] != rowsize[row] ||
+        isRanged(row)) {
       continue;
+    }
     const HighsInt direction = model->row_upper_[row] == kHighsInf ? -1 : 1;
     const double rowBound =
         direction == 1 ? model->row_upper_[row] : -model->row_lower_[row];
-    if (std::abs(rowBound) > maxValue) continue;
-    int64_t overflowBudget =
-        maxValue - static_cast<int64_t>(std::ceil(std::abs(rowBound)));
+    if (std::abs(rowBound) == kHighsInf) continue;
     HighsCDouble capacity = rowBound;
     KnapsackRow knapsack{row, direction, 0, 0, {}};
     bool eligible = true;
-    bool hasGeneralIntCoefficients = false;
+    bool allIntCoefficients = true;
+    double firstObservedCoefficient = 0;
+    bool allSameCoefficients = true;
     bool changed = false;
     for (const auto& nz : getRowVector(row)) {
       const HighsInt col = nz.index();
       const double value = direction * nz.value();
-      if (value != std::floor(value) || std::abs(value) > maxValue) {
+      const double weight = std::abs(value);
+      if (weight == kHighsInf) {
         eligible = false;
         break;
+      }
+      if (allIntCoefficients) {
+        allIntCoefficients = value == std::floor(value);
       }
       // Columns may have been fixed by previous row changes
       if (model->col_lower_[col] == model->col_upper_[col]) {
         const double fixedValue = model->col_lower_[col];
         const double contribution = value * fixedValue;
-        if (std::abs(contribution) > overflowBudget ||
-            fixedValue != std::floor(fixedValue) ||
-            contribution != std::floor(contribution)) {
+        if (std::abs(contribution) == kHighsInf) {
           eligible = false;
           break;
         }
-        overflowBudget -= static_cast<int64_t>(std::abs(contribution));
         capacity -= contribution;
         changed = true;
       } else {
-        if (model->integrality_[col] == HighsVarType::kContinuous ||
-            model->col_lower_[col] != 0 || model->col_upper_[col] != 1) {
+        if (model->col_lower_[col] != 0 || model->col_upper_[col] != 1) {
           eligible = false;
           break;
         }
-        const int64_t weight = static_cast<int64_t>(std::abs(value));
-        if (weight > overflowBudget) {
-          eligible = false;
-          break;
+        assert(model->integrality_[col] != HighsVarType::kContinuous);
+        if (firstObservedCoefficient == 0) firstObservedCoefficient = weight;
+        if (allSameCoefficients) {
+          allSameCoefficients = weight == firstObservedCoefficient;
         }
-        overflowBudget -= weight;
         knapsack.weightsum += weight;
         knapsack.terms.push_back({2 * col + (value > 0), weight});
         if (value < 0) capacity += weight;
-        if (weight != 1) hasGeneralIntCoefficients = true;
       }
     }
-    if (!eligible || !hasGeneralIntCoefficients) continue;
-    knapsack.capacity = static_cast<int64_t>(
-        static_cast<double>(floor(capacity + primal_feastol)));
-    changed |= capacity != static_cast<double>(knapsack.capacity);
+    if (!eligible || allSameCoefficients) continue;
+    knapsack.capacity = capacity;
     if (knapsack.capacity < 0) return Result::kPrimalInfeasible;
     if (knapsack.weightsum <= knapsack.capacity) {
       postsolve_stack.redundantRow(row);
@@ -154,21 +242,12 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       continue;
     }
 
-    // Filter out setppc rows
-    if (knapsack.capacity <= 1) continue;
-
-    // Reduce coefficient values by common factor if possible
-    int64_t gcd = 0;
-    for (const KnapsackTerm& term : knapsack.terms) {
-      gcd = HighsIntegers::gcd(gcd, term.weight);
-      if (gcd == 1) break;
-    }
-    if (gcd > 1) {
-      knapsack.weightsum /= gcd;
-      knapsack.capacity /= gcd;
-      if (knapsack.capacity <= 1) continue;
-      for (KnapsackTerm& term : knapsack.terms) term.weight /= gcd;
-      changed = true;
+    if (allIntCoefficients) {
+      // Round capacity to be integer if all coefficients are integer
+      double roundedCapacity =
+          std::floor(static_cast<double>(knapsack.capacity));
+      if (roundedCapacity < knapsack.capacity + primal_feastol) changed = true;
+      knapsack.capacity = roundedCapacity;
     }
 
     // Fix any columns with coefficients that are too large
@@ -185,11 +264,14 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       ++numFixed;
       changed = true;
     }
+
     knapsack.terms.erase(
         std::remove_if(
             knapsack.terms.begin(), knapsack.terms.end(),
             [](const KnapsackTerm& term) { return term.weight == 0; }),
         knapsack.terms.end());
+
+    // Knapsack may now be redundant
     if (knapsack.weightsum <= knapsack.capacity) {
       postsolve_stack.redundantRow(row);
       removeRow(row);
@@ -200,14 +282,21 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
 
     // If a column's absence makes a row redundant then its weight
     // can be reduced
-    const int64_t excess = knapsack.weightsum - knapsack.capacity;
+    const double excess =
+        static_cast<double>(knapsack.weightsum - knapsack.capacity);
     for (auto& term : knapsack.terms) {
-      if (term.weight <= excess) continue;
-      const int64_t delta = term.weight - excess;
+      if (term.weight <= excess + primal_feastol) continue;
+      const double delta = term.weight - excess;
       term.weight = excess;
       knapsack.capacity -= delta;
       knapsack.weightsum -= delta;
       changed = true;
+    }
+
+    bool hasZeroWeight = false;
+    if (allIntCoefficients && knapsack.capacity < kHighsIInf) {
+      // Simplify constraint (or strengthen) using GCD arguments
+      gcdSimplify(knapsack, changed, hasZeroWeight);
     }
 
     // (1) If the two smallest items can't fit into the knapsack then
@@ -218,10 +307,11 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     // larger than minWeight (either some single item larger than minWeight or
     // the two smallest items together), then its weight can be increased to
     // capacity - minWeight.
-    int64_t minWeight = maxValue;
-    int64_t secondWeight = maxValue;
-    int64_t secondUniqueMinWeight = maxValue;
+    double minWeight = kHighsInf;
+    double secondWeight = kHighsInf;
+    double secondUniqueMinWeight = kHighsInf;
     for (const auto& term : knapsack.terms) {
+      if (term.weight == 0) continue;
       if (term.weight < minWeight) {
         secondWeight = minWeight;
         secondUniqueMinWeight = minWeight;
@@ -234,34 +324,56 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
           secondUniqueMinWeight = std::min(term.weight, secondUniqueMinWeight);
       }
     }
-    if (minWeight + secondWeight > knapsack.capacity) {
+    HighsCDouble minWeightsCapacityDiff =
+        static_cast<HighsCDouble>(minWeight) + secondWeight - knapsack.capacity;
+    if (minWeightsCapacityDiff > primal_feastol) {
       if (knapsack.capacity != 1) {
-        for (auto& term : knapsack.terms) term.weight = 1;
+        double newWeightSum = 0;
+        for (auto& term : knapsack.terms) {
+          if (term.weight != 0) {
+            term.weight = 1;
+            newWeightSum += 1;
+          }
+        }
         knapsack.capacity = 1;
-        knapsack.weightsum = knapsack.terms.size();
+        knapsack.weightsum = newWeightSum;
         changed = true;
       }
     } else {
       secondUniqueMinWeight =
           std::min(secondUniqueMinWeight, minWeight + secondWeight);
       for (auto& term : knapsack.terms) {
+        const HighsCDouble weightPlusMinWeightExcess =
+            static_cast<HighsCDouble>(term.weight) + minWeight -
+            knapsack.capacity;
+        const HighsCDouble itemPlusSecondUniqueExcess =
+            static_cast<HighsCDouble>(secondUniqueMinWeight) + term.weight -
+            knapsack.capacity;
         if (term.weight < knapsack.capacity &&
-            term.weight + minWeight > knapsack.capacity) {
+            weightPlusMinWeightExcess > primal_feastol) {
           knapsack.weightsum += knapsack.capacity - term.weight;
-          term.weight = knapsack.capacity;
+          term.weight = static_cast<double>(knapsack.capacity);
           changed = true;
-        } else if (term.weight < knapsack.capacity - minWeight &&
+        } else if (weightPlusMinWeightExcess < -primal_feastol &&
                    term.weight > knapsack.capacity / 2 &&
-                   knapsack.capacity - term.weight < secondUniqueMinWeight) {
-          knapsack.weightsum += knapsack.capacity - minWeight - term.weight;
-          term.weight = knapsack.capacity - minWeight;
+                   itemPlusSecondUniqueExcess > primal_feastol) {
+          knapsack.weightsum -= weightPlusMinWeightExcess;
+          term.weight = static_cast<double>(knapsack.capacity - minWeight);
           changed = true;
         }
       }
     }
+
     if (changed) {
       changeRow(knapsack);
       ++numNormalized;
+      if (hasZeroWeight) {
+        knapsack.terms.erase(
+            std::remove_if(
+                knapsack.terms.begin(), knapsack.terms.end(),
+                [](const KnapsackTerm& term) { return term.weight == 0; }),
+            knapsack.terms.end());
+      }
     }
     knapsacks.push_back(std::move(knapsack));
   }
@@ -278,7 +390,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   for (KnapsackRow& knapsack : knapsacks) {
     std::vector<KnapsackTerm> maxWeightItems;
     std::vector<KnapsackTerm> smallItems;
-    int64_t smallItemSum = 0;
+    HighsCDouble smallItemSum = 0;
     for (const KnapsackTerm& term : knapsack.terms) {
       if (term.weight == knapsack.capacity)
         maxWeightItems.push_back({term.literal, 1});
@@ -323,67 +435,6 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     postsolve_stack.redundantRow(row);
     removeRow(row);
     ++numDisaggregated;
-    strengthenedKnapsacks = true;
-  }
-
-  knapsacks.erase(std::remove_if(knapsacks.begin(), knapsacks.end(),
-                                 [](const KnapsackRow& knapsack) {
-                                   return knapsack.capacity <= 1;
-                                 }),
-                  knapsacks.end());
-
-  // Search for a literal u, s.t.,
-  // u = 1 -> x_i = 0 for some set of I
-  // If \alpha = \sum_{i \in I} a_i - (weightsum - capacity) > 0
-  // then we can lift \alpha u into the row
-
-  // The sum of a_i for x_i = 0 when literal = 1, i.e.,
-  // the weight from the knapsack that disappears by fixing the literal.
-  std::vector<int64_t> removedWeight(2 * numCols, 0);
-  // Keeps track of source from where the literal was last visited
-  std::vector<HighsInt> lastLiteralSource(2 * numCols, -1);
-  // Keep track of literals with non-zero removed weight
-  std::vector<HighsInt> candidates;
-  for (const KnapsackRow& knapsack : knapsacks) {
-    candidates.clear();
-    for (const KnapsackTerm& term : knapsack.terms) {
-      HighsInt negatedTermLiteral = term.literal ^ 1;
-      lastLiteralSource[negatedTermLiteral] = term.literal;
-      if (removedWeight[negatedTermLiteral] == 0)
-        candidates.push_back(negatedTermLiteral);
-      removedWeight[negatedTermLiteral] += term.weight;
-      presolveCliqueTable.recordLiteralNeighbourhood(
-          term.literal, term.weight, removedWeight, lastLiteralSource,
-          candidates, maxRowSize);
-    }
-    HighsInt bestLiteral = -1;
-    int64_t bestWeight = 0;
-    for (HighsInt literal : candidates) {
-      const HighsInt col = literal / 2;
-      const int64_t weight =
-          removedWeight[literal] - (knapsack.weightsum - knapsack.capacity);
-      if (!colDeleted[col] &&
-          model->col_lower_[col] != model->col_upper_[col] &&
-          weight > bestWeight) {
-        bestLiteral = literal;
-        bestWeight = weight;
-      }
-      removedWeight[literal] = 0;
-      lastLiteralSource[literal] = -1;
-    }
-    if (bestLiteral == -1) continue;
-    const double weight = static_cast<double>(bestWeight);
-    const bool positive = bestLiteral % 2 == 1;
-    addToMatrix(knapsack.row, bestLiteral / 2,
-                knapsack.direction * (positive ? weight : -weight));
-    if (!positive) {
-      if (knapsack.direction == 1) {
-        addToRowUpper(knapsack.row, -static_cast<HighsCDouble>(weight));
-      } else {
-        addToRowLower(knapsack.row, static_cast<HighsCDouble>(weight));
-      }
-    }
-    ++numLifted;
     strengthenedKnapsacks = true;
   }
 
