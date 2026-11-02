@@ -1746,8 +1746,18 @@ class Highs {
 
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve(const bool force_lp_presolve,
+                                  const bool force_presolve = false) {
+    return runPresolve(presolve_, model_.lp_, force_lp_presolve,
+                       force_presolve);
+  }
+  HighsPresolveStatus runPresolve(PresolveComponent& presolve, HighsLp& lp,
+                                  const bool force_lp_presolve,
                                   const bool force_presolve = false);
-  HighsPostsolveStatus runPostsolve();
+  HighsPostsolveStatus runPostsolve() {
+    return runPostsolve(presolve_, model_.lp_);
+  }
+  HighsPostsolveStatus runPostsolve(PresolveComponent& presolve,
+                                    const HighsLp& lp);
 
   HighsStatus openWriteFile(const std::string& filename,
                             const std::string& method_name, FILE*& file,

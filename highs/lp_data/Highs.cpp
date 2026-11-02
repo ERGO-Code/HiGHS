@@ -4059,14 +4059,15 @@ void Highs::deprecationMessage(const std::string& method_name,
   }
 }
 
-HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
-                                       const bool force_presolve) {
-  presolve_.clear();
+HighsPresolveStatus Highs::runPresolve(PresolveComponent& presolve, HighsLp& lp, const bool force_lp_presolve, const bool force_presolve) {
+  // Clearing presolve would destroy lp if it were its reduced LP
+  assert(&lp != &presolve.data_.reduced_lp_);
+  presolve.clear();
   // Exit if presolve is set to off (unless presolve is forced)
   if (options_.presolve == kHighsOffString && !force_presolve)
     return HighsPresolveStatus::kNotPresolved;
 
-  if (model_.isEmpty()) {
+  if (lp.num_col_ == 0 && lp.num_row_ == 0) {
     // Empty models shouldn't reach here, but this status would cause
     // no harm if one did
     assert(1 == 0);
@@ -4074,10 +4075,9 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   }
 
   // Ensure that the LP is column-wise
-  HighsLp& original_lp = model_.lp_;
-  original_lp.ensureColwise();
+  lp.ensureColwise();
 
-  if (original_lp.num_col_ == 0 && original_lp.num_row_ == 0)
+  if (lp.num_col_ == 0 && lp.num_row_ == 0)
     return HighsPresolveStatus::kNullError;
 
   // Ensure that the timer is running
@@ -4102,12 +4102,12 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
   // Presolve.
   HighsPresolveStatus presolve_return_status =
       HighsPresolveStatus::kNotPresolved;
-  if (model_.isMip() && !force_lp_presolve) {
+  if (lp.isMip() && !force_lp_presolve) {
     // Use presolve for MIP
     //
     // Presolved model is extracted now since it's part of solver,
     // which is lost on return
-    HighsMipSolver solver(callback_, options_, original_lp, solution_);
+    HighsMipSolver solver(callback_, options_, lp, solution_);
     solver.setProfiling(this->profiling_);
     // Start the MIP solver's timer so that timeout in presolve can be
     // identified
@@ -4115,19 +4115,19 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
     // Only place that HighsMipSolver::runMipPresolve is called
     solver.runMipPresolve(options_.presolve_reduction_limit);
     presolve_return_status = solver.getPresolveStatus();
-    // Assign values to data members of presolve_
-    presolve_.data_.reduced_lp_ = solver.getPresolvedModel();
-    presolve_.data_.postSolveStack = solver.getPostsolveStack();
-    presolve_.presolve_status_ = presolve_return_status;
-    //    presolve_.data_.presolve_log_ =
+    // Assign values to data members of presolve
+    presolve.data_.reduced_lp_ = solver.getPresolvedModel();
+    presolve.data_.postSolveStack = solver.getPostsolveStack();
+    presolve.presolve_status_ = presolve_return_status;
+    //    presolve.data_.presolve_log_ =
   } else {
     // Use presolve for LP
-    presolve_.init(original_lp, timer_);
-    presolve_.options_ = &options_;
+    presolve.init(lp, timer_);
+    presolve.options_ = &options_;
     if (options_.time_limit > 0 && options_.time_limit < kHighsInf) {
       double current = timer_.read();
       double time_init = current - start_presolve;
-      double left = presolve_.options_->time_limit - time_init;
+      double left = presolve.options_->time_limit - time_init;
       if (left <= 0) {
         highsLogDev(options_.log_options, HighsLogType::kError,
                     "Time limit reached while copying matrix into presolve.\n");
@@ -4139,7 +4139,7 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
                   time_init, left);
     }
 
-    presolve_return_status = presolve_.run();
+    presolve_return_status = presolve.run();
   }
 
   highsLogDev(options_.log_options, HighsLogType::kVerbose,
@@ -4147,17 +4147,18 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
               presolveStatusToString(presolve_return_status).c_str());
 
   // Update reduction counts.
-  assert(presolve_return_status == presolve_.presolve_status_);
-  presolve_log_ = presolve_.getPresolveLog();
-  switch (presolve_.presolve_status_) {
+  assert(presolve_return_status == presolve.presolve_status_);
+  // The Highs presolve log is that of presolve_
+  if (&presolve == &presolve_) presolve_log_ = presolve.getPresolveLog();
+  switch (presolve.presolve_status_) {
     case HighsPresolveStatus::kReduced: {
-      HighsLp& reduced_lp = presolve_.getReducedProblem();
-      presolve_.info_.n_cols_removed =
-          original_lp.num_col_ - reduced_lp.num_col_;
-      presolve_.info_.n_rows_removed =
-          original_lp.num_row_ - reduced_lp.num_row_;
-      presolve_.info_.n_nnz_removed =
-          (HighsInt)original_lp.numNz() - (HighsInt)reduced_lp.numNz();
+      HighsLp& reduced_lp = presolve.getReducedProblem();
+      presolve.info_.n_cols_removed =
+          lp.num_col_ - reduced_lp.num_col_;
+      presolve.info_.n_rows_removed =
+          lp.num_row_ - reduced_lp.num_row_;
+      presolve.info_.n_nnz_removed =
+          (HighsInt)lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
       reduced_lp.clearScale();
       assert(lpDimensionsOk("RunPresolve: reduced_lp", reduced_lp,
@@ -4165,36 +4166,36 @@ HighsPresolveStatus Highs::runPresolve(const bool force_lp_presolve,
       break;
     }
     case HighsPresolveStatus::kReducedToEmpty: {
-      presolve_.info_.n_cols_removed = original_lp.num_col_;
-      presolve_.info_.n_rows_removed = original_lp.num_row_;
-      presolve_.info_.n_nnz_removed = (HighsInt)original_lp.numNz();
+      presolve.info_.n_cols_removed = lp.num_col_;
+      presolve.info_.n_rows_removed = lp.num_row_;
+      presolve.info_.n_nnz_removed = (HighsInt)lp.numNz();
       break;
     }
     default:
       break;
   }
   // Presolve creates integrality vector for an LP, so clear it
-  if (!model_.isMip()) presolve_.data_.reduced_lp_.integrality_.clear();
+  if (!lp.isMip()) presolve.data_.reduced_lp_.integrality_.clear();
 
   return presolve_return_status;
 }
 
-HighsPostsolveStatus Highs::runPostsolve() {
-  // assert(presolve_.has_run_);
+HighsPostsolveStatus Highs::runPostsolve(PresolveComponent& presolve, const HighsLp& lp) {
+  // assert(presolve.has_run_);
   const bool have_primal_solution =
-      presolve_.data_.recovered_solution_.value_valid;
+      presolve.data_.recovered_solution_.value_valid;
   // Need at least a primal solution
   if (!have_primal_solution)
     return HighsPostsolveStatus::kNoPrimalSolutionError;
   const bool have_dual_solution =
-      presolve_.data_.recovered_solution_.dual_valid;
+      presolve.data_.recovered_solution_.dual_valid;
   const HighsInt report_3040_col = -578;
-  const bool have_basis = presolve_.data_.recovered_basis_.valid;
-  presolve_.data_.postSolveStack.undo(
-      options_, presolve_.data_.recovered_solution_,
-      presolve_.data_.recovered_basis_, 0, report_3040_col);
+  const bool have_basis = presolve.data_.recovered_basis_.valid;
+  presolve.data_.postSolveStack.undo(
+      options_, presolve.data_.recovered_solution_,
+      presolve.data_.recovered_basis_, 0, report_3040_col);
   if (have_basis &&
-      !isBasisConsistent(this->model_.lp_, presolve_.data_.recovered_basis_)) {
+      !isBasisConsistent(lp, presolve.data_.recovered_basis_)) {
     // Recovered basis was assumed to be consistent, but #3323
     // exposes that in exceptional circumstances it may not be,
     // so check here and return solver error if it is
@@ -4204,22 +4205,22 @@ HighsPostsolveStatus Highs::runPostsolve() {
     return HighsPostsolveStatus::kBasisError;
   }
   // Compute the row activities
-  assert(model_.lp_.a_matrix_.isColwise());
-  calculateRowValuesQuad(model_.lp_, presolve_.data_.recovered_solution_);
+  assert(lp.a_matrix_.isColwise());
+  calculateRowValuesQuad(lp, presolve.data_.recovered_solution_);
 
-  if (have_dual_solution && model_.lp_.sense_ == ObjSense::kMaximize) {
-    // Negate the dual values since the incumbent LP is a maximization
-    for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++)
-      presolve_.data_.recovered_solution_.col_dual[iCol] *= -1;
-    for (HighsInt iRow = 0; iRow < model_.lp_.num_row_; iRow++)
-      presolve_.data_.recovered_solution_.row_dual[iRow] *= -1;
+  if (have_dual_solution && lp.sense_ == ObjSense::kMaximize) {
+    // Negate the dual values since lp is a maximization
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+      presolve.data_.recovered_solution_.col_dual[iCol] *= -1;
+    for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+      presolve.data_.recovered_solution_.row_dual[iRow] *= -1;
   }
 
   // Ensure that the postsolve status is used to set
-  // presolve_.postsolve_status_, as well as being returned
+  // presolve.postsolve_status_, as well as being returned
   HighsPostsolveStatus postsolve_status =
       HighsPostsolveStatus::kSolutionRecovered;
-  presolve_.postsolve_status_ = postsolve_status;
+  presolve.postsolve_status_ = postsolve_status;
   return postsolve_status;
 }
 
