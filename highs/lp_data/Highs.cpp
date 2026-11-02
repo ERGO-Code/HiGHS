@@ -1285,6 +1285,13 @@ HighsStatus Highs::optimizeModelTryCatch() {
   OptimizeModelContext context;
   HighsStatus status;
   auto handleCatch = [&]() {
+    // The exception may have been thrown after
+    // called_return_from_optimize_model was set false, in which case
+    // returnFromOptimizeModel() won't have been called. Set it true
+    // so that the checks in returnFromHighs() - called by
+    // clearSolver() - and any subsequent call to optimizeModel()
+    // don't fail
+    called_return_from_optimize_model = true;
     // Clear all solver data, since there may be nothing useful
     this->clearSolver();
     status = HighsStatus::kError;
@@ -1569,16 +1576,7 @@ void Highs::optimizeModelQp(OptimizeModelContext& context) {
     return;
   }
   if (!solverValidForQp(options_.solver)) warnSolverInvalid(options_, "QP");
-  HighsStatus call_status;
-  try {
-    call_status = callSolveQp(this->model_, "Solve incumbent QP");
-  } catch (const std::exception& exception) {
-    model_status_ =
-        handleExceptionIsOom(options_.log_options, "callSolveQp", exception)
-            ? HighsModelStatus::kMemoryLimit
-            : HighsModelStatus::kSolveError;
-    call_status = HighsStatus::kError;
-  }
+  HighsStatus call_status = callSolveQp(this->model_, "Solve incumbent QP");
   context.status = interpretCallStatus(options_.log_options, call_status,
                                        context.status, "callSolveQp");
 }
