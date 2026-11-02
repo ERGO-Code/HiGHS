@@ -32,7 +32,7 @@ void ekk_solve(Highs& highs, std::string presolve,
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
   highs.setOptionValue("output_flag", dev_run);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void ekk_distillation(Highs& highs) {
@@ -89,7 +89,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     //    ekk_scipLpi3(highs);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
@@ -129,5 +129,5 @@ TEST_CASE("Ekk-excessive-primal-value", "[highs_test_ekk]") {
   REQUIRE(highs.run() == HighsStatus::kError);
   REQUIRE(log.find("Excessive primal value") != std::string::npos);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

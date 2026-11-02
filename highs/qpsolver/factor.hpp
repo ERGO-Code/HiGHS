@@ -34,6 +34,11 @@ class CholeskyFactor {
   std::vector<double> a;
 
   void resize(HighsInt new_k_max) {
+    // If new_k_max is ever zero, then current_k_max = 0, so when
+    // 2*current_k_max is passed into resize from expand, new_k_max is
+    // still zero. Observed in #3453, but could not reproduce. No harm
+    // in ensuring that the value used for new_k_max is at least 1.
+    new_k_max = std::max(new_k_max, HighsInt(1));
     std::vector<double> L_old = L;
     L.clear();
     L.resize((new_k_max) * (new_k_max));

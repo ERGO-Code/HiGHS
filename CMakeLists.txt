@@ -246,6 +246,17 @@ if (CUPDLP_GPU OR HIPDLP_GPU)
     endif()
 
     enable_language(HIP)
+
+    # Clang adds the ROCm include directory with -idirafter, i.e. after
+    # /usr/include, so a system HIP package in /usr/include/hip would shadow
+    # the headers of the ROCm install matching the compiler. CMake drops it
+    # from -I since it is an implicit include directory, so force it first.
+    if (CMAKE_HIP_COMPILER_ROCM_ROOT AND
+        EXISTS "${CMAKE_HIP_COMPILER_ROCM_ROOT}/include/hip/hip_runtime.h")
+      set(CMAKE_HIP_FLAGS
+        "-isystem ${CMAKE_HIP_COMPILER_ROCM_ROOT}/include ${CMAKE_HIP_FLAGS}")
+    endif()
+
     find_package(hipblas REQUIRED)
     find_package(hipsparse REQUIRED)
 

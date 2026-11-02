@@ -4,6 +4,7 @@
 
 #include "HCheckConfig.h"
 #include "Highs.h"
+#include "HighsExternalApi.h"
 #include "catch.hpp"
 #include "io/Filereader.h"
 #include "ipm/hipo/factorhighs/FactorHighs_c_api.h"
@@ -11,6 +12,7 @@
 #include "ipm/hipo/ipm/Status.h"
 #include "lp_data/HighsCallback.h"
 #include "parallel/HighsParallel.h"
+#include "util/stringutil.h"
 
 const bool dev_run = false;
 
@@ -40,7 +42,7 @@ void runHipoTest(
 TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
   Highs highs;
   runHipoTest(highs, "afiro.mps", -464.753);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
@@ -102,7 +104,7 @@ TEST_CASE("test-hipo-options", "[highs_hipo]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-qp", "[highs_hipo]") {
@@ -110,7 +112,7 @@ TEST_CASE("test-hipo-qp", "[highs_hipo]") {
   runHipoTest(highs, "qptestnw.lp", -6.4500);
   runHipoTest(highs, "qjh.lp", -5.2500);
   runHipoTest(highs, "primal1.mps", -3.501296e-2);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
@@ -119,7 +121,7 @@ TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
   runHipoTest(highs, "bgetam.mps", 0, expected_status, "off");
   runHipoTest(highs, "forest6.mps", 0, expected_status, "off");
   runHipoTest(highs, "klein1.mps", 0, expected_status, "off");
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
@@ -127,7 +129,7 @@ TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
   Highs highs;
   runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "on");
   runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "off");
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3369", "[highs_hipo]") {
@@ -238,4 +240,38 @@ TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   FactorHighs_symbolic_destroy(S);
   FactorHighs_destroy(FH);
   FactorHighs_terminate();
+}
+
+TEST_CASE("test-hipo-serial-blas", "[highs_hipo]") {
+  // Test that HiPO forces OpenBLAS to run in serial, unless
+  // hipo_serial_blas is false
+  if (!HighsExternalApi::isAvailable<HighsExtras::blas>() ||
+      !is_substring_case(HighsExtras::blas::getInfo()->provider, "openblas"))
+    return;
+
+  const int initial_threads = HighsExtras::blas::openblas_set_num_threads(0);
+
+  Highs highs;
+  bool hipo_serial_blas;
+  highs.getOptionValue("hipo_serial_blas", hipo_serial_blas);
+  REQUIRE(hipo_serial_blas);
+
+  // By default, HiPO sets the number of OpenBLAS threads to 1
+  const int multiple_threads = HighsExtras::blas::openblas_set_num_threads(2);
+  runHipoTest(highs, "afiro.mps", -464.753);
+  REQUIRE(HighsExtras::blas::openblas_set_num_threads(0) == 1);
+
+  // OpenBLAS may be limited to a single thread, in which case the opt-out
+  // cannot be observed
+  if (multiple_threads > 1) {
+    // With hipo_serial_blas false, HiPO leaves the number of threads unchanged
+    REQUIRE(HighsExtras::blas::openblas_set_num_threads(2) == multiple_threads);
+    highs.setOptionValue("hipo_serial_blas", false);
+    highs.clearSolver();
+    runHipoTest(highs, "afiro.mps", -464.753);
+    REQUIRE(HighsExtras::blas::openblas_set_num_threads(0) == multiple_threads);
+  }
+
+  HighsExtras::blas::openblas_set_num_threads(initial_threads);
+  highs.resetGlobalScheduler(true);
 }

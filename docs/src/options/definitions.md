@@ -472,6 +472,11 @@
 - Range: {0, 2147483647}
 - Default: 128
 
+## [hipo\_serial\_blas](@id option-hipo-serial-blas)
+- Force OpenBLAS to run in serial when used by HiPO. This setting is process-wide, so affects any other use of OpenBLAS
+- Type: boolean
+- Default: "true"
+
 ## [pdlp\_iteration\_limit](@id option-pdlp-iteration-limit)
 - Iteration limit for PDLP solver
 - Type: integer

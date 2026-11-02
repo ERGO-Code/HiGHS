@@ -93,7 +93,7 @@ class InfoRecordDouble : public InfoRecord {
 // todo: when creating the new info don't forget underscores for class
 // variables but no underscores for struct
 struct HighsInfoStruct {
-  bool valid;
+  bool valid = false;
   int64_t mip_node_count;
   HighsInt simplex_iteration_count;
   HighsInt ipm_iteration_count;

@@ -255,7 +255,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   assert(other_tests);
   std::remove(solution_file.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("set-pathological-solution", "[highs_check_solution]") {
@@ -283,7 +283,7 @@ TEST_CASE("set-pathological-solution", "[highs_check_solution]") {
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kUnbounded);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("check-set-lp-solution", "[highs_check_solution]") {
@@ -328,7 +328,7 @@ TEST_CASE("check-set-rowwise-lp-solution", "[highs_check_solution]") {
   double objective2 = highs.getInfo().objective_function_value;
   REQUIRE(fabs(objective1 - objective2) / max(1.0, objective1) < 1e-5);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
@@ -360,7 +360,7 @@ TEST_CASE("check-set-mip-solution-extra-row", "[highs_check_solution]") {
   if (dev_run) highs.writeSolution("", 1);
   std::remove(solution_file_name.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("check-set-illegal-solution", "[highs_check_solution]") {
@@ -422,7 +422,7 @@ TEST_CASE("read-miplib-solution", "[highs_check_solution]") {
   REQUIRE(h.run() == HighsStatus::kOk);
   std::remove(miplib_sol_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("read-lp-file-solution", "[highs_check_solution]") {
@@ -460,7 +460,7 @@ TEST_CASE("read-lp-file-solution", "[highs_check_solution]") {
   std::remove(model_file_name.c_str());
   std::remove(solution_file_name.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("read-lp-file-basis", "[highs_check_solution]") {
@@ -504,7 +504,7 @@ TEST_CASE("read-lp-file-basis", "[highs_check_solution]") {
   std::remove(model_file_name.c_str());
   std::remove(basis_file_name.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("read-lp-file-rgn", "[highs_check_solution]") {
@@ -534,7 +534,7 @@ TEST_CASE("read-lp-file-rgn", "[highs_check_solution]") {
   std::remove(model_file_name.c_str());
   std::remove(solution_file_name.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
@@ -594,7 +594,7 @@ void runWriteReadCheckSolution(Highs& highs, const std::string& test_name,
 
   std::remove(solution_file.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void runSetLpSolution(const std::string model) {
@@ -663,7 +663,7 @@ void runSetLpSolution(const std::string model) {
 
   std::remove(solution_file.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("miplib-sol-file", "[highs_check_solution]") {
@@ -702,7 +702,7 @@ TEST_CASE("miplib-sol-file", "[highs_check_solution]") {
   std::remove(lp_file.c_str());
   std::remove(sol_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3317", "[highs_check_solution]") {
@@ -743,5 +743,5 @@ TEST_CASE("issue-3317", "[highs_check_solution]") {
 
   std::remove(sol_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

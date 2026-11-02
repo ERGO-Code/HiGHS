@@ -112,5 +112,5 @@ TEST_CASE("highs-info", "[highs_info]") {
   }
   std::remove(highs_info_file.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }

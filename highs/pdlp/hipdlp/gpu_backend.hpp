@@ -11,6 +11,8 @@
 #include <hipblas/hipblas.h>
 #include <hipsparse/hipsparse.h>
 
+#define GPU_BACKEND_NAME "HIP"
+
 using gpuStream_t = hipStream_t;
 using gpuSparseHandle_t = hipsparseHandle_t;
 using gpuBlasHandle_t = hipblasHandle_t;
@@ -99,6 +101,8 @@ using gpuGraphExec_t = hipGraphExec_t;
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 #include <cusparse.h>
+
+#define GPU_BACKEND_NAME "CUDA"
 
 using gpuStream_t = cudaStream_t;
 using gpuSparseHandle_t = cusparseHandle_t;

@@ -95,7 +95,7 @@ TEST_CASE("test-col-stuffing", "[highs_test_presolve_rules]") {
   }
   lp.clear();
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-implied-bound-aggregation", "[highs_test_presolve_rules]") {
@@ -349,7 +349,7 @@ kPresolveRuleInitialSweep) == HighsStatus::kOk);
 
     maximize_first = !maximize_first;
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
 
@@ -515,7 +515,7 @@ TEST_CASE("test-fourier-motzkin", "[highs_test_presolve_rules]") {
                   solvers, 1, 6, 6);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-parallel-cols-merge-lp", "[highs_test_presolve_rules]") {
@@ -554,7 +554,7 @@ TEST_CASE("test-parallel-cols-merge-lp", "[highs_test_presolve_rules]") {
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(std::abs(h.getObjectiveValue() - 15) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-parallel-cols-merge-ip", "[highs_test_presolve_rules]") {
@@ -596,7 +596,7 @@ TEST_CASE("test-parallel-cols-merge-ip", "[highs_test_presolve_rules]") {
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(std::abs(h.getObjectiveValue() - 15) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-parallel-cols-merge-floor-rounding",
@@ -646,7 +646,7 @@ TEST_CASE("test-parallel-cols-merge-floor-rounding",
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(std::abs(h.getObjectiveValue()) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-parallel-cols-merge-ceil-rounding",
@@ -697,7 +697,7 @@ TEST_CASE("test-parallel-cols-merge-ceil-rounding",
   REQUIRE(h.getInfo().num_primal_infeasibilities == 0);
   REQUIRE(std::abs(h.getObjectiveValue() + 10.5) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-clique-extract-origin", "[highs_test_presolve_rules]") {
@@ -1166,7 +1166,7 @@ TEST_CASE("test-clique-no-delete-ranged-row", "[highs_test_presolve_rules]") {
   const std::vector<HighsInt>& deleted = cliquetable.getDeletedRows();
   REQUIRE(deleted.empty());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-clique-implied-equality", "[highs_test_presolve_rules]") {
@@ -1219,7 +1219,7 @@ TEST_CASE("test-clique-implied-equality", "[highs_test_presolve_rules]") {
   REQUIRE(domain.isFixed(1));
   REQUIRE(domain.col_lower_[1] == 1.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-3364", "[highs_test_presolve_rules]") {
@@ -1394,7 +1394,7 @@ TEST_CASE("test-aggregator-ranged-row", "[highs_test_presolve_rules]") {
   REQUIRE(std::abs(postsolved.col_value[1]) < 1e-8);
   REQUIRE(std::abs(postsolved.row_dual[0] + 1) < 1e-8);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
