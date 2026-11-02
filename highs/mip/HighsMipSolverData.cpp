@@ -965,6 +965,22 @@ void HighsMipSolverData::runSetup() {
 
   rowintegral.resize(mipsolver.numRow());
 
+#ifdef HIGHS_DEBUGSOL
+  if (debugSolution.debugSolActive) {
+    debugSolution.debugSolution.clear();
+    debugSolution.debugSolution = postSolveStack.getReducedPrimalSolution(
+        debugSolution.debugOrigSolution);
+    debugSolution.debugSolObjective = 0;
+    HighsCDouble debugsolobj = 0.0;
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
+      debugsolobj += static_cast<HighsCDouble>(mipsolver.colCost(i)) *
+                     debugSolution.debugSolution[i];
+    debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
+    debugSolution.registerDomain(getDomain());
+    assert(checkSolution(debugSolution.debugSolution));
+  }
+#endif
+
   // compute the maximal absolute coefficients to filter propagation
   maxAbsRowCoef.resize(mipsolver.numRow());
   for (HighsInt i = 0; i != mipsolver.numRow(); ++i) {
@@ -1147,22 +1163,6 @@ void HighsMipSolverData::runSetup() {
   }
 
   heuristics.setupIntCols();
-
-#ifdef HIGHS_DEBUGSOL
-  if (debugSolution.debugSolActive) {
-    debugSolution.debugSolution.clear();
-    debugSolution.debugSolution = postSolveStack.getReducedPrimalSolution(
-        debugSolution.debugOrigSolution);
-    debugSolution.debugSolObjective = 0;
-    HighsCDouble debugsolobj = 0.0;
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-      debugsolobj += static_cast<HighsCDouble>(mipsolver.colCost(i)) *
-                     debugSolution.debugSolution[i];
-    debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
-    debugSolution.registerDomain(getDomain());
-    assert(checkSolution(debugSolution.debugSolution));
-  }
-#endif
 
   if (upper_limit == kHighsInf) analyticCenterComputed = false;
   analyticCenterStatus = HighsModelStatus::kNotset;
