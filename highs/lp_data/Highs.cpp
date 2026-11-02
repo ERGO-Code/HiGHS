@@ -1600,17 +1600,16 @@ void Highs::optimizeModelMip(OptimizeModelContext& context) {
 void Highs::optimizeModelLp(OptimizeModelContext& context) {
   HighsUndoStack& options_undo = context.options_undo;
   size_t options_mark = 0;
+  OptimizeLpState& lp_state = context.lp_state;
 
-  const bool possibly_use_log_dev_level_2 = false;
-  const HighsInt log_dev_level = options_.log_dev_level;
-  const bool output_flag = options_.output_flag;
-  HighsInt use_log_dev_level = log_dev_level;
-  bool use_output_flag = output_flag;
+  lp_state.possibly_use_log_dev_level_2 = false;
+  lp_state.use_log_dev_level = options_.log_dev_level;
+  lp_state.use_output_flag = options_.output_flag;
 
   const HighsInt check_debug_run_call_num = -103757;
   const HighsInt check_num_col = -317;
   const HighsInt check_num_row = -714;
-  if (possibly_use_log_dev_level_2) {
+  if (lp_state.possibly_use_log_dev_level_2) {
     if (this->debug_optimize_call_num_ == check_debug_run_call_num &&
         model_.lp_.num_col_ == check_num_col &&
         model_.lp_.num_row_ == check_num_row) {
@@ -1620,22 +1619,20 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
                   "%s: run %d: LP(%6d, %6d)\n", message.c_str(),
                   int(this->debug_optimize_call_num_), int(model_.lp_.num_col_),
                   int(model_.lp_.num_row_));
-      // highsPause(true, message);
-      use_log_dev_level = 2;
-      use_output_flag = true;
+      lp_state.use_log_dev_level = 2;
+      lp_state.use_output_flag = true;
     }
   }
 
   HighsStatus call_status;
   HighsLp& incumbent_lp = model_.lp_;
   HighsLogOptions& log_options = options_.log_options;
-  bool no_incumbent_lp_solution_or_basis = false;
 
   if (!solverValidForLp(options_.solver)) warnSolverInvalid(options_, "LP");
 
   context.initial_time = timer_.read();
 
-  const bool may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
+  lp_state.may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
 
   if (options_.icrash) {
     HighsStatus icrash_status = optimizeModelICrash();
@@ -1648,10 +1645,10 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
   // Even if options_.solver == kHighsChooseString in isolation will,
   // ultimately lead to a choice between simplex and IPM, if a basis
   // is available, simplex should surely be chosen.
-  const bool solver_will_use_basis = options_.solver == kSimplexString ||
-                                     options_.solver == kHighsChooseString;
+  lp_state.solver_will_use_basis = options_.solver == kSimplexString ||
+                                   options_.solver == kHighsChooseString;
 
-  if (solver_will_use_basis) {
+  if (lp_state.solver_will_use_basis) {
     if (!basis_.valid && solution_.value_valid) {
       // There is no valid basis, but there is a valid solution, so use
       // it to construct a basis
@@ -1669,23 +1666,6 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
     basis_.clear();
   }
 
-  // lambda for Lp solving
-  auto timedSolveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
-                          double& time) {
-    time = -timer_.read(timer_.solve_clock);
-    options_mark = options_undo.mark();
-    if (possibly_use_log_dev_level_2) {
-      options_undo.set(options_.log_dev_level, use_log_dev_level);
-      options_undo.set(options_.output_flag, use_output_flag);
-    }
-    timer_.start(timer_.solve_clock);
-    const bool as_mip = false;
-    call_status = callSolveLp(lp, lpSolveDescription);
-    timer_.stop(timer_.solve_clock);
-    options_undo.resetTo(options_mark);
-    time += timer_.read(timer_.solve_clock);
-  };
-
   const bool unconstrained_lp = incumbent_lp.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
   const bool has_basis = basis_.useful;
@@ -1698,7 +1678,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
   if (basis_.valid) assert(basis_.useful);
 
   const bool without_presolve = options_.presolve == kHighsOffString;
-  if ((has_basis && solver_will_use_basis) || without_presolve ||
+  if ((has_basis && lp_state.solver_will_use_basis) || without_presolve ||
       unconstrained_lp) {
     // There is a valid basis for the problem and the solver will use
     // it, or presolve is off, or LP has no constraint matrix
@@ -1724,7 +1704,8 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
     // If there is a valid HiGHS basis, refine any status values that
     // are simply HighsBasisStatus::kNonbasic
     if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
-    timedSolveLp(incumbent_lp, lp_solve, context.solve_original_lp_time);
+    call_status = optimizeLpTimedSolve(context, incumbent_lp, lp_solve,
+                                       context.solve_original_lp_time);
     context.status = interpretCallStatus(options_.log_options, call_status,
                                          context.status, "callSolveLp");
     this->run_data_.solve_time = context.solve_original_lp_time;
@@ -1745,18 +1726,6 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
     presolve_.info_.presolve_time = context.presolve_time;
     this->run_data_.presolve_time = context.presolve_time;
 
-    // Set an illegal local pivot threshold value that's updated after
-    // solving the presolved LP - if simplex is used
-    double factor_pivot_threshold = -1;
-
-    // Run solver.
-    bool have_optimal_solution = false;
-    // ToDo Put solution of presolved problem in a separate method
-
-    // Record the number of iterations when PDLP is used to solve the
-    // presolved problem, since the iteration count is reset to zero
-    // if PDLP is used to clean up after postsolve
-    HighsInt presolved_lp_pdlp_iteration_count = 0;
     // Log the presolve reductions
     reportPresolveReductions(log_options, model_presolve_status_, incumbent_lp,
                              presolve_.getReducedProblem());
@@ -1769,8 +1738,9 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
-        timedSolveLp(incumbent_lp, "Not presolved: solving the LP",
-                     context.solve_original_lp_time);
+        call_status = optimizeLpTimedSolve(context, incumbent_lp,
+                                           "Not presolved: solving the LP",
+                                           context.solve_original_lp_time);
         this->run_data_.solve_time = context.solve_original_lp_time;
         context.status = interpretCallStatus(options_.log_options, call_status,
                                              context.status, "callSolveLp");
@@ -1780,9 +1750,10 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
       case HighsPresolveStatus::kNotReduced: {
         ekk_instance_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        timedSolveLp(incumbent_lp,
-                     "Problem not reduced by presolve: solving the LP",
-                     context.solve_original_lp_time);
+        call_status = optimizeLpTimedSolve(
+            context, incumbent_lp,
+            "Problem not reduced by presolve: solving the LP",
+            context.solve_original_lp_time);
         this->run_data_.solve_time = context.solve_original_lp_time;
         context.status = interpretCallStatus(options_.log_options, call_status,
                                              context.status, "callSolveLp");
@@ -1831,29 +1802,30 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         // objective values aren't correct
         options_mark = options_undo.mark();
         options_undo.set(options_.objective_bound, kHighsInf);
-        timedSolveLp(reduced_lp, "Solving the presolved LP",
-                     context.solve_presolved_lp_time);
+        call_status = optimizeLpTimedSolve(context, reduced_lp,
+                                           "Solving the presolved LP",
+                                           context.solve_presolved_lp_time);
         this->run_data_.solve_time = context.solve_presolved_lp_time;
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
           // with simplex
-          factor_pivot_threshold = ekk_instance_.info_.factor_pivot_threshold;
+          lp_state.factor_pivot_threshold =
+              ekk_instance_.info_.factor_pivot_threshold;
         }
         // Restore the dual objective cut-off
         options_undo.resetTo(options_mark);
         context.status = interpretCallStatus(options_.log_options, call_status,
                                              context.status, "callSolveLp");
         if (context.status == HighsStatus::kError) return;
-        presolved_lp_pdlp_iteration_count = info_.pdlp_iteration_count;
-        have_optimal_solution = model_status_ == HighsModelStatus::kOptimal;
-        no_incumbent_lp_solution_or_basis =
+        lp_state.presolved_lp_pdlp_iteration_count = info_.pdlp_iteration_count;
+        lp_state.no_incumbent_lp_solution_or_basis =
             model_status_ == HighsModelStatus::kInfeasible ||
             model_status_ == HighsModelStatus::kUnbounded ||
             model_status_ == HighsModelStatus::kUnboundedOrInfeasible ||
             model_status_ == HighsModelStatus::kTimeLimit ||
             model_status_ == HighsModelStatus::kIterationLimit ||
             model_status_ == HighsModelStatus::kInterrupt;
-        if (no_incumbent_lp_solution_or_basis) {
+        if (lp_state.no_incumbent_lp_solution_or_basis) {
           // Postsolve won't be performed, so clear the HEkk data
           // corresponding to the (strictly reduced) presolved LP here
           ekk_instance_.clear();
@@ -1872,7 +1844,6 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         basis_.was_alien = false;
         solution_.value_valid = true;
         solution_.dual_valid = true;
-        have_optimal_solution = true;
         // Optimality will not be spotted if there's no basis
         // postsolve
         model_status_ = HighsModelStatus::kOptimal;
@@ -1904,10 +1875,11 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         options_mark = options_undo.mark();
         options_undo.set(options_.solver, "simplex");
         options_undo.set(options_.simplex_strategy, kSimplexStrategyPrimal);
-        timedSolveLp(incumbent_lp,
-                     "Solving the original LP with primal simplex "
-                     "to determine infeasible or unbounded",
-                     context.solve_original_lp_time);
+        call_status =
+            optimizeLpTimedSolve(context, incumbent_lp,
+                                 "Solving the original LP with primal simplex "
+                                 "to determine infeasible or unbounded",
+                                 context.solve_original_lp_time);
         // Recover the options
         options_undo.resetTo(options_mark);
         // Primal simplex doesn't necessarily resolve the
@@ -1980,7 +1952,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
     // If presolve has been run assuming that there's no basis
     // postsolve - allowing sparsify to be used in presolve -
     // invalidate any basis
-    if (!may_require_basis_postsolve) this->invalidateBasis();
+    if (!lp_state.may_require_basis_postsolve) this->invalidateBasis();
     const bool have_optimal_reduced_solution =
         model_presolve_status_ == HighsPresolveStatus::kReducedToEmpty ||
         (model_presolve_status_ == HighsPresolveStatus::kReduced &&
@@ -2088,9 +2060,9 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
           options_undo.set(options_.simplex_min_concurrency, 1);
           options_undo.set(options_.simplex_max_concurrency, 1);
           // Use any pivot threshold resulting from solving the presolved LP
-          if (factor_pivot_threshold > 0)
+          if (lp_state.factor_pivot_threshold > 0)
             options_undo.set(options_.factor_pivot_threshold,
-                             factor_pivot_threshold);
+                             lp_state.factor_pivot_threshold);
           // The basis returned from postsolve is just basic/nonbasic
           // and EKK expects a refined basis, so set it up now
           refineBasis(incumbent_lp, solution_, basis_);
@@ -2101,8 +2073,8 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
           // adding the corresponding values after callSolveLp gives
           // difference
           context.postsolve_iteration_count = -info_.simplex_iteration_count;
-          timedSolveLp(
-              incumbent_lp,
+          call_status = optimizeLpTimedSolve(
+              context, incumbent_lp,
               "Solving the original LP from the solution after postsolve",
               context.solve_original_lp_time);
           this->run_data_.postsolve_time += context.solve_original_lp_time;
@@ -2167,8 +2139,8 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         options_undo.set(options_.solver, kPdlpString);
         options_undo.set(options_.pdlp_iteration_limit,
                          pdlp_cleanup_iteration_limit);
-        timedSolveLp(
-            incumbent_lp,
+        call_status = optimizeLpTimedSolve(
+            context, incumbent_lp,
             "Using PDLP to solve the original LP from the solution after "
             "postsolve",
             context.solve_original_lp_time);
@@ -2181,7 +2153,8 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         // Update the number of PDLP, iterations, since the
         // iteration count is reset to zero if PDLP is used to
         // clean up after postsolve
-        info_.pdlp_iteration_count += presolved_lp_pdlp_iteration_count;
+        info_.pdlp_iteration_count +=
+            lp_state.presolved_lp_pdlp_iteration_count;
       }
     }
   }
@@ -2190,7 +2163,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
 
   // Unless the model status was determined using the strictly reduced LP, the
   // HiGHS info is valid
-  if (!no_incumbent_lp_solution_or_basis) {
+  if (!lp_state.no_incumbent_lp_solution_or_basis) {
     this->callLpKktCheck(this->model_.lp_);
     info_.valid = true;
   }
@@ -2200,6 +2173,26 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
   // Assess success according to the model status, regardless of
   // whether anything worse has happened earlier
   context.status = highsStatusFromHighsModelStatus(model_status_);
+}
+
+HighsStatus Highs::optimizeLpTimedSolve(OptimizeModelContext& context,
+                                        HighsLp& lp,
+                                        const std::string& description,
+                                        double& time) {
+  HighsUndoStack& options_undo = context.options_undo;
+  const OptimizeLpState& lp_state = context.lp_state;
+  time = -timer_.read(timer_.solve_clock);
+  const size_t options_mark = options_undo.mark();
+  if (lp_state.possibly_use_log_dev_level_2) {
+    options_undo.set(options_.log_dev_level, lp_state.use_log_dev_level);
+    options_undo.set(options_.output_flag, lp_state.use_output_flag);
+  }
+  timer_.start(timer_.solve_clock);
+  HighsStatus call_status = callSolveLp(lp, description);
+  timer_.stop(timer_.solve_clock);
+  options_undo.resetTo(options_mark);
+  time += timer_.read(timer_.solve_clock);
+  return call_status;
 }
 
 HighsStatus Highs::optimizeModelICrash() {

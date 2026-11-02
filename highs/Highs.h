@@ -1685,6 +1685,26 @@ class Highs {
 
   HighsStatus completeSolutionFromDiscreteAssignment();
 
+  // State shared by the phases of optimizeModelLp
+  struct OptimizeLpState {
+    bool possibly_use_log_dev_level_2 = false;
+    HighsInt use_log_dev_level = 0;
+    bool use_output_flag = false;
+
+    bool solver_will_use_basis = false;
+    bool may_require_basis_postsolve = false;
+    bool no_incumbent_lp_solution_or_basis = false;
+
+    // Pivot threshold resulting from solving the presolved LP with
+    // simplex: illegal value unless updated
+    double factor_pivot_threshold = -1;
+
+    // Number of iterations when PDLP is used to solve the presolved
+    // problem, since the iteration count is reset to zero if PDLP is
+    // used to clean up after postsolve
+    HighsInt presolved_lp_pdlp_iteration_count = 0;
+  };
+
   // Phases of calledOptimizeModel
   struct OptimizeModelContext {
     double initial_time = -1;
@@ -1699,6 +1719,8 @@ class Highs {
     bool undo_mods = false;
     HighsStatus status = HighsStatus::kOk;
     HighsUndoStack options_undo;
+
+    OptimizeLpState lp_state;
   };
   HighsStatus calledOptimizeModel(OptimizeModelContext& context);
   bool optimizeModelPreChecks(OptimizeModelContext& context);
@@ -1709,6 +1731,9 @@ class Highs {
   void optimizeModelQp(OptimizeModelContext& context);
   void optimizeModelMip(OptimizeModelContext& context);
   void optimizeModelLp(OptimizeModelContext& context);
+  HighsStatus optimizeLpTimedSolve(OptimizeModelContext& context, HighsLp& lp,
+                                   const std::string& description,
+                                   double& time);
   HighsStatus optimizeModelICrash();
   void optimizeModelReportTimes(const OptimizeModelContext& context);
 
