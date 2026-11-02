@@ -1,0 +1,13 @@
+diff --git a/extern/cli11/CLI11.hpp b/extern/cli11/CLI11.hpp
+index 2ed2fd7c8a..f61cbe6061 100644
+--- a/extern/cli11/CLI11.hpp
++++ b/extern/cli11/CLI11.hpp
+@@ -9315,7 +9315,7 @@ CLI11_INLINE void App::_process_callbacks() {
+     }
+
+     for(const Option_p &opt : options_) {
+-        if((*opt) && !opt->get_callback_run()) {
++        if(opt->count() > 0 && !opt->get_callback_run()) {
+             opt->run_callback();
+         }
+     }
