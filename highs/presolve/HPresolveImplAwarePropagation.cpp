@@ -1232,14 +1232,16 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     return Result::kOk;
   };
 
-  auto isWorkLimitReached = [&]() {
+  auto currentWorkLimit = [&]() {
     // reductions add to the work limit in the main presolve
     int64_t limit = workLimit;
     if (!mipsolver->submip)
       limit += workBonusPerBoundChange * (numVarsFixed + numBoundsTightened) +
                workBonusPerClique * numCliquesAdded;
-    return numWorkUnits > limit;
+    return limit;
   };
+
+  auto isWorkLimitReached = [&]() { return numWorkUnits > currentWorkLimit(); };
 
   auto sortRowsByProbingScore = [&](std::vector<HighsInt>& rows) {
     // rows whose binaries have high probing scores (many implications) come
@@ -1385,22 +1387,16 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     changedNonBinaries.moveEntriesTo(myChangedNonBinaries);
   }
 
-  if (numVarsFixed > 0 || numCliquesAdded > 0 || numBoundsTightened > 0)
-    highsLogDev(
-        options->log_options, HighsLogType::kInfo,
-        "Implication-aware constraint propagation fixed %" HIGHSINT_FORMAT
-        " columns, added %" HIGHSINT_FORMAT
-        " cliques, tightened %" HIGHSINT_FORMAT " bounds\n",
-        numVarsFixed, numCliquesAdded, numBoundsTightened);
-  if (isWorkLimitReached())
-    highsLogDev(options->log_options, HighsLogType::kInfo,
-                "Implication-aware constraint propagation reached its work "
-                "limit (%" PRId64 " of %" PRId64
-                " units) after checking %" HIGHSINT_FORMAT
-                " rows and %" HIGHSINT_FORMAT " objectives (%" HIGHSINT_FORMAT
-                " checks)\n",
-                numWorkUnits, workLimit, numRowsChecked, numObjectiveChecks,
-                numCheckRowCalls);
+  highsLogDev(
+      options->log_options, HighsLogType::kInfo,
+      "Implication-aware constraint propagation: %" HIGHSINT_FORMAT
+      " checks (%" HIGHSINT_FORMAT " of the objective), fixed %" HIGHSINT_FORMAT
+      " columns, added %" HIGHSINT_FORMAT
+      " cliques, tightened %" HIGHSINT_FORMAT " bounds, used %" PRId64
+      " of %" PRId64 " work units%s\n",
+      numCheckRowCalls, numObjectiveChecks, numVarsFixed, numCliquesAdded,
+      numBoundsTightened, numWorkUnits, currentWorkLimit(),
+      isWorkLimitReached() ? " (limit reached)" : "");
 
   return checkLimits(postsolve_stack);
 }
