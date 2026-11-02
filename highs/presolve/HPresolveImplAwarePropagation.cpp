@@ -195,11 +195,13 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   HighsInt numVarsFixed = 0;
   HighsInt numCliquesAdded = 0;
   HighsInt numBoundsTightened = 0;
+  HighsInt numRowsChecked = 0;
 
   // maximum number of non-zeros in rows or objective
   const HighsInt maxRowSize = 300;
   const HighsInt maxObjSize = 20000;
-  // maximum number of implications visited per row to discover non-binaries
+  // maximum number of implications and variable bounds visited per row to
+  // discover non-binaries
   const HighsInt maxDiscoveryVisits = 10 * maxRowSize;
   // maximum number of cliques added
   const HighsInt maxNumCliquesAdded =
@@ -208,13 +210,18 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   const int64_t maxPartitionQueries = int64_t{maxRowSize} * maxRowSize / 2;
   // check for timeout according to this frequency (number of rows checked)
   const HighsInt checkTimeFrequency = 100;
-  HighsInt numRowsChecked = 0;
 
   auto isBinary = [&](HighsInt col) {
     // implicit integers are binary as well, consistent with the clique table
     // and the implications
     return model->integrality_[col] != HighsVarType::kContinuous &&
            model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0;
+  };
+
+  // value of a binary with row coefficient val that minimises its
+  // contribution to the row
+  auto minContributionVal = [](double val) {
+    return val < 0 ? HighsInt{1} : HighsInt{0};
   };
 
   auto trackColChange = [&](HighsInt col) {
@@ -355,6 +362,25 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
 
   auto addImpliedBound = [&](HighsInt binCol, HighsInt binVal,
                              HighsInt nonBinCol, double lb, double ub) {
+    // only the bounds that are read are stored: both sides for row binaries
+    // at their min-contribution value (looked up by collectBreakpoints),
+    // otherwise only the side that lifts the non-binary (lower bound for a
+    // positive coefficient, upper bound for a negative one). discovered
+    // non-binaries (zero coefficient) do not lift. the binaries in
+    // binNonZeros are the row binaries at this point, since lifted binaries
+    // and clique neighbours are only added in updateBinaryWeights
+    const VariableData* bin = binNonZeros.find(binCol);
+    bool isBreakpointKey = bin != nullptr && bin->val != 0.0 &&
+                           binVal == minContributionVal(bin->val);
+    if (!isBreakpointKey) {
+      // implied bounds are only collected for loaded non-binaries
+      const VariableData* nonBinVar = nonBinNonZeros.find(nonBinCol);
+      assert(nonBinVar != nullptr);
+      double val = nonBinVar->val;
+      if (val <= 0) lb = -kHighsInf;
+      if (val >= 0) ub = kHighsInf;
+      if (lb == -kHighsInf && ub == kHighsInf) return;
+    }
     // round bounds of integer non-binaries; variable bounds may imply
     // fractional values
     if (model->integrality_[nonBinCol] != HighsVarType::kContinuous) {
@@ -368,23 +394,35 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     bound.ub = std::min(bound.ub, ub);
   };
 
-  auto addVarBounds = [&](HighsInt col) {
-    // bounds on a non-binary implied by variable bound constraints
+  auto addVarBounds = [&](HighsInt col, bool isDiscovered,
+                          HighsInt& numDiscoveryVisits) {
+    // bounds on a non-binary implied by variable bound constraints. for a
+    // discovered non-binary, the visits count towards the discovery budget
+    auto isOverBudget = [&]() {
+      if (!isDiscovered) return false;
+      if (numDiscoveryVisits >= maxDiscoveryVisits) return true;
+      numDiscoveryVisits++;
+      return false;
+    };
     implications.getVlbs(col).for_each(
         [&](HighsInt binCol, const HighsImplications::VarBound& vlb) {
-          if (colDeleted[binCol] || !isBinary(binCol)) return;
+          if (isOverBudget()) return true;
+          if (colDeleted[binCol] || !isBinary(binCol)) return false;
           // x_bin = 1 --> x_j >= coef + constant
           addImpliedBound(binCol, 1, col, vlb.coef + vlb.constant, kHighsInf);
           // x_bin = 0 --> x_j >= constant
           addImpliedBound(binCol, 0, col, vlb.constant, kHighsInf);
+          return false;
         });
     implications.getVubs(col).for_each(
         [&](HighsInt binCol, const HighsImplications::VarBound& vub) {
-          if (colDeleted[binCol] || !isBinary(binCol)) return;
+          if (isOverBudget()) return true;
+          if (colDeleted[binCol] || !isBinary(binCol)) return false;
           // x_bin = 1 --> x_j <= coef + constant
           addImpliedBound(binCol, 1, col, -kHighsInf, vub.coef + vub.constant);
           // x_bin = 0 --> x_j <= constant
           addImpliedBound(binCol, 0, col, -kHighsInf, vub.constant);
+          return false;
         });
   };
 
@@ -411,7 +449,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
                       model->col_upper_[targetCol] >= kHighsInf)
                     return false;
                   nonBinNonZeros[targetCol] = VariableData(0.0);
-                  addVarBounds(targetCol);
+                  addVarBounds(targetCol, true, numDiscoveryVisits);
                 }
                 addImpliedBound(binCol, val, targetCol, impl.lb, impl.ub);
                 return false;
@@ -447,9 +485,11 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     // collect the bounds on non-binaries implied by binaries, merging
     // variable bound constraints and implications
     impliedBounds.clear();
+    // implications and variable bounds visited to discover non-binaries
+    HighsInt numDiscoveryVisits = 0;
     for (const auto& nz : nonBinNonZeros) {
       HighsInt nonBinCol = nz.key();
-      addVarBounds(nonBinCol);
+      addVarBounds(nonBinCol, false, numDiscoveryVisits);
       // implications of all binaries on row non-binaries. the reverse
       // implications are never cleaned up, so look up each one
       implications.getReverseImplications(nonBinCol).for_each(
@@ -464,7 +504,6 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
           });
     }
     // discover non-binaries outside the row
-    HighsInt numDiscoveryVisits = 0;
     for (const auto& binVar : binNonZeros)
       if (!discoverNonBinaries(binVar.key(), numDiscoveryVisits)) break;
 
@@ -516,7 +555,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
       HighsInt col = bin.key();
       double val = bin.value().val;
       if (colDeleted[col] || val == 0.0) continue;
-      partitionVars.emplace_back(col, val < 0 ? 1 : 0);
+      partitionVars.emplace_back(col, minContributionVal(val));
     }
 
     // largest coefficients first, ties by column index, so the members of
@@ -620,7 +659,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
 
       // collect neighbors and update weights
       cliquetable.forEachUniqueNeighbor(
-          HighsCliqueTable::CliqueVar(col, val < 0 ? 1 : 0),
+          HighsCliqueTable::CliqueVar(col, minContributionVal(val)),
           [&](HighsCliqueTable::CliqueVar neighbor) {
             // substitutions in the clique table can leave cliques {x, ~x}
             // until the next rebuild, so the column can be its own
@@ -659,7 +698,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     for (HighsInt k = 0; k < static_cast<HighsInt>(blockMembers.size()); ++k)
       blockPairs.emplace_back(
           HighsCliqueTable::CliqueVar(blockMembers[k].col,
-                                      memberVal(k) < 0 ? 0 : 1),
+                                      1 - minContributionVal(memberVal(k))),
           k);
 
     // per literal and block, replace the additive contributions of the
@@ -793,8 +832,8 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
           double absbval = std::abs(bval);
 
           // (col, val) setting that minimises this binary's contribution
-          HighsCliqueTable::CliqueVar minContribCliqueVar(bcol,
-                                                          bval < 0 ? 1 : 0);
+          HighsCliqueTable::CliqueVar minContribCliqueVar(
+              bcol, minContributionVal(bval));
 
           // binary is forced away from min-contribution if v1 or v2
           // is the complement, or shares a clique with it
@@ -854,7 +893,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
 
       // look up implications from the binary's min-activity value:
       // a_i > 0: min at x_i = 0, a_i < 0: min at x_i = 1
-      HighsInt val = binVal < 0 ? 1 : 0;
+      HighsInt val = minContributionVal(binVal);
       const auto* impl =
           impliedBounds.find(ImpliedBoundKey{binCol, val, nonBinCol});
       if (impl == nullptr) continue;
