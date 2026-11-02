@@ -863,14 +863,15 @@ void HighsMipSolverData::checkAddSolution() {
       // Bounds etc are determined without the objective offset
       solobj = mipsolver_objective - mipsolver.model_->offset_;
     }
-    bool feasible = mipsolver.bound_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance &&
-                    mipsolver.integrality_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance &&
-                    mipsolver.row_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance;
+    const bool feasible =
+        mipsolver.bound_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance &&
+        mipsolver.integrality_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance &&
+        mipsolver.row_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance;
     if (numRestarts == 0) {
-      const bool reduced = postSolveStack.numReductions();
+      const bool reduced = postSolveStack.numReductions() > 0;
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                    "\nMIP start solution is %s%s: objective value is %.12g\n",
                    feasible ? "feasible" : "infeasible",

@@ -2638,7 +2638,6 @@ TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
   REQUIRE(ranges[1].second - ranges[1].first == 0);
 }
 
-/*
 TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
   HighsLp lp;
   lp.num_col_ = 6;
@@ -2695,5 +2694,3 @@ TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
 
   h.resetGlobalScheduler(true);
 }
-*/
-
