@@ -159,6 +159,24 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     }
   };
 
+  // bound on a row non-binary implied by a binary
+  struct CachedBound {
+    HighsInt binCol;
+    HighsInt binVal;
+    double lb;
+    double ub;
+  };
+
+  // bounds on a row non-binary implied by binaries. they do not depend on the
+  // row, and the variable bounds and implications do not change during the
+  // call, so they are collected once
+  struct CachedColumn {
+    std::vector<CachedBound> bounds;
+    // variable bounds and reverse implications visited to collect the
+    // bounds, -1 if not collected yet
+    HighsInt numVisits = -1;
+  };
+
   // data structures
   IndexMap binNonZeros;
   IndexMap nonBinNonZeros;
@@ -167,6 +185,8 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   std::vector<Breakpoint> breakpoints;
   // bounds on non-binaries implied by binaries
   HighsHashTable<ImpliedBoundKey, HighsImplications::Implication> impliedBounds;
+  // implied bounds on row non-binaries, indexed by column
+  std::vector<CachedColumn> cachedColumns;
   std::vector<Lift> lifts;
   std::vector<HighsInt> liftedBins;
   // clique blocks of the row binaries: the members of block b are
@@ -406,17 +426,55 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     bound.ub = std::min(bound.ub, ub);
   };
 
-  auto addVarBounds = [&](HighsInt col, bool isDiscovered,
-                          HighsInt& numDiscoveryVisits) {
-    // bounds on a non-binary implied by variable bound constraints. for a
-    // discovered non-binary, the visits count towards the discovery budget,
-    // which is added to the work at the end of collectImpliedBounds;
-    // otherwise they count as work directly
-    auto isOverBudget = [&]() {
-      if (!isDiscovered) {
-        numWorkUnits++;
-        return false;
+  // value of a variable bound coef * x_bin + constant at x_bin = binVal
+  auto varBoundValue = [](const HighsImplications::VarBound& vb,
+                          HighsInt binVal) {
+    return binVal == 1 ? vb.coef + vb.constant : vb.constant;
+  };
+
+  auto cacheImpliedBounds = [&](HighsInt col, CachedColumn& cached) {
+    // bounds on a row non-binary implied by variable bound constraints and
+    // implications, collected unless they are cached already
+    if (cached.numVisits >= 0) return;
+    cached.numVisits = 0;
+    implications.getVlbs(col).for_each(
+        [&](HighsInt binCol, const HighsImplications::VarBound& vlb) {
+          cached.numVisits++;
+          if (colDeleted[binCol] || !isBinary(binCol)) return;
+          // x_bin = val --> x_j >= coef * val + constant
+          for (HighsInt val = 1; val >= 0; --val)
+            cached.bounds.push_back(
+                {binCol, val, varBoundValue(vlb, val), kHighsInf});
+        });
+    implications.getVubs(col).for_each(
+        [&](HighsInt binCol, const HighsImplications::VarBound& vub) {
+          cached.numVisits++;
+          if (colDeleted[binCol] || !isBinary(binCol)) return;
+          // x_bin = val --> x_j <= coef * val + constant
+          for (HighsInt val = 1; val >= 0; --val)
+            cached.bounds.push_back(
+                {binCol, val, -kHighsInf, varBoundValue(vub, val)});
+        });
+    // implications of all binaries on the non-binary. the reverse
+    // implications are never cleaned up, so look up each one
+    implications.getReverseImplications(col).for_each([&](HighsInt binCol,
+                                                          bool) {
+      cached.numVisits++;
+      if (colDeleted[binCol] || !isBinary(binCol)) return;
+      for (HighsInt val = 0; val <= 1; ++val) {
+        const auto* impl = implications.getImplications(binCol, val).find(col);
+        if (impl != nullptr)
+          cached.bounds.push_back({binCol, val, impl->lb, impl->ub});
       }
+    });
+  };
+
+  auto addDiscoveredVarBounds = [&](HighsInt col,
+                                    HighsInt& numDiscoveryVisits) {
+    // bounds on a discovered non-binary implied by variable bound
+    // constraints. the visits count towards the discovery budget, which is
+    // added to the work at the end of collectImpliedBounds
+    auto isOverBudget = [&]() {
       if (numDiscoveryVisits >= maxDiscoveryVisits) return true;
       numDiscoveryVisits++;
       return false;
@@ -425,20 +483,20 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
         [&](HighsInt binCol, const HighsImplications::VarBound& vlb) {
           if (isOverBudget()) return true;
           if (colDeleted[binCol] || !isBinary(binCol)) return false;
-          // x_bin = 1 --> x_j >= coef + constant
-          addImpliedBound(binCol, 1, col, vlb.coef + vlb.constant, kHighsInf);
-          // x_bin = 0 --> x_j >= constant
-          addImpliedBound(binCol, 0, col, vlb.constant, kHighsInf);
+          // x_bin = val --> x_j >= coef * val + constant
+          for (HighsInt val = 1; val >= 0; --val)
+            addImpliedBound(binCol, val, col, varBoundValue(vlb, val),
+                            kHighsInf);
           return false;
         });
     implications.getVubs(col).for_each(
         [&](HighsInt binCol, const HighsImplications::VarBound& vub) {
           if (isOverBudget()) return true;
           if (colDeleted[binCol] || !isBinary(binCol)) return false;
-          // x_bin = 1 --> x_j <= coef + constant
-          addImpliedBound(binCol, 1, col, -kHighsInf, vub.coef + vub.constant);
-          // x_bin = 0 --> x_j <= constant
-          addImpliedBound(binCol, 0, col, -kHighsInf, vub.constant);
+          // x_bin = val --> x_j <= coef * val + constant
+          for (HighsInt val = 1; val >= 0; --val)
+            addImpliedBound(binCol, val, col, -kHighsInf,
+                            varBoundValue(vub, val));
           return false;
         });
   };
@@ -466,7 +524,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
                       model->col_upper_[targetCol] >= kHighsInf)
                     return false;
                   nonBinNonZeros[targetCol] = VariableData(0.0);
-                  addVarBounds(targetCol, true, numDiscoveryVisits);
+                  addDiscoveredVarBounds(targetCol, numDiscoveryVisits);
                 }
                 addImpliedBound(binCol, val, targetCol, impl.lb, impl.ub);
                 return false;
@@ -506,20 +564,16 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     HighsInt numDiscoveryVisits = 0;
     for (const auto& nz : nonBinNonZeros) {
       HighsInt nonBinCol = nz.key();
-      addVarBounds(nonBinCol, false, numDiscoveryVisits);
-      // implications of all binaries on row non-binaries. the reverse
-      // implications are never cleaned up, so look up each one
-      implications.getReverseImplications(nonBinCol).for_each(
-          [&](HighsInt binCol, bool) {
-            numWorkUnits++;
-            if (colDeleted[binCol] || !isBinary(binCol)) return;
-            for (HighsInt val = 0; val <= 1; ++val) {
-              const auto* impl =
-                  implications.getImplications(binCol, val).find(nonBinCol);
-              if (impl != nullptr)
-                addImpliedBound(binCol, val, nonBinCol, impl->lb, impl->ub);
-            }
-          });
+      CachedColumn& cached = cachedColumns[nonBinCol];
+      cacheImpliedBounds(nonBinCol, cached);
+      // the visits count as work, also when the bounds are cached
+      numWorkUnits += cached.numVisits;
+      for (const CachedBound& bound : cached.bounds) {
+        // binaries may have been fixed since the bounds were cached
+        if (colDeleted[bound.binCol] || !isBinary(bound.binCol)) continue;
+        addImpliedBound(bound.binCol, bound.binVal, nonBinCol, bound.lb,
+                        bound.ub);
+      }
     }
     // discover non-binaries outside the row
     for (const auto& binVar : binNonZeros)
@@ -1188,6 +1242,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   changedNonBinaries.resize(model->num_col_);
   binNonZeros.resize(model->num_col_);
   nonBinNonZeros.resize(model->num_col_);
+  cachedColumns.resize(model->num_col_);
 
   // packed storage for objective
   if (mipsolver->mipdata_->upper_limit < kHighsInf ||
