@@ -196,6 +196,9 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   HighsInt numCliquesAdded = 0;
   HighsInt numBoundsTightened = 0;
   HighsInt numRowsChecked = 0;
+  // clique queries and implications, variable bounds and clique neighbours
+  // visited
+  int64_t numWorkUnits = 0;
 
   // maximum number of non-zeros in rows or objective
   const HighsInt maxRowSize = 300;
@@ -210,6 +213,15 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   const int64_t maxPartitionQueries = int64_t{maxRowSize} * maxRowSize / 2;
   // check for timeout according to this frequency (number of rows checked)
   const HighsInt checkTimeFrequency = 100;
+  // work limit per call: as in probing, it scales with the number of
+  // non-zeros, is smaller in sub-MIPs and grows with the reductions found in
+  // the main presolve
+  const int64_t workPerNonzero = mipsolver->submip ? 10 : 30;
+  const int64_t minWork = mipsolver->submip ? 0 : 100000;
+  const int64_t workBonusPerBoundChange = 100;
+  const int64_t workBonusPerClique = 1000;
+  const int64_t workLimit = minWork + workPerNonzero * numNonzeros();
+  bool workLimitReached = false;
 
   auto isBinary = [&](HighsInt col) {
     // implicit integers are binary as well, consistent with the clique table
@@ -397,9 +409,14 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   auto addVarBounds = [&](HighsInt col, bool isDiscovered,
                           HighsInt& numDiscoveryVisits) {
     // bounds on a non-binary implied by variable bound constraints. for a
-    // discovered non-binary, the visits count towards the discovery budget
+    // discovered non-binary, the visits count towards the discovery budget,
+    // which is added to the work at the end of collectImpliedBounds;
+    // otherwise they count as work directly
     auto isOverBudget = [&]() {
-      if (!isDiscovered) return false;
+      if (!isDiscovered) {
+        numWorkUnits++;
+        return false;
+      }
       if (numDiscoveryVisits >= maxDiscoveryVisits) return true;
       numDiscoveryVisits++;
       return false;
@@ -494,6 +511,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
       // implications are never cleaned up, so look up each one
       implications.getReverseImplications(nonBinCol).for_each(
           [&](HighsInt binCol, bool) {
+            numWorkUnits++;
             if (colDeleted[binCol] || !isBinary(binCol)) return;
             for (HighsInt val = 0; val <= 1; ++val) {
               const auto* impl =
@@ -527,6 +545,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
                      liftedBins.end());
     for (HighsInt binCol : liftedBins)
       if (!discoverNonBinaries(binCol, numDiscoveryVisits)) break;
+    numWorkUnits += numDiscoveryVisits;
   };
 
   auto memberVal = [&](HighsInt member) {
@@ -566,10 +585,12 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
              std::make_pair(-std::abs(binNonZeros.find(b.col)->val), b.col);
     };
     // the clique separation budgets its work with the number of neighbourhood
-    // queries, so the queries of the partition are not counted
+    // queries, so the queries of the partition are not counted there; they
+    // count as work of this method instead
     int64_t oldNumQueries = cliquetable.numNeighbourhoodQueries;
     cliquetable.cliquePartition(partitionVars, partitionStarts,
                                 byDecreasingAbsVal, maxPartitionQueries);
+    numWorkUnits += cliquetable.numNeighbourhoodQueries - oldNumQueries;
     cliquetable.numNeighbourhoodQueries = oldNumQueries;
 
     // a single block of all binaries with equal coefficients and no
@@ -661,6 +682,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
       cliquetable.forEachUniqueNeighbor(
           HighsCliqueTable::CliqueVar(col, minContributionVal(val)),
           [&](HighsCliqueTable::CliqueVar neighbor) {
+            numWorkUnits++;
             // substitutions in the clique table can leave cliques {x, ~x}
             // until the next rebuild, so the column can be its own
             // neighbour; skip it, otherwise its coefficient is counted twice
@@ -1134,6 +1156,33 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     return Result::kOk;
   };
 
+  auto sortRowsByProbingScore = [&](std::vector<HighsInt>& rows) {
+    // rows whose binaries have high probing scores (many implications) come
+    // first, so that they are checked before the work limit is reached. the
+    // row score is the average probing score of the row binaries, as in
+    // enumeration; ties are broken by row index
+    std::vector<std::tuple<double, double, HighsInt>> rowScores;
+    rowScores.reserve(rows.size());
+    for (HighsInt row : rows) {
+      int64_t score = 0;
+      HighsInt score2 = 0;
+      HighsInt numBins = 0;
+      for (const auto& nz : getRowVector(row)) {
+        if (!isBinary(nz.index())) continue;
+        auto probingScore = computeProbingScore(nz.index());
+        score += probingScore.first;
+        score2 += probingScore.second;
+        numBins++;
+      }
+      double divisor = std::max(HighsInt{1}, numBins);
+      rowScores.emplace_back(-score / divisor, -score2 / divisor, row);
+    }
+    pdqsort(rowScores.begin(), rowScores.end());
+    rows.clear();
+    for (const auto& rowScore : rowScores)
+      rows.push_back(std::get<2>(rowScore));
+  };
+
   // prepare vectors
   modifiedRows.resize(model->num_row_);
   changedNonBinaries.resize(model->num_col_);
@@ -1218,8 +1267,19 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
             mipsolver->mipdata_->lower_bound - minActivity)));
     }
 
+    sortRowsByProbingScore(myModifiedRows);
     for (HighsInt row : myModifiedRows) {
       if (rowDeleted[row]) continue;
+      // stop when the work limit is reached; reductions add to the limit in
+      // the main presolve
+      int64_t limit = workLimit;
+      if (!mipsolver->submip)
+        limit += workBonusPerBoundChange * (numVarsFixed + numBoundsTightened) +
+                 workBonusPerClique * numCliquesAdded;
+      if (numWorkUnits > limit) {
+        workLimitReached = true;
+        break;
+      }
       numRowsChecked++;
       if (numRowsChecked % checkTimeFrequency == 0)
         HPRESOLVE_CHECKED_CALL(checkTimeLimit());
@@ -1231,6 +1291,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
         HPRESOLVE_CHECKED_CALL(checkRow(
             impliedRowBounds.getSumUpperOrig(row, -model->row_lower_[row])));
     }
+    if (workLimitReached) break;
 
     // re-check changed rows and non-binaries
     myObjectiveAffected = objectiveAffected;
@@ -1246,6 +1307,11 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
         " columns, added %" HIGHSINT_FORMAT
         " cliques, tightened %" HIGHSINT_FORMAT " bounds\n",
         numVarsFixed, numCliquesAdded, numBoundsTightened);
+  if (workLimitReached)
+    highsLogDev(options->log_options, HighsLogType::kInfo,
+                "Implication-aware constraint propagation reached its work "
+                "limit after checking %" HIGHSINT_FORMAT " rows\n",
+                numRowsChecked);
 
   return checkLimits(postsolve_stack);
 }
