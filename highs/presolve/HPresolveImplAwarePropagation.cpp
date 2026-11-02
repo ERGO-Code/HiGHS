@@ -219,6 +219,9 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   HighsInt numCliquesAdded = 0;
   HighsInt numBoundsTightened = 0;
   HighsInt numRowsChecked = 0;
+  // calls of checkRow, for the rows and the objective
+  HighsInt numCheckRowCalls = 0;
+  HighsInt numObjectiveChecks = 0;
   // work in elementary operations: clique queries, look-ups of implied bounds
   // and visits of implications, variable bounds and clique neighbours
   int64_t numWorkUnits = 0;
@@ -1193,6 +1196,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   };
 
   auto checkRow = [&](double threshold) {
+    numCheckRowCalls++;
     // the min-contribution literals of the row binaries in a clique block
     // exclude each other, which increases the row's minimum activity
     threshold -= static_cast<double>(partitionRowBinaries());
@@ -1343,15 +1347,19 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     if (myObjectiveAffected) {
       HighsCDouble minActivity;
       if (mipsolver->mipdata_->upper_limit < kHighsInf &&
-          loadObjective(HighsInt{1}, minActivity))
+          loadObjective(HighsInt{1}, minActivity)) {
+        numObjectiveChecks++;
         HPRESOLVE_CHECKED_CALL(checkRow(static_cast<double>(
             static_cast<HighsCDouble>(mipsolver->mipdata_->upper_limit) -
             model->offset_ - minActivity)));
+      }
       if (mipsolver->mipdata_->lower_bound > -kHighsInf &&
-          loadObjective(HighsInt{-1}, minActivity))
+          loadObjective(HighsInt{-1}, minActivity)) {
+        numObjectiveChecks++;
         HPRESOLVE_CHECKED_CALL(checkRow(static_cast<double>(
             static_cast<HighsCDouble>(model->offset_) -
             mipsolver->mipdata_->lower_bound - minActivity)));
+      }
     }
 
     sortRowsByProbingScore(myModifiedRows);
@@ -1387,8 +1395,12 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   if (isWorkLimitReached())
     highsLogDev(options->log_options, HighsLogType::kInfo,
                 "Implication-aware constraint propagation reached its work "
-                "limit after checking %" HIGHSINT_FORMAT " rows\n",
-                numRowsChecked);
+                "limit (%" PRId64 " of %" PRId64
+                " units) after checking %" HIGHSINT_FORMAT
+                " rows and %" HIGHSINT_FORMAT " objectives (%" HIGHSINT_FORMAT
+                " checks)\n",
+                numWorkUnits, workLimit, numRowsChecked, numObjectiveChecks,
+                numCheckRowCalls);
 
   return checkLimits(postsolve_stack);
 }
