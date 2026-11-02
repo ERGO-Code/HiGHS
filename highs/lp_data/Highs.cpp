@@ -1292,8 +1292,11 @@ HighsStatus Highs::optimizeModelTryCatch() {
     // clearSolver() - and any subsequent call to optimizeModel()
     // don't fail
     called_return_from_optimize_model = true;
-    // Clear all solver data, since there may be nothing useful
+    // Clear all solver data, since there may be nothing useful,
+    // retaining the model status set when the exception was caught
+    const HighsModelStatus model_status = model_status_;
     this->clearSolver();
+    model_status_ = model_status;
     status = HighsStatus::kError;
     // Ensure that the incumbent model isn't left modified
     optimizeModelUndoMods(context, status);
