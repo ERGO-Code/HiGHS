@@ -1598,118 +1598,17 @@ void Highs::optimizeModelMip(OptimizeModelContext& context) {
 }
 
 void Highs::optimizeModelLp(OptimizeModelContext& context) {
+  if (optimizeModelLpSetup(context)) return;
+
   HighsUndoStack& options_undo = context.options_undo;
   size_t options_mark = 0;
-  OptimizeLpState& lp_state = context.lp_state;
-
-  lp_state.possibly_use_log_dev_level_2 = false;
-  lp_state.use_log_dev_level = options_.log_dev_level;
-  lp_state.use_output_flag = options_.output_flag;
-
-  const HighsInt check_debug_run_call_num = -103757;
-  const HighsInt check_num_col = -317;
-  const HighsInt check_num_row = -714;
-  if (lp_state.possibly_use_log_dev_level_2) {
-    if (this->debug_optimize_call_num_ == check_debug_run_call_num &&
-        model_.lp_.num_col_ == check_num_col &&
-        model_.lp_.num_row_ == check_num_row) {
-      std::string message =
-          "Entering Highs::optimizeModel(): run/col/row matching check ";
-      highsLogDev(options_.log_options, HighsLogType::kInfo,
-                  "%s: run %d: LP(%6d, %6d)\n", message.c_str(),
-                  int(this->debug_optimize_call_num_), int(model_.lp_.num_col_),
-                  int(model_.lp_.num_row_));
-      lp_state.use_log_dev_level = 2;
-      lp_state.use_output_flag = true;
-    }
-  }
-
+  OptimizeModelLpState& lp_state = context.lp_state;
   HighsStatus call_status;
   HighsLp& incumbent_lp = model_.lp_;
   HighsLogOptions& log_options = options_.log_options;
 
-  if (!solverValidForLp(options_.solver)) warnSolverInvalid(options_, "LP");
-
-  context.initial_time = timer_.read();
-
-  lp_state.may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
-
-  if (options_.icrash) {
-    HighsStatus icrash_status = optimizeModelICrash();
-    if (icrash_status != HighsStatus::kOk) {
-      context.status = icrash_status;
-      return;
-    }
-  }
-
-  // Even if options_.solver == kHighsChooseString in isolation will,
-  // ultimately lead to a choice between simplex and IPM, if a basis
-  // is available, simplex should surely be chosen.
-  lp_state.solver_will_use_basis = options_.solver == kSimplexString ||
-                                   options_.solver == kHighsChooseString;
-
-  if (lp_state.solver_will_use_basis) {
-    if (!basis_.valid && solution_.value_valid) {
-      // There is no valid basis, but there is a valid solution, so use
-      // it to construct a basis
-      context.status =
-          interpretCallStatus(options_.log_options, basisForSolution(),
-                              context.status, "basisForSolution");
-      if (context.status == HighsStatus::kError) return;
-      assert(basis_.valid);
-    }
-  } else {
-    // The basis won't be used, so clear it to ensure that, after any
-    // presolve the solver choice won't be over-ruled by choosing
-    // simplex due to the existence of a basis - which mustn't be used
-    // after a strict reduction due to presolve!
-    basis_.clear();
-  }
-
-  const bool unconstrained_lp = incumbent_lp.numNz() == 0;
-  assert(incumbent_lp.num_row_ || unconstrained_lp);
-  const bool has_basis = basis_.useful;
-  if (has_basis) {
-    assert(basis_.col_status.size() ==
-           static_cast<size_t>(incumbent_lp.num_col_));
-    assert(basis_.row_status.size() ==
-           static_cast<size_t>(incumbent_lp.num_row_));
-  }
-  if (basis_.valid) assert(basis_.useful);
-
-  const bool without_presolve = options_.presolve == kHighsOffString;
-  if ((has_basis && lp_state.solver_will_use_basis) || without_presolve ||
-      unconstrained_lp) {
-    // There is a valid basis for the problem and the solver will use
-    // it, or presolve is off, or LP has no constraint matrix
-    //
-    // Determine a coherent message about how the LP is being solved
-    std::stringstream lp_solve_ss;
-    if (unconstrained_lp) {
-      lp_solve_ss << "Solving unconstrained LP";
-    } else if (has_basis) {
-      if (without_presolve) {
-        lp_solve_ss << "Solving LP with useful basis";
-      } else {
-        lp_solve_ss << "Solving LP with useful basis so presolve not used";
-      }
-    } else {
-      // One of unconstrained_lp, has_basis and without_presolve must
-      // be true, and the first two aren't
-      assert(without_presolve);
-      lp_solve_ss << "Solving LP without presolve or useful basis";
-    }
-    std::string lp_solve = lp_solve_ss.str();
-    ekk_instance_.lp_name_ = lp_solve;
-    // If there is a valid HiGHS basis, refine any status values that
-    // are simply HighsBasisStatus::kNonbasic
-    if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
-    call_status = optimizeLpTimedSolve(context, incumbent_lp, lp_solve,
-                                       context.solve_original_lp_time);
-    context.status = interpretCallStatus(options_.log_options, call_status,
-                                         context.status, "callSolveLp");
-    this->run_data_.solve_time = context.solve_original_lp_time;
-    if (context.status == HighsStatus::kError) return;
+  if (!optimizeModelLpUsePresolve(context, incumbent_lp)) {
+    if (optimizeModelLpSolveUnreduced(context, incumbent_lp)) return;
   } else {
     // Possibly presolve - according to option_.presolve
     //
@@ -1738,7 +1637,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
-        call_status = optimizeLpTimedSolve(context, incumbent_lp,
+        call_status = optimizeModelLpTimedSolve(context, incumbent_lp,
                                            "Not presolved: solving the LP",
                                            context.solve_original_lp_time);
         this->run_data_.solve_time = context.solve_original_lp_time;
@@ -1750,7 +1649,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
       case HighsPresolveStatus::kNotReduced: {
         ekk_instance_.lp_name_ = "Unreduced LP";
         // Log the presolve reductions
-        call_status = optimizeLpTimedSolve(
+        call_status = optimizeModelLpTimedSolve(
             context, incumbent_lp,
             "Problem not reduced by presolve: solving the LP",
             context.solve_original_lp_time);
@@ -1802,7 +1701,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         // objective values aren't correct
         options_mark = options_undo.mark();
         options_undo.set(options_.objective_bound, kHighsInf);
-        call_status = optimizeLpTimedSolve(context, reduced_lp,
+        call_status = optimizeModelLpTimedSolve(context, reduced_lp,
                                            "Solving the presolved LP",
                                            context.solve_presolved_lp_time);
         this->run_data_.solve_time = context.solve_presolved_lp_time;
@@ -1876,7 +1775,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         options_undo.set(options_.solver, "simplex");
         options_undo.set(options_.simplex_strategy, kSimplexStrategyPrimal);
         call_status =
-            optimizeLpTimedSolve(context, incumbent_lp,
+            optimizeModelLpTimedSolve(context, incumbent_lp,
                                  "Solving the original LP with primal simplex "
                                  "to determine infeasible or unbounded",
                                  context.solve_original_lp_time);
@@ -2073,7 +1972,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
           // adding the corresponding values after callSolveLp gives
           // difference
           context.postsolve_iteration_count = -info_.simplex_iteration_count;
-          call_status = optimizeLpTimedSolve(
+          call_status = optimizeModelLpTimedSolve(
               context, incumbent_lp,
               "Solving the original LP from the solution after postsolve",
               context.solve_original_lp_time);
@@ -2139,7 +2038,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         options_undo.set(options_.solver, kPdlpString);
         options_undo.set(options_.pdlp_iteration_limit,
                          pdlp_cleanup_iteration_limit);
-        call_status = optimizeLpTimedSolve(
+        call_status = optimizeModelLpTimedSolve(
             context, incumbent_lp,
             "Using PDLP to solve the original LP from the solution after "
             "postsolve",
@@ -2158,13 +2057,135 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
       }
     }
   }
+  optimizeModelLpFinish(context, incumbent_lp);
+}
+
+bool Highs::optimizeModelLpSetup(OptimizeModelContext& context) {
+  OptimizeModelLpState& lp_state = context.lp_state;
+
+  lp_state.possibly_use_log_dev_level_2 = false;
+  lp_state.use_log_dev_level = options_.log_dev_level;
+  lp_state.use_output_flag = options_.output_flag;
+
+  const HighsInt check_debug_run_call_num = -103757;
+  const HighsInt check_num_col = -317;
+  const HighsInt check_num_row = -714;
+  if (lp_state.possibly_use_log_dev_level_2) {
+    if (this->debug_optimize_call_num_ == check_debug_run_call_num &&
+        model_.lp_.num_col_ == check_num_col &&
+        model_.lp_.num_row_ == check_num_row) {
+      std::string message =
+          "Entering Highs::optimizeModel(): run/col/row matching check ";
+      highsLogDev(options_.log_options, HighsLogType::kInfo,
+                  "%s: run %d: LP(%6d, %6d)\n", message.c_str(),
+                  int(this->debug_optimize_call_num_), int(model_.lp_.num_col_),
+                  int(model_.lp_.num_row_));
+      lp_state.use_log_dev_level = 2;
+      lp_state.use_output_flag = true;
+    }
+  }
+
+  if (!solverValidForLp(options_.solver)) warnSolverInvalid(options_, "LP");
+
+  context.initial_time = timer_.read();
+
+  lp_state.may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
+
+  if (options_.icrash) {
+    HighsStatus icrash_status = optimizeModelICrash();
+    if (icrash_status != HighsStatus::kOk) {
+      context.status = icrash_status;
+      return true;
+    }
+  }
+
+  // Even if options_.solver == kHighsChooseString in isolation will,
+  // ultimately lead to a choice between simplex and IPM, if a basis
+  // is available, simplex should surely be chosen.
+  lp_state.solver_will_use_basis = options_.solver == kSimplexString ||
+                                   options_.solver == kHighsChooseString;
+
+  if (lp_state.solver_will_use_basis) {
+    if (!basis_.valid && solution_.value_valid) {
+      // There is no valid basis, but there is a valid solution, so use
+      // it to construct a basis
+      context.status =
+          interpretCallStatus(options_.log_options, basisForSolution(),
+                              context.status, "basisForSolution");
+      if (context.status == HighsStatus::kError) return true;
+      assert(basis_.valid);
+    }
+  } else {
+    // The basis won't be used, so clear it to ensure that, after any
+    // presolve the solver choice won't be over-ruled by choosing
+    // simplex due to the existence of a basis - which mustn't be used
+    // after a strict reduction due to presolve!
+    basis_.clear();
+  }
+
+  return false;
+}
+
+bool Highs::optimizeModelLpUsePresolve(const OptimizeModelContext& context, const HighsLp& lp) const {
+  const bool unconstrained_lp = lp.numNz() == 0;
+  assert(lp.num_row_ || unconstrained_lp);
+  const bool has_basis = basis_.useful;
+  if (has_basis) {
+    assert(basis_.col_status.size() ==
+           static_cast<size_t>(lp.num_col_));
+    assert(basis_.row_status.size() ==
+           static_cast<size_t>(lp.num_row_));
+  }
+  if (basis_.valid) assert(basis_.useful);
+
+  const bool without_presolve = options_.presolve == kHighsOffString;
+  // Don't use presolve if there is a valid basis for the problem and
+  // the solver will use it, or presolve is off, or LP has no
+  // constraint matrix
+  return !((has_basis && context.lp_state.solver_will_use_basis) || without_presolve || unconstrained_lp);
+}
+
+bool Highs::optimizeModelLpSolveUnreduced(OptimizeModelContext& context, HighsLp& lp) {
+  const bool unconstrained_lp = lp.numNz() == 0;
+  const bool has_basis = basis_.useful;
+  const bool without_presolve = options_.presolve == kHighsOffString;
+  // Determine a coherent message about how the LP is being solved
+  std::stringstream lp_solve_ss;
+  if (unconstrained_lp) {
+    lp_solve_ss << "Solving unconstrained LP";
+  } else if (has_basis) {
+    if (without_presolve) {
+      lp_solve_ss << "Solving LP with useful basis";
+    } else {
+      lp_solve_ss << "Solving LP with useful basis so presolve not used";
+    }
+  } else {
+    // One of unconstrained_lp, has_basis and without_presolve must
+    // be true, and the first two aren't
+    assert(without_presolve);
+    lp_solve_ss << "Solving LP without presolve or useful basis";
+  }
+  std::string lp_solve = lp_solve_ss.str();
+  ekk_instance_.lp_name_ = lp_solve;
+  // If there is a valid HiGHS basis, refine any status values that
+  // are simply HighsBasisStatus::kNonbasic
+  if (basis_.useful) refineBasis(lp, solution_, basis_);
+  HighsStatus call_status = optimizeModelLpTimedSolve(context, lp, lp_solve,
+                                     context.solve_original_lp_time);
+  context.status = interpretCallStatus(options_.log_options, call_status,
+                                       context.status, "callSolveLp");
+  this->run_data_.solve_time = context.solve_original_lp_time;
+  return context.status == HighsStatus::kError;
+}
+
+void Highs::optimizeModelLpFinish(OptimizeModelContext& context, const HighsLp& lp) {
   // Cycling can yield model_status_ == HighsModelStatus::kNotset,
   //  assert(model_status_ != HighsModelStatus::kNotset);
 
   // Unless the model status was determined using the strictly reduced LP, the
   // HiGHS info is valid
-  if (!lp_state.no_incumbent_lp_solution_or_basis) {
-    this->callLpKktCheck(this->model_.lp_);
+  if (!context.lp_state.no_incumbent_lp_solution_or_basis) {
+    this->callLpKktCheck(lp);
     info_.valid = true;
   }
 
@@ -2175,12 +2196,12 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
   context.status = highsStatusFromHighsModelStatus(model_status_);
 }
 
-HighsStatus Highs::optimizeLpTimedSolve(OptimizeModelContext& context,
+HighsStatus Highs::optimizeModelLpTimedSolve(OptimizeModelContext& context,
                                         HighsLp& lp,
                                         const std::string& description,
                                         double& time) {
   HighsUndoStack& options_undo = context.options_undo;
-  const OptimizeLpState& lp_state = context.lp_state;
+  const OptimizeModelLpState& lp_state = context.lp_state;
   time = -timer_.read(timer_.solve_clock);
   const size_t options_mark = options_undo.mark();
   if (lp_state.possibly_use_log_dev_level_2) {

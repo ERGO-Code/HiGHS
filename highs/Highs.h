@@ -1686,7 +1686,7 @@ class Highs {
   HighsStatus completeSolutionFromDiscreteAssignment();
 
   // State shared by the phases of optimizeModelLp
-  struct OptimizeLpState {
+  struct OptimizeModelLpState {
     bool possibly_use_log_dev_level_2 = false;
     HighsInt use_log_dev_level = 0;
     bool use_output_flag = false;
@@ -1720,7 +1720,7 @@ class Highs {
     HighsStatus status = HighsStatus::kOk;
     HighsUndoStack options_undo;
 
-    OptimizeLpState lp_state;
+    OptimizeModelLpState lp_state;
   };
   HighsStatus calledOptimizeModel(OptimizeModelContext& context);
   bool optimizeModelPreChecks(OptimizeModelContext& context);
@@ -1731,9 +1731,16 @@ class Highs {
   void optimizeModelQp(OptimizeModelContext& context);
   void optimizeModelMip(OptimizeModelContext& context);
   void optimizeModelLp(OptimizeModelContext& context);
-  HighsStatus optimizeLpTimedSolve(OptimizeModelContext& context, HighsLp& lp,
-                                   const std::string& description,
-                                   double& time);
+  bool optimizeModelLpSetup(OptimizeModelContext& context);
+  bool optimizeModelLpUsePresolve(const OptimizeModelContext& context,
+                                  const HighsLp& lp) const;
+  bool optimizeModelLpSolveUnreduced(OptimizeModelContext& context,
+                                     HighsLp& lp);
+  void optimizeModelLpFinish(OptimizeModelContext& context, const HighsLp& lp);
+  HighsStatus optimizeModelLpTimedSolve(OptimizeModelContext& context,
+                                        HighsLp& lp,
+                                        const std::string& description,
+                                        double& time);
   HighsStatus optimizeModelICrash();
   void optimizeModelReportTimes(const OptimizeModelContext& context);
 
