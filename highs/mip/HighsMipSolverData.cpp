@@ -852,17 +852,6 @@ void HighsMipSolverData::checkAddSolution() {
     double solobj =
         mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
         mipsolver.model_->offset_;
-    if (numRestarts == 0) {
-      // Since the supplied solution (mipsolver.solution_) may not
-      // correspond to postsolve applied to incumbent (#3510), compute
-      // the objective locally using incumbent
-      double mipsolver_objective =
-          double(mipsolver.model_->objectiveCDoubleValue(incumbent));
-      mipsolver.solution_objective_ =
-          int(mipsolver.orig_model_->sense_) * mipsolver_objective;
-      // Bounds etc are determined without the objective offset
-      solobj = mipsolver_objective - mipsolver.model_->offset_;
-    }
     const bool feasible =
         mipsolver.bound_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance &&
@@ -871,12 +860,50 @@ void HighsMipSolverData::checkAddSolution() {
         mipsolver.row_violation_ <=
             mipsolver.options_mip_->mip_feasibility_tolerance;
     if (numRestarts == 0) {
-      const bool reduced = postSolveStack.numReductions() > 0;
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "\nMIP start solution is %s%s: objective value is %.12g\n",
-                   feasible ? "feasible" : "infeasible",
-                   reduced ? " in the reduced space" : "",
-                   mipsolver.solution_objective_);
+      // Perform logging and checking of the MIP start solution
+      if (feasible) {
+        highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+            "\nMIP start solution is feasible: objective value is %.12g\n",
+            mipsolver.solution_objective_);
+      } else {
+        // The initial solution shouldn't be infeasible in the
+        // original space, since it's tested externally
+        highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+            "\nMIP start solution is infeasible: objective value is "
+            "%.12g with violations:"
+            " variable bound = %.4g; constraint bound = %.4g; "
+            "integrality = %.4g\n",
+            mipsolver.solution_objective_, mipsolver.bound_violation_,
+            mipsolver.row_violation_, mipsolver.integrality_violation_);
+      }
+      // Since the supplied solution (mipsolver.solution_) may not
+      // correspond to postsolve applied to incumbent (#3510), compute
+      // the objective locally using incumbent, saving the value of
+      // mipsolver.solution_objective_ to identify changes
+      const double previous_mipsolver_solution_objective =
+          mipsolver.solution_objective_;
+      double mipsolver_solution_objective =
+          double(mipsolver.model_->objectiveCDoubleValue(incumbent));
+      mipsolver.solution_objective_ =
+          int(mipsolver.orig_model_->sense_) * mipsolver_solution_objective;
+      const bool has_start_solution_objective_difference =
+          std::fabs(mipsolver.solution_objective_ -
+                    previous_mipsolver_solution_objective) /
+              (1 + std::fabs(previous_mipsolver_solution_objective)) >
+          mipsolver.options_mip_->mip_feasibility_tolerance;
+      // This affects solobj - which is use used to determine bounds
+      // etc (without the objective offset)
+      solobj = mipsolver_solution_objective - mipsolver.model_->offset_;
+      if (has_start_solution_objective_difference) {
+        const bool reduced = postSolveStack.numReductions() > 0;
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                     "MIP start solution is %s%s: objective value is %.12g\n",
+                     feasible ? "feasible" : "infeasible",
+                     reduced ? " in the reduced space" : "",
+                     mipsolver.solution_objective_);
+      }
     }
     if (feasible && solobj < upper_bound) {
       double prev_upper_bound = upper_bound;

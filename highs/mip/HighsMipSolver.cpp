@@ -58,8 +58,13 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                            integral, feasible);
     assert(valid);
 #endif
-    // Initial solution can be infeasible, but need to set values for violation
-    // and objective
+    // Original comment: "Initial solution can be infeasible, but need
+    // to set values for violation and objective"
+    //
+    // The initial solution shouldn't be infeasible in the original
+    // space, since it's tested externally, but logging of
+    // infeasibility has been added to
+    // HighsMipSolverData::checkAddSolution()
     MipViolation violation;
     HighsCDouble quad_solution_objective_;
     solutionFeasible(orig_model_, solution.col_value, &solution.row_value,

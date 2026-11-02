@@ -2674,7 +2674,7 @@ TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
   std::vector<double> start_value = {1, 1, 0};
 
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
   // Fourier-Motzkin off was necessaary to expose the bug
   REQUIRE(
       h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin) ==
