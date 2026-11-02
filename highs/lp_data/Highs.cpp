@@ -1282,7 +1282,7 @@ HighsStatus Highs::optimizeModelTryCatch() {
   // take m = context.options_undo.mark() first and call
   // context.options_undo.resetTo(m) when done. Changes still recorded are
   // undone when context is destroyed, after returnFromOptimizeModel()
-  OptimizeModelContext context;
+  Context context;
   HighsStatus status;
   auto handleCatch = [&]() {
     // The exception may have been thrown after
@@ -1318,7 +1318,7 @@ HighsStatus Highs::optimizeModelTryCatch() {
 // Checks the options calls presolve and postsolve if needed.
 //
 // LP solvers are called with callSolveLp(..)
-HighsStatus Highs::calledOptimizeModel(OptimizeModelContext& context) {
+HighsStatus Highs::calledOptimizeModel(Context& context) {
   this->logHeader();
   // Level 2b of Highs::run()
 
@@ -1374,7 +1374,7 @@ HighsStatus Highs::calledOptimizeModel(OptimizeModelContext& context) {
   return returnFromOptimizeModel(context.status, &context);
 }
 
-bool Highs::optimizeModelPreChecks(OptimizeModelContext& context) {
+bool Highs::optimizeModelPreChecks(Context& context) {
   context.min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
@@ -1409,7 +1409,7 @@ bool Highs::optimizeModelPreChecks(OptimizeModelContext& context) {
   return false;
 }
 
-bool Highs::optimizeModelApplyMods(OptimizeModelContext& context) {
+bool Highs::optimizeModelApplyMods(Context& context) {
   // HiGHS solvers require models with no infinite costs, and
   // semi-variables that have either been relaxed or assessed. All
   // such modifications of the incumbent model are made here, and
@@ -1483,7 +1483,7 @@ bool Highs::optimizeModelApplyMods(OptimizeModelContext& context) {
   return false;
 }
 
-void Highs::optimizeModelUndoMods(OptimizeModelContext& context,
+void Highs::optimizeModelUndoMods(Context& context,
                                   HighsStatus& return_status) {
   if (!context.undo_mods) return;
   // Restore any infinite costs
@@ -1494,7 +1494,7 @@ void Highs::optimizeModelUndoMods(OptimizeModelContext& context,
   context.undo_mods = false;
 }
 
-bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
+bool Highs::optimizeModelPrepare(Context& context) {
   auto returnAndStop = [&](HighsStatus return_status) {
     context.status = return_status;
     return true;
@@ -1558,7 +1558,7 @@ bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
   return false;
 }
 
-void Highs::optimizeModelQp(OptimizeModelContext& context) {
+void Highs::optimizeModelQp(Context& context) {
   // Any semi-variables have been relaxed by optimizeModelApplyMods()
   // if solving the relaxation
   if (model_.isMip() && !options_.solve_relaxation) {
@@ -1581,7 +1581,7 @@ void Highs::optimizeModelQp(OptimizeModelContext& context) {
                                        context.status, "callSolveQp");
 }
 
-void Highs::optimizeModelMip(OptimizeModelContext& context) {
+void Highs::optimizeModelMip(Context& context) {
   if (options_.solve_relaxation) {
     // Solving just the relaxation, with any semi-variables relaxed by
     // optimizeModelApplyMods()
@@ -1597,39 +1597,39 @@ void Highs::optimizeModelMip(OptimizeModelContext& context) {
                                        context.status, "callSolveMip");
 }
 
-void Highs::optimizeModelLp(OptimizeModelContext& context) {
-  if (optimizeModelLpSetup(context)) return;
+void Highs::optimizeModelLp(Context& context) {
+  if (lpSetup(context)) return;
 
   HighsLp& incumbent_lp = model_.lp_;
 
-  if (!optimizeModelLpUsePresolve(context, incumbent_lp)) {
-    if (optimizeModelLpSolveUnreduced(context, incumbent_lp)) return;
+  if (!lpUsePresolve(context, incumbent_lp)) {
+    if (lpSolveUnreduced(context, incumbent_lp)) return;
   } else {
-    if (optimizeModelLpPresolve(context, presolve_, incumbent_lp)) return;
+    if (lpPresolve(context, presolve_, incumbent_lp)) return;
     HighsLp& presolved_lp =
         model_presolve_status_ == HighsPresolveStatus::kReduced
             ? presolve_.getReducedProblem()
             : incumbent_lp;
-    if (optimizeModelLpSolveReduced(context, model_presolve_status_, presolved_lp))
+    if (lpSolveReduced(context, model_presolve_status_, presolved_lp)) return;
+    if (lpPostsolve(context, presolve_, model_presolve_status_, incumbent_lp))
       return;
-    if (optimizeModelLpPostsolve(context, presolve_, model_presolve_status_, incumbent_lp))
-      return;
-    if (optimizeModelLpCleanupOriginal(context, incumbent_lp)) return;
+    if (lpCleanupOriginal(context, incumbent_lp)) return;
   }
-  optimizeModelLpFinish(context, incumbent_lp);
+  lpFinish(context, incumbent_lp);
 }
 
-bool Highs::optimizeModelLpSolveReduced(OptimizeModelContext& context, const HighsPresolveStatus presolve_status, HighsLp& lp) {
+bool Highs::lpSolveReduced(Context& context,
+                           const HighsPresolveStatus presolve_status,
+                           HighsLp& lp) {
   HighsUndoStack& options_undo = context.options_undo;
   size_t options_mark = 0;
-  OptimizeModelLpState& lp_state = context.lp_state;
+  LpState& lp_state = context.lp_state;
   HighsStatus call_status;
   switch (presolve_status) {
     case HighsPresolveStatus::kNotPresolved: {
       ekk_instance_.lp_name_ = "Original LP";
-      call_status = optimizeModelLpTimedSolve(context, lp,
-                                         "Not presolved: solving the LP",
-                                         context.solve_original_lp_time);
+      call_status = lpTimedSolve(context, lp, "Not presolved: solving the LP",
+                                 context.solve_original_lp_time);
       this->run_data_.solve_time = context.solve_original_lp_time;
       context.status = interpretCallStatus(options_.log_options, call_status,
                                            context.status, "callSolveLp");
@@ -1639,9 +1639,8 @@ bool Highs::optimizeModelLpSolveReduced(OptimizeModelContext& context, const Hig
     case HighsPresolveStatus::kNotReduced: {
       ekk_instance_.lp_name_ = "Unreduced LP";
       // Log the presolve reductions
-      call_status = optimizeModelLpTimedSolve(
-          context, lp,
-          "Problem not reduced by presolve: solving the LP",
+      call_status = lpTimedSolve(
+          context, lp, "Problem not reduced by presolve: solving the LP",
           context.solve_original_lp_time);
       this->run_data_.solve_time = context.solve_original_lp_time;
       context.status = interpretCallStatus(options_.log_options, call_status,
@@ -1658,9 +1657,8 @@ bool Highs::optimizeModelLpSolveReduced(OptimizeModelContext& context, const Hig
       // objective values aren't correct
       options_mark = options_undo.mark();
       options_undo.set(options_.objective_bound, kHighsInf);
-      call_status = optimizeModelLpTimedSolve(context, lp,
-                                         "Solving the presolved LP",
-                                         context.solve_presolved_lp_time);
+      call_status = lpTimedSolve(context, lp, "Solving the presolved LP",
+                                 context.solve_presolved_lp_time);
       this->run_data_.solve_time = context.solve_presolved_lp_time;
       if (ekk_instance_.status_.initialised_for_solve) {
         // Record the pivot threshold resulting from solving the presolved LP
@@ -1699,8 +1697,10 @@ bool Highs::optimizeModelLpSolveReduced(OptimizeModelContext& context, const Hig
   return false;
 }
 
-bool Highs::optimizeModelLpPostsolve(OptimizeModelContext& context, PresolveComponent& presolve, const HighsPresolveStatus presolve_status, HighsLp& lp) {
-  OptimizeModelLpState& lp_state = context.lp_state;
+bool Highs::lpPostsolve(Context& context, PresolveComponent& presolve,
+                        const HighsPresolveStatus presolve_status,
+                        HighsLp& lp) {
+  LpState& lp_state = context.lp_state;
   HighsLogOptions& log_options = options_.log_options;
   // End of presolve
   //
@@ -1768,8 +1768,7 @@ bool Highs::optimizeModelLpPostsolve(OptimizeModelContext& context, PresolveComp
       // Indicate that nontrivial postsolve has been performed
       if (presolve_status == HighsPresolveStatus::kReduced ||
           presolve_status == HighsPresolveStatus::kReducedToEmpty)
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "Performed postsolve\n");
+        highsLogUser(log_options, HighsLogType::kInfo, "Performed postsolve\n");
       // Set solution and its status
       solution_.clear();
       solution_ = presolve.data_.recovered_solution_;
@@ -1809,10 +1808,10 @@ bool Highs::optimizeModelLpPostsolve(OptimizeModelContext& context, PresolveComp
   return false;
 }
 
-bool Highs::optimizeModelLpCleanupOriginal(OptimizeModelContext& context, HighsLp& incumbent_lp) {
+bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
   HighsUndoStack& options_undo = context.options_undo;
   size_t options_mark = 0;
-  OptimizeModelLpState& lp_state = context.lp_state;
+  LpState& lp_state = context.lp_state;
   HighsStatus call_status;
   HighsLogOptions& log_options = options_.log_options;
   if (lp_state.postsolve_recovered_basis) {
@@ -1828,10 +1827,9 @@ bool Highs::optimizeModelLpCleanupOriginal(OptimizeModelContext& context, HighsL
       const bool force_debug = false;
       options_mark = options_undo.mark();
       if (force_debug)
-        options_undo.set(options_.highs_debug_level,
-                         kHighsDebugLevelCostly);
-      if (debugHighsSolution("After returning from postsolve", options_,
-                             model_, solution_,
+        options_undo.set(options_.highs_debug_level, kHighsDebugLevelCostly);
+      if (debugHighsSolution("After returning from postsolve", options_, model_,
+                             solution_,
                              basis_) == HighsDebugStatus::kLogicalError) {
         context.status = HighsStatus::kError;
         return true;
@@ -1864,7 +1862,7 @@ bool Highs::optimizeModelLpCleanupOriginal(OptimizeModelContext& context, HighsL
     // adding the corresponding values after callSolveLp gives
     // difference
     context.postsolve_iteration_count = -info_.simplex_iteration_count;
-    call_status = optimizeModelLpTimedSolve(
+    call_status = lpTimedSolve(
         context, incumbent_lp,
         "Solving the original LP from the solution after postsolve",
         context.solve_original_lp_time);
@@ -1897,7 +1895,8 @@ bool Highs::optimizeModelLpCleanupOriginal(OptimizeModelContext& context, HighsL
   */
   if (consider_pdlp_cleanup) {
     HighsInt pdlp_cleanup_iteration_limit = 0;
-    if (tryPdlpCleanup(pdlp_cleanup_iteration_limit, lp_state.presolved_lp_info)) {
+    if (tryPdlpCleanup(pdlp_cleanup_iteration_limit,
+                       lp_state.presolved_lp_info)) {
       // Primal/dual infeasibilities/residuals can be magnified in
       // postsolve after PDLP, and IPX without crossover can fail,
       // both leading to model_status_ == HighsModelStatus::kUnknown,
@@ -1915,7 +1914,7 @@ bool Highs::optimizeModelLpCleanupOriginal(OptimizeModelContext& context, HighsL
       options_undo.set(options_.solver, kPdlpString);
       options_undo.set(options_.pdlp_iteration_limit,
                        pdlp_cleanup_iteration_limit);
-      call_status = optimizeModelLpTimedSolve(
+      call_status = lpTimedSolve(
           context, incumbent_lp,
           "Using PDLP to solve the original LP from the solution after "
           "postsolve",
@@ -1929,14 +1928,14 @@ bool Highs::optimizeModelLpCleanupOriginal(OptimizeModelContext& context, HighsL
       // Update the number of PDLP, iterations, since the
       // iteration count is reset to zero if PDLP is used to
       // clean up after postsolve
-      info_.pdlp_iteration_count +=
-          lp_state.presolved_lp_pdlp_iteration_count;
+      info_.pdlp_iteration_count += lp_state.presolved_lp_pdlp_iteration_count;
     }
   }
   return false;
 }
 
-bool Highs::optimizeModelLpPresolve(OptimizeModelContext& context, PresolveComponent& presolve, HighsLp& lp) {
+bool Highs::lpPresolve(Context& context, PresolveComponent& presolve,
+                       HighsLp& lp) {
   // Possibly presolve - according to option_.presolve
   //
   // If solving the relaxation of a MIP, make sure that LP presolve
@@ -1963,16 +1962,16 @@ bool Highs::optimizeModelLpPresolve(OptimizeModelContext& context, PresolveCompo
   this->run_data_.presolved_model_num_row = reduced_lp.num_row_;
   this->run_data_.presolved_model_num_nz = reduced_lp.a_matrix_.numNz();
 
-  if (optimizeModelLpHandlePresolveStatus(context, presolve_status))
-    return true;
+  if (lpHandlePresolveStatus(context, presolve_status)) return true;
   if (presolve_status == HighsPresolveStatus::kReduced)
-    return optimizeModelLpPrepareReducedLp(context, reduced_lp);
+    return lpPrepareReducedLp(context, reduced_lp);
   if (presolve_status == HighsPresolveStatus::kReducedToEmpty)
-    optimizeModelLpSetReducedToEmptySolution();
+    lpSetReducedToEmptySolution();
   return false;
 }
 
-bool Highs::optimizeModelLpHandlePresolveStatus(OptimizeModelContext& context, const HighsPresolveStatus presolve_status) {
+bool Highs::lpHandlePresolveStatus(Context& context,
+                                   const HighsPresolveStatus presolve_status) {
   const HighsLogOptions& log_options = options_.log_options;
   switch (presolve_status) {
     case HighsPresolveStatus::kNotPresolved:
@@ -1989,22 +1988,20 @@ bool Highs::optimizeModelLpHandlePresolveStatus(OptimizeModelContext& context, c
       return true;
     }
     case HighsPresolveStatus::kUnboundedOrInfeasible: {
-      highsLogUser(
-          log_options, HighsLogType::kInfo,
-          "Problem status detected on presolve: %s\n",
-          modelStatusToString(HighsModelStatus::kUnboundedOrInfeasible)
-              .c_str());
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Problem status detected on presolve: %s\n",
+                   modelStatusToString(HighsModelStatus::kUnboundedOrInfeasible)
+                       .c_str());
       if (options_.allow_unbounded_or_infeasible) {
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kUnboundedOrInfeasible);
         return true;
       }
-      optimizeModelLpResolveUnboundedOrInfeasible(context, model_.lp_);
+      lpResolveUnboundedOrInfeasible(context, model_.lp_);
       return true;
     }
     case HighsPresolveStatus::kTimeout: {
-      setHighsModelStatusAndClearSolutionAndBasis(
-          HighsModelStatus::kTimeLimit);
+      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kTimeLimit);
       highsLogDev(log_options, HighsLogType::kWarning,
                   "Presolve reached timeout\n");
       context.status = HighsStatus::kWarning;
@@ -2027,15 +2024,14 @@ bool Highs::optimizeModelLpHandlePresolveStatus(OptimizeModelContext& context, c
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPresolveError);
       highsLogDev(log_options, HighsLogType::kError,
-                  "Presolve returned status %d\n",
-                  (int)presolve_status);
+                  "Presolve returned status %d\n", (int)presolve_status);
       context.status = HighsStatus::kError;
       return true;
     }
   }
 }
 
-void Highs::optimizeModelLpResolveUnboundedOrInfeasible(OptimizeModelContext& context, HighsLp& lp) {
+void Highs::lpResolveUnboundedOrInfeasible(Context& context, HighsLp& lp) {
   HighsUndoStack& options_undo = context.options_undo;
   // Presolve has returned kUnboundedOrInfeasible, but HiGHS
   // can't return this. Use primal simplex solver on the original
@@ -2043,10 +2039,10 @@ void Highs::optimizeModelLpResolveUnboundedOrInfeasible(OptimizeModelContext& co
   const size_t options_mark = options_undo.mark();
   options_undo.set(options_.solver, "simplex");
   options_undo.set(options_.simplex_strategy, kSimplexStrategyPrimal);
-  optimizeModelLpTimedSolve(context, lp,
-                           "Solving the original LP with primal simplex "
-                           "to determine infeasible or unbounded",
-                           context.solve_original_lp_time);
+  lpTimedSolve(context, lp,
+               "Solving the original LP with primal simplex "
+               "to determine infeasible or unbounded",
+               context.solve_original_lp_time);
   // Recover the options
   options_undo.resetTo(options_mark);
   // Primal simplex doesn't necessarily resolve the
@@ -2074,7 +2070,7 @@ void Highs::optimizeModelLpResolveUnboundedOrInfeasible(OptimizeModelContext& co
   }
 }
 
-bool Highs::optimizeModelLpPrepareReducedLp(OptimizeModelContext& context, HighsLp& lp) {
+bool Highs::lpPrepareReducedLp(Context& context, HighsLp& lp) {
   lp.origin_name_ = "Reduced LP";
   lp.setMatrixDimensions();
   if (kAllowDeveloperAssert) {
@@ -2095,13 +2091,12 @@ bool Highs::optimizeModelLpPrepareReducedLp(OptimizeModelContext& context, Highs
     assert(assessLp(lp, options_) == HighsStatus::kOk);
   } else {
     lp.a_matrix_.assessSmallValues(options_.log_options,
-                                           options_.small_matrix_value);
+                                   options_.small_matrix_value);
   }
   HighsStatus call_status = cleanBounds(options_, lp);
   // Ignore any warning from clean bounds since the original LP
   // is still solved after presolve
-  if (interpretCallStatus(options_.log_options, call_status,
-                          context.status,
+  if (interpretCallStatus(options_.log_options, call_status, context.status,
                           "cleanBounds") == HighsStatus::kError) {
     context.status = HighsStatus::kError;
     return true;
@@ -2109,7 +2104,7 @@ bool Highs::optimizeModelLpPrepareReducedLp(OptimizeModelContext& context, Highs
   return false;
 }
 
-void Highs::optimizeModelLpSetReducedToEmptySolution() {
+void Highs::lpSetReducedToEmptySolution() {
   // Create a trivial optimal solution for postsolve to use
   solution_.clear();
   basis_.clear();
@@ -2125,8 +2120,8 @@ void Highs::optimizeModelLpSetReducedToEmptySolution() {
   model_status_ = HighsModelStatus::kOptimal;
 }
 
-bool Highs::optimizeModelLpSetup(OptimizeModelContext& context) {
-  OptimizeModelLpState& lp_state = context.lp_state;
+bool Highs::lpSetup(Context& context) {
+  LpState& lp_state = context.lp_state;
 
   lp_state.possibly_use_log_dev_level_2 = false;
   lp_state.use_log_dev_level = options_.log_dev_level;
@@ -2157,7 +2152,7 @@ bool Highs::optimizeModelLpSetup(OptimizeModelContext& context) {
   lp_state.may_require_basis_postsolve = mayRequireBasisPostsolve(&options_);
 
   if (options_.icrash) {
-    HighsStatus icrash_status = optimizeModelICrash();
+    HighsStatus icrash_status = lpICrash();
     if (icrash_status != HighsStatus::kOk) {
       context.status = icrash_status;
       return true;
@@ -2191,15 +2186,13 @@ bool Highs::optimizeModelLpSetup(OptimizeModelContext& context) {
   return false;
 }
 
-bool Highs::optimizeModelLpUsePresolve(const OptimizeModelContext& context, const HighsLp& lp) const {
+bool Highs::lpUsePresolve(const Context& context, const HighsLp& lp) const {
   const bool unconstrained_lp = lp.numNz() == 0;
   assert(lp.num_row_ || unconstrained_lp);
   const bool has_basis = basis_.useful;
   if (has_basis) {
-    assert(basis_.col_status.size() ==
-           static_cast<size_t>(lp.num_col_));
-    assert(basis_.row_status.size() ==
-           static_cast<size_t>(lp.num_row_));
+    assert(basis_.col_status.size() == static_cast<size_t>(lp.num_col_));
+    assert(basis_.row_status.size() == static_cast<size_t>(lp.num_row_));
   }
   if (basis_.valid) assert(basis_.useful);
 
@@ -2207,10 +2200,11 @@ bool Highs::optimizeModelLpUsePresolve(const OptimizeModelContext& context, cons
   // Don't use presolve if there is a valid basis for the problem and
   // the solver will use it, or presolve is off, or LP has no
   // constraint matrix
-  return !((has_basis && context.lp_state.solver_will_use_basis) || without_presolve || unconstrained_lp);
+  return !((has_basis && context.lp_state.solver_will_use_basis) ||
+           without_presolve || unconstrained_lp);
 }
 
-bool Highs::optimizeModelLpSolveUnreduced(OptimizeModelContext& context, HighsLp& lp) {
+bool Highs::lpSolveUnreduced(Context& context, HighsLp& lp) {
   const bool unconstrained_lp = lp.numNz() == 0;
   const bool has_basis = basis_.useful;
   const bool without_presolve = options_.presolve == kHighsOffString;
@@ -2235,15 +2229,15 @@ bool Highs::optimizeModelLpSolveUnreduced(OptimizeModelContext& context, HighsLp
   // If there is a valid HiGHS basis, refine any status values that
   // are simply HighsBasisStatus::kNonbasic
   if (basis_.useful) refineBasis(lp, solution_, basis_);
-  HighsStatus call_status = optimizeModelLpTimedSolve(context, lp, lp_solve,
-                                     context.solve_original_lp_time);
+  HighsStatus call_status =
+      lpTimedSolve(context, lp, lp_solve, context.solve_original_lp_time);
   context.status = interpretCallStatus(options_.log_options, call_status,
                                        context.status, "callSolveLp");
   this->run_data_.solve_time = context.solve_original_lp_time;
   return context.status == HighsStatus::kError;
 }
 
-void Highs::optimizeModelLpFinish(OptimizeModelContext& context, const HighsLp& lp) {
+void Highs::lpFinish(Context& context, const HighsLp& lp) {
   // Cycling can yield model_status_ == HighsModelStatus::kNotset,
   //  assert(model_status_ != HighsModelStatus::kNotset);
 
@@ -2254,19 +2248,17 @@ void Highs::optimizeModelLpFinish(OptimizeModelContext& context, const HighsLp& 
     info_.valid = true;
   }
 
-  optimizeModelReportTimes(context);
+  lpReportTimes(context);
 
   // Assess success according to the model status, regardless of
   // whether anything worse has happened earlier
   context.status = highsStatusFromHighsModelStatus(model_status_);
 }
 
-HighsStatus Highs::optimizeModelLpTimedSolve(OptimizeModelContext& context,
-                                        HighsLp& lp,
-                                        const std::string& description,
-                                        double& time) {
+HighsStatus Highs::lpTimedSolve(Context& context, HighsLp& lp,
+                                const std::string& description, double& time) {
   HighsUndoStack& options_undo = context.options_undo;
-  const OptimizeModelLpState& lp_state = context.lp_state;
+  const LpState& lp_state = context.lp_state;
   time = -timer_.read(timer_.solve_clock);
   const size_t options_mark = options_undo.mark();
   if (lp_state.possibly_use_log_dev_level_2) {
@@ -2281,7 +2273,7 @@ HighsStatus Highs::optimizeModelLpTimedSolve(OptimizeModelContext& context,
   return call_status;
 }
 
-HighsStatus Highs::optimizeModelICrash() {
+HighsStatus Highs::lpICrash() {
   ICrashStrategy strategy = ICrashStrategy::kICA;
   bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
   if (!strategy_ok) {
@@ -2319,7 +2311,7 @@ HighsStatus Highs::optimizeModelICrash() {
   return HighsStatus::kOk;
 }
 
-void Highs::optimizeModelReportTimes(const OptimizeModelContext& context) {
+void Highs::lpReportTimes(const Context& context) {
   double solve_time = timer_.read() - context.initial_time;
 
   HighsLogOptions& log_options = options_.log_options;
@@ -4145,7 +4137,9 @@ void Highs::deprecationMessage(const std::string& method_name,
   }
 }
 
-HighsPresolveStatus Highs::runPresolve(PresolveComponent& presolve, HighsLp& lp, const bool force_lp_presolve, const bool force_presolve) {
+HighsPresolveStatus Highs::runPresolve(PresolveComponent& presolve, HighsLp& lp,
+                                       const bool force_lp_presolve,
+                                       const bool force_presolve) {
   // Clearing presolve would destroy lp if it were its reduced LP
   assert(&lp != &presolve.data_.reduced_lp_);
   presolve.clear();
@@ -4239,10 +4233,8 @@ HighsPresolveStatus Highs::runPresolve(PresolveComponent& presolve, HighsLp& lp,
   switch (presolve.presolve_status_) {
     case HighsPresolveStatus::kReduced: {
       HighsLp& reduced_lp = presolve.getReducedProblem();
-      presolve.info_.n_cols_removed =
-          lp.num_col_ - reduced_lp.num_col_;
-      presolve.info_.n_rows_removed =
-          lp.num_row_ - reduced_lp.num_row_;
+      presolve.info_.n_cols_removed = lp.num_col_ - reduced_lp.num_col_;
+      presolve.info_.n_rows_removed = lp.num_row_ - reduced_lp.num_row_;
       presolve.info_.n_nnz_removed =
           (HighsInt)lp.numNz() - (HighsInt)reduced_lp.numNz();
       // Clear any scaling information inherited by the reduced LP
@@ -4266,22 +4258,21 @@ HighsPresolveStatus Highs::runPresolve(PresolveComponent& presolve, HighsLp& lp,
   return presolve_return_status;
 }
 
-HighsPostsolveStatus Highs::runPostsolve(PresolveComponent& presolve, const HighsLp& lp) {
+HighsPostsolveStatus Highs::runPostsolve(PresolveComponent& presolve,
+                                         const HighsLp& lp) {
   // assert(presolve.has_run_);
   const bool have_primal_solution =
       presolve.data_.recovered_solution_.value_valid;
   // Need at least a primal solution
   if (!have_primal_solution)
     return HighsPostsolveStatus::kNoPrimalSolutionError;
-  const bool have_dual_solution =
-      presolve.data_.recovered_solution_.dual_valid;
+  const bool have_dual_solution = presolve.data_.recovered_solution_.dual_valid;
   const HighsInt report_3040_col = -578;
   const bool have_basis = presolve.data_.recovered_basis_.valid;
   presolve.data_.postSolveStack.undo(
       options_, presolve.data_.recovered_solution_,
       presolve.data_.recovered_basis_, 0, report_3040_col);
-  if (have_basis &&
-      !isBasisConsistent(lp, presolve.data_.recovered_basis_)) {
+  if (have_basis && !isBasisConsistent(lp, presolve.data_.recovered_basis_)) {
     // Recovered basis was assumed to be consistent, but #3323
     // exposes that in exceptional circumstances it may not be,
     // so check here and return solver error if it is
@@ -4945,7 +4936,7 @@ HighsStatus Highs::returnFromWriteSolution(FILE* file,
 
 // Applies checks before returning from optimizeModel()
 HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
-                                           OptimizeModelContext* context) {
+                                           Context* context) {
   assert(!called_return_from_optimize_model);
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   if (return_status != run_return_status) {
