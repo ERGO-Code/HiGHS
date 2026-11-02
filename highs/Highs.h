@@ -1731,11 +1731,21 @@ class Highs {
   void optimizeModelQp(OptimizeModelContext& context);
   void optimizeModelMip(OptimizeModelContext& context);
   void optimizeModelLp(OptimizeModelContext& context);
+  // Phases of calledOptimizeModelLp
   bool optimizeModelLpSetup(OptimizeModelContext& context);
   bool optimizeModelLpUsePresolve(const OptimizeModelContext& context,
                                   const HighsLp& lp) const;
   bool optimizeModelLpSolveUnreduced(OptimizeModelContext& context,
                                      HighsLp& lp);
+  bool optimizeModelLpPresolve(OptimizeModelContext& context,
+                               PresolveComponent& presolve, HighsLp& lp);
+  bool optimizeModelLpHandlePresolveStatus(
+      OptimizeModelContext& context, const HighsPresolveStatus presolve_status);
+  void optimizeModelLpResolveUnboundedOrInfeasible(
+      OptimizeModelContext& context, HighsLp& lp);
+  bool optimizeModelLpPrepareReducedLp(OptimizeModelContext& context,
+                                       HighsLp& lp);
+  void optimizeModelLpSetReducedToEmptySolution();
   void optimizeModelLpFinish(OptimizeModelContext& context, const HighsLp& lp);
   HighsStatus optimizeModelLpTimedSolve(OptimizeModelContext& context,
                                         HighsLp& lp,

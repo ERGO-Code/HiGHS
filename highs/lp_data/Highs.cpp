@@ -1610,30 +1610,7 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
   if (!optimizeModelLpUsePresolve(context, incumbent_lp)) {
     if (optimizeModelLpSolveUnreduced(context, incumbent_lp)) return;
   } else {
-    // Possibly presolve - according to option_.presolve
-    //
-    // If solving the relaxation of a MIP, make sure that LP presolve
-    // is used - so that rules assuming MIP properties are not applied.
-    const double from_presolve_time = timer_.read(timer_.presolve_clock);
-    context.presolve_time = -from_presolve_time;
-    timer_.start(timer_.presolve_clock);
-    const bool force_lp_presolve = true;
-    model_presolve_status_ = runPresolve(force_lp_presolve);
-    timer_.stop(timer_.presolve_clock);
-    const double to_presolve_time = timer_.read(timer_.presolve_clock);
-    context.presolve_time += to_presolve_time;
-    presolve_.info_.presolve_time = context.presolve_time;
-    this->run_data_.presolve_time = context.presolve_time;
-
-    // Log the presolve reductions
-    reportPresolveReductions(log_options, model_presolve_status_, incumbent_lp,
-                             presolve_.getReducedProblem());
-    this->run_data_.presolved_model_num_col =
-        presolve_.getReducedProblem().num_col_;
-    this->run_data_.presolved_model_num_row =
-        presolve_.getReducedProblem().num_row_;
-    this->run_data_.presolved_model_num_nz =
-        presolve_.getReducedProblem().a_matrix_.numNz();
+    if (optimizeModelLpPresolve(context, presolve_, incumbent_lp)) return;
     switch (model_presolve_status_) {
       case HighsPresolveStatus::kNotPresolved: {
         ekk_instance_.lp_name_ = "Original LP";
@@ -1661,38 +1638,6 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
       }
       case HighsPresolveStatus::kReduced: {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
-        reduced_lp.origin_name_ = "Reduced LP";
-        reduced_lp.setMatrixDimensions();
-        if (kAllowDeveloperAssert) {
-          // Validate the reduced LP
-          //
-          // Although presolve can yield small values in the matrix,
-          // they are only stripped out (by assessLp) in debug. This
-          // suggests that they are no real danger to the simplex
-          // solver. The only danger is pivoting on them, but that
-          // implies that values of roughly that size have been chosen
-          // in the ratio test. Even with the filter, values of 1e-9
-          // could be in the matrix, and these would be bad
-          // pivots. Hence, since the small values may play a
-          // meaningful role in postsolve, then it's better to keep
-          // them.
-          //
-          // ToDo. Analyse the extent of small value creation. See #1187
-          assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
-        } else {
-          reduced_lp.a_matrix_.assessSmallValues(options_.log_options,
-                                                 options_.small_matrix_value);
-        }
-        call_status = cleanBounds(options_, reduced_lp);
-        // Ignore any warning from clean bounds since the original LP
-        // is still solved after presolve
-        if (interpretCallStatus(options_.log_options, call_status,
-                                context.status,
-                                "cleanBounds") == HighsStatus::kError) {
-          context.status = HighsStatus::kError;
-          return;
-        }
-
         // Solving the presolved LP with strictly reduced dimensions
         // so ensure that the Ekk instance is cleared
         ekk_instance_.clear();
@@ -1733,109 +1678,11 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
         break;
       }
       case HighsPresolveStatus::kReducedToEmpty: {
-        // Create a trivial optimal solution for postsolve to use
-        solution_.clear();
-        basis_.clear();
-        basis_.debug_origin_name = "Presolve to empty";
-        basis_.valid = true;
-        basis_.alien = false;
-        basis_.useful = true;
-        basis_.was_alien = false;
-        solution_.value_valid = true;
-        solution_.dual_valid = true;
-        // Optimality will not be spotted if there's no basis
-        // postsolve
-        model_status_ = HighsModelStatus::kOptimal;
         this->run_data_.solve_time = 0;
         break;
       }
-      case HighsPresolveStatus::kInfeasible: {
-        setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kInfeasible);
-        highsLogUser(log_options, HighsLogType::kInfo,
-                     "Problem status detected on presolve: %s\n",
-                     modelStatusToString(model_status_).c_str());
-        return;
-      }
-      case HighsPresolveStatus::kUnboundedOrInfeasible: {
-        highsLogUser(
-            log_options, HighsLogType::kInfo,
-            "Problem status detected on presolve: %s\n",
-            modelStatusToString(HighsModelStatus::kUnboundedOrInfeasible)
-                .c_str());
-        if (options_.allow_unbounded_or_infeasible) {
-          setHighsModelStatusAndClearSolutionAndBasis(
-              HighsModelStatus::kUnboundedOrInfeasible);
-          return;
-        }
-        // Presolve has returned kUnboundedOrInfeasible, but HiGHS
-        // can't return this. Use primal simplex solver on the original
-        // LP
-        options_mark = options_undo.mark();
-        options_undo.set(options_.solver, "simplex");
-        options_undo.set(options_.simplex_strategy, kSimplexStrategyPrimal);
-        call_status =
-            optimizeModelLpTimedSolve(context, incumbent_lp,
-                                 "Solving the original LP with primal simplex "
-                                 "to determine infeasible or unbounded",
-                                 context.solve_original_lp_time);
-        // Recover the options
-        options_undo.resetTo(options_mark);
-        // Primal simplex doesn't necessarily resolve the
-        // kUnboundedOrInfeasible case, as it may time out or reach
-        // the iteration count (#3383), or even fail
-        assert(model_status_ == HighsModelStatus::kInfeasible ||
-               model_status_ == HighsModelStatus::kUnbounded ||
-               model_status_ == HighsModelStatus::kTimeLimit ||
-               model_status_ == HighsModelStatus::kIterationLimit ||
-               model_status_ == HighsModelStatus::kInterrupt);
-        const bool resolved = model_status_ == HighsModelStatus::kInfeasible ||
-                              model_status_ == HighsModelStatus::kUnbounded;
-        if (resolved) {
-          info_.valid = true;
-        } else {
-          // Unresolved, so return with result from presolve
-          highsLogUser(log_options, HighsLogType::kInfo,
-                       "Unable to resolve whether LP is unbounded or "
-                       "infeasible: primal simplex yields model status of %s\n",
-                       modelStatusToString(model_status_).c_str());
-
-          model_status_ = HighsModelStatus::kUnboundedOrInfeasible;
-          setHighsModelStatusAndClearSolutionAndBasis(
-              HighsModelStatus::kUnboundedOrInfeasible);
-        }
-        return;
-      }
-      case HighsPresolveStatus::kTimeout: {
-        setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kTimeLimit);
-        highsLogDev(log_options, HighsLogType::kWarning,
-                    "Presolve reached timeout\n");
-        context.status = HighsStatus::kWarning;
-        return;
-      }
-      case HighsPresolveStatus::kOutOfMemory: {
-        setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kMemoryLimit);
-        context.status = HighsStatus::kError;
-        return;
-      }
-      case HighsPresolveStatus::kException: {
-        setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kSolveError);
-        context.status = HighsStatus::kError;
-        return;
-      }
-      default: {
-        assert(model_presolve_status_ == HighsPresolveStatus::kNullError);
-        setHighsModelStatusAndClearSolutionAndBasis(
-            HighsModelStatus::kPresolveError);
-        highsLogDev(log_options, HighsLogType::kError,
-                    "Presolve returned status %d\n",
-                    (int)model_presolve_status_);
-        context.status = HighsStatus::kError;
-        return;
-      }
+      default:
+        break;
     }
     // End of presolve
     //
@@ -2058,6 +1905,195 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
     }
   }
   optimizeModelLpFinish(context, incumbent_lp);
+}
+
+bool Highs::optimizeModelLpPresolve(OptimizeModelContext& context, PresolveComponent& presolve, HighsLp& lp) {
+  // Possibly presolve - according to option_.presolve
+  //
+  // If solving the relaxation of a MIP, make sure that LP presolve
+  // is used - so that rules assuming MIP properties are not applied.
+  const double from_presolve_time = timer_.read(timer_.presolve_clock);
+  context.presolve_time = -from_presolve_time;
+  timer_.start(timer_.presolve_clock);
+  const bool force_lp_presolve = true;
+  const HighsPresolveStatus presolve_status =
+      runPresolve(presolve, lp, force_lp_presolve);
+  // The Highs presolve status is that of presolve_
+  if (&presolve == &presolve_) model_presolve_status_ = presolve_status;
+  timer_.stop(timer_.presolve_clock);
+  const double to_presolve_time = timer_.read(timer_.presolve_clock);
+  context.presolve_time += to_presolve_time;
+  presolve.info_.presolve_time = context.presolve_time;
+  this->run_data_.presolve_time = context.presolve_time;
+
+  // Log the presolve reductions
+  HighsLp& reduced_lp = presolve.getReducedProblem();
+  reportPresolveReductions(options_.log_options, presolve_status, lp,
+                           reduced_lp);
+  this->run_data_.presolved_model_num_col = reduced_lp.num_col_;
+  this->run_data_.presolved_model_num_row = reduced_lp.num_row_;
+  this->run_data_.presolved_model_num_nz = reduced_lp.a_matrix_.numNz();
+
+  if (optimizeModelLpHandlePresolveStatus(context, presolve_status))
+    return true;
+  if (presolve_status == HighsPresolveStatus::kReduced)
+    return optimizeModelLpPrepareReducedLp(context, reduced_lp);
+  if (presolve_status == HighsPresolveStatus::kReducedToEmpty)
+    optimizeModelLpSetReducedToEmptySolution();
+  return false;
+}
+
+bool Highs::optimizeModelLpHandlePresolveStatus(OptimizeModelContext& context, const HighsPresolveStatus presolve_status) {
+  const HighsLogOptions& log_options = options_.log_options;
+  switch (presolve_status) {
+    case HighsPresolveStatus::kNotPresolved:
+    case HighsPresolveStatus::kNotReduced:
+    case HighsPresolveStatus::kReduced:
+    case HighsPresolveStatus::kReducedToEmpty:
+      return false;
+    case HighsPresolveStatus::kInfeasible: {
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kInfeasible);
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "Problem status detected on presolve: %s\n",
+                   modelStatusToString(model_status_).c_str());
+      return true;
+    }
+    case HighsPresolveStatus::kUnboundedOrInfeasible: {
+      highsLogUser(
+          log_options, HighsLogType::kInfo,
+          "Problem status detected on presolve: %s\n",
+          modelStatusToString(HighsModelStatus::kUnboundedOrInfeasible)
+              .c_str());
+      if (options_.allow_unbounded_or_infeasible) {
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kUnboundedOrInfeasible);
+        return true;
+      }
+      optimizeModelLpResolveUnboundedOrInfeasible(context, model_.lp_);
+      return true;
+    }
+    case HighsPresolveStatus::kTimeout: {
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kTimeLimit);
+      highsLogDev(log_options, HighsLogType::kWarning,
+                  "Presolve reached timeout\n");
+      context.status = HighsStatus::kWarning;
+      return true;
+    }
+    case HighsPresolveStatus::kOutOfMemory: {
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kMemoryLimit);
+      context.status = HighsStatus::kError;
+      return true;
+    }
+    case HighsPresolveStatus::kException: {
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kSolveError);
+      context.status = HighsStatus::kError;
+      return true;
+    }
+    default: {
+      assert(presolve_status == HighsPresolveStatus::kNullError);
+      setHighsModelStatusAndClearSolutionAndBasis(
+          HighsModelStatus::kPresolveError);
+      highsLogDev(log_options, HighsLogType::kError,
+                  "Presolve returned status %d\n",
+                  (int)presolve_status);
+      context.status = HighsStatus::kError;
+      return true;
+    }
+  }
+}
+
+void Highs::optimizeModelLpResolveUnboundedOrInfeasible(OptimizeModelContext& context, HighsLp& lp) {
+  HighsUndoStack& options_undo = context.options_undo;
+  // Presolve has returned kUnboundedOrInfeasible, but HiGHS
+  // can't return this. Use primal simplex solver on the original
+  // LP
+  const size_t options_mark = options_undo.mark();
+  options_undo.set(options_.solver, "simplex");
+  options_undo.set(options_.simplex_strategy, kSimplexStrategyPrimal);
+  optimizeModelLpTimedSolve(context, lp,
+                           "Solving the original LP with primal simplex "
+                           "to determine infeasible or unbounded",
+                           context.solve_original_lp_time);
+  // Recover the options
+  options_undo.resetTo(options_mark);
+  // Primal simplex doesn't necessarily resolve the
+  // kUnboundedOrInfeasible case, as it may time out or reach
+  // the iteration count (#3383), or even fail
+  assert(model_status_ == HighsModelStatus::kInfeasible ||
+         model_status_ == HighsModelStatus::kUnbounded ||
+         model_status_ == HighsModelStatus::kTimeLimit ||
+         model_status_ == HighsModelStatus::kIterationLimit ||
+         model_status_ == HighsModelStatus::kInterrupt);
+  const bool resolved = model_status_ == HighsModelStatus::kInfeasible ||
+                        model_status_ == HighsModelStatus::kUnbounded;
+  if (resolved) {
+    info_.valid = true;
+  } else {
+    // Unresolved, so return with result from presolve
+    highsLogUser(options_.log_options, HighsLogType::kInfo,
+                 "Unable to resolve whether LP is unbounded or "
+                 "infeasible: primal simplex yields model status of %s\n",
+                 modelStatusToString(model_status_).c_str());
+
+    model_status_ = HighsModelStatus::kUnboundedOrInfeasible;
+    setHighsModelStatusAndClearSolutionAndBasis(
+        HighsModelStatus::kUnboundedOrInfeasible);
+  }
+}
+
+bool Highs::optimizeModelLpPrepareReducedLp(OptimizeModelContext& context, HighsLp& lp) {
+  lp.origin_name_ = "Reduced LP";
+  lp.setMatrixDimensions();
+  if (kAllowDeveloperAssert) {
+    // Validate the reduced LP
+    //
+    // Although presolve can yield small values in the matrix,
+    // they are only stripped out (by assessLp) in debug. This
+    // suggests that they are no real danger to the simplex
+    // solver. The only danger is pivoting on them, but that
+    // implies that values of roughly that size have been chosen
+    // in the ratio test. Even with the filter, values of 1e-9
+    // could be in the matrix, and these would be bad
+    // pivots. Hence, since the small values may play a
+    // meaningful role in postsolve, then it's better to keep
+    // them.
+    //
+    // ToDo. Analyse the extent of small value creation. See #1187
+    assert(assessLp(lp, options_) == HighsStatus::kOk);
+  } else {
+    lp.a_matrix_.assessSmallValues(options_.log_options,
+                                           options_.small_matrix_value);
+  }
+  HighsStatus call_status = cleanBounds(options_, lp);
+  // Ignore any warning from clean bounds since the original LP
+  // is still solved after presolve
+  if (interpretCallStatus(options_.log_options, call_status,
+                          context.status,
+                          "cleanBounds") == HighsStatus::kError) {
+    context.status = HighsStatus::kError;
+    return true;
+  }
+  return false;
+}
+
+void Highs::optimizeModelLpSetReducedToEmptySolution() {
+  // Create a trivial optimal solution for postsolve to use
+  solution_.clear();
+  basis_.clear();
+  basis_.debug_origin_name = "Presolve to empty";
+  basis_.valid = true;
+  basis_.alien = false;
+  basis_.useful = true;
+  basis_.was_alien = false;
+  solution_.value_valid = true;
+  solution_.dual_valid = true;
+  // Optimality will not be spotted if there's no basis
+  // postsolve
+  model_status_ = HighsModelStatus::kOptimal;
 }
 
 bool Highs::optimizeModelLpSetup(OptimizeModelContext& context) {
