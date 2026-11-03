@@ -218,7 +218,6 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   HighsInt numVarsFixed = 0;
   HighsInt numCliquesAdded = 0;
   HighsInt numBoundsTightened = 0;
-  HighsInt numRowsChecked = 0;
   // calls of checkRow, for the rows and the objective
   HighsInt numCheckRowCalls = 0;
   HighsInt numObjectiveChecks = 0;
@@ -237,7 +236,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
       std::max(HighsInt{1000}, std::min(HighsInt{10000}, numNonzeros() / 10));
   // maximum number of clique queries to partition a row into clique blocks
   const int64_t maxPartitionQueries = int64_t{maxRowSize} * maxRowSize / 2;
-  // check for timeout according to this frequency (number of rows checked)
+  // check for timeout according to this frequency (number of checkRow calls)
   const HighsInt checkTimeFrequency = 100;
   // work limit per call: as in probing, it scales with the number of
   // non-zeros, is smaller in sub-MIPs and grows with the reductions found in
@@ -1196,6 +1195,8 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
 
   auto checkRow = [&](double threshold) {
     numCheckRowCalls++;
+    if (numCheckRowCalls % checkTimeFrequency == 0)
+      HPRESOLVE_CHECKED_CALL(checkTimeLimit());
     // the min-contribution literals of the row binaries in a clique block
     // exclude each other, which increases the row's minimum activity
     threshold -= static_cast<double>(partitionRowBinaries());
@@ -1367,9 +1368,6 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     for (HighsInt row : myModifiedRows) {
       if (rowDeleted[row]) continue;
       if (isWorkLimitReached()) break;
-      numRowsChecked++;
-      if (numRowsChecked % checkTimeFrequency == 0)
-        HPRESOLVE_CHECKED_CALL(checkTimeLimit());
       if (model->row_upper_[row] < kHighsInf && loadModelRow(row, HighsInt{1}))
         HPRESOLVE_CHECKED_CALL(checkRow(
             -impliedRowBounds.getSumLowerOrig(row, -model->row_upper_[row])));
