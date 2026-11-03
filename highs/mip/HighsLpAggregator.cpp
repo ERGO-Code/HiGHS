@@ -42,9 +42,8 @@ void HighsLpAggregator::getCurrentAggregation(std::vector<HighsInt>& inds,
     // (assuming that separators only add each row once). Also all the
     // separators will only allow rows that do have meaningful coefficient
     // contributions with the used weight
-    return col < numCol &&
-           HighsDomain::termIsZero(val, domain.col_lower_[col],
-                                   domain.col_upper_[col], droptol);
+    return col < numCol && termIsZero(val, domain.col_lower_[col],
+                                      domain.col_upper_[col], droptol);
   });
 
   inds = vectorsum.getNonzeros();
