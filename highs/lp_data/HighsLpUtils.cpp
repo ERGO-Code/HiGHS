@@ -1692,12 +1692,15 @@ void deleteScale(vector<double>& scale,
   }
 }
 
-void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                               const HighsInt col, const double new_value,
-                               const bool zero_new_value) {
+HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options, HighsLp& lp,
+                                const HighsInt row, const HighsInt col,
+                                const double new_value,
+                                const double small_matrix_value) {
   assert(0 <= row && row < lp.num_row_);
   assert(0 <= col && col < lp.num_col_);
 
+  const double abs_new_value = std::fabs(new_value);
+  const bool zero_new_value = abs_new_value <= small_matrix_value;
   // Determine whether the coefficient corresponds to an existing
   // nonzero
   HighsInt change_el = -1;
@@ -1708,15 +1711,25 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
       break;
     }
   }
+  HighsInt new_num_nz = lp.numNz();
   if (change_el < 0) {
     // Coefficient doesn't correspond to an existing nonzero
     //
     // If coefficient is small, then just ignore it
-    if (zero_new_value) return;
-    // New nonzero goes at the end of column "col", so have to shift
-    // all index and value entries forward by 1 to accommodate it
+    if (zero_new_value) {
+      highsLogUser(
+          log_options, HighsLogType::kWarning,
+          "|Value| of %g supplied to Highs::changeCoeff is less than %g and "
+          "does not correspond to an existing nonzero: ignored\n",
+          abs_new_value, small_matrix_value);
+      return HighsStatus::kWarning;
+    }
+    // New nonzero goes at the end of column "col", so have to
+    // increment all subsequent start values by 1, and shift all
+    // subsequent index and value entries forward by 1 to accommodate
+    // it
     change_el = lp.a_matrix_.start_[col + 1];
-    HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] + 1;
+    new_num_nz++;
     lp.a_matrix_.index_.resize(new_num_nz);
     lp.a_matrix_.value_.resize(new_num_nz);
     for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]++;
@@ -1725,18 +1738,36 @@ void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
       lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el - 1];
     }
   } else if (zero_new_value) {
-    // Coefficient zeroes an existing nonzero, so shift all index and
-    // value entries backward by 1 to eliminate it
-    HighsInt new_num_nz = lp.a_matrix_.start_[lp.num_col_] - 1;
+    // Coefficient zeroes an existing nonzero
+    HighsStatus return_status = HighsStatus::kOk;
+    if (abs_new_value > 0) {
+      // Warn if the new value was small but nonzero, so treated as
+      // zero. If the new value is zero, it's OK, as it's the way of
+      // zeroing nonzero entries.
+      highsLogUser(log_options, HighsLogType::kWarning,
+                   "|Value| of %g supplied to Highs::changeCoeff is less than "
+                   "%g and zeroes (%d, %d) entry of %g\n",
+                   abs_new_value, small_matrix_value, int(row), int(col),
+                   lp.a_matrix_.value_[change_el]);
+      return_status = HighsStatus::kWarning;
+    }
+    // Zeroing an existing nonzero, so have to decrement all
+    // subsequent start values by 1, and shift all subsequent index
+    // and value entries backward by 1 to eliminate it
+    new_num_nz--;
     for (HighsInt i = col + 1; i <= lp.num_col_; i++) lp.a_matrix_.start_[i]--;
     for (HighsInt el = change_el; el < new_num_nz; el++) {
       lp.a_matrix_.index_[el] = lp.a_matrix_.index_[el + 1];
       lp.a_matrix_.value_[el] = lp.a_matrix_.value_[el + 1];
     }
-    return;
+    lp.a_matrix_.index_.resize(new_num_nz);
+    lp.a_matrix_.value_.resize(new_num_nz);
+    return return_status;
   }
+  assert(change_el >= 0 && !zero_new_value);
   lp.a_matrix_.index_[change_el] = row;
   lp.a_matrix_.value_[change_el] = new_value;
+  return HighsStatus::kOk;
 }
 
 HighsStatus changeLpIntegrality(HighsLp& lp,
@@ -2318,22 +2349,23 @@ HighsStatus readSolutionFile(const std::string& filename,
     for (;;) {
       std::getline(in_file, column_section_line);
       std::stringstream column_section_line_ss(column_section_line);
-      if (column_section_line.empty() ||
-          !readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
+      if (!readSolutionFileColumnHeaderLineOk(hash, keyword, value_string,
                                               num_col, qualifier_string,
                                               column_section_line_ss)) {
-        // If # hasn't been read, then it's "Objective_bound" or
-        // "MIP_rel_gap", so look at the next line
         if (hash != "#") {
-          assert(hash == "Objective_bound" || hash == "MIP_rel_gap");
-          continue;
+          // If # hasn't been read and is "Objective_bound" or
+          // "MIP_rel_gap", look at the next line
+          if (hash == "Objective_bound" || hash == "MIP_rel_gap") continue;
         }
+        // Something illegal has been read, or the file has ended
+        // after the objective line (#3499) - which is perversely
+        // invalid
         highsLogUser(log_options, HighsLogType::kError,
                      "readSolutionFile: Error reading line \"%s\"\n",
                      column_section_line.c_str());
         return readSolutionFileErrorReturn(in_file);
       }
-      // "# Columns" has been read correctly, to break
+      // "# Columns" has been read correctly, so break
       break;
     }
     assert(keyword == "Columns");
