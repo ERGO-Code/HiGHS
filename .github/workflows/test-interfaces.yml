@@ -3,7 +3,11 @@ name: test-interfaces
 # Builds HiGHS from this checkout and solves a small LP and MIP through
 # downstream interfaces: PuLP and Pyomo (via highspy) and the Rust highs crate
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ latest, master ]
+  pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
