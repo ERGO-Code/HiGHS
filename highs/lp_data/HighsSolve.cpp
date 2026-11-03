@@ -20,21 +20,19 @@
 #include "simplex/HApp.h"
 #include "util/HighsUndoStack.h"
 
-#define SOLVE_CATCH_CALL(Solve, SolveString)                                  \
+#define SOLVE_CATCH_CALL(Solve, SolveString, ModelStatus)                     \
   do {                                                                        \
     try {                                                                     \
-      call_status = Solve;                                                    \
+      Solve;                                                                  \
     } catch (const std::exception& exception) {                               \
-      solver_object.model_status_ =                                           \
+      ModelStatus =                                                           \
           handleExceptionIsOom(options.log_options, SolveString, exception)   \
               ? HighsModelStatus::kMemoryLimit                                \
               : HighsModelStatus::kSolveError;                                \
-      call_status = HighsStatus::kError;                                      \
     } catch (const HighsTask::Interrupt&) {                                   \
       highsLogDev(options.log_options, HighsLogType::kError,                  \
                   "HighsTask interrupt when solving with %s\n", SolveString); \
-      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
-      call_status = HighsStatus::kError;                                      \
+      ModelStatus = HighsModelStatus::kSolveError;                            \
     }                                                                         \
   } while (0)
 
@@ -70,7 +68,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
   // lambda for solving LP by simplex
   auto simplexSolve = [&]() -> HighsStatus {
     return_status = HighsStatus::kOk;
-    SOLVE_CATCH_CALL(solveLpSimplex(solver_object), "Simplex");
+    call_status = HighsStatus::kError;
+    SOLVE_CATCH_CALL(call_status = solveLpSimplex(solver_object), "Simplex",
+                     solver_object.model_status_);
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
@@ -94,22 +94,29 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
       // Use IPM to solve the LP
       if (use_hipo) {
         // Use HiPO to solve the LP
-        SOLVE_CATCH_CALL(solveLpHipo(solver_object), "HiPO(LP)");
+        call_status = HighsStatus::kError;
+        SOLVE_CATCH_CALL(call_status = solveLpHipo(solver_object), "HiPO(LP)",
+                         solver_object.model_status_);
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
       } else if (use_ipx) {
         // Use IPX to solve the LP
-        SOLVE_CATCH_CALL(solveLpIpx(solver_object), "IPX");
+        call_status = HighsStatus::kError;
+        SOLVE_CATCH_CALL(call_status = solveLpIpx(solver_object), "IPX",
+                         solver_object.model_status_);
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpIpx");
       }
     } else {
       // Use cuPDLP-C or HiPDLP to solve the LP
       profiling->start(kSubSolverPdlp);
+      call_status = HighsStatus::kError;
       if (options.solver == kPdlpString) {
-        SOLVE_CATCH_CALL(solveLpCupdlp(solver_object), "cuPDLP-C");
+        SOLVE_CATCH_CALL(call_status = solveLpCupdlp(solver_object), "cuPDLP-C",
+                         solver_object.model_status_);
       } else {
-        SOLVE_CATCH_CALL(solveLpHiPdlp(solver_object), "HiPDLP");
+        SOLVE_CATCH_CALL(call_status = solveLpHiPdlp(solver_object), "HiPDLP",
+                         solver_object.model_status_);
       }
       profiling->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
@@ -889,7 +896,9 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
     assert(!hessian.isOracle());
     // Run HiPO
     if (profiling) profiling->start(kSubSolverHipo);
-    SOLVE_CATCH_CALL(solveQpHipo(solver_object), "HiPO(QP)");
+    call_status = HighsStatus::kError;
+    SOLVE_CATCH_CALL(call_status = solveQpHipo(solver_object), "HiPO(QP)",
+                     solver_object.model_status_);
     if (profiling) profiling->stop(kSubSolverHipo);
     // Restore any oracle call;
     hessian.oracle_.call_ = oracle_call;
@@ -897,7 +906,9 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
   } else {
     // Run the active set QP solver
     if (profiling) profiling->start(kSubSolverQpAsm);
-    SOLVE_CATCH_CALL(solveQpAsm(solver_object), "active set QP solver");
+    call_status = HighsStatus::kError;
+    SOLVE_CATCH_CALL(call_status = solveQpAsm(solver_object),
+                     "active set QP solver", solver_object.model_status_);
     if (profiling) profiling->stop(kSubSolverQpAsm);
   }
   HighsStatus return_status = call_status;
@@ -988,18 +999,7 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   HighsMipSolver solver(callback, options, mip, solution);
   solver.setProfiling(profiling);
   profiling->start(kSubSolverMip);
-  try {
-    solver.run();
-  } catch (const std::exception& exception) {
-    solver.modelstatus_ =
-        handleExceptionIsOom(options.log_options, "MIP solver", exception)
-            ? HighsModelStatus::kMemoryLimit
-            : HighsModelStatus::kSolveError;
-  } catch (const HighsTask::Interrupt&) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "HighsTask interrupt when solving with MIP solver\n");
-    solver.modelstatus_ = HighsModelStatus::kSolveError;
-  }
+  SOLVE_CATCH_CALL(solver.run(), "MIP solver", solver.modelstatus_);
   profiling->stop(kSubSolverMip);
   options_undo.reset();
   // Set the return_status, model status and, for completeness, scaled
