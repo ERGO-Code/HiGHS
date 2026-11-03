@@ -13,8 +13,11 @@
 #   * If $ENV{VCPKG_ROOT} is set and CMAKE_TOOLCHAIN_FILE is not, point
 #     CMAKE_TOOLCHAIN_FILE at vcpkg's toolchain so manifest mode kicks in.
 #   * Auto-pick a sensible VCPKG_TARGET_TRIPLET unless the caller (or env
-#     var VCPKG_DEFAULT_TRIPLET) already set one. Windows defaults to the
-#     *-windows-static triplet so wheels stay self-contained.
+#     var VCPKG_DEFAULT_TRIPLET) already set one. Windows defaults to a
+#     static triplet so wheels stay self-contained: on x64 and arm64, the
+#     *-windows-static-clang triplet from cmake/vcpkg-triplets when clang-cl
+#     is found, so that OpenBLAS gets its optimised kernels, and otherwise
+#     *-windows-static.
 #
 # Notes on cross-compilation:
 #   * Visual Studio generators expose the target arch via
@@ -97,10 +100,37 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT "$ENV{VCPKG_ROOT}" STREQUAL "")
     message(STATUS "Auto-detected vcpkg architecture: ${_vcpkg_arch}")
 
     if(WIN32 AND DEFINED _vcpkg_arch)
-      set(VCPKG_TARGET_TRIPLET "${_vcpkg_arch}-windows-static"
+      set(_vcpkg_triplet "${_vcpkg_arch}-windows-static")
+
+      # MSVC can only build OpenBLAS's generic kernels, which make HiPO
+      # several times slower. On x64 and arm64, when clang-cl is available,
+      # use the *-windows-static-clang triplets in cmake/vcpkg-triplets,
+      # which build the ports with clang-cl. The host triplet is the same,
+      # so that the copy of OpenBLAS that it builds as a tool is not also
+      # built with MSVC.
+      option(HIGHS_VCPKG_CLANG_CL
+        "On Windows x64 and arm64, use the *-windows-static-clang vcpkg triplets when clang-cl is found"
+        ON)
+      if(HIGHS_VCPKG_CLANG_CL AND _vcpkg_arch MATCHES "^(x64|arm64)$")
+        find_program(HIGHS_VCPKG_CLANG_CL_EXECUTABLE clang-cl
+          PATHS "$ENV{ProgramFiles}/LLVM/bin"
+          DOC "clang-cl used by the *-windows-static-clang vcpkg triplets")
+        if(HIGHS_VCPKG_CLANG_CL_EXECUTABLE)
+          set(_vcpkg_triplet "${_vcpkg_arch}-windows-static-clang")
+        else()
+          message(WARNING
+            "clang-cl not found, so vcpkg will build OpenBLAS with MSVC "
+            "using generic kernels, which are several times slower. Install "
+            "LLVM, or put clang-cl on PATH, to use the "
+            "${_vcpkg_arch}-windows-static-clang triplet instead.")
+        endif()
+      endif()
+
+      set(VCPKG_TARGET_TRIPLET "${_vcpkg_triplet}"
         CACHE STRING "vcpkg triplet")
-      set(VCPKG_HOST_TRIPLET "${_vcpkg_arch}-windows-static"
+      set(VCPKG_HOST_TRIPLET "${_vcpkg_triplet}"
         CACHE STRING "vcpkg host triplet")
+      unset(_vcpkg_triplet)
 
       # Match the static CRT used by the *-windows-static triplet to
       # avoid LNK4098 "defaultlib 'LIBCMT' conflicts with ..." warnings.
@@ -118,6 +148,16 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT "$ENV{VCPKG_ROOT}" STREQUAL "")
 
     unset(_vcpkg_arch)
     unset(_vcpkg_host_arch)
+  endif()
+
+  # Make the *-windows-static-clang triplets available, whether picked above
+  # or set by the caller.
+  if(WIN32)
+    list(APPEND VCPKG_OVERLAY_TRIPLETS
+      "${CMAKE_CURRENT_LIST_DIR}/vcpkg-triplets")
+    list(REMOVE_DUPLICATES VCPKG_OVERLAY_TRIPLETS)
+    set(VCPKG_OVERLAY_TRIPLETS "${VCPKG_OVERLAY_TRIPLETS}"
+      CACHE STRING "vcpkg overlay triplets directories" FORCE)
   endif()
 
   # Fall back to the env-var default if nothing else picked a triplet.
