@@ -1376,7 +1376,7 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
       optimizeModelLp(context);
   }
 
-  return returnFromOptimizeModel(context.status, &context);
+  return returnFromOptimizeModel(context);
 }
 
 bool Highs::optimizeModelPreChecks(Context& context) {
@@ -4611,6 +4611,15 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
   const HighsLp& presolved_lp = presolve_.getReducedProblem();
+  // Lambda to clear what is invalid when postsolve fails.
+  // Highs::postsolve() calls returnFromHighs()
+  auto returnFromPostsolveError = [&]() {
+    invalidateInfo();
+    invalidateRunData();
+    invalidateSolution();
+    invalidateBasis();
+    return HighsStatus::kError;
+  };
 
   // Must at least have a primal column solution of the right size
   if (HighsInt(solution.col_value.size()) != presolved_lp.num_col_) {
@@ -4781,7 +4790,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                        this->model_.lp_.col_cost_, this->solution_, this->info_,
                        get_residuals);
         if (return_status == HighsStatus::kError)
-          return returnFromOptimizeModel(return_status);
+          return returnFromPostsolveError();
       } else {
         this->basis_.clear();
         // callLpKktCheck will set LPs with model status
@@ -4814,7 +4823,7 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
                    utilPostsolveStatusToString(postsolve_status).c_str());
       setHighsModelStatusAndClearSolutionAndBasis(
           HighsModelStatus::kPostsolveError);
-      return returnFromOptimizeModel(HighsStatus::kError);
+      return returnFromPostsolveError();
     }
   }
   call_status = highsStatusFromHighsModelStatus(model_status_);
@@ -4940,9 +4949,9 @@ HighsStatus Highs::returnFromWriteSolution(FILE* file,
 }
 
 // Applies checks before returning from optimizeModel()
-HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
-                                           Context* context) {
+HighsStatus Highs::returnFromOptimizeModel(Context& context) {
   assert(!called_return_from_optimize_model);
+  const HighsStatus run_return_status = context.status;
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   if (return_status != run_return_status) {
     highsLogDev(
@@ -5110,10 +5119,8 @@ HighsStatus Highs::returnFromOptimizeModel(const HighsStatus run_return_status,
   // Record that returnFromOptimizeModel() has been called
   called_return_from_optimize_model = true;
 
-  // Undo any mods applied by optimizeModelApplyMods(). Note that
-  // models passed to Highs::postsolve() cannot require mods, so it
-  // has no context
-  if (context) optimizeModelUndoMods(*context, return_status);
+  // Undo any mods applied by optimizeModelApplyMods()
+  optimizeModelUndoMods(context, return_status);
 
   // Unless solved as a MIP, report on the solution
   const bool solved_as_mip = model_.isMip() && !options_.solve_relaxation;

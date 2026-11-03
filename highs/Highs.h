@@ -1857,8 +1857,7 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromOptimizeModel(const HighsStatus return_status,
-                                      Context* context = nullptr);
+  HighsStatus returnFromOptimizeModel(Context& context);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
