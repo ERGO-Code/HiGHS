@@ -143,7 +143,11 @@ bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
     ++v;
   }
   const HighsInt numBig = v;
-  if (numBig == numNonZeroTerms) return false;
+  if (numBig == numNonZeroTerms) return true;
+  if (weight(numBig) == 1 && weight(numNonZeroTerms - 1) == 1) {
+    if (numNonZeroTerms - numBig - knapsack.capacity > 0) return true;
+    return false;
+  }
 
   auto setCardinality = [&](const double newWeight) {
     changed = true;
@@ -195,7 +199,7 @@ bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
       // If the largest small term can fit m times into the knapsack
       // then the cardinality upgrade has a stronger LP relaxation
       setCardinality(numNonZeroTerms - numBig);
-      return true;
+      return false;
     }
   }
   return false;
@@ -326,8 +330,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
 
     if (allIntCoefficients) {
       // Round capacity to be integer if all coefficients are integer
-      double roundedCapacity =
-          std::floor(static_cast<double>(knapsack.capacity));
+      HighsCDouble roundedCapacity = floor(knapsack.capacity);
       if (roundedCapacity < knapsack.capacity + primal_feastol) changed = true;
       knapsack.capacity = roundedCapacity;
     }
@@ -452,7 +455,8 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     }
 
     // Recognise whether the knapsack can be upgraded to a "cardinality" row
-    bool upgraded = recogniseCardinality(knapsack, primal_feastol, changed);
+    bool skipDisaggregation =
+        recogniseCardinality(knapsack, primal_feastol, changed);
 
     if (changed) {
       changeRow(knapsack);
@@ -465,7 +469,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
             knapsack.terms.end());
       }
     }
-    if (!upgraded) {
+    if (!skipDisaggregation) {
       knapsacks.push_back(std::move(knapsack));
     }
   }
@@ -475,14 +479,14 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   // The set of rows
   // x_i + \sum x_j <= 1 \forall i
   // has a stronger LP relaxation
-  HighsInt maxNewRows = numRows / 5;
-  HighsInt numNewRows = 0;
+  HighsInt maxNewNonZeros = numNonzeros() / 4;
+  HighsInt numNewNonZeros = 0;
   std::vector<std::vector<HighsInt>> newIndices;
   std::vector<std::vector<double>> newValues;
   std::vector<double> newUpper;
   std::vector<HighsInt> disaggregatedRows;
   for (KnapsackRow& knapsack : knapsacks) {
-    if (numNewRows >= maxNewRows) break;
+    if (numNewNonZeros >= maxNewNonZeros) break;
     std::vector<KnapsackTerm> maxWeightItems;
     std::vector<KnapsackTerm> smallItems;
     HighsCDouble smallItemSum = 0;
@@ -494,10 +498,15 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
         smallItemSum += term.weight;
       }
     }
-    if (maxWeightItems.empty() || smallItems.empty() ||
-        smallItems.size() >= 5 || smallItemSum - knapsack.capacity > 0) {
+    if (maxWeightItems.empty() || smallItems.size() <= 1 ||
+        smallItems.size() * (maxWeightItems.size() + 1) >=
+            10 * (maxWeightItems.size() + smallItems.size()) ||
+        smallItemSum - knapsack.capacity > 0) {
       continue;
     }
+    numNewNonZeros +=
+        static_cast<HighsInt>(smallItems.size() * (maxWeightItems.size() + 1) -
+                              maxWeightItems.size() - smallItems.size());
     for (const KnapsackTerm& term : smallItems) {
       std::vector<KnapsackTerm> clique = maxWeightItems;
       clique.push_back(term);
@@ -513,7 +522,6 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       newIndices.push_back(std::move(indices));
       newValues.push_back(std::move(values));
       newUpper.push_back(rhs);
-      numNewRows++;
     }
     // TODO: Can we add a clique to the table here or does that cause issues
     // with fixings when no domain is present?
