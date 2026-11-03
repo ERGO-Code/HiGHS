@@ -902,6 +902,7 @@ void solve(Highs& highs, std::string presolve,
   if (require_model_status == HighsModelStatus::kOptimal)
     REQUIRE(objectiveOk(highs.getInfo().objective_function_value,
                         require_optimal_objective, dev_run));
+  highs.clearSolver();
 }
 
 void solve(Highs& highs, std::string presolve,
@@ -911,6 +912,7 @@ void solve(Highs& highs, std::string presolve,
   if (require_model_status == HighsModelStatus::kOptimal)
     REQUIRE(solutionOk(highs.getSolution().col_value, require_optimal_solution,
                        highs.getOptions().mip_feasibility_tolerance));
+  highs.clearSolver();
 }
 
 void distillationMIP(Highs& highs) {
