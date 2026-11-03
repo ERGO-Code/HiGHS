@@ -121,9 +121,10 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection);
 
-void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                               const HighsInt col, const double new_value,
-                               const bool zero_new_value);
+HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options, HighsLp& lp,
+                                const HighsInt row, const HighsInt col,
+                                const double new_value,
+                                const double small_matrix_value);
 
 HighsStatus changeLpIntegrality(HighsLp& lp,
                                 const HighsIndexCollection& index_collection,
@@ -253,7 +254,8 @@ bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
                                     std::ifstream& in_file);
 
-void assessColPrimalSolution(const HighsOptions& options, const double primal,
+void assessColPrimalSolution(const bool assess_as_mip,
+                             const HighsOptions& options, const double primal,
                              const double lower, const double upper,
                              const HighsVarType type, double& col_infeasibility,
                              double& integer_infeasibility);

@@ -857,9 +857,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   }
 }
 
-void Highs::getCoefficientInterface(const HighsInt ext_row,
-                                    const HighsInt ext_col,
-                                    double& value) const {
+void Highs::getCoeffInterface(const HighsInt ext_row, const HighsInt ext_col,
+                              double& value) const {
   const HighsLp& lp = model_.lp_;
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
@@ -1062,18 +1061,23 @@ HighsStatus Highs::changeRowBoundsInterface(
 }
 
 // Change a single coefficient in the matrix
-void Highs::changeCoefficientInterface(const HighsInt ext_row,
-                                       const HighsInt ext_col,
-                                       const double ext_new_value) {
+HighsStatus Highs::changeCoeffInterface(const HighsInt ext_row,
+                                        const HighsInt ext_col,
+                                        const double ext_new_value) {
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
   lp.ensureColwise();
+  // Should alread yhave checked that the row and column indices are
+  // legal, and that the value is not large
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
-  const bool zero_new_value =
-      std::fabs(ext_new_value) <= options_.small_matrix_value;
-  changeLpMatrixCoefficient(lp, ext_row, ext_col, ext_new_value,
-                            zero_new_value);
+  const double abs_ext_new_value = std::fabs(ext_new_value);
+  assert(abs_ext_new_value < options_.large_matrix_value);
+
+  HighsStatus return_status =
+      changeLpMatrixCoeff(options_.log_options, lp, ext_row, ext_col,
+                          ext_new_value, options_.small_matrix_value);
+  assert(return_status != HighsStatus::kError);
   // Deduce the consequences of a changed element
   //
   // ToDo: Can do something more intelligent if element is in nonbasic
@@ -1094,6 +1098,7 @@ void Highs::changeCoefficientInterface(const HighsInt ext_row,
 
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewRows);
+  return return_status;
 }
 
 HighsStatus Highs::scaleColInterface(const HighsInt col,
@@ -3214,6 +3219,8 @@ HighsStatus Highs::computeIllConditioning(
   Highs conditioning;
   const bool dev_conditioning = false;
   conditioning.setOptionValue("output_flag", false);  // dev_conditioning);
+  // Ensure that logging header is never written for this Highs instance
+  conditioning.logHeader(false);
   std::vector<HighsInt> basic_var;
   HighsLp& ill_conditioning_lp = conditioning.model_.lp_;
   // Form the ill-conditioning LP according to method
@@ -3746,7 +3753,9 @@ void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
   ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
 }
 
-bool Highs::infeasibleBoundsOk() {
+// ToDo: this method shouldn't change the incumbent model irrevocably,
+// since this loses user data
+bool Highs::processedBoundsFindsInfeasibility() {
   const HighsLogOptions& log_options = this->options_.log_options;
   HighsLp& lp = this->model_.lp_;
 
@@ -3850,6 +3859,9 @@ bool Highs::infeasibleBoundsOk() {
     // bounds being propagated to the relaxation, this can prevent a
     // dual ray from being constructed
   }
+  // Set performed_inward_integer_rounding = false since it's still
+  // checked in infeasibleBoundOk, and may be true from last pass with
+  // integer variable
   performed_inward_integer_rounding = false;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] > lp.row_upper_[iRow])
@@ -3863,7 +3875,7 @@ bool Highs::infeasibleBoundsOk() {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Model has %d significant inconsistent bound(s): infeasible\n",
                  int(num_true_infeasible_bound));
-  return num_true_infeasible_bound == 0;
+  return num_true_infeasible_bound > 0;
 }
 
 bool Highs::validLinearObjective(const HighsLinearObjective& linear_objective,

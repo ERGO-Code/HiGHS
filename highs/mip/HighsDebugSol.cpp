@@ -221,8 +221,8 @@ void HighsDebugSol::resetDomain(const HighsDomain& domain) {
   conflictingBounds[&domain].clear();
 }
 
-void HighsDebugSol::nodePruned(const HighsDomain& localdomain) {
-  if (!debugSolActive) return;
+void HighsDebugSol::nodePruned(const HighsDomain& localdomain, double cutoff) {
+  if (!debugSolActive || debugSolObjective > cutoff) return;
 
   if (conflictingBounds.count(&localdomain) == 0) return;
 

@@ -1182,10 +1182,8 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
     optimality_tolerance = options.kkt_tolerance;
   }
   info.objective_function_value = lp.objectiveValue(solution.col_value);
-  HighsPrimalDualErrors primal_dual_errors;
   const bool get_residuals = !basis.valid;
-  getLpKktFailures(options, lp, solution, basis, info, &primal_dual_errors,
-                   get_residuals);
+  getLpKktFailures(options, lp, solution, basis, info, nullptr, get_residuals);
   if (model_status == HighsModelStatus::kOptimal)
     reportKktFailures(lp, options, info, message);
   // get_residuals is false when there is a valid basis, since
@@ -1448,7 +1446,6 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Model status changed from \"Unknown\" to \"Optimal\"\n");
   }
-  highsLogUser(log_options, HighsLogType::kInfo, "\n");
   return;
 }
 
@@ -1479,18 +1476,19 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
   assert(solution.row_value.size() == static_cast<size_t>(lp.num_row_));
   assert(solution.row_dual.size() == static_cast<size_t>(lp.num_row_));
 
-  dual_objective_value = lp.offset_;
+  HighsCDouble extended_dual_objective_value = lp.offset_;
   if (gradient) {
     // The dual objective for a QP has a -(1/2)x^TQx term, and this
     // can be computed from the gradient (g = Qx + c) as
     // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, a pointer to the gradient data
     // is passed if this is necessary
-    double quad_value = 0;
+    HighsCDouble extended_quad_value = 0;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      quad_value +=
-          (lp.col_cost_[iCol] - gradient[iCol]) * solution.col_value[iCol];
+      HighsCDouble extended_coefficient =
+          HighsCDouble(lp.col_cost_[iCol]) - HighsCDouble(gradient[iCol]);
+      extended_quad_value += extended_coefficient * solution.col_value[iCol];
     }
-    dual_objective_value += 0.5 * quad_value;
+    extended_dual_objective_value += 0.5 * extended_quad_value;
   }
   double bound = 0;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
@@ -1509,8 +1507,9 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
       const double mid = (lower + upper) * 0.5;
       bound = primal < mid ? lower : upper;
     }
-    dual_objective_value += bound * dual;
+    extended_dual_objective_value += HighsCDouble(bound) * dual;
   }
+  dual_objective_value = double(extended_dual_objective_value);
   return true;
 }
 

@@ -110,6 +110,7 @@ void highsReportDevInfo(const HighsLogOptions* log_options,
 void highsOpenLogFile(HighsOptions& options, const std::string& log_file);
 
 void highsReportLogOptions(const HighsLogOptions& log_options_);
+void highsPrintStringAsHeading(const std::string& text);
 
 std::string highsFormatToString(const char* format, ...);
 
