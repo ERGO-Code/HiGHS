@@ -3336,19 +3336,30 @@ void reportPresolveReductions(const HighsLogOptions& log_options,
   }
   char nz_sign_char = '-';
   HighsInt delta_nz = num_nz_from - num_nz_to;
-  if (num_nz_to > num_nz_from) {
+  if (delta_nz < 0) {
     delta_nz = -delta_nz;
     nz_sign_char = '+';
   }
+  char row_sign_char = '-';
+  HighsInt delta_row = num_row_from - num_row_to;
+  if (delta_row < 0) {
+    delta_row = -delta_row;
+    row_sign_char = '+';
+  }
+  char col_sign_char = '-';
+  HighsInt delta_col = num_col_from - num_col_to;
+  if (delta_col < 0) {
+    delta_col = -delta_col;
+    col_sign_char = '+';
+  }
   highsLogUser(log_options, HighsLogType::kInfo,
                "Presolve reductions: rows %" HIGHSINT_FORMAT
-               "(-%" HIGHSINT_FORMAT "); columns %" HIGHSINT_FORMAT
-               "(-%" HIGHSINT_FORMAT
+               "(%c%" HIGHSINT_FORMAT "); columns %" HIGHSINT_FORMAT
+               "(%c%" HIGHSINT_FORMAT
                "); "
                "nonzeros %" HIGHSINT_FORMAT "(%c%" HIGHSINT_FORMAT ") %s\n",
-               num_row_to, (num_row_from - num_row_to), num_col_to,
-               (num_col_from - num_col_to), num_nz_to, nz_sign_char, delta_nz,
-               message.c_str());
+               num_row_to, row_sign_char, delta_row, num_col_to, col_sign_char,
+               delta_col, num_nz_to, nz_sign_char, delta_nz, message.c_str());
 }
 
 bool isLessInfeasibleDSECandidate(const HighsLogOptions& log_options,
