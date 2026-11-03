@@ -105,61 +105,128 @@ struct DeviceState {
   int64_t feasible_iteration;
 };
 
-struct Stats {
-  double p = 0, d = 0, comp = 0, primal = 0, dual = 0, raw = 0;
-  double norm = 0, absolute = 0, dx2 = 0, dy2 = 0, cross = 0, cone = 0;
-  double exposure = 0;  // Farkas: sum |A'f+g|_j * max(1, |x_j|) over the current iterate x
-
-  // lpKktCheck measures
-  double active_bound = 0, active_cost = 0, dual_pos = 0;
-  double rel_primal = 0, rel_dual = 0, rel_residual = 0;
-  // PDLP / cuPDLPx L2 measures (Metrics::l2_*): squared violation / residual sums and the squared
-  // norms of b and c they are divided by.
+// lpKktCheck pass 1 and the PDLP / cuPDLPx L2 measures (Metrics::l2_*): squared violation and
+// residual sums and the squared norms of b and c they are divided by. `cross` carries cuPDLPx's
+// dual objective z'x + b-part (l2_gap).
+struct KktSums {
+  double p = 0, d = 0, dual_pos = 0, cross = 0;
   double l2_primal_sq = 0, l2_dual_sq = 0, b_sq = 0, c_sq = 0;
-  int bad = 0, primal_index = -1, raw_index = -1, dual_index = -1, comp_index = -1;
+  double active_bound = 0, active_cost = 0;
+  double primal = 0, dual = 0, comp = 0, raw = 0;
+  int primal_index = -1, raw_index = -1, dual_index = -1, comp_index = -1;
+  int bad = 0;
+  __device__ void Merge(const KktSums& b) {
+    p += b.p;
+    d += b.d;
+    dual_pos += b.dual_pos;
+    cross += b.cross;
+    l2_primal_sq += b.l2_primal_sq;
+    l2_dual_sq += b.l2_dual_sq;
+    b_sq += b.b_sq;
+    c_sq += b.c_sq;
+    active_bound = fmax(active_bound, b.active_bound);
+    active_cost = fmax(active_cost, b.active_cost);
+    if (b.primal > primal) {
+      primal = b.primal;
+      primal_index = b.primal_index;
+    }
+    if (b.dual > dual) {
+      dual = b.dual;
+      dual_index = b.dual_index;
+    }
+    if (b.comp > comp) {
+      comp = b.comp;
+      comp_index = b.comp_index;
+    }
+    if (b.raw > raw) {
+      raw = b.raw;
+      raw_index = b.raw_index;
+    }
+    bad |= b.bad;
+  }
+};
+
+// lpKktCheck pass 2 (the relative failures).
+struct KktRelSums {
+  double rel_primal = 0, rel_dual = 0, rel_residual = 0;
+  int bad = 0;
+  __device__ void Merge(const KktRelSums& b) {
+    rel_primal = fmax(rel_primal, b.rel_primal);
+    rel_dual = fmax(rel_dual, b.rel_dual);
+    rel_residual = fmax(rel_residual, b.rel_residual);
+    bad |= b.bad;
+  }
+};
+
+// Fixed-point error of a step (trial and reference).
+struct FpeSums {
+  double dx2 = 0, dy2 = 0, cross = 0, absolute = 0;
+  int bad = 0;
+  __device__ void Merge(const FpeSums& b) {
+    dx2 += b.dx2;
+    dy2 += b.dy2;
+    cross += b.cross;
+    absolute += b.absolute;
+    bad |= b.bad;
+  }
+};
+
+// Squared movement of the primal and dual iterates, for the primal weight.
+struct WeightSums {
+  double dx2 = 0, dy2 = 0;
+  __device__ void Merge(const WeightSums& b) {
+    dx2 += b.dx2;
+    dy2 += b.dy2;
+  }
+};
+
+// Infinity norm of a certificate direction.
+struct NormMax {
+  double norm = 0;
+  int bad = 0;
+  __device__ void Merge(const NormMax& b) {
+    norm = fmax(norm, b.norm);
+    bad |= b.bad;
+  }
+};
+
+struct FarkasSums {
+  double d = 0, absolute = 0, dual = 0;
+  double exposure = 0;  // sum |A'f+g|_j * max(1, |x_j|) over the current iterate x
+  int bad = 0;
+  __device__ void Merge(const FarkasSums& b) {
+    d += b.d;
+    absolute += b.absolute;
+    exposure += b.exposure;
+    dual = fmax(dual, b.dual);
+    bad |= b.bad;
+  }
+};
+
+struct RaySums {
+  double p = 0, absolute = 0, dual = 0, cone = 0;
+  int bad = 0;
+  __device__ void Merge(const RaySums& b) {
+    p += b.p;
+    absolute += b.absolute;
+    dual = fmax(dual, b.dual);
+    cone = fmax(cone, b.cone);
+    bad |= b.bad;
+  }
 };
 
 struct Combine {
-  __device__ Stats operator()(Stats a, Stats b) const {
-    a.p += b.p;
-    a.d += b.d;
-    a.absolute += b.absolute;
-    a.dx2 += b.dx2;
-    a.dy2 += b.dy2;
-    a.cross += b.cross;
-    a.exposure += b.exposure;
-    a.dual_pos += b.dual_pos;
-    a.l2_primal_sq += b.l2_primal_sq;
-    a.l2_dual_sq += b.l2_dual_sq;
-    a.b_sq += b.b_sq;
-    a.c_sq += b.c_sq;
-    a.active_bound = fmax(a.active_bound, b.active_bound);
-    a.active_cost = fmax(a.active_cost, b.active_cost);
-    a.rel_primal = fmax(a.rel_primal, b.rel_primal);
-    a.rel_dual = fmax(a.rel_dual, b.rel_dual);
-    a.rel_residual = fmax(a.rel_residual, b.rel_residual);
-    if (b.primal > a.primal) {
-      a.primal = b.primal;
-      a.primal_index = b.primal_index;
-    }
-    if (b.dual > a.dual) {
-      a.dual = b.dual;
-      a.dual_index = b.dual_index;
-    }
-    if (b.comp > a.comp) {
-      a.comp = b.comp;
-      a.comp_index = b.comp_index;
-    }
-    if (b.raw > a.raw) {
-      a.raw = b.raw;
-      a.raw_index = b.raw_index;
-    }
-    a.norm = fmax(a.norm, b.norm);
-    a.cone = fmax(a.cone, b.cone);
-    a.bad |= b.bad;
+  template <class T>
+  __device__ T operator()(T a, const T& b) const {
+    a.Merge(b);
     return a;
   }
 };
+
+// The partial results of one block-per-slot reduction share one buffer; it is sized for the widest reduction (the KKT sums)
+constexpr size_t kPartialBytes =
+    std::max({sizeof(KktSums), sizeof(KktRelSums), sizeof(FpeSums), sizeof(WeightSums),
+              sizeof(NormMax), sizeof(FarkasSums), sizeof(RaySums)});
 
 struct Resources {
  public:

@@ -97,7 +97,7 @@ static __device__ double ConeViolation(double v, double l, double u) {
   return error;
 }
 
-static __device__ void BoundMetrics(Stats& s, double v, double multiplier, double l, double u,
+static __device__ void BoundMetrics(KktSums& s, double v, double multiplier, double l, double u,
                                     int index) {
   if (!isfinite(v) || !isfinite(multiplier)) {
     s.bad = 1;
@@ -134,7 +134,7 @@ static __device__ void BoundMetrics(Stats& s, double v, double multiplier, doubl
 // [l, u]: a value within sqrt(tol) of a bound is active and puts that bound into the active
 // bound norm; the dual objective takes the bound on the side of the midpoint v is on (not the
 // bound the sign of the multiplier selects), and a free variable contributes its multiplier.
-static __device__ void KktBounds(Stats& s, double v, double mult, double l, double u, double tol) {
+static __device__ void KktBounds(KktSums& s, double v, double mult, double l, double u, double tol) {
   if (!isfinite(v) || !isfinite(mult)) return;
   if (isfinite(l) && (l - v) * (l - v) <= tol)
     s.active_bound = fmax(s.active_bound, fabs(l));
@@ -149,7 +149,7 @@ static __device__ void KktBounds(Stats& s, double v, double mult, double l, doub
 // larger), dual sign violation over 1 + the active cost norm (or the cost when the multiplier
 // is not near zero). Only a boxed variable of meaningful length has a two-sided sign rule: it
 // uses the multiplier sign that the side of the midpoint requires. `cost` is 0 for rows.
-static __device__ void KktRelative(Stats& s, double v, double mult, double l, double u,
+static __device__ void KktRelative(KktRelSums& s, double v, double mult, double l, double u,
                                    double cost, double tol, double active_bound,
                                    double active_cost) {
   if (!isfinite(v) || !isfinite(mult)) return;
@@ -176,10 +176,19 @@ static __device__ void KktRelative(Stats& s, double v, double mult, double l, do
     s.rel_dual = fmax(s.rel_dual, sign_violation / (1 + measure));
   }
 }
-static __device__ void StoreStats(Stats value, Stats* partial) {
-  __shared__ typename cub::BlockReduce<Stats, kBlock>::TempStorage storage;
-  Stats total = cub::BlockReduce<Stats, kBlock>(storage).Reduce(value, Combine{});
+template <class T>
+static __device__ void StoreStats(T value, T* partial) {
+  __shared__ typename cub::BlockReduce<T, kBlock>::TempStorage storage;
+  T total = cub::BlockReduce<T, kBlock>(storage).Reduce(value, Combine{});
   if (threadIdx.x == 0) partial[blockIdx.x] = total;
+}
+// Folds the `size` partial results of a StoreStats pass into one, for thread 0.
+template <class T>
+static __device__ T ReducePartials(const T* partial, int size) {
+  T a;
+  for (int i = threadIdx.x; i < size; i += blockDim.x) a = Combine{}(a, partial[i]);
+  __shared__ typename cub::BlockReduce<T, kBlock>::TempStorage storage;
+  return cub::BlockReduce<T, kBlock>(storage).Reduce(a, Combine{});
 }
 
 __global__ void Begin(DeviceState* s) {
@@ -348,9 +357,9 @@ __global__ void StepControl(DeviceState* s, Branch check) {
 #endif
 }
 
-__global__ void FpeStats(DeviceLp lp, Vectors v, Stats* partial) {
+__global__ void FpeStats(DeviceLp lp, Vectors v, FpeSums* partial) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  Stats a;
+  FpeSums a;
   if (i < lp.n) {
     a.dx2 = v.dx[i] * v.dx[i];
     a.cross = v.dx[i] * v.atdy[i];
@@ -378,9 +387,9 @@ __global__ void Unscale(DeviceLp lp, Vectors v, DeviceState* s) {
   }
 }
 
-__global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
+__global__ void KktStats(DeviceLp lp, Vectors v, KktSums* partial, double tol) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  Stats a;
+  KktSums a;
   if (i < lp.n) {
     double raw_z = lp.c[i] - v.out_aty[i];
     double z = Multiplier(raw_z, lp.lx[i], lp.ux[i]);
@@ -420,12 +429,12 @@ __global__ void KktStats(DeviceLp lp, Vectors v, Stats* partial, double tol) {
   StoreStats(a, partial);
 }
 
-// Pass 2 of the lpKktCheck measures; reads the norms ReduceStats(mode 0) stored in `s`. out_aty
+// Pass 2 of the lpKktCheck measures; reads the norms ReduceKkt stored in `s`. out_aty
 // still holds A^T y of this check (nothing runs between the two passes).
-__global__ void KktRelativeStats(DeviceLp lp, Vectors v, const DeviceState* s, Stats* partial,
-                                 double tol) {
+__global__ void KktRelativeStats(DeviceLp lp, Vectors v, const DeviceState* s,
+                                 KktRelSums* partial, double tol) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  Stats a;
+  KktRelSums a;
   double active_bound = s->active_bound_norm, active_cost = s->active_cost_norm;
   if (i < lp.n) {
     KktRelative(a, v.out_x[i], v.out_z[i], lp.lx[i], lp.ux[i], lp.c[i], tol, active_bound,
@@ -473,9 +482,9 @@ __global__ void CertificateDirection(DeviceLp lp, Vectors v, DeviceState* s, int
   }
 }
 
-__global__ void CertificateNorm(DeviceLp lp, Vectors v, Stats* partial, bool farkas) {
+__global__ void CertificateNorm(DeviceLp lp, Vectors v, NormMax* partial, bool farkas) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  Stats a;
+  NormMax a;
   if (farkas) {
     if (i < lp.m) a.norm = fabs(v.f[i]);
     if (i < lp.n) {
@@ -500,41 +509,43 @@ __global__ void NormalizeCertificate(DeviceLp lp, Vectors v, DeviceState* s, boo
     v.ray[i] /= norm;
 }
 
-__global__ void CertificateStats(DeviceLp lp, Vectors v, Stats* partial, bool farkas) {
+__global__ void FarkasStats(DeviceLp lp, Vectors v, FarkasSums* partial) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  Stats a;
-  if (farkas) {
-    if (i < lp.m) {
-      double b = BoundProduct(v.f[i], lp.lr[i], lp.ur[i]);
-      a.d += b;
-      a.absolute += fabs(b);
-    }
-    if (i < lp.n) {
-      double b = BoundProduct(v.g[i], lp.lx[i], lp.ux[i]);
-      a.d += b;
-      a.absolute += fabs(b);
-      double residual = fabs(v.atf[i] + v.g[i]);
-      // Judged against column j's own 1-norm (|A'f|_j <= ||A_j||_1 for ||f||_inf <= 1), so one
-      // huge column cannot widen the tolerance of every other.
-      a.dual = residual / fmax(1.0, lp.column_norm[i]);
-      // A'f+g is left only where g was cut by an infinite bound (plus rounding). B does not
-      // cover it: a feasible x needs (A'f+g)'x >= B, which large |x_j| can supply. Charge it at
-      // the size of the current iterate (finite or not, it never marks the state bad).
-      a.exposure = residual * fmax(1.0, fabs(v.out_x[i]));
-    }
-  } else {
-    if (i < lp.n) {
-      a.p = lp.c[i] * v.ray[i];
-      a.absolute = fabs(a.p);
-      a.dual = ConeViolation(v.ray[i], lp.lx[i], lp.ux[i]);
-    }
-    // Likewise per row: |A d|_i <= ||A_i||_1 for ||d||_inf <= 1.
-    if (i < lp.m) 
-      a.cone = ConeViolation(v.ad[i], lp.lr[i], lp.ur[i]) / fmax(1.0, lp.row_norm[i]);
+  FarkasSums a;
+  if (i < lp.m) {
+    double b = BoundProduct(v.f[i], lp.lr[i], lp.ur[i]);
+    a.d += b;
+    a.absolute += fabs(b);
   }
-  if (!isfinite(a.d) || !isfinite(a.p) || !isfinite(a.dual) || !isfinite(a.cone) ||
-      !isfinite(a.absolute))
-    a.bad = 1;
+  if (i < lp.n) {
+    double b = BoundProduct(v.g[i], lp.lx[i], lp.ux[i]);
+    a.d += b;
+    a.absolute += fabs(b);
+    double residual = fabs(v.atf[i] + v.g[i]);
+    // Judged against column j's own 1-norm (|A'f|_j <= ||A_j||_1 for ||f||_inf <= 1), so one
+    // huge column cannot widen the tolerance of every other.
+    a.dual = residual / fmax(1.0, lp.column_norm[i]);
+    // A'f+g is left only where g was cut by an infinite bound (plus rounding). B does not
+    // cover it: a feasible x needs (A'f+g)'x >= B, which large |x_j| can supply. Charge it at
+    // the size of the current iterate (finite or not, it never marks the state bad).
+    a.exposure = residual * fmax(1.0, fabs(v.out_x[i]));
+  }
+  if (!isfinite(a.d) || !isfinite(a.dual) || !isfinite(a.absolute)) a.bad = 1;
+  StoreStats(a, partial);
+}
+
+__global__ void RayStats(DeviceLp lp, Vectors v, RaySums* partial) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  RaySums a;
+  if (i < lp.n) {
+    a.p = lp.c[i] * v.ray[i];
+    a.absolute = fabs(a.p);
+    a.dual = ConeViolation(v.ray[i], lp.lx[i], lp.ux[i]);
+  }
+  // Likewise per row: |A d|_i <= ||A_i||_1 for ||d||_inf <= 1.
+  if (i < lp.m)
+    a.cone = ConeViolation(v.ad[i], lp.lr[i], lp.ur[i]) / fmax(1.0, lp.row_norm[i]);
+  if (!isfinite(a.p) || !isfinite(a.dual) || !isfinite(a.cone) || !isfinite(a.absolute)) a.bad = 1;
   StoreStats(a, partial);
 }
 
@@ -547,130 +558,153 @@ __global__ void SaveCertificate(DeviceLp lp, Vectors v, DeviceState* s, bool far
     v.saved_ray[i] = v.ray[i];
 }
 
-// mode: 0 KKT pass 1, 1 trial FPE, 2 reference FPE, 3 direction norm, 4 Farkas, 5 ray,
-// 6 KKT pass 2 (decides optimality).
-__global__ void ReduceStats(const Stats* partial, int size, DeviceState* s, int mode) {
-  Stats a;
-  for (int i = threadIdx.x; i < size; i += blockDim.x) a = Combine{}(a, partial[i]);
-  __shared__ typename cub::BlockReduce<Stats, kBlock>::TempStorage storage;
-  a = cub::BlockReduce<Stats, kBlock>(storage).Reduce(a, Combine{});
+// Each reduction folds the partial results of its kernel on one block, then thread 0 updates the
+// state. KKT pass 1 and 2, the fixed-point error of a step (trial or reference), the direction
+// norm, and the Farkas and ray statistics each have their own struct and kernel.
+__global__ void ReduceKkt(const KktSums* partial, int size, DeviceState* s) {
+  KktSums a = ReducePartials(partial, size);
   if (threadIdx.x != 0) return;
   if (a.bad) s->bad = 1;
-  if (mode == 0) {
-    ++s->kkt_checks;
-    s->spmv_count += 2;
-    double denom = 1 + fabs(a.p) + fabs(a.d);
-    s->metrics.primal = a.primal;
-    s->metrics.dual = a.dual / (1 + s->cost_scale);
-    s->metrics.gap = fabs(a.p - a.d) / denom;
-    s->metrics.complementarity = a.comp / denom;
-    s->metrics.primal_raw = a.raw;
-    s->metrics.dual_raw = a.dual;
-    s->metrics.complementarity_raw = a.comp;
-    s->metrics.primal_objective = a.p;
-    s->metrics.dual_objective = a.d;
-    s->metrics.primal_index = a.primal_index;
-    s->metrics.primal_raw_index = a.raw_index;
-    s->metrics.dual_index = a.dual_index;
-    s->metrics.complementarity_index = a.comp_index;
-    if (!isfinite(denom) || !isfinite(s->metrics.gap) || !isfinite(s->metrics.dual) ||
-        !isfinite(a.primal) || !isfinite(a.raw) || !isfinite(a.comp))
-      s->bad = 1;
-    if (!s->bad && a.primal <= s->tolerance) {
-      s->feasible_valid = 1;
-      s->feasible_iteration = s->iterations;
-    }
-    // lpKktCheck's objective error, on the objectives WITHOUT the constant term: the offset
-    // cancels in p - d and would only enlarge the denominator (a huge constant would make any
-    // gap pass). Sense does not matter: |p - d| and |p| + |d| are sign-free.
-    double gap_model = 1 + fabs(a.p) + fabs(a.dual_pos);
-    s->active_bound_norm = s->metrics.active_bound_norm = a.active_bound;
-    s->active_cost_norm = s->metrics.active_cost_norm = a.active_cost;
-    s->metrics.kkt_gap = fabs(a.p - a.dual_pos) / gap_model;
-    s->metrics.l2_primal = sqrt(a.l2_primal_sq) / (1 + sqrt(a.b_sq));
-    s->metrics.l2_dual = sqrt(a.l2_dual_sq) / (1 + sqrt(a.c_sq));
-    // As cuPDLPx: the column part of the dual objective is z'x, not z times the bound chosen by
-    // the sign of z, so a noise-level z on a huge bound does not dominate it.
-    s->metrics.l2_gap = fabs(a.p - a.cross) / (1 + fabs(a.p) + fabs(a.cross));
-    if (!isfinite(s->metrics.l2_gap)) s->bad = 1;
-    if (!isfinite(s->metrics.kkt_gap) || !isfinite(a.dual_pos)) s->bad = 1;
-    // The switch to the deviation form uses the strict per-row/column measures above.
-    s->deviation_next |= !s->bad && a.primal <= kDeviationLevel &&
-                         s->metrics.dual <= kDeviationLevel && s->metrics.gap <= kDeviationLevel &&
-                         s->metrics.complementarity <= kDeviationLevel;
-  } else if (mode == 6) {
-    s->metrics.kkt_primal = a.rel_primal;
-    s->metrics.kkt_dual = fmax(a.rel_dual, a.rel_residual);
-    if (!isfinite(a.rel_primal) || !isfinite(s->metrics.kkt_dual)) s->bad = 1;
-    const Metrics& k = s->metrics;
-    s->optimal = !s->bad && (s->stop_strict ? k.primal <= s->tolerance &&
-                                                  k.dual <= s->tolerance &&
-                                                  k.gap <= s->tolerance &&
-                                                  k.complementarity <= s->tolerance
-                             : s->stop_l2   ? k.l2_primal <= s->tolerance &&
-                                                  k.l2_dual <= s->tolerance &&
-                                                  k.l2_gap <= s->tolerance
-                                            : k.kkt_primal <= s->tolerance &&
-                                                  k.kkt_dual <= s->tolerance &&
-                                                  k.kkt_gap <= s->tolerance);
-  } else if (mode == 1 || mode == 2) {
-    ++s->spmv_count;
-    double energy = s->omega * a.dx2 + a.dy2 / s->omega + 2 * kEta * a.cross;
-    double roundoff =
-        64 * 2.220446049250313e-16 * (s->omega * a.dx2 + a.dy2 / s->omega + 2 * kEta * a.absolute);
-    if (!isfinite(energy) || energy < -roundoff) s->bad = 1;
-    s->fpe = sqrt(fmax(energy, 0.0));
-    if (mode == 2) {
-      s->reference_fpe = s->fpe;
-      s->previous_fpe = INFINITY;
-    }
-  } else if (mode == 3)
-    s->normalization = a.norm;
-  else {
-    ++s->certificate_checks;
-    if (!isfinite(a.d) || !isfinite(a.p) || !isfinite(a.absolute) || !isfinite(a.dual) ||
-        !isfinite(a.cone))
-      s->bad = 1;
-    bool valid = !s->bad && s->normalization > 0;
-    if (mode == 4) {
-      s->spmv_count += 2;
-      // A certificate of the original model must keep its margin after the stationarity
-      // exposure at the current iterate; otherwise it does not even exclude points of the size
-      // the iterates have. A reduced model's candidate only stops the reduced session.
-      valid = valid && a.dual <= kCertificateTolerance &&
-              a.d > 100 * kCertificateTolerance * fmax(1.0, a.absolute) &&
-              (!s->exposure_check ||
-               a.d - a.exposure > 100 * kCertificateTolerance * fmax(1.0, a.absolute));
-      s->cert_source = valid && !s->farkas_valid;
-      if (s->cert_source) {
-        s->margin = a.d;
-        s->stationarity = a.dual;
-        s->cert_scale = s->normalization;
-        s->farkas_info = CertificateInfo{s->direction_source, s->direction_sign,
-                                         s->direction_iteration, s->normalization};
-      }
-      s->farkas_valid |= valid;
-    } else {
-      ++s->spmv_count;
-      valid = valid && a.dual <= kCertificateTolerance &&
-              a.cone <= kCertificateTolerance &&
-              -a.p > 100 * kCertificateTolerance * fmax(1.0, a.absolute);
-      s->cert_source = valid && !s->ray_valid;
-      if (s->cert_source) {
-        s->ray_margin = -a.p;
-        s->ray_info = CertificateInfo{s->direction_source, s->direction_sign,
-                                      s->direction_iteration, s->normalization};
-        s->ray_row_violation = a.cone;
-        s->ray_column_violation = a.dual;
-      }
-      s->ray_valid |= valid;
-    }
+  ++s->kkt_checks;
+  s->spmv_count += 2;
+  double denom = 1 + fabs(a.p) + fabs(a.d);
+  s->metrics.primal = a.primal;
+  s->metrics.dual = a.dual / (1 + s->cost_scale);
+  s->metrics.gap = fabs(a.p - a.d) / denom;
+  s->metrics.complementarity = a.comp / denom;
+  s->metrics.primal_raw = a.raw;
+  s->metrics.dual_raw = a.dual;
+  s->metrics.complementarity_raw = a.comp;
+  s->metrics.primal_objective = a.p;
+  s->metrics.dual_objective = a.d;
+  s->metrics.primal_index = a.primal_index;
+  s->metrics.primal_raw_index = a.raw_index;
+  s->metrics.dual_index = a.dual_index;
+  s->metrics.complementarity_index = a.comp_index;
+  if (!isfinite(denom) || !isfinite(s->metrics.gap) || !isfinite(s->metrics.dual) ||
+      !isfinite(a.primal) || !isfinite(a.raw) || !isfinite(a.comp))
+    s->bad = 1;
+  if (!s->bad && a.primal <= s->tolerance) {
+    s->feasible_valid = 1;
+    s->feasible_iteration = s->iterations;
+  }
+  // lpKktCheck's objective error, on the objectives WITHOUT the constant term: the offset
+  // cancels in p - d and would only enlarge the denominator (a huge constant would make any
+  // gap pass). Sense does not matter: |p - d| and |p| + |d| are sign-free.
+  double gap_model = 1 + fabs(a.p) + fabs(a.dual_pos);
+  s->active_bound_norm = s->metrics.active_bound_norm = a.active_bound;
+  s->active_cost_norm = s->metrics.active_cost_norm = a.active_cost;
+  s->metrics.kkt_gap = fabs(a.p - a.dual_pos) / gap_model;
+  s->metrics.l2_primal = sqrt(a.l2_primal_sq) / (1 + sqrt(a.b_sq));
+  s->metrics.l2_dual = sqrt(a.l2_dual_sq) / (1 + sqrt(a.c_sq));
+  // As cuPDLPx: the column part of the dual objective is z'x, not z times the bound chosen by
+  // the sign of z, so a noise-level z on a huge bound does not dominate it.
+  s->metrics.l2_gap = fabs(a.p - a.cross) / (1 + fabs(a.p) + fabs(a.cross));
+  if (!isfinite(s->metrics.l2_gap)) s->bad = 1;
+  if (!isfinite(s->metrics.kkt_gap) || !isfinite(a.dual_pos)) s->bad = 1;
+  // The switch to the deviation form uses the strict per-row/column measures above.
+  s->deviation_next |= !s->bad && a.primal <= kDeviationLevel &&
+                       s->metrics.dual <= kDeviationLevel && s->metrics.gap <= kDeviationLevel &&
+                       s->metrics.complementarity <= kDeviationLevel;
+}
+
+// Decides optimality.
+__global__ void ReduceKktRelative(const KktRelSums* partial, int size, DeviceState* s) {
+  KktRelSums a = ReducePartials(partial, size);
+  if (threadIdx.x != 0) return;
+  if (a.bad) s->bad = 1;
+  s->metrics.kkt_primal = a.rel_primal;
+  s->metrics.kkt_dual = fmax(a.rel_dual, a.rel_residual);
+  if (!isfinite(a.rel_primal) || !isfinite(s->metrics.kkt_dual)) s->bad = 1;
+  const Metrics& k = s->metrics;
+  s->optimal = !s->bad && (s->stop_strict ? k.primal <= s->tolerance &&
+                                                k.dual <= s->tolerance &&
+                                                k.gap <= s->tolerance &&
+                                                k.complementarity <= s->tolerance
+                           : s->stop_l2   ? k.l2_primal <= s->tolerance &&
+                                                k.l2_dual <= s->tolerance &&
+                                                k.l2_gap <= s->tolerance
+                                          : k.kkt_primal <= s->tolerance &&
+                                                k.kkt_dual <= s->tolerance &&
+                                                k.kkt_gap <= s->tolerance);
+}
+
+// reference: the fixed-point error of the reference step instead of the trial step.
+__global__ void ReduceFpe(const FpeSums* partial, int size, DeviceState* s, bool reference) {
+  FpeSums a = ReducePartials(partial, size);
+  if (threadIdx.x != 0) return;
+  if (a.bad) s->bad = 1;
+  ++s->spmv_count;
+  double energy = s->omega * a.dx2 + a.dy2 / s->omega + 2 * kEta * a.cross;
+  double roundoff =
+      64 * 2.220446049250313e-16 * (s->omega * a.dx2 + a.dy2 / s->omega + 2 * kEta * a.absolute);
+  if (!isfinite(energy) || energy < -roundoff) s->bad = 1;
+  s->fpe = sqrt(fmax(energy, 0.0));
+  if (reference) {
+    s->reference_fpe = s->fpe;
+    s->previous_fpe = INFINITY;
   }
 }
 
-__global__ void WeightStats(DeviceLp lp, Vectors v, Stats* partial, const DeviceState* s) {
+__global__ void ReduceNorm(const NormMax* partial, int size, DeviceState* s) {
+  NormMax a = ReducePartials(partial, size);
+  if (threadIdx.x != 0) return;
+  if (a.bad) s->bad = 1;
+  s->normalization = a.norm;
+}
+
+__global__ void ReduceFarkas(const FarkasSums* partial, int size, DeviceState* s) {
+  FarkasSums a = ReducePartials(partial, size);
+  if (threadIdx.x != 0) return;
+  if (a.bad) s->bad = 1;
+  ++s->certificate_checks;
+  if (!isfinite(a.d) || !isfinite(a.absolute) || !isfinite(a.dual)) s->bad = 1;
+  bool valid = !s->bad && s->normalization > 0;
+    s->spmv_count += 2;
+    // A certificate of the original model must keep its margin after the stationarity
+    // exposure at the current iterate; otherwise it does not even exclude points of the size
+    // the iterates have. A reduced model's candidate only stops the reduced session.
+    valid = valid && a.dual <= kCertificateTolerance &&
+            a.d > 100 * kCertificateTolerance * fmax(1.0, a.absolute) &&
+            (!s->exposure_check ||
+             a.d - a.exposure > 100 * kCertificateTolerance * fmax(1.0, a.absolute));
+    s->cert_source = valid && !s->farkas_valid;
+    if (s->cert_source) {
+      s->margin = a.d;
+      s->stationarity = a.dual;
+      s->cert_scale = s->normalization;
+      s->farkas_info = CertificateInfo{s->direction_source, s->direction_sign,
+                                       s->direction_iteration, s->normalization};
+    }
+    s->farkas_valid |= valid;
+}
+
+__global__ void ReduceRay(const RaySums* partial, int size, DeviceState* s) {
+  RaySums a = ReducePartials(partial, size);
+  if (threadIdx.x != 0) return;
+  if (a.bad) s->bad = 1;
+  ++s->certificate_checks;
+  if (!isfinite(a.p) || !isfinite(a.absolute) || !isfinite(a.dual) || !isfinite(a.cone))
+    s->bad = 1;
+  bool valid = !s->bad && s->normalization > 0;
+    ++s->spmv_count;
+    valid = valid && a.dual <= kCertificateTolerance &&
+            a.cone <= kCertificateTolerance &&
+            -a.p > 100 * kCertificateTolerance * fmax(1.0, a.absolute);
+    s->cert_source = valid && !s->ray_valid;
+    if (s->cert_source) {
+      s->ray_margin = -a.p;
+      s->ray_info = CertificateInfo{s->direction_source, s->direction_sign,
+                                    s->direction_iteration, s->normalization};
+      s->ray_row_violation = a.cone;
+      s->ray_column_violation = a.dual;
+    }
+    s->ray_valid |= valid;
+}
+
+__global__ void WeightStats(DeviceLp lp, Vectors v, WeightSums* partial, const DeviceState* s) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  Stats a;
+  WeightSums a;
   if (i < lp.n) {
     double d = s->deviation ? v.xp[i] : v.xp[i] - v.xa[i];
     a.dx2 = d * d;
@@ -682,11 +716,8 @@ __global__ void WeightStats(DeviceLp lp, Vectors v, Stats* partial, const Device
   StoreStats(a, partial);
 }
 
-__global__ void UpdateWeight(const Stats* partial, int size, DeviceState* s) {
-  Stats a;
-  for (int i = threadIdx.x; i < size; i += blockDim.x) a = Combine{}(a, partial[i]);
-  __shared__ typename cub::BlockReduce<Stats, kBlock>::TempStorage storage;
-  a = cub::BlockReduce<Stats, kBlock>(storage).Reduce(a, Combine{});
+__global__ void UpdateWeight(const WeightSums* partial, int size, DeviceState* s) {
+  WeightSums a = ReducePartials(partial, size);
   if (threadIdx.x != 0 || s->fixed_weight) return;
   s->balance_epoch_limit = 0;
   if (a.dx2 > 0 && a.dy2 > 0 && isfinite(a.dx2) && isfinite(a.dy2)) {
@@ -1063,7 +1094,7 @@ static size_t SolveFootprint(int rows, int columns, int nnz, bool matrix_borrowe
   size_t after = 2 * Charged(size_t(nnz) * sizeof(double)) + 21 * n + 16 * m +
                  Charged(2 * sizeof(double)) + Charged(kDecisionCapacity * sizeof(Decision)) +
                  Charged(sizeof(DeviceState)) +
-                 Charged(size_t(Blocks(std::max(rows, columns))) * sizeof(Stats)) +
+                 Charged(size_t(Blocks(std::max(rows, columns))) * kPartialBytes) +
                  (nnz && rows && columns ? 9 * SpmvWorkspace(nnz) : 0);
   return SessionPeak(before, rows, columns, nnz, transpose_borrowed, after);
 }
@@ -1324,7 +1355,8 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     if (snapshot)
       initial.decisions = r.AllocateZero<Decision>(kDecisionCapacity);  // padding downloaded too
     DeviceState* s = r.Allocate<DeviceState>(1);  // overwritten by `initial` before the launch
-    Stats* partial = r.AllocateZero<Stats>(blocks);
+    // One buffer for every reduction, viewed as the struct of the kernel that fills it.
+    unsigned char* partial = r.AllocateZero<unsigned char>(size_t(blocks) * kPartialBytes);
     profile.scale_copy = SynchronizedSeconds(r, phase);
     meter.Sample();
     nvtxRangePop();
@@ -1360,25 +1392,24 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     for (auto* h : {&loop, &check, &restart, &cert, &initial_cert, &reference})
       Cuda(cudaGraphConditionalHandleCreate(h, r.graph, 0, cudaGraphCondAssignDefault));
 #endif
-    auto reduce = [&](int mode) {
-      ReduceStats<<<1, kBlock, 0, stream>>>(partial, blocks, s, mode);
-    };
+    auto partial_of = [&](auto* type) { return reinterpret_cast<decltype(type)>(partial); };
     auto kkt = [&]() {
       Mark<<<1, 1, 0, stream>>>(s, 3);
       Unscale<<<blocks, kBlock, 0, stream>>>(lp, v, s);
       Multiply(r, out_ax, ab);
       Multiply(r, out_aty, ab);
-      KktStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, options.tolerance);
-      reduce(0);
-      KktRelativeStats<<<blocks, kBlock, 0, stream>>>(lp, v, s, partial, options.tolerance);
-      reduce(6);
+      KktStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((KktSums*)0), options.tolerance);
+      ReduceKkt<<<1, kBlock, 0, stream>>>(partial_of((KktSums*)0), blocks, s);
+      KktRelativeStats<<<blocks, kBlock, 0, stream>>>(lp, v, s, partial_of((KktRelSums*)0),
+                                                      options.tolerance);
+      ReduceKktRelative<<<1, kBlock, 0, stream>>>(partial_of((KktRelSums*)0), blocks, s);
       SaveFeasible<<<Blocks(n), kBlock, 0, stream>>>(lp, v, s);
       Mark<<<1, 1, 0, stream>>>(s, 4);
     };
     auto fpe = [&](int mode) {
       Multiply(r, atdy, ab);
-      FpeStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial);
-      reduce(mode);
+      FpeStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((FpeSums*)0));
+      ReduceFpe<<<1, kBlock, 0, stream>>>(partial_of((FpeSums*)0), blocks, s, mode == 2);
     };
     auto anchor = [&]() {
       Multiply(r, aty_anchor, ab);
@@ -1398,19 +1429,19 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
         for (int sign : {1, -1}) {
           CertificateDirection<<<blocks, kBlock, 0, stream>>>(lp, v, s, source, sign);
           Multiply(r, atf, ab);
-          CertificateNorm<<<blocks, kBlock, 0, stream>>>(lp, v, partial, true);
-          reduce(3);
+          CertificateNorm<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((NormMax*)0), true);
+          ReduceNorm<<<1, kBlock, 0, stream>>>(partial_of((NormMax*)0), blocks, s);
           NormalizeCertificate<<<blocks, kBlock, 0, stream>>>(lp, v, s, true);
           Multiply(r, atf, ab);
-          CertificateStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, true);
-          reduce(4);
+          FarkasStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((FarkasSums*)0));
+          ReduceFarkas<<<1, kBlock, 0, stream>>>(partial_of((FarkasSums*)0), blocks, s);
           SaveCertificate<<<blocks, kBlock, 0, stream>>>(lp, v, s, true);
-          CertificateNorm<<<blocks, kBlock, 0, stream>>>(lp, v, partial, false);
-          reduce(3);
+          CertificateNorm<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((NormMax*)0), false);
+          ReduceNorm<<<1, kBlock, 0, stream>>>(partial_of((NormMax*)0), blocks, s);
           NormalizeCertificate<<<blocks, kBlock, 0, stream>>>(lp, v, s, false);
           Multiply(r, ad, ab);
-          CertificateStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, false);
-          reduce(5);
+          RayStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((RaySums*)0));
+          ReduceRay<<<1, kBlock, 0, stream>>>(partial_of((RaySums*)0), blocks, s);
           SaveCertificate<<<blocks, kBlock, 0, stream>>>(lp, v, s, false);
         }
     };
@@ -1451,8 +1482,8 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
       Decide<<<1, 1, 0, stream>>>(s, restart, cert, false, false);
     };
     auto restart_body = [&]() {
-      WeightStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial, s);
-      UpdateWeight<<<1, kBlock, 0, stream>>>(partial, blocks, s);
+      WeightStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((WeightSums*)0), s);
+      UpdateWeight<<<1, kBlock, 0, stream>>>(partial_of((WeightSums*)0), blocks, s);
       RestartVectors<<<blocks, kBlock, 0, stream>>>(lp, v, s);
       anchor();
       RestartState<<<1, 1, 0, stream>>>(s);
