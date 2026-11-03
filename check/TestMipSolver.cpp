@@ -908,7 +908,6 @@ void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const std::vector<double> require_optimal_solution) {
   solve(highs, require_model_status, presolve);
-  highs.writeSolution("", 0);
   if (require_model_status == HighsModelStatus::kOptimal)
     REQUIRE(solutionOk(highs.getSolution().col_value, require_optimal_solution,
                        highs.getOptions().mip_feasibility_tolerance));
@@ -2338,18 +2337,24 @@ TEST_CASE("issue-3273", "[highs_test_mip_solver]") {
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
                      HighsVarType::kContinuous, HighsVarType::kInteger};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   std::vector<double> optimal_solution = {1, 11, 1, 1};
   solve(highs, kHighsOffString, require_model_status, optimal_solution);
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   solve(highs, kHighsOnString, require_model_status, optimal_solution);
+  highs.setOptionValue("output_flag", dev_run);
 
-  // "Ultimate" optimal solution (1+2*epsilon, 11+epsilon, 1+epsilon,
-  // 1) has objective 12 + 3*epsilon, where epsilon =
-  // mip_feasibility_tolerance
-  double epsilon = highs.getOptions().mip_feasibility_tolerance;
+  // "Ultimate" optimal solution is
+  //
+  // (1+2*epsilon, 11+epsilon, 1+epsilon, 1)
+  //
+  // which has objective 12 + 3*epsilon
+  //
+  // Have to use epsilon = mip_feasibility_tolerance/2 due to rounding
+  // in computing 1 + 2 * epsilon
+  double epsilon = 0.5 * highs.getOptions().mip_feasibility_tolerance;
   HighsSolution solution;
   solution.col_value = {1 + 2 * epsilon, 11 + epsilon, 1 + epsilon, 1};
   highs.setSolution(solution);
