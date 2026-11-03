@@ -734,7 +734,7 @@ void HighsSymmetryDetection::initializeHashValues() {
     HighsInt cell = vertexToCell[i];
     for (HighsInt j = Gstart[i]; j != Gend[i]; ++j) {
       HighsHashHelpers::sparse_combine(vertexHash[Gedge[j].first], cell,
-                                         Gedge[j].second);
+                                       Gedge[j].second);
     }
     markCellForRefinement(cell);
   }
@@ -754,7 +754,7 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
         HighsInt edgeDestinationCell = vertexToCell[Gedge[j].first];
         if (cellSize(edgeDestinationCell) == 1) continue;
         HighsHashHelpers::sparse_combine(vertexHash[Gedge[j].first], cell,
-                                           Gedge[j].second);
+                                         Gedge[j].second);
         markCellForRefinement(edgeDestinationCell);
       }
     }
