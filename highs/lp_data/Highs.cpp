@@ -1364,18 +1364,17 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
   // things. It's important to be able to check that it's been called,
   // and this is done with this->called_return_from_optimize_model
   // Set this so that calls to returnFromOptimizeModel() can be checked: from
-  // here all return statements execute returnFromOptimizeModel()
+  // here the only return statement executes returnFromOptimizeModel()
   called_return_from_optimize_model = false;
 
-  if (optimizeModelPrepare(context))
-    return returnFromOptimizeModel(context.status, &context);
-
-  if (model_.isQp())
-    optimizeModelQp(context);
-  else if (model_.isMip())
-    optimizeModelMip(context);
-  else
-    optimizeModelLp(context);
+  if (!optimizeModelPrepare(context)) {
+    if (model_.isQp())
+      optimizeModelQp(context);
+    else if (model_.isMip())
+      optimizeModelMip(context);
+    else
+      optimizeModelLp(context);
+  }
 
   return returnFromOptimizeModel(context.status, &context);
 }
