@@ -1,0 +1,55 @@
+name: test-interfaces
+
+# Builds HiGHS from this checkout and solves a small LP and MIP through
+# downstream interfaces: PuLP and Pyomo (via highspy) and the Rust highs crate
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install highspy from this checkout
+        run: python3 -m pip install .
+
+      - name: Install PuLP and Pyomo
+        run: python3 -m pip install pulp pyomo
+
+      - name: Solve with PuLP
+        run: python3 check/interfaces/pulp_smoke.py
+
+      - name: Solve with Pyomo
+        run: python3 check/interfaces/pyomo_smoke.py
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build and install HiGHS
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/highs-install
+          cmake --build build --parallel
+          cmake --install build
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Solve with the highs crate
+        working-directory: check/interfaces/rust
+        env:
+          PKG_CONFIG_PATH: ${{ github.workspace }}/highs-install/lib/pkgconfig
+          LD_LIBRARY_PATH: ${{ github.workspace }}/highs-install/lib
+        run: HIGHS_EXPECTED_GITHASH=$(git rev-parse HEAD) cargo run --release
