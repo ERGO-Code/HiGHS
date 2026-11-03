@@ -5,7 +5,7 @@ name: rust-tests
 
 on:
   push:
-    # branches: [ latest, master ]
+    branches: [ latest, master ]
   pull_request:
   workflow_dispatch:
 
