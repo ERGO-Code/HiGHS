@@ -4700,13 +4700,13 @@ HighsStatus Highs::callRunPostsolve(const HighsSolution& solution,
 }
 
 // End of public methods
-void Highs::logHeader(const bool log_header) const {
+void Highs::logHeader() const {
   if (!options_.output_flag) return;
   //  if (!*options_.log_options.output_flag) return;
   static std::once_flag flag;
 
-  std::call_once(flag, [this, log_header]() {
-    if (log_header) highsLogHeader(options_.log_options, options_.log_githash);
+  std::call_once(flag, [this]() {
+    highsLogHeader(options_.log_options, options_.log_githash);
   });
   return;
 }

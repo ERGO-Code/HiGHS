@@ -9,10 +9,15 @@ using BinaryBuilder, Pkg
 name = "HiGHS"
 version = VersionNumber(ENV["HIGHS_RELEASE"])
 
-sources = [GitSource(ENV["HIGHS_URL"], ENV["HIGHS_COMMIT"])]
+sources = [
+    GitSource(ENV["HIGHS_URL"], ENV["HIGHS_COMMIT"]),
+    DirectorySource(joinpath(@__DIR__, "bundled")),
+]
 
 script = raw"""
 cd $WORKSPACE/srcdir/HiGHS
+
+atomic_patch -p1 ${WORKSPACE}/srcdir/patches/fix-cli11.patch
 
 # Remove system CMake to use the jll version
 apk del cmake

@@ -703,6 +703,8 @@ HighsStatus HighsLp::trimDimensions(const HighsLogOptions& log_options) {
 }
 
 HighsStatus HighsLp::assess(const HighsOptions& options) {
+  // Just in case it's not yet been done
+  this->setMatrixDimensions();
   return assessLp(*this, options);
 }
 
