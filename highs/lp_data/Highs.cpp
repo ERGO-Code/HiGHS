@@ -1611,12 +1611,9 @@ void Highs::optimizeModelLp(Context& context) {
   if (!lpUsePresolve(context, incumbent_lp)) {
     if (lpSolveUnreduced(context, incumbent_lp)) return;
   } else {
-    if (lpPresolve(context, presolve_, incumbent_lp)) return;
-    HighsLp& presolved_lp =
-        model_presolve_status_ == HighsPresolveStatus::kReduced
-            ? presolve_.getReducedProblem()
-            : incumbent_lp;
-    if (lpSolveReduced(context, model_presolve_status_, presolved_lp)) return;
+    HighsLp* lp = &incumbent_lp;
+    if (lpPresolve(context, presolve_, lp)) return;
+    if (lpSolveReduced(context, model_presolve_status_, *lp)) return;
     if (lpPostsolve(context, presolve_, model_presolve_status_, incumbent_lp))
       return;
     if (lpCleanupOriginal(context, incumbent_lp)) return;
@@ -1941,7 +1938,7 @@ bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
 }
 
 bool Highs::lpPresolve(Context& context, PresolveComponent& presolve,
-                       HighsLp& lp) {
+                       HighsLp*& lp) {
   // Possibly presolve - according to option_.presolve
   //
   // If solving the relaxation of a MIP, make sure that LP presolve
@@ -1951,7 +1948,7 @@ bool Highs::lpPresolve(Context& context, PresolveComponent& presolve,
   timer_.start(timer_.presolve_clock);
   const bool force_lp_presolve = true;
   const HighsPresolveStatus presolve_status =
-      runPresolve(presolve, lp, force_lp_presolve);
+      runPresolve(presolve, *lp, force_lp_presolve);
   // The Highs presolve status is that of presolve_
   if (&presolve == &presolve_) model_presolve_status_ = presolve_status;
   timer_.stop(timer_.presolve_clock);
@@ -1962,15 +1959,18 @@ bool Highs::lpPresolve(Context& context, PresolveComponent& presolve,
 
   // Log the presolve reductions
   HighsLp& reduced_lp = presolve.getReducedProblem();
-  reportPresolveReductions(options_.log_options, presolve_status, lp,
+  reportPresolveReductions(options_.log_options, presolve_status, *lp,
                            reduced_lp);
   this->run_data_.presolved_model_num_col = reduced_lp.num_col_;
   this->run_data_.presolved_model_num_row = reduced_lp.num_row_;
   this->run_data_.presolved_model_num_nz = reduced_lp.a_matrix_.numNz();
 
   if (lpHandlePresolveStatus(context, presolve_status)) return true;
-  if (presolve_status == HighsPresolveStatus::kReduced)
-    return lpPrepareReducedLp(context, reduced_lp);
+  if (presolve_status == HighsPresolveStatus::kReduced) {
+    if (lpPrepareReducedLp(context, reduced_lp)) return true;
+    // Subsequent steps use the reduced LP
+    lp = &reduced_lp;
+  }
   if (presolve_status == HighsPresolveStatus::kReducedToEmpty)
     lpSetReducedToEmptySolution();
   return false;

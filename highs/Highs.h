@@ -1742,7 +1742,7 @@ class Highs {
   bool lpSetup(Context& context);
   bool lpUsePresolve(const Context& context, const HighsLp& lp) const;
   bool lpSolveUnreduced(Context& context, HighsLp& lp);
-  bool lpPresolve(Context& context, PresolveComponent& presolve, HighsLp& lp);
+  bool lpPresolve(Context& context, PresolveComponent& presolve, HighsLp*& lp);
   bool lpHandlePresolveStatus(Context& context,
                               const HighsPresolveStatus presolve_status);
   void lpResolveUnboundedOrInfeasible(Context& context, HighsLp& lp);
