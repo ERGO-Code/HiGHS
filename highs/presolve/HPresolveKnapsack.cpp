@@ -42,6 +42,7 @@ bool gcdAllButOne(std::vector<int64_t>& weights, int64_t& b,
   }
   int64_t gcd = 0;
   HighsInt candidate = -1;
+  // TODO: Extend logic s.t. search can swap candidate once, see SCIP
   for (HighsInt i = 0; i != numTerms; ++i) {
     if (weights[i] == b || weights[i] == 0) continue;
     const int64_t oldGcd = gcd;
@@ -117,6 +118,87 @@ void gcdSimplify(KnapsackRow& knapsack, bool& changed, bool& hasZeroWeight) {
     knapsack.weightsum = newWeightSum;
     knapsack.capacity = static_cast<double>(b);
   }
+}
+
+bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
+                          bool& changed) {
+  HighsInt numTerms = static_cast<HighsInt>(knapsack.terms.size());
+  HighsInt numZeros = 0;
+  if (numTerms <= 2) return false;
+  std::vector<HighsInt> order;
+  order.reserve(numTerms);
+  for (HighsInt i = 0; i != numTerms; ++i) {
+    order.push_back(i);
+    if (knapsack.terms[i].weight == 0) numZeros++;
+  }
+  HighsInt numNonZeroTerms = numTerms - numZeros;
+  pdqsort(order.begin(), order.end(), [&](const HighsInt i, const HighsInt j) {
+    return knapsack.terms[i].weight > knapsack.terms[j].weight;
+  });
+  auto weight = [&](const HighsInt i) -> double& {
+    return knapsack.terms[order[i]].weight;
+  };
+  HighsInt v = 0;
+  while (v != numNonZeroTerms && weight(v) == knapsack.capacity) {
+    ++v;
+  }
+  const HighsInt numBig = v;
+  if (numBig == numNonZeroTerms) return false;
+
+  auto setCardinality = [&](const double newWeight) {
+    changed = true;
+    for (HighsInt i = 0; i != numBig; ++i) {
+      knapsack.weightsum -= weight(i) - newWeight;
+      weight(i) = newWeight;
+    }
+    for (HighsInt i = numBig; i != numNonZeroTerms; ++i) {
+      knapsack.weightsum -= weight(i) - 1;
+      weight(i) = 1;
+    }
+    knapsack.capacity = newWeight;
+  };
+
+  HighsCDouble exceedSum = 0;
+  while (v != numNonZeroTerms && exceedSum - knapsack.capacity <= 0) {
+    exceedSum += weight(v);
+    v++;
+  }
+  const HighsCDouble exceedGap = exceedSum - knapsack.capacity;
+  const HighsInt numExceed = v - numBig;
+
+  if (exceedGap > 0) {
+    if (exceedGap <= feastol) return false;
+    // There is some subset of small items that together exceed capacity
+    if (v == numNonZeroTerms) {
+      // All small items needed to exceed capacity
+      setCardinality(static_cast<double>(numNonZeroTerms - numBig - 1));
+      return true;
+    }
+    HighsCDouble exceedSumBack = 0;
+    for (HighsInt i = numNonZeroTerms - 1; i >= numNonZeroTerms - numExceed;
+         --i) {
+      exceedSumBack += weight(i);
+    }
+    if (exceedSumBack - knapsack.capacity > feastol) {
+      // If the largest n small weights AND the smallest n small weights
+      // both exceed capacity, then the row holds for all n combinations
+      setCardinality(static_cast<double>(numExceed - 1));
+      return true;
+    }
+  } else {
+    // If all small terms don't exceed capacity, then the row can be rewritten
+    // as \sum m x_i + \sum x_j <= m, where x_i are large items and
+    // x_j are small items (where there's m small items)
+    if (static_cast<HighsCDouble>(weight(numBig)) * (numNonZeroTerms - numBig) -
+            knapsack.capacity <=
+        feastol) {
+      // If the largest small term can fit m times into the knapsack
+      // then the cardinality upgrade has a stronger LP relaxation
+      setCardinality(numNonZeroTerms - numBig);
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace
@@ -236,7 +318,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     if (!eligible || allSameCoefficients) continue;
     knapsack.capacity = capacity;
     if (knapsack.capacity < 0) return Result::kPrimalInfeasible;
-    if (knapsack.weightsum <= knapsack.capacity) {
+    if (knapsack.weightsum - knapsack.capacity <= primal_feastol) {
       postsolve_stack.redundantRow(row);
       removeRow(row);
       continue;
@@ -272,7 +354,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
         knapsack.terms.end());
 
     // Knapsack may now be redundant
-    if (knapsack.weightsum <= knapsack.capacity) {
+    if (knapsack.weightsum - knapsack.capacity <= primal_feastol) {
       postsolve_stack.redundantRow(row);
       removeRow(row);
       continue;
@@ -282,12 +364,11 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
 
     // If a column's absence makes a row redundant then its weight
     // can be reduced
-    const double excess =
-        static_cast<double>(knapsack.weightsum - knapsack.capacity);
+    const HighsCDouble excess = knapsack.weightsum - knapsack.capacity;
     for (auto& term : knapsack.terms) {
-      if (term.weight <= excess + primal_feastol) continue;
-      const double delta = term.weight - excess;
-      term.weight = excess;
+      if (term.weight - excess <= primal_feastol) continue;
+      const HighsCDouble delta = term.weight - excess;
+      term.weight = static_cast<double>(excess);
       knapsack.capacity -= delta;
       knapsack.weightsum -= delta;
       changed = true;
@@ -297,6 +378,12 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     if (allIntCoefficients && knapsack.capacity < kHighsIInf) {
       // Simplify constraint (or strengthen) using GCD arguments
       gcdSimplify(knapsack, changed, hasZeroWeight);
+      // Knapsack may now be redundant
+      if (knapsack.weightsum - knapsack.capacity <= primal_feastol) {
+        postsolve_stack.redundantRow(row);
+        removeRow(row);
+        continue;
+      }
     }
 
     // (1) If the two smallest items can't fit into the knapsack then
@@ -364,6 +451,9 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       }
     }
 
+    // Recognise whether the knapsack can be upgraded to a "cardinality" row
+    bool upgraded = recogniseCardinality(knapsack, primal_feastol, changed);
+
     if (changed) {
       changeRow(knapsack);
       ++numNormalized;
@@ -375,19 +465,24 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
             knapsack.terms.end());
       }
     }
-    knapsacks.push_back(std::move(knapsack));
+    if (!upgraded) {
+      knapsacks.push_back(std::move(knapsack));
+    }
   }
 
   // Check if knapsack can be disaggregated.
-  // Given \sum a_i x_i + \sum b x_j <= b, a_i <= b,
+  // Given \sum a_i x_i + \sum b x_j <= b, \sum a_i < b
   // The set of rows
   // x_i + \sum x_j <= 1 \forall i
   // has a stronger LP relaxation
+  HighsInt maxNewRows = numRows / 5;
+  HighsInt numNewRows = 0;
   std::vector<std::vector<HighsInt>> newIndices;
   std::vector<std::vector<double>> newValues;
   std::vector<double> newUpper;
   std::vector<HighsInt> disaggregatedRows;
   for (KnapsackRow& knapsack : knapsacks) {
+    if (numNewRows >= maxNewRows) break;
     std::vector<KnapsackTerm> maxWeightItems;
     std::vector<KnapsackTerm> smallItems;
     HighsCDouble smallItemSum = 0;
@@ -400,12 +495,9 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       }
     }
     if (maxWeightItems.empty() || smallItems.empty() ||
-        smallItemSum > knapsack.capacity ||
-        maxWeightItems.size() * smallItems.size() >
-            10 * knapsack.terms.size()) {
+        smallItems.size() >= 5 || smallItemSum - knapsack.capacity > 0) {
       continue;
     }
-    knapsack.capacity = 1;  // Spoof capacity so we don't try lifting afterwards
     for (const KnapsackTerm& term : smallItems) {
       std::vector<KnapsackTerm> clique = maxWeightItems;
       clique.push_back(term);
@@ -421,6 +513,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       newIndices.push_back(std::move(indices));
       newValues.push_back(std::move(values));
       newUpper.push_back(rhs);
+      numNewRows++;
     }
     // TODO: Can we add a clique to the table here or does that cause issues
     // with fixings when no domain is present?
