@@ -2769,36 +2769,42 @@ bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
   return true;
 }
 
-void assessColPrimalSolution(const HighsOptions& options, const double primal,
+void assessColPrimalSolution(const bool assess_as_mip,
+                             const HighsOptions& options, const double primal,
                              const double lower, const double upper,
                              const HighsVarType type, double& col_infeasibility,
                              double& integer_infeasibility) {
+  const double kPrimalFeasibilityTolerance =
+      assess_as_mip ? options.mip_feasibility_tolerance
+                    : options.primal_feasibility_tolerance;
   // @primal_infeasibility calculation
   col_infeasibility = 0;
-  if (primal < lower - options.primal_feasibility_tolerance) {
+  if (primal < lower - kPrimalFeasibilityTolerance) {
     col_infeasibility = lower - primal;
-  } else if (primal > upper + options.primal_feasibility_tolerance) {
+  } else if (primal > upper + kPrimalFeasibilityTolerance) {
     col_infeasibility = primal - upper;
   }
   integer_infeasibility = 0;
-  if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
-    integer_infeasibility = fractionality(primal);
-    assert(integer_infeasibility >= 0);
-    if (integer_infeasibility <= options.mip_feasibility_tolerance)
-      integer_infeasibility = 0;
-  }
-  if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
-                                type == HighsVarType::kSemiInteger)) {
-    // Semi-variables at zero will have positive col
-    // infeasibility, so possibly zero this
-    if (std::fabs(primal) <= options.mip_feasibility_tolerance)
-      col_infeasibility = 0;
-    // If there is (still) column infeasibility due to value being
-    // off zero or below lower bound, then this counts as an integer
-    // infeasibility
-    if (col_infeasibility && primal < upper)
-      integer_infeasibility =
-          std::max(col_infeasibility, integer_infeasibility);
+  if (assess_as_mip) {
+    if (type == HighsVarType::kInteger || type == HighsVarType::kSemiInteger) {
+      integer_infeasibility = fractionality(primal);
+      assert(integer_infeasibility >= 0);
+      if (integer_infeasibility <= options.mip_feasibility_tolerance)
+        integer_infeasibility = 0;
+    }
+    if (col_infeasibility > 0 && (type == HighsVarType::kSemiContinuous ||
+                                  type == HighsVarType::kSemiInteger)) {
+      // Semi-variables at zero will have positive col infeasibility,
+      // so possibly zero this
+      if (std::fabs(primal) <= options.mip_feasibility_tolerance)
+        col_infeasibility = 0;
+      // If there is (still) column infeasibility due to value being
+      // off zero or below lower bound, then this counts as an integer
+      // infeasibility
+      if (col_infeasibility && primal < upper)
+        integer_infeasibility =
+            std::max(col_infeasibility, integer_infeasibility);
+    }
   }
 }
 
@@ -2826,9 +2832,10 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
   double sum_row_residuals = 0;
   const double kRowResidualTolerance =
       options.primal_feasibility_tolerance;  // 1e-12;
+  const bool assess_as_mip = lp.isMip() && !options.solve_relaxation;
   const double kPrimalFeasibilityTolerance =
-      lp.isMip() ? options.mip_feasibility_tolerance
-                 : options.primal_feasibility_tolerance;
+      assess_as_mip ? options.mip_feasibility_tolerance
+                    : options.primal_feasibility_tolerance;
   // Warning logging is done if an infeasibility or row residual
   // exceeding the tolerance is found.  Ultimately, if no warnings
   // have been issued, warning is set to false, and a one-line OK
@@ -2842,7 +2849,7 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
         options.log_options,
         warning ? HighsLogType::kWarning : HighsLogType::kInfo,
         "%sAssessing feasibility of %s of %.4g%s\n", message.c_str(),
-        lp.isMip()
+        assess_as_mip
             ? "MIP solution using primal feasibility and integrality tolerances"
             : "LP solution using primal feasibility tolerance",
         kPrimalFeasibilityTolerance, feasible ? ": feasible" : "");
@@ -2867,7 +2874,7 @@ HighsStatus assessLpPrimalSolution(const std::string& message,
     double col_infeasibility = 0;
     double integer_infeasibility = 0;
 
-    assessColPrimalSolution(options, primal, lower, upper, type,
+    assessColPrimalSolution(assess_as_mip, options, primal, lower, upper, type,
                             col_infeasibility, integer_infeasibility);
     if (col_infeasibility > 0) {
       if (col_infeasibility > kPrimalFeasibilityTolerance) {

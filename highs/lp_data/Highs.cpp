@@ -4258,6 +4258,7 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
   // Count the number of fixed and unfixed discrete variables
   HighsInt num_fixed_discrete_variable = 0;
   HighsInt num_unfixed_discrete_variable = 0;
+  const bool assess_as_mip = true;
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
     const double primal = solution_.col_value[iCol];
     // Default value is lower bound, unless primal is integer for a
@@ -4270,12 +4271,11 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
     } else {
       const double lower = lp.col_lower_[iCol];
       const double upper = lp.col_upper_[iCol];
-      const HighsVarType type =
-          have_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+      const HighsVarType type = lp.integrality_[iCol];
       double col_infeasibility = 0;
       double integer_infeasibility = 0;
-      assessColPrimalSolution(options_, primal, lower, upper, type,
-                              col_infeasibility, integer_infeasibility);
+      assessColPrimalSolution(assess_as_mip, options_, primal, lower, upper,
+                              type, col_infeasibility, integer_infeasibility);
       if (integer_infeasibility > options_.mip_feasibility_tolerance) {
         num_unfixed_discrete_variable++;
       } else {
