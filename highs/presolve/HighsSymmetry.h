@@ -22,6 +22,8 @@
 #include "util/HighsHash.h"
 #include "util/HighsType.h"
 
+class HighsTimer;
+
 /// class that is responsible for assigning distinct colors for each distinct
 /// double value
 class HighsMatrixColoring {
@@ -307,7 +309,8 @@ class HighsSymmetryDetection {
 
   bool initializeDetection();
 
-  void run(HighsSymmetries& symmetries);
+  void run(HighsSymmetries& symmetries, const HighsTimer* timer = nullptr,
+           double timeLimit = kHighsInf);
 };
 
 #endif

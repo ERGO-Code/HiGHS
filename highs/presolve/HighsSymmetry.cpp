@@ -20,6 +20,7 @@
 #include "mip/HighsDomain.h"
 #include "parallel/HighsParallel.h"
 #include "util/HighsDisjointSets.h"
+#include "util/HighsTimer.h"
 
 void HighsSymmetryDetection::removeFixPoints() {
   Gend.resize(numVertices);
@@ -1663,7 +1664,8 @@ bool HighsSymmetryDetection::recordAutomorphism(
   return false;
 }
 
-void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
+void HighsSymmetryDetection::run(HighsSymmetries& symmetries,
+                                 const HighsTimer* timer, double timeLimit) {
   assert(numActiveCols != 0);
   initializeGroundSet();
   currNodeCertificate.clear();
@@ -1672,6 +1674,7 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
   HighsInt maxPerms = 64000000 / numActiveCols;
   HighsSplitDeque* workerDeque = HighsTaskExecutor::getThisWorkerDeque();
   while (!nodeStack.empty()) {
+    if (timer && timer->read() >= timeLimit) break;
     HighsInt targetCell = selectTargetCell();
     if (targetCell == -1) {
       if (firstLeavePartition.empty()) {
