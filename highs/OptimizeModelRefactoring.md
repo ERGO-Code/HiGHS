@@ -156,21 +156,50 @@ as wrappers that pass `presolve_` and `model_.lp_`, so `presolve()`,
 
 ## Behaviour changes
 
-All of these are fixes.
+The last three are fixes. The first is what makes the second possible,
+and it changes what `completeSolutionFromDiscreteAssignment()` sees.
 
-- **Order of mods.** Semi-variables are now assessed or relaxed before
+- **Order of mods.** Semi-variables are now assessed (or, with
+  `solve_relaxation`, relaxed) before
   `completeSolutionFromDiscreteAssignment()` runs, together with the
   infinite-cost handling. Previously only the infinite costs were
-  handled first, and the nested `optimizeModel()` call assessed the
-  semi-variables again and undid that on return. Now they are assessed
-  once, and an invalid semi-variable gives an error before the nested
-  solve rather than after it.
+  handled first: semi-variables were assessed after it, and the nested
+  `optimizeModel()` call it makes assessed them itself and undid that
+  on return. Now they are assessed once, the nested call leaves the
+  mods alone, and an invalid semi-variable gives an error before the
+  nested solve rather than after it.
 
-  The one edge case: the initial check of whether the user's solution
-  is feasible now sees semi-variable upper bounds already tightened to
-  `kMaxSemiVariableUpper` (or relaxed, with `solve_relaxation`). A
-  solution with a semi-variable above that bound now triggers the
-  attempt to complete it. The MIP solve that follows is unaffected.
+  `completeSolutionFromDiscreteAssignment()` fixes every non-continuous
+  variable at the user's value, checks the user's solution against the
+  bounds, and solves for the rest. It now sees semi-variables after
+  assessment, so:
+
+  - A semi-continuous variable with a zero lower bound has become
+    continuous, so the user's value for it is no longer fixed: the
+    nested solve chooses it. (A semi-integer variable with a zero lower
+    bound becomes integer, so its value is still fixed.)
+  - A semi-variable with inconsistent bounds has been fixed at zero, so
+    a non-zero user value for it makes the user's solution infeasible.
+  - An upper bound above `kMaxSemiVariableUpper` has been tightened to
+    it (or, with `solve_relaxation`, the lower bound relaxed to zero),
+    so the feasibility check uses the modified bound.
+
+  In these cases the completed solution, which is used as the MIP
+  solver's starting point, can differ from before. The model solved by
+  the MIP solver is unchanged.
+
+- **Infinite costs with a user-supplied MIP solution.** All mods are
+  recorded in the single `lp.mods_`, and `unapplyMods()` undoes and
+  clears all of it. Previously, if the nested `optimizeModel()` called
+  from `completeSolutionFromDiscreteAssignment()` made semi-variable
+  mods, its undo also ran `restoreInfCost()` on the outer call's
+  infinite-cost record. That put the infinite costs back on the
+  incumbent (and set `has_infinite_cost_`) before the outer MIP was
+  solved, and left the outer call nothing to undo. This needed infinite
+  costs, a user-supplied solution and an unfixed semi-variable that
+  assessment changes. Now `model_mods_applied_` stops the nested call
+  from applying or undoing any mods, so the outer solve always runs
+  with the infinite costs handled.
 
 - **Exceptions.** `callSolveQp()` no longer has its own `try/catch`.
   Exceptions from LP, MIP and QP are all handled by the one in
