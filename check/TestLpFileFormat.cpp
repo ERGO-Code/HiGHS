@@ -1733,6 +1733,7 @@ TEST_CASE("lp-file-format-row-names", "[LpFileFormat]") {
   REQUIRE(highs.getLp().row_names_ == std::vector<std::string>{"HiGHS_R7"});
   // Otherwise the generated names might clash, so all row names are removed
   std::string log;
+
   REQUIRE(readLp(highs, filename,
                  "min\n obj: x\nst\n HiGHS_R7: x >= 1\n x >= 2\nend\n",
                  log) == HighsStatus::kOk);
