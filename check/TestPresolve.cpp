@@ -951,7 +951,7 @@ TEST_CASE("presolve-light", "[highs_test_presolve]") {
       printf("%s presolved LP has %d columns; %d rows and %d nonzeros\n",
              k == 0 ? "Fully" : "Lightly", int(presolved_num_col),
              int(presolved_num_row), int(presolved_num_nz));
-    highs.setOptionValue("presolve_light", kHighsOnString);
+    highs.setOptionValue("presolve_mode", kPresolveModeLight);
   }
 
   highs.resetThreadScheduler(true);
@@ -1030,7 +1030,7 @@ TEST_CASE("presolve-initial-sweep-all", "[highs_test_presolve]") {
   // Tests all cases in initial sweep
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  highs.setOptionValue("presolve_light", kHighsOnString);
+  highs.setOptionValue("presolve_mode", kPresolveModeLight);
   if (dev_run) highs.setOptionValue("presolve_rule_logging", true);
   HighsLp lp;
   lp.num_col_ = 7;
@@ -1279,7 +1279,7 @@ TEST_CASE("presolve-light-no-crossover", "[highs_test_presolve]") {
 
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
 
-  REQUIRE(h.setOptionValue("presolve_light", kHighsOnString) ==
+  REQUIRE(h.setOptionValue("presolve_mode", kPresolveModeLight) ==
           HighsStatus::kOk);
   REQUIRE(h.setOptionValue("solve_relaxation", true) == HighsStatus::kOk);
   testAllLpSolversCrossoverChoose(h, HighsModelStatus::kOptimal);
