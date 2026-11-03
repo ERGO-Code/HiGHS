@@ -869,6 +869,7 @@ bool objectiveOk(const double optimal_objective,
 bool solutionOk(const std::vector<double> optimal_solution,
                 const std::vector<double> require_optimal_solution,
                 const double feasibility_tolerance) {
+  if (optimal_solution.size() != require_optimal_solution.size()) return false;
   HighsInt num_col = optimal_solution.size();
   for (HighsInt iCol = 0; iCol < num_col; iCol++)
     if (std::fabs(require_optimal_solution[iCol] - optimal_solution[iCol]) >
@@ -881,7 +882,9 @@ void solve(Highs& highs, const HighsModelStatus require_model_status,
            std::string presolve) {
   REQUIRE(highs.setOptionValue(kPresolveString, presolve) == HighsStatus::kOk);
 
-  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+  // start from scratch, so that a solution of a previous solve isn't used as a
+  // start solution, and the solver data remain available after the solve
+  REQUIRE(highs.clearSolver() == HighsStatus::kOk);
 
   REQUIRE(highs.run() == (require_model_status == HighsModelStatus::kSolveError
                               ? HighsStatus::kError
@@ -902,17 +905,18 @@ void solve(Highs& highs, std::string presolve,
   if (require_model_status == HighsModelStatus::kOptimal)
     REQUIRE(objectiveOk(highs.getInfo().objective_function_value,
                         require_optimal_objective, dev_run));
-  highs.clearSolver();
 }
 
 void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const std::vector<double> require_optimal_solution) {
+  // get the tolerance before solve() resets the options
+  const double mip_feasibility_tolerance =
+      highs.getOptions().mip_feasibility_tolerance;
   solve(highs, require_model_status, presolve);
   if (require_model_status == HighsModelStatus::kOptimal)
     REQUIRE(solutionOk(highs.getSolution().col_value, require_optimal_solution,
-                       highs.getOptions().mip_feasibility_tolerance));
-  highs.clearSolver();
+                       mip_feasibility_tolerance));
 }
 
 void distillationMIP(Highs& highs) {
