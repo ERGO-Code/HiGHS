@@ -28,11 +28,27 @@ HPresolve::Result HPresolve::enumerateSolutions(
   HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
-  // scores, random tie-breaker, row index, signature, number of binaries and
-  // number of binaries minus the number of distinct signature bits
-  typedef std::tuple<double, double, HighsInt, HighsInt, uint64_t, HighsInt,
-                     HighsInt>
-      candidateRow;
+  // candidate row for the enumeration
+  struct CandidateRow {
+    // scores of the row (negated, so that the best rows come first)
+    double score;
+    double score2;
+    // random tie-breaker
+    HighsInt tieBreaker;
+    // row index, -1 if the row is removed
+    HighsInt row;
+    uint64_t signature;
+    HighsInt numBinaries;
+    // number of binaries minus the number of distinct signature bits
+    HighsInt numCoincidences;
+
+    // the row index is unique, so the remaining fields do not affect the order
+    bool operator<(const CandidateRow& other) const {
+      return std::make_tuple(score, score2, tieBreaker, row) <
+             std::make_tuple(other.score, other.score2, other.tieBreaker,
+                             other.row);
+    }
+  };
 
   // maximum size of a row and maximum number of rows that will be checked
   const size_t maxRowSize = 8;
@@ -102,14 +118,14 @@ HPresolve::Result HPresolve::enumerateSolutions(
   // common bits are at least the overlap minus the bits lost to coinciding
   // columns in either row. the check never rejects similar rows; whether
   // they are similar is decided by computeRowOverlap
-  auto mayBeSimilar = [&](const candidateRow& row, const candidateRow& row2) {
-    HighsInt numnzs = std::get<5>(row);
-    HighsInt numnzs2 = std::get<5>(row2);
-    HighsInt numCoincidences = std::min(std::get<6>(row), std::get<6>(row2));
+  auto mayBeSimilar = [&](const CandidateRow& row, const CandidateRow& row2) {
+    HighsInt numCoincidences =
+        std::min(row.numCoincidences, row2.numCoincidences);
     HighsInt numCommonBits =
-        HighsHashHelpers::popcnt(std::get<4>(row) & std::get<4>(row2));
+        HighsHashHelpers::popcnt(row.signature & row2.signature);
     return static_cast<size_t>(numCommonBits + numCoincidences) >=
-           requiredRowOverlap(static_cast<size_t>(std::min(numnzs, numnzs2)));
+           requiredRowOverlap(static_cast<size_t>(
+               std::min(row.numBinaries, row2.numBinaries)));
   };
 
   // lambda for computing overlap of two binary rows
@@ -134,7 +150,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
   };
 
   // lambda for compiling candidate rows
-  auto compileRows = [&](std::vector<candidateRow>& rows) {
+  auto compileRows = [&](std::vector<CandidateRow>& rows) {
     std::vector<HighsInt> binvars(maxRowSize);
     size_t numnzs = 0;
     HighsRandom random(options->random_seed);
@@ -149,14 +165,14 @@ HPresolve::Result HPresolve::enumerateSolutions(
       uint64_t signature = computeRowSignature(binvars, numnzs);
       HighsInt numCoincidences =
           static_cast<HighsInt>(numnzs) - HighsHashHelpers::popcnt(signature);
-      rows.emplace_back(-score.first, -score.second, random.integer(), i,
-                        signature, static_cast<HighsInt>(numnzs),
-                        numCoincidences);
+      rows.push_back(CandidateRow{-score.first, -score.second, random.integer(),
+                                  i, signature, static_cast<HighsInt>(numnzs),
+                                  numCoincidences});
     }
   };
 
   // lambda for removing similar rows
-  auto removeSimilarRows = [&](std::vector<candidateRow>& rows) {
+  auto removeSimilarRows = [&](std::vector<CandidateRow>& rows) {
     if (rows.size() <= 1) return;
     std::vector<HighsInt> binvars(maxRowSize);
     std::vector<HighsInt> binvars2(maxRowSize);
@@ -167,7 +183,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
     size_t numComparisons = 0;
     for (size_t i = 0; i < rows.size() - 1; i++) {
       // get row index and skip removed rows
-      HighsInt r = std::get<3>(rows[i]);
+      HighsInt r = rows[i].row;
       if (r == -1) continue;
       // check if maximum number of rows is reached
       if ((++numRowsAccepted) >= maxNumRowsChecked) break;
@@ -178,7 +194,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
       HighsInt oldNumRowsRemoved = numRowsRemoved;
       for (size_t ii = i + 1; ii < rows.size(); ii++) {
         // get row index and skip removed rows
-        HighsInt& r2 = std::get<3>(rows[ii]);
+        HighsInt& r2 = rows[ii].row;
         if (r2 == -1) continue;
         // compare signatures to see if there may be too much overlap
         numRowsActive++;
@@ -200,17 +216,16 @@ HPresolve::Result HPresolve::enumerateSolutions(
       if (numRowsActive - numRowsRemoved + oldNumRowsRemoved <= 1) break;
     }
     if (numRowsRemoved > 0)
-      rows.erase(std::remove_if(rows.begin(), rows.end(),
-                                [](const candidateRow& p) {
-                                  return std::get<3>(p) == -1;
-                                }),
-                 rows.end());
+      rows.erase(
+          std::remove_if(rows.begin(), rows.end(),
+                         [](const CandidateRow& p) { return p.row == -1; }),
+          rows.end());
     if (rows.size() > static_cast<size_t>(maxNumRowsChecked))
       rows.resize(maxNumRowsChecked);
   };
 
   // vector of rows
-  std::vector<candidateRow> rows;
+  std::vector<CandidateRow> rows;
   rows.reserve(model->num_row_);
 
   // compile rows and sort them
@@ -370,7 +385,7 @@ HPresolve::Result HPresolve::enumerateSolutions(
   HighsInt numFails = 0;
   for (const auto& r : rows) {
     // get row index
-    HighsInt row = std::get<3>(r);
+    HighsInt row = r.row;
     // skip redundant rows
     if (domain.isRedundantRow(row)) continue;
     // check row
