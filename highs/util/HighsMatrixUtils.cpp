@@ -62,6 +62,27 @@ HighsStatus assessMatrix(
                              matrix_index, matrix_value))
     return HighsStatus::kError;
 
+  if ((vec_dim == 0 || num_vec == 0) &&
+      matrix_start.size() > 1 &&
+      matrix_index.size() > 0 &&
+      matrix_value.size() > 0) {
+    // Most likely that vec_dim and/or num_vec have not been set so,
+    // rather than trimming matrix_start_, matrix_.index_ and
+    // matrix_.value_ to correspond to an empty matrix, log an error
+    // and return
+    highsLogUser(log_options, HighsLogType::kError,
+                 "%s %s number of vectors (%d) and vector dimension (%d) "
+		 "with (start, index, value) sizes of (%d, %d, %d)\n",
+                 class_name.c_str(), matrix_name.c_str(),
+		 int(vec_dim), int(num_vec),
+		 int(matrix_start.size()),
+		 int(matrix_index.size()),
+		 int(matrix_value.size()));
+    highsLogUser(log_options, HighsLogType::kError,
+		 "   Suggests that the number of vectors and/or vector dimension have not been set\n");
+    return HighsStatus::kError;
+  }
+
   auto possible_col_name = [&](const HighsInt ix) {
     std::string name = "";
     if (col_names) name = " (col " + col_names[ix] + ")";

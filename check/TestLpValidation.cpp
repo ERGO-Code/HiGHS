@@ -962,6 +962,9 @@ TEST_CASE("issue-3366", "[highs_test_lp_validation]") {
   if (dev_run) printf("For matrix_copy.assess\n");
   HighsSparseMatrix matrix_copy = lp.a_matrix_;
   matrix_copy.name_ = "LP matrix A";
+  REQUIRE(matrix_copy.assess(options) == HighsStatus::kError);
+  matrix_copy.num_col_ = lp.num_col_;
+  matrix_copy.num_row_ = lp.num_row_;
   REQUIRE(matrix_copy.assess(options) == HighsStatus::kWarning);
 
   if (dev_run) printf("For lp.assess\n");
