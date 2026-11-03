@@ -28,7 +28,11 @@ HPresolve::Result HPresolve::enumerateSolutions(
   HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
-  typedef std::tuple<double, double, HighsInt, HighsInt, uint32_t> candidateRow;
+  // scores, random tie-breaker, row index, signature, number of binaries and
+  // number of binaries minus the number of distinct signature bits
+  typedef std::tuple<double, double, HighsInt, HighsInt, uint64_t, HighsInt,
+                     HighsInt>
+      candidateRow;
 
   // maximum size of a row and maximum number of rows that will be checked
   const size_t maxRowSize = 8;
@@ -77,13 +81,35 @@ HPresolve::Result HPresolve::enumerateSolutions(
   // lambda for computing row signature
   auto computeRowSignature = [&](const std::vector<HighsInt>& binvars,
                                  size_t numnzs) {
-    uint32_t signature = 0;
+    uint64_t signature = 0;
     for (size_t i = 0; i < numnzs; i++) {
-      HighsInt colHashedPos = (HighsHashHelpers::hash(binvars[i]) >> 59);
-      assert(colHashedPos < 32);
-      signature |= 1 << colHashedPos;
+      HighsInt colHashedPos = (HighsHashHelpers::hash(binvars[i]) >> 58);
+      assert(colHashedPos < 64);
+      signature |= uint64_t{1} << colHashedPos;
     }
     return signature;
+  };
+
+  // lambda for computing the smallest overlap for which a row with numnzs
+  // binaries is too similar to a row that is at least as long (see
+  // removeSimilarRows)
+  auto requiredRowOverlap = [&](size_t numnzs) {
+    return ((maxPercentageRowOverlap + 1) * numnzs + 99) / 100;
+  };
+
+  // lambda for checking with the signatures whether two rows may overlap too
+  // much. a column in both rows sets the same bit in both signatures, so the
+  // common bits are at least the overlap minus the bits lost to coinciding
+  // columns in either row. the check never rejects similar rows; whether
+  // they are similar is decided by computeRowOverlap
+  auto mayBeSimilar = [&](const candidateRow& row, const candidateRow& row2) {
+    HighsInt numnzs = std::get<5>(row);
+    HighsInt numnzs2 = std::get<5>(row2);
+    HighsInt numCoincidences = std::min(std::get<6>(row), std::get<6>(row2));
+    HighsInt numCommonBits =
+        HighsHashHelpers::popcnt(std::get<4>(row) & std::get<4>(row2));
+    return static_cast<size_t>(numCommonBits + numCoincidences) >=
+           requiredRowOverlap(static_cast<size_t>(std::min(numnzs, numnzs2)));
   };
 
   // lambda for computing overlap of two binary rows
@@ -119,9 +145,13 @@ HPresolve::Result HPresolve::enumerateSolutions(
       if (!getBinaryRow(i, binvars, numnzs)) continue;
       // compute row score
       auto score = computeRowScore(binvars, numnzs);
-      // add row to vector
+      // compute signature and add row to vector
+      uint64_t signature = computeRowSignature(binvars, numnzs);
+      HighsInt numCoincidences =
+          static_cast<HighsInt>(numnzs) - HighsHashHelpers::popcnt(signature);
       rows.emplace_back(-score.first, -score.second, random.integer(), i,
-                        computeRowSignature(binvars, numnzs));
+                        signature, static_cast<HighsInt>(numnzs),
+                        numCoincidences);
     }
   };
 
@@ -150,9 +180,9 @@ HPresolve::Result HPresolve::enumerateSolutions(
         // get row index and skip removed rows
         HighsInt& r2 = std::get<3>(rows[ii]);
         if (r2 == -1) continue;
-        // compare signatures to see if there may be overlap
+        // compare signatures to see if there may be too much overlap
         numRowsActive++;
-        if ((std::get<4>(rows[i]) & std::get<4>(rows[ii])) == 0) continue;
+        if (!mayBeSimilar(rows[i], rows[ii])) continue;
         // get indices of binary variables in the row
         getBinaryRow(r2, binvars2, numnzs2);
         // check if there is too much overlap (compute overlap coefficient)
