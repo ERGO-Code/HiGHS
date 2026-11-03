@@ -58,8 +58,13 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                            integral, feasible);
     assert(valid);
 #endif
-    // Initial solution can be infeasible, but need to set values for violation
-    // and objective
+    // Original comment: "Initial solution can be infeasible, but need
+    // to set values for violation and objective"
+    //
+    // The initial solution shouldn't be infeasible in the original
+    // space, since it's tested externally, but logging of
+    // infeasibility has been added to
+    // HighsMipSolverData::checkAddSolution()
     MipViolation violation;
     HighsCDouble quad_solution_objective_;
     solutionFeasible(orig_model_, solution.col_value, &solution.row_value,
@@ -1308,7 +1313,7 @@ void HighsMipSolver::solvingReport(const std::string& solutionstatus) const {
                  primal_bound_, dual_bound_, gapString.data());
     if (!timeless_log)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "  P-D integral      %.12g\n",
+                   "  P-D integral      %.2f\n",
                    mipdata_->primal_dual_integral.value);
   }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
