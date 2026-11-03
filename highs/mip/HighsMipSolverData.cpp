@@ -428,18 +428,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.setOptionValue("presolve", kHighsOffString);
     // Determine the solver
     const std::string mip_ipm_solver = mipsolver.options_mip_->mip_ipm_solver;
-    // Currently use IPX by default and take action on failure here if
-    // using HiPO.
-    bool use_hipo =
-        /*
-  #ifdef HIPO
-        // Later use HiPO by default
-        mip_ipm_solver == kHighsChooseString ||
-  #endif
-        */
-        mip_ipm_solver == kHipoString;
-    // Later still, pass mip_ipm_solver and take action on failure in
-    // solveLp
+    // HiPO does not have centring yet, so use IPX
+    const bool use_hipo = false;
     const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
     ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("ipm_iteration_limit", 200);
