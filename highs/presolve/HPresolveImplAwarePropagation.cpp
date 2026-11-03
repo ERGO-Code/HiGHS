@@ -183,7 +183,9 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   std::vector<SortedBin> sortedBins;
   std::vector<CliqueCandidate> candidates;
   std::vector<Breakpoint> breakpoints;
-  // bounds on non-binaries implied by binaries
+  // bounds implied by binaries on the non-binaries of the current row, as
+  // read by the propagation (filtered and merged), keyed by literal and
+  // non-binary
   HighsHashTable<ImpliedBoundKey, HighsImplications::Implication> impliedBounds;
   // implied bounds on non-binaries, indexed by column
   std::vector<CachedColumn> cachedColumns;
@@ -218,12 +220,13 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   HighsInt numVarsFixed = 0;
   HighsInt numCliquesAdded = 0;
   HighsInt numBoundsTightened = 0;
-  // calls of checkRow, for the rows and the objective
+  // calls of checkRow, for the rows and the objective (numObjectiveChecks of
+  // them for the objective)
   HighsInt numCheckRowCalls = 0;
   HighsInt numObjectiveChecks = 0;
   // work in elementary operations: clique queries, look-ups of implied bounds
   // and visits of implications, variable bounds and clique neighbours
-  int64_t numWorkUnits = 0;
+  int64_t numWork = 0;
 
   // maximum number of non-zeros in rows or objective
   const HighsInt maxRowSize = 300;
@@ -580,7 +583,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
       CachedColumn& cached = cachedColumns[nonBinCol];
       cacheImpliedBounds(nonBinCol, cached);
       // the visits count as work, also when the bounds are cached
-      numWorkUnits += cached.numVisits;
+      numWork += cached.numVisits;
       addBoundsFromCache(nonBinCol);
     }
     // discover non-binaries outside the row
@@ -607,7 +610,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
                      liftedBins.end());
     for (HighsInt binCol : liftedBins)
       if (!discoverNonBinaries(binCol, numDiscoveryWork)) break;
-    numWorkUnits += numDiscoveryWork;
+    numWork += numDiscoveryWork;
   };
 
   auto memberVal = [&](HighsInt member) {
@@ -652,7 +655,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     int64_t oldNumQueries = cliquetable.numNeighbourhoodQueries;
     cliquetable.cliquePartition(partitionVars, partitionStarts,
                                 byDecreasingAbsVal, maxPartitionQueries);
-    numWorkUnits += cliquetable.numNeighbourhoodQueries - oldNumQueries;
+    numWork += cliquetable.numNeighbourhoodQueries - oldNumQueries;
     cliquetable.numNeighbourhoodQueries = oldNumQueries;
 
     // a single block of all binaries with equal coefficients and no
@@ -747,7 +750,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
       cliquetable.forEachUniqueNeighbor(
           HighsCliqueTable::CliqueVar(col, minContributionVal(val)),
           [&](HighsCliqueTable::CliqueVar neighbor) {
-            numWorkUnits++;
+            numWork++;
             // substitutions in the clique table can leave cliques {x, ~x}
             // until the next rebuild, so the column can be its own
             // neighbour; skip it, otherwise its coefficient is counted twice
@@ -870,7 +873,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
 
         // skip pair of variables if they are already in a clique together
         // (this includes complementary literals of the same column)
-        numWorkUnits++;
+        numWork++;
         if (presolveCliqueTable.haveCommonClique(v1, v2)) continue;
 
         // combined weight cannot exceed threshold; since candidates are
@@ -881,7 +884,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
 
         // the pair test looks up the implied bounds of both literals on the
         // non-binaries and queries the clique table for each row binary
-        numWorkUnits +=
+        numWork +=
             2 * static_cast<int64_t>(nonBinNonZeros.size() + sortedBins.size());
 
         // "simulate" setting v1 and v2 active: what is the effect on the
@@ -979,7 +982,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     // lower-type breakpoint at lambda: active when x_r < lambda (cost |a_i|)
     // upper-type breakpoint at mu:     active when x_r > mu     (cost |a_i|)
     breakpoints.clear();
-    numWorkUnits += static_cast<int64_t>(binNonZeros.size());
+    numWork += static_cast<int64_t>(binNonZeros.size());
     for (const auto& binVar : binNonZeros) {
       HighsInt binCol = binVar.key();
       double binVal = binVar.value().val;
@@ -1241,7 +1244,7 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     return limit;
   };
 
-  auto isWorkLimitReached = [&]() { return numWorkUnits > currentWorkLimit(); };
+  auto isWorkLimitReached = [&]() { return numWork > currentWorkLimit(); };
 
   auto sortRowsByProbingScore = [&](std::vector<HighsInt>& rows) {
     // rows whose binaries have high probing scores (many implications) come
@@ -1305,8 +1308,8 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
   // check rows
   while (myObjectiveAffected || !myModifiedRows.empty() ||
          !myChangedNonBinaries.empty()) {
-    // the work of a round is checked before each row; the checks of
-    // conflicting implications below do not count as work
+    // stop when the work limit is reached; it is checked again before each
+    // row. the checks of conflicting implications below do not count as work
     if (isWorkLimitReached()) break;
 
     // literals implying contradicting bounds on a non-binary do not depend on
@@ -1384,16 +1387,16 @@ HPresolve::Result HPresolve::implAwareConstrPropagation(
     changedNonBinaries.moveEntriesTo(myChangedNonBinaries);
   }
 
-  highsLogDev(
-      options->log_options, HighsLogType::kInfo,
-      "Implication-aware constraint propagation: %" HIGHSINT_FORMAT
-      " checks (%" HIGHSINT_FORMAT " of the objective), fixed %" HIGHSINT_FORMAT
-      " columns, added %" HIGHSINT_FORMAT
-      " cliques, tightened %" HIGHSINT_FORMAT " bounds, used %" PRId64
-      " of %" PRId64 " work units%s\n",
-      numCheckRowCalls, numObjectiveChecks, numVarsFixed, numCliquesAdded,
-      numBoundsTightened, numWorkUnits, currentWorkLimit(),
-      isWorkLimitReached() ? " (limit reached)" : "");
+  highsLogDev(options->log_options, HighsLogType::kInfo,
+              "Implication-aware constraint propagation: %" HIGHSINT_FORMAT
+              " checks (%" HIGHSINT_FORMAT
+              " of the objective), fixed %" HIGHSINT_FORMAT
+              " columns, added %" HIGHSINT_FORMAT
+              " cliques, tightened %" HIGHSINT_FORMAT " bounds, used %" PRId64
+              " of %" PRId64 " work units%s\n",
+              numCheckRowCalls, numObjectiveChecks, numVarsFixed,
+              numCliquesAdded, numBoundsTightened, numWork, currentWorkLimit(),
+              isWorkLimitReached() ? " (limit reached)" : "");
 
   return checkLimits(postsolve_stack);
 }
