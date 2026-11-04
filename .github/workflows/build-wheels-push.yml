@@ -60,6 +60,9 @@ jobs:
             python: "cp315t"
           - buildplat: [ubuntu-24.04, musllinux_i686]
             python: "cp315t"
+          # highspy tests crash with an access violation on 32-bit Windows free-threaded 3.15
+          - buildplat: [windows-2022, win32]
+            python: "cp315t"
           # CPython for Windows ARM64 is only available from 3.11
           - buildplat: [windows-11-arm, win_arm64]
             python: "cp39"
@@ -106,6 +109,9 @@ jobs:
           - buildplat: [ubuntu-24.04, manylinux_i686]
             python: "cp315t"
           - buildplat: [ubuntu-24.04, musllinux_i686]
+            python: "cp315t"
+          # highspy tests crash with an access violation on 32-bit Windows free-threaded 3.15
+          - buildplat: [windows-2022, win32]
             python: "cp315t"
           # CPython for Windows ARM64 is only available from 3.11
           - buildplat: [windows-11-arm, win_arm64]
