@@ -337,7 +337,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
 
     // Fix any columns with coefficients that are too large
     for (auto& term : knapsack.terms) {
-      if (term.weight <= knapsack.capacity) continue;
+      if (term.weight - knapsack.capacity <= primal_feastol) continue;
       const HighsInt col = term.literal / 2;
       if (term.literal % 2 != 0) {
         HPRESOLVE_CHECKED_CALL(changeColUpper(col, 0.0));
