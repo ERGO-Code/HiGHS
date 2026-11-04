@@ -2712,6 +2712,23 @@ TEST_CASE("issue-3461", "[highs_test_mip_solver]") {
   highs.resetThreadScheduler(true);
 }
 
+TEST_CASE("issue-3478", "[highs_test_mip_solver]") {
+  // model tolls.lp in issue 3478. HighsLpAggregator dropped coefficients with
+  // |val| <= small_matrix_value without accounting for their contribution
+  // |val| * bound to the aggregated row, which led to invalid cuts and the
+  // wrong optimal objective -6016.354106
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3478.lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -6254.734457;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  highs.resetThreadScheduler(true);
+}
+
 TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
   // an empty conflict, which can be derived when a proof is violated by the
   // global bounds alone, is stored at the end of the conflict entries and

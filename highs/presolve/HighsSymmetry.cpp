@@ -20,6 +20,7 @@
 #include "mip/HighsDomain.h"
 #include "parallel/HighsParallel.h"
 #include "util/HighsDisjointSets.h"
+#include "util/HighsTimer.h"
 
 void HighsSymmetryDetection::removeFixPoints() {
   Gend.resize(numVertices);
@@ -732,8 +733,8 @@ void HighsSymmetryDetection::initializeHashValues() {
   for (HighsInt i = 0; i != numVertices; ++i) {
     HighsInt cell = vertexToCell[i];
     for (HighsInt j = Gstart[i]; j != Gend[i]; ++j) {
-      HighsHashHelpers::sparse_combine32(vertexHash[Gedge[j].first], cell,
-                                         Gedge[j].second);
+      HighsHashHelpers::sparse_combine(vertexHash[Gedge[j].first], cell,
+                                       Gedge[j].second);
     }
     markCellForRefinement(cell);
   }
@@ -752,8 +753,8 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
       for (HighsInt j = Gstart[vertex]; j != Gend[vertex]; ++j) {
         HighsInt edgeDestinationCell = vertexToCell[Gedge[j].first];
         if (cellSize(edgeDestinationCell) == 1) continue;
-        HighsHashHelpers::sparse_combine32(vertexHash[Gedge[j].first], cell,
-                                           Gedge[j].second);
+        HighsHashHelpers::sparse_combine(vertexHash[Gedge[j].first], cell,
+                                         Gedge[j].second);
         markCellForRefinement(edgeDestinationCell);
       }
     }
@@ -765,8 +766,8 @@ bool HighsSymmetryDetection::updateCellMembership(HighsInt i, HighsInt cell,
 }
 
 bool HighsSymmetryDetection::splitCell(HighsInt cell, HighsInt splitPoint) {
-  u32 hSplit = getVertexHash(currentPartition[splitPoint]);
-  u32 hCell = getVertexHash(currentPartition[cell]);
+  u32 hSplit = static_cast<u32>(getVertexHash(currentPartition[splitPoint]));
+  u32 hCell = static_cast<u32>(getVertexHash(currentPartition[cell]));
 
   u32 certificateVal =
       (HighsHashHelpers::pair_hash<0>(hSplit, hCell) +
@@ -824,8 +825,8 @@ void HighsSymmetryDetection::clearRefinementState() {
   vertexHash.clear();
 }
 
-HighsSymmetryDetection::u32 HighsSymmetryDetection::getVertexHash(HighsInt v) {
-  const u32* h = vertexHash.find(v);
+HighsSymmetryDetection::u64 HighsSymmetryDetection::getVertexHash(HighsInt v) {
+  const u64* h = vertexHash.find(v);
   if (h) return *h;
   return 0;
 }
@@ -1663,7 +1664,8 @@ bool HighsSymmetryDetection::recordAutomorphism(
   return false;
 }
 
-void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
+void HighsSymmetryDetection::run(HighsSymmetries& symmetries,
+                                 const HighsTimer* timer, double timeLimit) {
   assert(numActiveCols != 0);
   initializeGroundSet();
   currNodeCertificate.clear();
@@ -1672,6 +1674,10 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
   HighsInt maxPerms = 64000000 / numActiveCols;
   HighsSplitDeque* workerDeque = HighsTaskExecutor::getThisWorkerDeque();
   while (!nodeStack.empty()) {
+    // stop if the task was cancelled, e.g. if the MIP solver returned before
+    // finishing symmetry detection, or if the time limit is reached
+    workerDeque->checkInterrupt();
+    if (timer && timer->read() >= timeLimit) break;
     HighsInt targetCell = selectTargetCell();
     if (targetCell == -1) {
       if (firstLeavePartition.empty()) {
@@ -1761,8 +1767,6 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries) {
 
         switchToNextNode(backtrackDepth);
       }
-
-      workerDeque->checkInterrupt();
     } else {
       Node& currNode = nodeStack.back();
       currNode.targetCell = targetCell;
