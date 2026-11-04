@@ -102,63 +102,16 @@ cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsyste
 
 ##### Windows: OpenBLAS from vcpkg, built with clang-cl
 
-vcpkg's standard Windows triplets, such as `x64-windows-static`, build OpenBLAS with MSVC. That gives only the generic kernels, which make HiPO several times slower (see [Windows: clang-cl](@ref install-blas-clang-cl)). With `clang-cl` installed, a custom vcpkg triplet can build OpenBLAS with `clang-cl` instead. The vcpkg port is used unchanged, and HiGHS can still be compiled with MSVC.
+vcpkg's standard Windows triplets, such as `x64-windows-static`, build OpenBLAS with MSVC. That gives only the generic kernels, which make HiPO several times slower (see [Windows: clang-cl](@ref install-blas-clang-cl)). HiGHS therefore provides the triplets `x64-windows-static-clang` and `arm64-windows-static-clang` in `cmake/vcpkg-triplets`. They are the same as `x64-windows-static` and `arm64-windows-static`, except that the ports are built with `clang-cl`, which is searched for on `PATH`, in the default LLVM install location, and in Visual Studio installs with the "C++ Clang Compiler for Windows" component. HiGHS itself can still be compiled with MSVC.
 
-1. Create a directory for the triplet, e.g. `C:/vcpkg-triplets`, containing the two files below.
+When HiGHS is configured with `-DHIGHS_VCPKG=ON`, these triplets are used by default on Windows x64 and ARM64 if `clang-cl` is found. Add `-DHIGHS_VCPKG_CLANG_CL=OFF` to use `x64-windows-static` or `arm64-windows-static` instead.
 
-`x64-windows-clang.cmake` defines the triplet:
-```cmake
-set(VCPKG_TARGET_ARCHITECTURE x64)
-set(VCPKG_CRT_LINKAGE dynamic)
-set(VCPKG_LIBRARY_LINKAGE dynamic)
-set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/clang-cl-toolchain.cmake")
-# Still use the MSVC environment (linker, Windows SDK); this is off by default
-# with a chainloaded toolchain
-set(VCPKG_LOAD_VCVARS_ENV ON)
-
-if(PORT STREQUAL "openblas")
-    if(VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
-        # There is no runtime CPU detection for ARM64 on Windows
-        list(APPEND VCPKG_CMAKE_CONFIGURE_OPTIONS -DTARGET=ARMV8)
-    else()
-        # Select the kernels for the CPU at runtime
-        list(APPEND VCPKG_CMAKE_CONFIGURE_OPTIONS -DDYNAMIC_ARCH=ON)
-    endif()
-    # Recent clang reports incompatible pointer types in some kernels as errors
-    set(VCPKG_C_FLAGS "-Wno-error=incompatible-pointer-types -w")
-    set(VCPKG_CXX_FLAGS "")
-endif()
+To use the triplets with your own vcpkg setup, e.g.
 ```
-`clang-cl-toolchain.cmake` makes the vcpkg build use `clang-cl` as its compiler:
-```cmake
-find_program(CLANG_CL_EXECUTABLE clang-cl
-    PATHS "$ENV{ProgramFiles}/LLVM/bin" REQUIRED)
-set(CMAKE_C_COMPILER "${CLANG_CL_EXECUTABLE}")
-set(CMAKE_CXX_COMPILER "${CLANG_CL_EXECUTABLE}")
-# Ninja would pass rc.exe flags to clang-cl when scanning .rc files
-set(CMAKE_NINJA_CMCLDEPS_RC OFF)
-
-# Keep vcpkg's usual Windows compiler settings
-list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES _VCPKG_ROOT_DIR)
-include("${_VCPKG_ROOT_DIR}/scripts/toolchains/windows.cmake")
+vcpkg install openblas[threads]:x64-windows-static-clang --overlay-triplets=<HiGHS>/cmake/vcpkg-triplets --host-triplet=x64-windows-static-clang
+cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-clang -DVCPKG_OVERLAY_TRIPLETS=<HiGHS>/cmake/vcpkg-triplets -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
 ```
-
-2. Install OpenBLAS with the new triplet:
-```
-vcpkg install openblas[threads]:x64-windows-clang --overlay-triplets=C:/vcpkg-triplets --host-triplet=x64-windows-clang
-```
-OpenBLAS needs a copy of itself for the host as a build tool. Using the new triplet for the host too means vcpkg does not also build that copy with MSVC.
-
-3. Configure HiGHS with the same triplet:
-```
-cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-clang -DVCPKG_OVERLAY_TRIPLETS=C:/vcpkg-triplets
-```
-
-Notes:
-- For Windows ARM64, save the triplet as `arm64-windows-clang.cmake`, set `VCPKG_TARGET_ARCHITECTURE` to `arm64`, and use `arm64-windows-clang` in place of `x64-windows-clang` above.
-- This triplet builds DLLs. For static libraries like `x64-windows-static`, set both `VCPKG_LIBRARY_LINKAGE` and `VCPKG_CRT_LINKAGE` to `static`, and add `-DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"` when configuring HiGHS so that it uses the static runtime too.
-- The triplet builds every port with `clang-cl`. To use `clang-cl` for OpenBLAS only, move the `VCPKG_CHAINLOAD_TOOLCHAIN_FILE` and `VCPKG_LOAD_VCVARS_ENV` lines into the `if(PORT STREQUAL "openblas")` block.
-- `clang-cl` is searched for on `PATH` and in the default LLVM install location. Edit `find_program` in the toolchain file if it is installed elsewhere.
+OpenBLAS needs a copy of itself for the host as a build tool, so using the same triplet for the host means that copy is not also built with MSVC.
 
 ##### Path to BLAS
 
