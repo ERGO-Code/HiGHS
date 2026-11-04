@@ -199,10 +199,9 @@ bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
       // If the largest small term can fit m times into the knapsack
       // then the cardinality upgrade has a stronger LP relaxation
       setCardinality(numNonZeroTerms - numBig);
-      return false;
     }
   }
-  return false;
+  return weight(numBig) != 1 || weight(numNonZeroTerms -1) != 1;
 }
 
 }  // namespace
@@ -469,7 +468,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
             knapsack.terms.end());
       }
     }
-    if (!skipDisaggregation) {
+    if (!skipDisaggregation && knapsack.capacity <= 100 * minWeight) {
       knapsacks.push_back(std::move(knapsack));
     }
   }
@@ -481,12 +480,14 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   // has a stronger LP relaxation
   HighsInt maxNewNonZeros = numNonzeros() / 4;
   HighsInt numNewNonZeros = 0;
+  HighsInt maxNewRows = numRows / 2;
+  HighsInt numNewRows = 0;
   std::vector<std::vector<HighsInt>> newIndices;
   std::vector<std::vector<double>> newValues;
   std::vector<double> newUpper;
   std::vector<HighsInt> disaggregatedRows;
   for (KnapsackRow& knapsack : knapsacks) {
-    if (numNewNonZeros >= maxNewNonZeros) break;
+    if (numNewNonZeros >= maxNewNonZeros || numNewRows >= maxNewRows) break;
     std::vector<KnapsackTerm> maxWeightItems;
     std::vector<KnapsackTerm> smallItems;
     HighsCDouble smallItemSum = 0;
@@ -501,12 +502,13 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     if (maxWeightItems.empty() || smallItems.size() <= 1 ||
         smallItems.size() * (maxWeightItems.size() + 1) >=
             10 * (maxWeightItems.size() + smallItems.size()) ||
-        smallItemSum - knapsack.capacity > 0) {
+        smallItems.size() > 100 || smallItemSum - knapsack.capacity > 0) {
       continue;
     }
     numNewNonZeros +=
         static_cast<HighsInt>(smallItems.size() * (maxWeightItems.size() + 1) -
                               maxWeightItems.size() - smallItems.size());
+    numNewRows += static_cast<HighsInt>(smallItems.size()) - 1;
     for (const KnapsackTerm& term : smallItems) {
       std::vector<KnapsackTerm> clique = maxWeightItems;
       clique.push_back(term);
