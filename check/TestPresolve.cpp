@@ -296,7 +296,8 @@ HighsStatus zeroCostColSing() {
   lp.num_col_ = 2;
   lp.num_row_ = 1;
 
-  lp.a_matrix_.start_.push_back(0);
+  //  lp.a_matrix_.start_.push_back(0); // NB Initial HighsLp::a_matrix has
+  //  start_[0]=0;
   lp.a_matrix_.start_.push_back(1);
   lp.a_matrix_.start_.push_back(2);
 
@@ -336,9 +337,8 @@ HighsStatus colSingDoubletonEquality() {
   lp.num_col_ = 4;
   lp.num_row_ = 2;
 
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
-
-  lp.a_matrix_.start_.push_back(0);
+  //  lp.a_matrix_.start_.push_back(0); // NB Initial HighsLp::a_matrix has
+  //  start_[0]=0;
   lp.a_matrix_.start_.push_back(2);
   lp.a_matrix_.start_.push_back(3);
   lp.a_matrix_.start_.push_back(4);
@@ -395,9 +395,8 @@ HighsStatus colSingDoubletonInequality() {
   lp.num_col_ = 4;
   lp.num_row_ = 2;
 
-  lp.a_matrix_.format_ = MatrixFormat::kColwise;
-
-  lp.a_matrix_.start_.push_back(0);
+  //  lp.a_matrix_.start_.push_back(0); // NB Initial HighsLp::a_matrix has
+  //  start_[0]=0;
   lp.a_matrix_.start_.push_back(2);
   lp.a_matrix_.start_.push_back(3);
   lp.a_matrix_.start_.push_back(4);
@@ -455,7 +454,8 @@ HighsStatus twoColSingDoubletonEquality() {
   lp.num_col_ = 2;
   lp.num_row_ = 1;
 
-  lp.a_matrix_.start_.push_back(0);
+  //  lp.a_matrix_.start_.push_back(0); // NB Initial HighsLp::a_matrix has
+  //  start_[0]=0;
   lp.a_matrix_.start_.push_back(1);
   lp.a_matrix_.start_.push_back(2);
 
@@ -495,7 +495,8 @@ HighsStatus twoColSingDoubletonInequality() {
   lp.num_col_ = 2;
   lp.num_row_ = 1;
 
-  lp.a_matrix_.start_.push_back(0);
+  //  lp.a_matrix_.start_.push_back(0); // NB Initial HighsLp::a_matrix has
+  //  start_[0]=0;
   lp.a_matrix_.start_.push_back(1);
   lp.a_matrix_.start_.push_back(2);
 
@@ -576,7 +577,8 @@ TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
   lp.num_col_ = 4;
   lp.num_row_ = 4;
 
-  lp.a_matrix_.start_.push_back(0);
+  //  lp.a_matrix_.start_.push_back(0);  // NB Initial HighsLp::a_matrix has
+  //  start_[0]=0;
   lp.a_matrix_.start_.push_back(3);
   lp.a_matrix_.start_.push_back(5);
   lp.a_matrix_.start_.push_back(6);
@@ -615,7 +617,7 @@ TEST_CASE("presolve-issue-425", "[highs_test_presolve]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsStatus status = highs.passModel(lp);
-  assert(status == HighsStatus::kOk);
+  REQUIRE(status == HighsStatus::kOk);
 
   status = highs.run();
   REQUIRE(status == HighsStatus::kOk);
