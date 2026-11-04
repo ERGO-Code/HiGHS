@@ -60,6 +60,8 @@ static HighsCDouble computeDelta(double val, double oldbound, double newbound,
 
 static inline double boundRange(double upper_bound, double lower_bound,
                                 double tolerance, HighsVarType var_type) {
+  // the range is infinite if one of the bounds is infinite
+  if (lower_bound <= -kHighsInf || upper_bound >= kHighsInf) return kHighsInf;
   double range = upper_bound - lower_bound;
   return range - (var_type == HighsVarType::kContinuous
                       ? std::max(0.3 * range, 1000.0 * tolerance)

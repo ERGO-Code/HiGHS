@@ -34,7 +34,7 @@ fi
 cmake -S . -B build \
     -DCMAKE_INSTALL_PREFIX=${prefix} \
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TARGET_TOOLCHAIN} \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_SHARED_LIBS=ON \
     -DHIPO=ON \
     -DBUILD_SHARED_EXTRAS_LIB=OFF \
@@ -44,9 +44,9 @@ if [[ "${target}" == *-linux-* ]]; then
     make -C build -j ${nproc}
 else
     if [[ "${target}" == *-mingw* ]]; then
-        cmake --build build --config Release
+        cmake --build build --config Debug
     else
-        cmake --build build --config Release --parallel
+        cmake --build build --config Debug --parallel
     fi
 fi
 cmake --install build

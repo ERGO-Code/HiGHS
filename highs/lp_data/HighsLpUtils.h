@@ -44,9 +44,6 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
 
-bool lpDimensionsOk(const std::string& message, const HighsLp& lp,
-                    const HighsLogOptions& log_options);
-
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
                         vector<double>& cost, bool& has_infinite_cost,
@@ -254,7 +251,8 @@ bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
                                     std::ifstream& in_file);
 
-void assessColPrimalSolution(const HighsOptions& options, const double primal,
+void assessColPrimalSolution(const bool assess_as_mip,
+                             const HighsOptions& options, const double primal,
                              const double lower, const double upper,
                              const HighsVarType type, double& col_infeasibility,
                              double& integer_infeasibility);
