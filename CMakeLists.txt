@@ -302,6 +302,14 @@ else()
   set(HIPDLP_GPU OFF)
 endif()
 
+# Link HiGHS statically into the highspy extension module by default. A
+# separate libhighs in the wheel shares its SONAME / install name with any other
+# libhighs in the process, e.g. the one bundled by OR-Tools, so the dynamic
+# loader can give one package the other's copy. GPU wheels still need libhighs.
+if (HIPO_PYTHON AND NOT DEFINED BUILD_SHARED_LIBS AND NOT (CUPDLP_GPU OR HIPDLP_GPU))
+  set(BUILD_SHARED_LIBS OFF)
+endif()
+
 if(BUILD_STATIC_EXE)
   set(BUILD_SHARED_LIBS OFF)
 
