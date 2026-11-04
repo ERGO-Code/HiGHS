@@ -198,6 +198,11 @@ bool computeScatterDataRegressionError(HighsScatterData& scatter_data,
 
 double nearestPowerOfTwoScale(const double value);
 
+// returns true if the term val * x with x in [lb, ub] is negligible, i.e. if
+// |val| and |val| * max(|lb|, |ub|) do not exceed epsilon
+bool termIsZero(const double val, const double lb, const double ub,
+                const double epsilon);
+
 // If assert_condition is false then, if NDEBUG is defined message is
 // printed and abort() is called, otherwise assert is called
 void highsAssert(const bool assert_condition, const std::string& message = "");

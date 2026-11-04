@@ -52,7 +52,8 @@ TEST_CASE("highs-model", "[highs_model]") {
   hessian.start_.resize(dim + 1);
   hessian.start_[0] = 0;
   hessian.start_[dim] = 0;
-  if (!dev_run) highs.setOptionValue("output_flag", false);
+  highs.setOptionValue("output_flag", dev_run);
+  if (dev_run) highs.setOptionValue("log_dev_level", 1);
   status = highs.passModel(model);
   REQUIRE(status == HighsStatus::kOk);
 
@@ -72,7 +73,7 @@ TEST_CASE("highs-model", "[highs_model]") {
   hessian.value_[0] = illegal_small_hessian_diagonal_entry;
   hessian.value_[1] = illegal_negative_hessian_diagonal_entry;
   status = highs.passModel(model);
-  REQUIRE(status == HighsStatus::kOk);
+  REQUIRE(status == HighsStatus::kWarning);
   status = highs.run();
   REQUIRE(status == HighsStatus::kError);
 
