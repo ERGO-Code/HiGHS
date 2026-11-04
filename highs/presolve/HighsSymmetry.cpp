@@ -1674,6 +1674,9 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries,
   HighsInt maxPerms = 64000000 / numActiveCols;
   HighsSplitDeque* workerDeque = HighsTaskExecutor::getThisWorkerDeque();
   while (!nodeStack.empty()) {
+    // stop if the task was cancelled, e.g. if the MIP solver returned before
+    // finishing symmetry detection, or if the time limit is reached
+    workerDeque->checkInterrupt();
     if (timer && timer->read() >= timeLimit) break;
     HighsInt targetCell = selectTargetCell();
     if (targetCell == -1) {
@@ -1764,8 +1767,6 @@ void HighsSymmetryDetection::run(HighsSymmetries& symmetries,
 
         switchToNextNode(backtrackDepth);
       }
-
-      workerDeque->checkInterrupt();
     } else {
       Node& currNode = nodeStack.back();
       currNode.targetCell = targetCell;
