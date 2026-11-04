@@ -9,8 +9,9 @@ set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/clang-cl-toolchain
 set(VCPKG_LOAD_VCVARS_ENV ON)
 
 if(PORT STREQUAL "openblas")
-    # Select the kernels for the CPU at runtime
-    list(APPEND VCPKG_CMAKE_CONFIGURE_OPTIONS -DDYNAMIC_ARCH=ON)
+    # With no TARGET, OpenBLAS uses the kernels for the CPU of the build machine,
+    # so the library may not run on an older CPU
+
     # Recent clang reports incompatible pointer types in some kernels as errors
     set(VCPKG_C_FLAGS "-Wno-error=incompatible-pointer-types -w")
     set(VCPKG_CXX_FLAGS "")

@@ -2,9 +2,8 @@ name: vcpkg-clang-cl
 
 # Tests that HIGHS_VCPKG=ON on Windows picks the *-windows-static-clang
 # triplet in cmake/vcpkg-triplets, that it builds the ports with clang-cl, and
-# that HiPO works with the OpenBLAS it builds. Building OpenBLAS with
-# DYNAMIC_ARCH takes most of an hour on x64, so this only runs when the
-# triplets or their use change.
+# that HiPO works with the OpenBLAS it builds. Building these ports is slow, so
+# this only runs when the triplets or their use change.
 
 on:
   push:
@@ -37,7 +36,7 @@ jobs:
         include:
           - os: windows-latest
             arch: x64
-            kernels: "DYNAMIC_ARCH: ON"
+            kernels: "TARGET: <native> (OpenBLAS getarch/getarch_2nd)"
           - os: windows-11-arm
             arch: ARM64
             kernels: "TARGET: ARMV8 (user-defined)"
