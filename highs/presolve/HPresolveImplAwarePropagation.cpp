@@ -15,6 +15,14 @@ namespace presolve {
 
 HPresolve::Result HPresolve::implAwareConstrPropagation(
     HighsPostsolveStack& postsolve_stack) {
+  // This method implements implication-aware constraint propagation as
+  // described in Section 4 ("VI-aware linear constraint propagation") of Chen
+  // et al., Exploiting Variable Implications in Presolve for Mixed Integer
+  // Programming, 2026, https://arxiv.org/abs/2607.04313. In addition, cliques
+  // are exploited by partitioning the binary variables of a row into cliques
+  // (clique blocks), which yields a stronger minimum activity, cf. Achterberg
+  // et al., Presolve Reductions in Mixed Integer Programming, 2020.
+
   if (mipsolver == nullptr) return Result::kOk;
 
   HighsProfilingScope clock(*mipsolver->profiling_,
