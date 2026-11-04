@@ -1746,6 +1746,40 @@ TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
   highs.resetThreadScheduler(true);
 }
 
+TEST_CASE("MIP-clique-table-duplicate-size-two-cliques",
+          "[highs_test_mip_solver]") {
+  // the clique table may contain several size-two cliques on the same edge;
+  // removing one of them must not hide the edge of the others
+  HighsCliqueTable::CliqueVar edge[] = {{0, 1}, {1, 1}};
+  HighsCliqueTable::CliqueVar otherEdge[] = {{0, 1}, {2, 1}};
+
+  // remove the clique added last
+  {
+    HighsCliqueTable cliquetable(3);
+    cliquetable.doAddClique(edge, 2);
+    cliquetable.doAddClique(edge, 2);
+    REQUIRE(cliquetable.numCliques() == 2);
+    cliquetable.removeClique(1);
+    REQUIRE(cliquetable.haveCommonClique(edge[0], edge[1]));
+    cliquetable.removeClique(0);
+    REQUIRE(!cliquetable.haveCommonClique(edge[0], edge[1]));
+  }
+
+  // remove the clique added first
+  {
+    HighsCliqueTable cliquetable(3);
+    cliquetable.doAddClique(edge, 2);
+    cliquetable.doAddClique(otherEdge, 2);
+    cliquetable.doAddClique(edge, 2);
+    cliquetable.removeClique(0);
+    REQUIRE(cliquetable.haveCommonClique(edge[0], edge[1]));
+    REQUIRE(cliquetable.haveCommonClique(otherEdge[0], otherEdge[1]));
+    cliquetable.removeClique(2);
+    REQUIRE(!cliquetable.haveCommonClique(edge[0], edge[1]));
+    REQUIRE(cliquetable.haveCommonClique(otherEdge[0], otherEdge[1]));
+  }
+}
+
 TEST_CASE("issue-3170", "[highs_test_mip_solver]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/issue-3170.mps";
