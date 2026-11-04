@@ -367,6 +367,29 @@ bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
 void HPresolve::chooseRules() {
   const bool silent = silentLog();
 
+  auto setRulesForFullMode = [&]() {
+    // All rules on in full mode
+    this->allow_rule_.assign(kPresolveRuleCount, true);
+  };
+
+  auto setRulesForLightMode = [&]() {
+    // All rules on by default
+    setRulesForFullMode();
+    // Switch off the rules not used in presolve light
+    allow_rule_[kPresolveRuleDominatedCol] = false;
+    allow_rule_[kPresolveRuleDependentEquations] = false;
+    allow_rule_[kPresolveRuleDependentFreeCols] = false;
+    allow_rule_[kPresolveRuleAggregator] = false;
+    allow_rule_[kPresolveRuleParallelRowsAndCols] = false;
+    allow_rule_[kPresolveRuleSparsify] = false;
+    allow_rule_[kPresolveRuleProbing] = false;
+    allow_rule_[kPresolveRuleEnumeration] = false;
+    allow_rule_[kPresolveRuleDualFixing] = false;
+    allow_rule_[kPresolveRuleZeroCostSingleton] = false;
+    allow_rule_[kPresolveRuleColStuffing] = false;
+    allow_rule_[kPresolveRuleFourierMotzkin] = false;
+  };
+
   auto setRulesForInitialSweepMode = [&]() {
     // All rules off by default
     allow_rule_.assign(kPresolveRuleCount, false);
@@ -389,24 +412,6 @@ void HPresolve::chooseRules() {
     if (rule == kPresolveRuleEmptyCol) return true;
     if (rule == kPresolveRuleFixedCol) return true;
     return false;
-  };
-
-  auto setRulesForLightMode = [&]() {
-    // All rules on by default
-    allow_rule_.assign(kPresolveRuleCount, true);
-    // Switch off the rules not used in presolve light
-    allow_rule_[kPresolveRuleDominatedCol] = false;
-    allow_rule_[kPresolveRuleDependentEquations] = false;
-    allow_rule_[kPresolveRuleDependentFreeCols] = false;
-    allow_rule_[kPresolveRuleAggregator] = false;
-    allow_rule_[kPresolveRuleParallelRowsAndCols] = false;
-    allow_rule_[kPresolveRuleSparsify] = false;
-    allow_rule_[kPresolveRuleProbing] = false;
-    allow_rule_[kPresolveRuleEnumeration] = false;
-    allow_rule_[kPresolveRuleDualFixing] = false;
-    allow_rule_[kPresolveRuleZeroCostSingleton] = false;
-    allow_rule_[kPresolveRuleColStuffing] = false;
-    allow_rule_[kPresolveRuleFourierMotzkin] = false;
   };
 
   auto logRule = [&](const HighsInt rule) {
@@ -448,15 +453,14 @@ void HPresolve::chooseRules() {
     if (usePdlp(options->solver)) {
       setRulesForLightMode();
     } else {
-      this->allow_rule_.assign(kPresolveRuleCount, true);
+      setRulesForFullMode();
     }
   } else if (options->presolve_mode == kPresolveModeInitialSweep) {
     setRulesForInitialSweepMode();
   } else if (options->presolve_mode == kPresolveModeLight) {
     setRulesForLightMode();
   } else if (options->presolve_mode == kPresolveModeFull) {
-    // Full presolve uses all presolve rules
-    this->allow_rule_.assign(kPresolveRuleCount, true);
+    setRulesForFullMode();
   } else {
     highsLogUser(options->log_options, HighsLogType::kError,
                  "Unrecognised presolve mode %d\n",

@@ -2297,7 +2297,8 @@ TEST_CASE("presolve-mode", "[highs_test_presolve]") {
   REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
-  std::vector<std::string> presolve_modes = {"default", "initial sweep", "light", "full"};
+  std::vector<std::string> presolve_modes = {"default", "initial sweep",
+                                             "light", "full"};
   h.setOptionValue("", dev_run);
 
   HighsInt initial_sweep_num_row = 0;
@@ -2306,14 +2307,16 @@ TEST_CASE("presolve-mode", "[highs_test_presolve]") {
   const HighsLp& presolved_lp = h.getPresolvedLp();
   for (HighsInt iMode = kPresolveModeMin; iMode <= kPresolveModeMax; iMode++) {
     if (dev_run) {
-      std::string text = "Testing presolve mode " + std::to_string(iMode) + " (" + presolve_modes[iMode] + ")";
+      std::string text = "Testing presolve mode " + std::to_string(iMode) +
+                         " (" + presolve_modes[iMode] + ")";
       highsPrintStringAsHeading(text);
     }
     REQUIRE(h.setOptionValue("presolve_mode", iMode) == HighsStatus::kOk);
     REQUIRE(h.presolve() == HighsStatus::kOk);
     if (dev_run)
       printf("Presolved LP has %d rows, %d columns and %d nonzeros\n",
-	     int(presolved_lp.num_row_), int(presolved_lp.num_col_), int(presolved_lp.numNz()));
+             int(presolved_lp.num_row_), int(presolved_lp.num_col_),
+             int(presolved_lp.numNz()));
     if (iMode == kPresolveModeDefault || iMode == kPresolveModeFull) {
       REQUIRE(presolved_lp.num_row_ == 0);
       REQUIRE(presolved_lp.num_col_ == 0);
@@ -2330,4 +2333,3 @@ TEST_CASE("presolve-mode", "[highs_test_presolve]") {
   }
   h.resetThreadScheduler(true);
 }
-
