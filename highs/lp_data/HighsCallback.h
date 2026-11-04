@@ -98,7 +98,7 @@ struct HighsCallback {
   HighsCallbackOutput data_out;
   HighsCallbackInput data_in;
   bool callbackActive(const int callback_type);
-  bool callbackAction(const int callback_type, std::string message = "");
+  bool callbackAction(const int callback_type, const std::string& message = "");
   void clearHighsCallbackOutput();
   void clearHighsCallbackInput();
   void clear();

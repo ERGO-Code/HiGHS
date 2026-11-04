@@ -698,9 +698,10 @@ HighsStatus HEkk::dualize() {
   }
   lp_.offset_ += delta_offset;
   // Copy the row-wise dual LP constraint matrix and transpose it.
-  // ToDo Make this more efficient
-  lp_.a_matrix_ = dual_matrix;
-  lp_.a_matrix_.ensureColwise();
+  lp_.a_matrix_ = dual_matrix.getColwise();
+  assert(lp_.a_matrix_.isColwise());
+  // lp_.a_matrix_.ensureColwise(); is now redundant
+
   // Add the extra columns to the dual LP constraint matrix
   lp_.a_matrix_.addCols(extra_columns);
 
@@ -765,7 +766,6 @@ HighsStatus HEkk::undualize() {
   // its values will be over-written in constructing the corresponding
   // data for the primal problem
   vector<int8_t> dual_nonbasic_flag = basis_.nonbasicFlag_;
-  vector<int8_t> dual_nonbasic_move = basis_.nonbasicMove_;
   vector<HighsInt>& primal_basic_index = basis_.basicIndex_;
   vector<int8_t>& primal_nonbasic_flag = basis_.nonbasicFlag_;
   vector<int8_t>& primal_nonbasic_move = basis_.nonbasicMove_;
@@ -953,9 +953,10 @@ HighsStatus HEkk::undualize() {
   primal_matrix.num_row_ = original_num_row_;
   primal_matrix.format_ = MatrixFormat::kRowwise;
   // Copy the row-wise primal LP constraint matrix and transpose it.
-  // ToDo Make this more efficient
-  lp_.a_matrix_ = primal_matrix;
-  lp_.a_matrix_.ensureColwise();
+  lp_.a_matrix_ = primal_matrix.getColwise();
+  assert(lp_.a_matrix_.isColwise());
+  // lp_.a_matrix_.ensureColwise(); is now redundant
+
   // Some sanity checks
   assert(lp_.num_col_ == original_num_col_);
   assert(lp_.num_row_ == original_num_row_);
@@ -2297,6 +2298,11 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   analysis_.simplexTimerStart(matrixSetupClock);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_,
                                       basis_.nonbasicFlag_.data());
+  assert(ar_matrix_.legalDimensions(options_->log_options));
+  assert(ar_matrix_.trimDimensions(options_->log_options) == HighsStatus::kOk);
+  assert(ar_matrix_.assess(options_->log_options, options_->small_matrix_value,
+                           options_->large_matrix_value,
+                           false) == HighsStatus::kOk);
   assert(ar_matrix_.debugPartitionOk(basis_.nonbasicFlag_.data()));
   analysis_.simplexTimerStop(matrixSetupClock);
   status_.has_ar_matrix = true;
@@ -3010,7 +3016,7 @@ double HEkk::computeDualForTableauColumn(const HighsInt iVar,
 }
 
 bool HEkk::reinvertOnNumericalTrouble(
-    const std::string method_name, double& numerical_trouble_measure,
+    const std::string& method_name, double& numerical_trouble_measure,
     const double alpha_from_col, const double alpha_from_row,
     const double numerical_trouble_tolerance) {
   double abs_alpha_from_col = fabs(alpha_from_col);
@@ -3798,6 +3804,8 @@ std::string HEkk::rebuildReason(const HighsInt rebuild_reason) const {
     rebuild_reason_string = "Primal infeasible in primal simplex";
   } else if (rebuild_reason == kRebuildReasonChooseColumnFail) {
     rebuild_reason_string = "Choose column failure";
+  } else if (rebuild_reason == kRebuildReasonExcessivePrimalValue) {
+    rebuild_reason_string = "Excessive primal value";
   } else {
     rebuild_reason_string = "Unidentified";
     assert(1 == 0);
@@ -4356,7 +4364,7 @@ void HEkk::unitBtranResidual(const HighsInt row_out, const HVector& row_ep,
   }
 }
 
-void HighsSimplexStats::report(FILE* file, std::string message) const {
+void HighsSimplexStats::report(FILE* file, const std::string& message) const {
   fprintf(file, "\nSimplex stats: %s\n", message.c_str());
   fprintf(file, "   valid                      = %d\n", this->valid);
   fprintf(file, "   iteration_count            = %d\n",

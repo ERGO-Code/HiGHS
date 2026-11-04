@@ -67,6 +67,14 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   endif()
 
   find_package(IntelSYCL REQUIRED)
+
+  # IntelLLVM defaults to a fast floating-point model that allows
+  # reassociation, which breaks the error terms in HighsCDouble.
+  if (MSVC)
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/fp:precise>")
+  else()
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-fp-model=precise>")
+  endif()
 endif()
 
 # MSVC
@@ -238,6 +246,17 @@ if (CUPDLP_GPU OR HIPDLP_GPU)
     endif()
 
     enable_language(HIP)
+
+    # Clang adds the ROCm include directory with -idirafter, i.e. after
+    # /usr/include, so a system HIP package in /usr/include/hip would shadow
+    # the headers of the ROCm install matching the compiler. CMake drops it
+    # from -I since it is an implicit include directory, so force it first.
+    if (CMAKE_HIP_COMPILER_ROCM_ROOT AND
+        EXISTS "${CMAKE_HIP_COMPILER_ROCM_ROOT}/include/hip/hip_runtime.h")
+      set(CMAKE_HIP_FLAGS
+        "-isystem ${CMAKE_HIP_COMPILER_ROCM_ROOT}/include ${CMAKE_HIP_FLAGS}")
+    endif()
+
     find_package(hipblas REQUIRED)
     find_package(hipsparse REQUIRED)
 
@@ -281,6 +300,14 @@ else()
   set(CUPDLP_CPU ON)
   set(CUDA_LIBRARY-NOTFOUND true)
   set(HIPDLP_GPU OFF)
+endif()
+
+# Link HiGHS statically into the highspy extension module by default. A
+# separate libhighs in the wheel shares its SONAME / install name with any other
+# libhighs in the process, e.g. the one bundled by OR-Tools, so the dynamic
+# loader can give one package the other's copy. GPU wheels still need libhighs.
+if (HIPO_PYTHON AND NOT DEFINED BUILD_SHARED_LIBS AND NOT (CUPDLP_GPU OR HIPDLP_GPU))
+  set(BUILD_SHARED_LIBS OFF)
 endif()
 
 if(BUILD_STATIC_EXE)
@@ -930,7 +957,6 @@ if(NOT FAST_BUILD)
     ${PROJECT_SOURCE_DIR}/highs/presolve
     ${PROJECT_SOURCE_DIR}/highs/qpsolver
     ${PROJECT_SOURCE_DIR}/highs/simplex
-    ${PROJECT_SOURCE_DIR}/highs/test_kkt
     ${PROJECT_SOURCE_DIR}/highs/util)
 
   # explicitly switch on colored output for ninja

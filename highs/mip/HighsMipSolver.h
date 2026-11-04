@@ -30,7 +30,7 @@ struct HighsTerminator {
   void terminate();
   bool terminated() const;
   HighsModelStatus terminationStatus() const;
-  void report(const HighsLogOptions log_options) const;
+  void report(const HighsLogOptions& log_options) const;
 };
 
 struct MipViolation {
@@ -44,8 +44,8 @@ struct MipViolation {
   HighsInt col_of_max_integrality_violation;
   HighsInt row_of_max_row_violation;
   void clear();
-  void copy(double& bound_violation_, double& integrality_violation_,
-            double& row_violation_) const;
+  void copy(double& bound_violation_, double& row_violation_,
+            double& integrality_violation_) const;
   void log(const HighsLogOptions& log_options, const double objective_value,
            const std::string& source) const;
 };
@@ -175,7 +175,7 @@ class HighsMipSolver {
   void setParallelLock(bool lock) const;
   void setProfiling(HighsProfiling* profiling);
   HighsInt getMaxNumWorkers() const {
-    if (options_mip_->parallel != kHighsOnString || submip) {
+    if (options_mip_->parallel == kHighsOffString || submip) {
       return 1;
     }
     return highs::parallel::num_threads();

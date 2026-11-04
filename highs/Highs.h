@@ -372,7 +372,7 @@ class Highs {
    * Possible to write only deviations from default values.
    */
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
-                           const bool report_only_deviations = false);
+                           const bool report_only_deviations = false) const;
 
   /**
    * @brief Returns the number of user-settable options
@@ -577,7 +577,7 @@ class Highs {
   /**
    * @brief Zero all clocks in the internal HighsTimer instance
    */
-  void zeroAllClocks() { timer_.zeroAllClocks(); };
+  void zeroAllClocks() { timer_.zeroAllClocks(); }
 
   /**
    * @brief Return a const reference to the internal HighsSolution
@@ -590,7 +590,7 @@ class Highs {
   /**
    * @brief Return a const reference to the internal ICrash info instance
    */
-  const ICrashInfo& getICrashInfo() const { return icrash_info_; };
+  const ICrashInfo& getICrashInfo() const { return icrash_info_; }
 
   /**
    * @brief Return a const reference to the internal HighsBasis instance
@@ -694,7 +694,7 @@ class Highs {
    * @brief Returns true if an invertible representation of the
    * current basis matrix is available
    */
-  bool hasInvert() const;
+  bool hasInvert() const { return ekk_instance_.status_.has_invert; }
 
   /**
    * @brief Gets the basic variables in the order corresponding to
@@ -1341,7 +1341,7 @@ class Highs {
   std::string presolveRuleTypeToString(const HighsInt presolve_rule) const;
 
   /**
-   * @brief Ensures that the global scheduler is initialized,
+   * @brief Ensures that the scheduler is initialized,
    * returning HighsStatus::kError if it has already been initialized,
    * but the threads option is nonzero and not equal to
    * this->max_threads_.
@@ -1349,19 +1349,20 @@ class Highs {
   HighsStatus initializeMultiThreading();
 
   /**
-   * @brief Releases all resources held by the global scheduler instance. It is
-   * not thread-safe to call this function while calling run() or presolve() on
-   * any other Highs instance in any thread. After this function has terminated
-   * it is guaranteed that eventually all previously created scheduler threads
-   * will terminate and allocated memory will be released. After this function
-   * has returned the option value for the number of threads may be altered to a
-   * new value before the next call to run() or presolve(). If the given bool
-   * parameter has value true, then the function will not return until all
-   * memory is freed, which might be desirable when debugging heap memory but
-   * requires the calling thread to wait for all scheduler threads to wake-up
-   * which is usually not necessary.
+   * @brief Releases all resources held by the scheduler owned by the calling
+   * thread. It is thread-safe to call this function only from the thread that
+   * owns the scheduler (not from a worker thread) and when no run() or
+   * presolve() is in progress on that thread. After this function has
+   * terminated it is guaranteed that eventually all previously created
+   * scheduler threads will terminate and allocated memory will be released.
+   * After this function has returned the option value for the number of threads
+   * may be altered to a new value before the next call to run() or presolve().
+   * If the given bool parameter has value true, then the function will not
+   * return until all memory is freed, which might be desirable when debugging
+   * heap memory but requires the calling thread to wait for all scheduler
+   * threads to wake-up which is usually not necessary.
    */
-  static void resetGlobalScheduler(bool blocking = false);
+  static void resetThreadScheduler(bool blocking = false);
 
   /**
    * @brief If profiling is not nullptr, sets up profiling and copies
@@ -1436,7 +1437,10 @@ class Highs {
    * Entries are indices of columns if in [0,num_col), and entries in [num_col,
    * num_col+num_row) are (num_col+row_index).
    */
-  const HighsInt* getBasicVariablesArray() const;
+  const HighsInt* getBasicVariablesArray() const {
+    assert(ekk_instance_.status_.has_invert);
+    return ekk_instance_.basis_.basicIndex_.data();
+  }
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
@@ -1571,7 +1575,7 @@ class Highs {
 
   const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
-  void logHeader();
+  void logHeader() const;
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;
@@ -1620,6 +1624,10 @@ class Highs {
     return HighsStatus::kError;
   }
 
+  // Deprecated in favour of resetThreadScheduler().
+  // Cannot call deprecationMessage here.
+  static void resetGlobalScheduler(bool blocking = false);
+
   // End of deprecated methods
  private:
   HighsSolution solution_;
@@ -1644,7 +1652,7 @@ class Highs {
       HighsPresolveStatus::kNotPresolved;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
 
-  bool standard_form_valid_;
+  bool standard_form_valid_ = false;
   double standard_form_offset_;
   std::vector<double> standard_form_cost_;
   std::vector<double> standard_form_rhs_;
@@ -1663,8 +1671,6 @@ class Highs {
   // whether Highs::optimizeModel() is called recursively.
   bool called_return_from_optimize_model = true;
   HighsInt debug_optimize_call_num_ = 0;
-
-  bool written_log_header_ = false;
 
   void reportModelStats() const;
 
@@ -1799,8 +1805,8 @@ class Highs {
                         HighsInt& num_nz, HighsInt* start, HighsInt* index,
                         double* value) const;
 
-  void getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
-                               double& value) const;
+  void getCoeffInterface(const HighsInt ext_row, const HighsInt ext_col,
+                         double& value) const;
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
@@ -1816,9 +1822,9 @@ class Highs {
   HighsStatus changeRowBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
-  void changeCoefficientInterface(const HighsInt ext_row,
-                                  const HighsInt ext_col,
-                                  const double ext_new_value);
+  HighsStatus changeCoeffInterface(const HighsInt ext_row,
+                                   const HighsInt ext_col,
+                                   const double ext_new_value);
   HighsStatus scaleColInterface(const HighsInt col, const double scale_value);
   HighsStatus scaleRowInterface(const HighsInt row, const double scale_value);
 
@@ -1850,6 +1856,7 @@ class Highs {
       const HighsStatus return_status, const std::string& original_model_name,
       const HighsModelStatus original_model_status,
       const HighsInt original_num_col, const HighsInt original_num_row,
+      const ObjSense original_sense,
       const std::vector<double>& original_col_cost,
       const std::vector<double>& original_col_lower,
       const std::vector<double>& original_col_upper,
@@ -1873,7 +1880,7 @@ class Highs {
   bool qFormatOk(const HighsInt num_nz, const HighsInt format);
   void clearZeroHessian();
   void callLpKktCheck(const HighsLp& lp, const std::string& message = "");
-  HighsStatus invertRequirementError(std::string method_name) const;
+  HighsStatus invertRequirementError(const std::string& method_name) const;
 
   HighsStatus handleInfCost();
   void restoreInfCost(HighsStatus& return_status);
@@ -1896,7 +1903,7 @@ class Highs {
                               std::vector<HighsInt>& basic_var,
                               const bool constraint,
                               const double ill_conditioning_bound);
-  bool infeasibleBoundsOk();
+  bool processedBoundsFindsInfeasibility();
   bool validLinearObjective(const HighsLinearObjective& linear_objective,
                             const HighsInt iObj) const;
   bool hasRepeatedLinearObjectivePriorities(

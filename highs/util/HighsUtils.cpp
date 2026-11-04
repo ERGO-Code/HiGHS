@@ -67,7 +67,7 @@ void highsSparseTranspose(HighsInt numRow, HighsInt numCol,
   // Make a AR copy
   std::vector<HighsInt> iwork(numRow, 0);
   ARstart.resize(numRow + 1, 0);
-  HighsInt AcountX = Aindex.size();
+  HighsInt AcountX = Astart[numCol];
   ARindex.resize(AcountX);
   ARvalue.resize(AcountX);
   for (HighsInt k = 0; k < AcountX; k++) {
@@ -1231,6 +1231,14 @@ double nearestPowerOfTwoScale(const double value) {
   return scale;
 }
 
+bool termIsZero(const double val, const double lb, const double ub,
+                const double epsilon) {
+  const double absVal = std::abs(val);
+  if (absVal <= std::numeric_limits<double>::min()) return true;
+  return absVal <= epsilon &&
+         absVal * std::max(std::abs(lb), std::abs(ub)) <= epsilon;
+}
+
 void highsAssert(const bool assert_condition, const std::string& message) {
   if (assert_condition) return;
   printf("Failing highsAssert(\"%s\")\n", message.c_str());
@@ -1256,4 +1264,12 @@ bool highsPause(const bool pause_condition, const std::string& message) {
     fflush(stdout);
   }
   return pause_condition;
+}
+
+bool handleExceptionIsOom(const HighsLogOptions& log_options,
+                          const std::string& source,
+                          const std::exception& exception) {
+  highsLogUser(log_options, HighsLogType::kError, "Exception %s in %s\n",
+               exception.what(), source.c_str());
+  return dynamic_cast<const std::bad_alloc*>(&exception);
 }

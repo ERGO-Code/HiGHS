@@ -100,7 +100,7 @@ class HighsCutPool {
 
   const std::vector<double>& getRhs() const { return rhs_; }
 
-  bool isDuplicate(size_t hash, double norm, const HighsInt* Rindex,
+  bool isDuplicate(uint64_t hash, double norm, const HighsInt* Rindex,
                    const double* Rvalue, HighsInt Rlen, double rhs);
 
   void resetAge(HighsInt cut, bool thread_safe = false) {

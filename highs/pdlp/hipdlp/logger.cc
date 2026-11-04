@@ -23,7 +23,7 @@ std::string EnumToString(T e, const std::map<T, std::string>& map) {
 
 // Logger implementation
 void Logger::initialise(const HighsInt log_dev_level,
-                        const HighsLogOptions log_options,
+                        const HighsLogOptions& log_options,
                         HighsTimer* highs_timer_p) {
   if (log_dev_level == kHighsLogDevLevelVerbose) {
     console_level_ = LogLevel::kDebug;

@@ -77,7 +77,7 @@ bool HighsCallback::callbackActive(const int callback_type) {
 }
 
 bool HighsCallback::callbackAction(const int callback_type,
-                                   std::string message) {
+                                   const std::string& message) {
   if (!callbackActive(callback_type)) return false;
   this->user_callback(callback_type, message.c_str(), &this->data_out,
                       &this->data_in, this->user_callback_data);

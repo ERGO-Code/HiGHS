@@ -40,7 +40,7 @@ class FilereaderLp : public Filereader {
   void writeToFileLineEnd(FILE* file);
   void writeToFileValue(FILE* file, const double value,
                         const bool force_plus = true);
-  void writeToFileVar(FILE* file, const std::string var_name);
+  void writeToFileVar(FILE* file, const std::string& var_name);
   void writeToFileMatrixRow(FILE* file, const HighsInt iRow,
                             const HighsSparseMatrix& ar_matrix,
                             const std::vector<string>& col_names);

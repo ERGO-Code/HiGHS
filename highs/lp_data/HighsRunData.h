@@ -33,8 +33,8 @@ class RunDataRecord {
   std::string description;
   bool advanced;
 
-  RunDataRecord(HighsRunDataType Xtype, std::string Xname,
-                std::string Xdescription, bool Xadvanced) {
+  RunDataRecord(HighsRunDataType Xtype, const std::string& Xname,
+                const std::string& Xdescription, bool Xadvanced) {
     this->type = Xtype;
     this->name = Xname;
     this->description = Xdescription;
@@ -48,7 +48,7 @@ class RunDataRecordInt64 : public RunDataRecord {
  public:
   int64_t* value;
   int64_t default_value;
-  RunDataRecordInt64(std::string Xname, std::string Xdescription,
+  RunDataRecordInt64(const std::string& Xname, const std::string& Xdescription,
                      bool Xadvanced, int64_t* Xvalue_pointer,
                      int64_t Xdefault_value)
       : RunDataRecord(HighsRunDataType::kInt64, Xname, Xdescription,
@@ -65,8 +65,9 @@ class RunDataRecordInt : public RunDataRecord {
  public:
   HighsInt* value;
   HighsInt default_value;
-  RunDataRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                   HighsInt* Xvalue_pointer, HighsInt Xdefault_value)
+  RunDataRecordInt(const std::string& Xname, const std::string& Xdescription,
+                   bool Xadvanced, HighsInt* Xvalue_pointer,
+                   HighsInt Xdefault_value)
       : RunDataRecord(HighsRunDataType::kInt, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
@@ -80,7 +81,7 @@ class RunDataRecordDouble : public RunDataRecord {
  public:
   double* value;
   double default_value;
-  RunDataRecordDouble(std::string Xname, std::string Xdescription,
+  RunDataRecordDouble(const std::string& Xname, const std::string& Xdescription,
                       bool Xadvanced, double* Xvalue_pointer,
                       double Xdefault_value)
       : RunDataRecord(HighsRunDataType::kDouble, Xname, Xdescription,

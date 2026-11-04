@@ -123,10 +123,7 @@ bool HighsLp::equalScaling(const HighsLp& lp) const {
 
 double HighsLp::objectiveValue(const std::vector<double>& solution) const {
   assert((int)solution.size() >= this->num_col_);
-  double objective_function_value = this->offset_;
-  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
-    objective_function_value += this->col_cost_[iCol] * solution[iCol];
-  return objective_function_value;
+  return double(objectiveCDoubleValue(solution));
 }
 
 HighsCDouble HighsLp::objectiveCDoubleValue(
@@ -178,13 +175,13 @@ bool HighsLp::okNames() const {
   for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
     const std::string& name = this->col_names_[iCol];
     if (HighsInt(name.length()) == 0) return false;
-    size_t space_pos = name.find(" ");
+    size_t space_pos = name.find(' ');
     if (space_pos != std::string::npos) return false;
   }
   for (HighsInt iRow = 0; iRow < this->num_row_; iRow++) {
     const std::string& name = this->row_names_[iRow];
     if (HighsInt(name.length()) == 0) return false;
-    size_t space_pos = name.find(" ");
+    size_t space_pos = name.find(' ');
     if (space_pos != std::string::npos) return false;
   }
   return true;
@@ -226,6 +223,7 @@ void HighsLp::clear() {
   this->is_moved_ = false;
   this->cost_row_location_ = -1;
   this->has_infinite_cost_ = false;
+  this->fme_obj_col_ = -1;
   this->mods_.clear();
 }
 
@@ -302,7 +300,7 @@ void HighsLp::moveBackLpAndUnapplyScaling(HighsLp& lp) {
   assert(this->is_moved_ == false);
 }
 
-void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
+void HighsLp::addColNames(const std::string& name, const HighsInt num_new_col) {
   // Don't add names if there are no columns being added
   if (this->num_col_ == 0) return;
   HighsInt col_names_size = this->col_names_.size();
@@ -314,7 +312,7 @@ void HighsLp::addColNames(const std::string name, const HighsInt num_new_col) {
   // appendColsToLpVectors
 }
 
-void HighsLp::addRowNames(const std::string name, const HighsInt num_new_row) {
+void HighsLp::addRowNames(const std::string& name, const HighsInt num_new_row) {
   // Don't add names if there are no rows being added
   if (this->num_row_ == 0) return;
   HighsInt row_names_size = this->row_names_.size();
@@ -425,6 +423,291 @@ void HighsLp::deleteRows(const HighsIndexCollection& index_collection) {
   this->num_row_ = new_num_row;
 }
 
+bool HighsLp::legalDimensions(const std::string& message,
+                              const HighsLogOptions& log_options) const {
+  bool ok = true;
+  const HighsInt num_col = this->num_col_;
+  const HighsInt num_row = this->num_row_;
+  if (!(num_col >= 0))
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on num_col = %d >= 0\n",
+                 message.c_str(), (int)num_col);
+  ok = num_col >= 0 && ok;
+  if (!(num_row >= 0))
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on num_row = %d >= 0\n",
+                 message.c_str(), (int)num_row);
+  ok = num_row >= 0 && ok;
+  if (!ok) return ok;
+
+  HighsInt col_cost_size = this->col_cost_.size();
+  HighsInt col_lower_size = this->col_lower_.size();
+  HighsInt col_upper_size = this->col_upper_.size();
+  HighsInt col_names_size = this->col_names_.size();
+  HighsInt integrality_size = this->integrality_.size();
+  bool legal_col_cost_size = col_cost_size >= num_col;
+  bool legal_col_lower_size = col_lower_size >= num_col;
+  bool legal_col_upper_size = col_upper_size >= num_col;
+  bool legal_col_names_size = col_names_size == 0 || col_names_size >= num_col;
+  bool legal_integrality_size =
+      integrality_size == 0 || integrality_size >= num_col;
+  if (!legal_col_cost_size)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on col_cost_.size() = %d < "
+        "%d = num_col\n",
+        message.c_str(), (int)col_cost_size, (int)num_col);
+  ok = legal_col_cost_size && ok;
+
+  if (!legal_col_lower_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on col_lower_.size() = %d "
+                 "< %d = num_col\n",
+                 message.c_str(), (int)col_lower_size, (int)num_col);
+  ok = legal_col_lower_size && ok;
+
+  if (!legal_col_upper_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on col_upper_.size() = %d "
+                 "< %d = num_col\n",
+                 message.c_str(), (int)col_upper_size, (int)num_col);
+  ok = legal_col_upper_size && ok;
+
+  if (!legal_integrality_size)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on integrality_.size() = %d "
+        "< %d = num_col\n",
+        message.c_str(), (int)integrality_size, (int)num_col);
+  ok = legal_integrality_size && ok;
+
+  if (!legal_col_names_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on col_names_.size() = %d "
+                 "< %d = num_col\n",
+                 message.c_str(), (int)col_names_size, (int)num_col);
+  ok = legal_col_names_size && ok;
+
+  bool legal_format = this->a_matrix_.format_ == MatrixFormat::kColwise ||
+                      this->a_matrix_.format_ == MatrixFormat::kRowwise;
+  if (!legal_format)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on a_matrix_.format\n",
+                 message.c_str());
+  ok = legal_format && ok;
+  HighsInt num_vec;
+  if (this->a_matrix_.isColwise()) {
+    num_vec = num_col;
+  } else {
+    num_vec = num_row;
+  }
+  bool legal_matrix_dimensions = this->a_matrix_.legalDimensions(log_options);
+  if (!legal_matrix_dimensions)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on a_matrix dimensions\n",
+                 message.c_str());
+  ok = legal_matrix_dimensions && ok;
+
+  HighsInt row_lower_size = this->row_lower_.size();
+  HighsInt row_upper_size = this->row_upper_.size();
+  HighsInt row_names_size = this->row_names_.size();
+  bool legal_row_lower_size = row_lower_size >= num_row;
+  bool legal_row_upper_size = row_upper_size >= num_row;
+  bool legal_row_names_size = row_names_size == 0 || row_names_size >= num_row;
+  if (!legal_row_lower_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on row_lower_.size() = %d "
+                 "< %d = num_row\n",
+                 message.c_str(), (int)row_lower_size, (int)num_row);
+  ok = legal_row_lower_size && ok;
+
+  if (!legal_row_upper_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on row_upper_.size() = %d "
+                 "< %d = num_row\n",
+                 message.c_str(), (int)row_upper_size, (int)num_row);
+  ok = legal_row_upper_size && ok;
+
+  if (!legal_row_names_size)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on row_names_.size() = %d "
+                 "< %d = num_row\n",
+                 message.c_str(), (int)row_names_size, (int)num_row);
+  ok = legal_row_names_size && ok;
+
+  bool legal_a_matrix_num_col = this->a_matrix_.num_col_ == num_col;
+  bool legal_a_matrix_num_row = this->a_matrix_.num_row_ == num_row;
+  if (!legal_a_matrix_num_col)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on a_matrix.num_col_ = %d "
+                 "!= %d = num_col\n",
+                 message.c_str(), (int)this->a_matrix_.num_col_, (int)num_col);
+  ok = legal_a_matrix_num_col && ok;
+
+  if (!legal_a_matrix_num_row)
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails on a_matrix.num_row_ = %d "
+                 "!= %d = num_row\n",
+                 message.c_str(), (int)this->a_matrix_.num_row_, (int)num_row);
+  ok = legal_a_matrix_num_row && ok;
+
+  HighsInt scale_strategy = (HighsInt)this->scale_.strategy;
+  bool legal_scale_strategy = scale_strategy >= 0;
+  if (!legal_scale_strategy)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.scale_strategy\n",
+        message.c_str());
+  ok = legal_scale_strategy && ok;
+  HighsInt scale_row_size = (HighsInt)this->scale_.row.size();
+  HighsInt scale_col_size = (HighsInt)this->scale_.col.size();
+  bool legal_scale_num_col = false;
+  bool legal_scale_num_row = false;
+  bool legal_scale_row_size = false;
+  bool legal_scale_col_size = false;
+  if (this->scale_.has_scaling) {
+    legal_scale_num_col = this->scale_.num_col == num_col;
+    legal_scale_num_row = this->scale_.num_row == num_row;
+    legal_scale_row_size = scale_row_size >= num_row;
+    legal_scale_col_size = scale_col_size >= num_col;
+  } else {
+    legal_scale_num_col = this->scale_.num_col == 0;
+    legal_scale_num_row = this->scale_.num_row == 0;
+    legal_scale_row_size = scale_row_size == 0;
+    legal_scale_col_size = scale_col_size == 0;
+  }
+  if (!legal_scale_num_col)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.num_col = %d != %d\n",
+        message.c_str(), (int)this->scale_.num_col,
+        (int)(this->scale_.has_scaling ? num_col : 0));
+  ok = legal_scale_num_col && ok;
+  if (!legal_scale_num_row)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.num_row = %d != %d\n",
+        message.c_str(), (int)this->scale_.num_row,
+        (int)(this->scale_.has_scaling ? num_row : 0));
+  ok = legal_scale_num_row && ok;
+  if (!legal_scale_col_size)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.col.size() = %d %s %d\n",
+        message.c_str(), (int)scale_col_size,
+        this->scale_.has_scaling ? ">=" : "==",
+        (int)(this->scale_.has_scaling ? num_col : 0));
+  ok = legal_scale_col_size && ok;
+  if (!legal_scale_row_size)
+    highsLogUser(
+        log_options, HighsLogType::kError,
+        "LP dimension validation (%s) fails on scale_.row.size() = %d %s %d\n",
+        message.c_str(), (int)scale_row_size,
+        this->scale_.has_scaling ? ">=" : "==",
+        (int)(this->scale_.has_scaling ? num_row : 0));
+  ok = legal_scale_row_size && ok;
+  if (!ok) {
+    highsLogUser(log_options, HighsLogType::kError,
+                 "LP dimension validation (%s) fails\n", message.c_str());
+  }
+
+  return ok;
+}
+
+HighsStatus HighsLp::trimDimensions(const HighsLogOptions& log_options) {
+  const HighsInt num_col = this->num_col_;
+  const HighsInt num_row = this->num_row_;
+
+  HighsInt trimmed = 0;
+  HighsStatus status = HighsStatus::kOk;
+
+  std::string lp_name = "";
+  if (this->model_name_ != "") {
+    lp_name = this->model_name_;
+    if (this->origin_name_ != "") {
+      lp_name += "+" + this->origin_name_;
+    }
+    lp_name += " ";
+  } else if (this->origin_name_ != "") {
+    lp_name = this->origin_name_ + " ";
+  }
+
+  auto logTrimming = [&](const std::string& name) {
+    if (trimmed == 0) return;
+    assert(trimmed > 0);
+    highsLogUser(log_options, HighsLogType::kWarning,
+                 "Trimmed %d excess entr%s from %sHighsLp data member %s\n",
+                 int(trimmed), highsIntToPlural(trimmed, true).c_str(),
+                 lp_name.c_str(), name.c_str());
+    status = HighsStatus::kWarning;
+  };
+
+  trimmed = this->col_cost_.size() - num_col;
+  if (trimmed) {
+    this->col_cost_.resize(num_col);
+    logTrimming("col_cost_");
+  }
+
+  trimmed = this->col_lower_.size() - num_col;
+  if (trimmed) {
+    this->col_lower_.resize(num_col);
+    logTrimming("col_lower_");
+  }
+
+  trimmed = this->col_upper_.size() - num_col;
+  if (trimmed) {
+    this->col_upper_.resize(num_col);
+    logTrimming("col_upper_");
+  }
+
+  trimmed = this->row_lower_.size() - num_row;
+  if (trimmed) {
+    this->row_lower_.resize(num_row);
+    logTrimming("row_lower_");
+  }
+
+  trimmed = this->row_upper_.size() - num_row;
+  if (trimmed) {
+    this->row_upper_.resize(num_row);
+    logTrimming("row_upper_");
+  }
+
+  if (this->col_names_.size()) {
+    trimmed = this->col_names_.size() - num_col;
+    if (trimmed) {
+      this->col_names_.resize(num_col);
+      logTrimming("col_names_");
+    }
+  }
+
+  if (this->row_names_.size()) {
+    trimmed = this->row_names_.size() - num_row;
+    if (trimmed) {
+      this->row_names_.resize(num_row);
+      logTrimming("row_names_");
+    }
+  }
+
+  if (this->integrality_.size()) {
+    trimmed = this->integrality_.size() - num_col;
+    if (trimmed) {
+      this->integrality_.resize(num_col);
+      logTrimming("integrality_");
+    }
+  }
+
+  HighsStatus matrix_trim_status = this->a_matrix_.trimDimensions(log_options);
+
+  if (matrix_trim_status == HighsStatus::kWarning) return matrix_trim_status;
+  return status;
+}
+
+HighsStatus HighsLp::assess(const HighsOptions& options) {
+  // Just in case it's not yet been done
+  this->setMatrixDimensions();
+  return assessLp(*this, options);
+}
+
 void HighsLp::unapplyMods() {
   // Restore any non-semi types
   const HighsInt num_non_semi = this->mods_.save_non_semi_variable_index.size();
@@ -523,43 +806,98 @@ bool HighsLpMods::isClear() {
   return true;
 }
 
-void HighsNameHash::form(const std::vector<std::string>& name) {
+void HighsNameHash::form(const std::vector<std::string>& names) {
   this->clear();
-  for (size_t index = 0; index < name.size(); index++) {
+  for (size_t index = 0; index < names.size(); index++) {
     auto emplace_result =
-        this->name2index.emplace(name[index], static_cast<int>(index));
+        this->name2index.emplace(names[index], static_cast<int>(index));
     const bool duplicate = !emplace_result.second;
     if (duplicate) {
-      // Find the original and mark it as duplicate
+      // Find the original
       auto& search = emplace_result.first;
-      assert(int(search->second) < int(this->name2index.size()));
-      search->second = kHashIsDuplicate;
+      if (search->second >= 0) {
+        // search->second is is the index associated with the first
+        // occurrence of the name (not the position in name2index), so
+        // initialise the duplicate count
+        search->second = -1;
+      } else {
+        // search->second < 0, then -search->second is the duplicate
+        // count, so increase it
+        search->second--;
+      }
     }
   }
+  assert(this->ok(names));
 }
 
-bool HighsNameHash::hasDuplicate(const std::vector<std::string>& name) {
+bool HighsNameHash::hasDuplicate(const std::vector<std::string>& names) {
   this->clear();
   bool has_duplicate = false;
-  for (size_t index = 0; index < name.size(); index++) {
-    has_duplicate =
-        !this->name2index.emplace(name[index], static_cast<int>(index)).second;
+  for (size_t index = 0; index < names.size(); index++) {
+    auto emplace_result =
+        this->name2index.emplace(names[index], static_cast<int>(index));
+    has_duplicate = !emplace_result.second;
     if (has_duplicate) break;
   }
   this->clear();
   return has_duplicate;
 }
 
-void HighsNameHash::update(int index, const std::string& old_name,
-                           const std::string& new_name) {
-  this->name2index.erase(old_name);
-  auto emplace_result = this->name2index.emplace(new_name, index);
-  if (!emplace_result.second) {
-    // Find the original and mark it as duplicate
-    auto& search = emplace_result.first;
-    assert(int(search->second) < int(this->name2index.size()));
-    search->second = kHashIsDuplicate;
-  }
+void HighsNameHash::addName(const HighsInt index, const std::string& name) {
+  if (!this->size()) return;
+  addNameFindsDuplicate(index, name);
 }
 
-void HighsNameHash::clear() { this->name2index.clear(); }
+bool HighsNameHash::addNameFindsDuplicate(const HighsInt index,
+                                          const std::string& name) {
+  auto emplace_result = this->name2index.emplace(name, static_cast<int>(index));
+  const bool duplicate = !emplace_result.second;
+  if (duplicate) {
+    // Find the original and mark it as duplicate
+    auto& search = emplace_result.first;
+    if (search->second >= 0) {
+      search->second = -1;
+    } else {
+      search->second--;
+    }
+    return true;
+  }
+  return false;
+}
+
+bool HighsNameHash::updateFindsDuplicate(const HighsInt index,
+                                         const std::string& old_name,
+                                         const std::string& new_name) {
+  // Update duplication data for old_name, erasing it if it disappears
+  auto find_result = this->name2index.find(old_name);
+  if (find_result != this->name2index.end()) {
+    // Old name is present, so find out if it's a duplicate
+    if (find_result->second < 0) {
+      // At least one duplicate of old_name
+      find_result->second++;
+    } else {
+      // Old name was unique, so erase it
+      this->name2index.erase(old_name);
+    }
+  }
+  return addNameFindsDuplicate(index, new_name);
+}
+
+bool HighsNameHash::ok(const std::vector<std::string>& names) {
+  HighsInt num_name = names.size();
+  HighsNameHash helper;
+  for (HighsInt index = 0; index < num_name; index++)
+    helper.name2index.emplace(names[index], 0);
+  for (auto& entry : helper.name2index) {
+    std::string unique_name = entry.first;
+    auto find_result = this->name2index.find(unique_name);
+    if (find_result == this->name2index.end()) return false;
+    HighsInt count = 0;
+    for (HighsInt index = 0; index < num_name; index++)
+      if (names[index] == unique_name) count++;
+    if ((count == 1 && find_result->second < 0) ||
+        (count > 1 && count != 1 - find_result->second))
+      return false;
+  }
+  return true;
+}

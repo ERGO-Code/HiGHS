@@ -162,11 +162,11 @@ void PDLPSolver::preprocessLp() {
     logger_.info("Original LP matrix must be in column-wise format,");
   }
 
-  lp_.offset_ = original_lp_->offset_;
-
   HighsInt num_new_cols = 0;
   HighsInt nEqs = 0;
+  HighsInt num_free_rows = 0;
   sense_origin_ = (original_lp_->sense_ == ObjSense::kMinimize) ? 1 : -1;
+  lp_.offset_ = original_lp_->offset_ * sense_origin_;
   constraint_types_.resize(nRows_orig);
 
   // 1. First pass: Classify constraints and count slack variables needed
@@ -189,15 +189,14 @@ void PDLPSolver::preprocessLp() {
       constraint_types_[i] = LEQ;
     } else {
       constraint_types_[i] = FREE;
-      num_new_cols++;
-      nEqs++;
+      num_free_rows++;
     }
   }
 
   // 2. Set new dimensions
   HighsLp& processed_lp = lp_;
   processed_lp.num_col_ = nCols_orig + num_new_cols;
-  processed_lp.num_row_ = nRows_orig;
+  processed_lp.num_row_ = nRows_orig - num_free_rows;  // Free rows are removed
   original_num_col_ = nCols_orig;
   constraint_new_idx_.resize(nRows_orig);
 
@@ -207,37 +206,39 @@ void PDLPSolver::preprocessLp() {
   processed_lp.row_lower_.resize(processed_lp.num_row_);
   processed_lp.row_upper_.resize(processed_lp.num_row_);
 
-  // 3. Determine row permutation: EQ/BOUND/FREE first, then LEQ/GEQ
+  // 3. Determine row permutation: EQ/BOUND first, then LEQ/GEQ； free rows are
+  // removed
   HighsInt eq_idx = 0;
   HighsInt ineq_idx = nEqs;
   for (HighsInt i = 0; i < nRows_orig; ++i) {
-    if (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
-        constraint_types_[i] == FREE) {
+    if (constraint_types_[i] == EQ || constraint_types_[i] == BOUND) {
       constraint_new_idx_[i] = eq_idx++;
+    } else if (constraint_types_[i] == FREE) {
+      constraint_new_idx_[i] = -1;  // Mark free rows with -1
     } else {
       constraint_new_idx_[i] = ineq_idx++;
     }
   }
 
   // 4. Create is_equality_row_ vector based on NEW ordering
-  is_equality_row_.resize(nRows_orig, false);
+  is_equality_row_.resize(processed_lp.num_row_, false);
   for (HighsInt i = 0; i < nRows_orig; ++i) {
+    if (constraint_types_[i] == FREE) continue;  // Skip free rows
     HighsInt new_row_idx = constraint_new_idx_[i];
     is_equality_row_[new_row_idx] =
-        (constraint_types_[i] == EQ || constraint_types_[i] == BOUND ||
-         constraint_types_[i] == FREE);
+        (constraint_types_[i] == EQ || constraint_types_[i] == BOUND);
   }
 
   // 5. Populate costs and bounds for original and new slack variables
   for (HighsInt i = 0; i < nCols_orig; ++i) {
-    processed_lp.col_cost_[i] = original_lp_->col_cost_[i];
+    processed_lp.col_cost_[i] = original_lp_->col_cost_[i] * sense_origin_;
     processed_lp.col_lower_[i] = original_lp_->col_lower_[i];
     processed_lp.col_upper_[i] = original_lp_->col_upper_[i];
   }
 
   HighsInt current_slack_col = nCols_orig;
   for (HighsInt i = 0; i < nRows_orig; ++i) {
-    if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
+    if (constraint_types_[i] == BOUND) {
       processed_lp.col_cost_[current_slack_col] = 0.0;
       processed_lp.col_lower_[current_slack_col] = original_lp_->row_lower_[i];
       processed_lp.col_upper_[current_slack_col] = original_lp_->row_upper_[i];
@@ -247,6 +248,7 @@ void PDLPSolver::preprocessLp() {
 
   // 6. Set the new RHS (row bounds) in PERMUTED order
   for (HighsInt i = 0; i < nRows_orig; ++i) {
+    if (constraint_types_[i] == FREE) continue;  // Skip free rows
     HighsInt new_row_idx = constraint_new_idx_[i];
     switch (constraint_types_[i]) {
       case EQ:
@@ -263,18 +265,20 @@ void PDLPSolver::preprocessLp() {
         processed_lp.row_upper_[new_row_idx] = kHighsInf;
         break;
       case BOUND:
-      case FREE:
         // Becomes ax - z = 0
         processed_lp.row_lower_[new_row_idx] = 0.0;
         processed_lp.row_upper_[new_row_idx] = 0.0;
         break;
+      case FREE:
+        break;  // Removed above; never reaches here
     }
   }
 
   // 7. Build the constraint matrix with proper row ordering
   // First, get the original matrix in column-wise format
-  HighsSparseMatrix original_matrix = original_lp_->a_matrix_;
-  original_matrix.ensureColwise();
+  HighsSparseMatrix original_matrix = original_lp_->a_matrix_.getColwise();
+  assert(original_matrix.isColwise());
+  // original_matrix.ensureColwise(); is now redundant
 
   // Create new matrix
   HighsSparseMatrix& processed_matrix = processed_lp.a_matrix_;
@@ -297,6 +301,12 @@ void PDLPSolver::preprocessLp() {
     for (HighsInt el = original_matrix.start_[col];
          el < original_matrix.start_[col + 1]; ++el) {
       HighsInt old_row = original_matrix.index_[el];
+
+      // Skip free rows
+      if (constraint_types_[old_row] == FREE) {
+        continue;
+      }
+
       HighsInt new_row = constraint_new_idx_[old_row];
       double val = original_matrix.value_[el];
 
@@ -323,7 +333,7 @@ void PDLPSolver::preprocessLp() {
   // Add slack variable columns
   current_slack_col = nCols_orig;
   for (HighsInt i = 0; i < nRows_orig; ++i) {
-    if (constraint_types_[i] == BOUND || constraint_types_[i] == FREE) {
+    if (constraint_types_[i] == BOUND) {
       HighsInt row_idx = constraint_new_idx_[i];
       processed_matrix.index_.push_back(row_idx);
       processed_matrix.value_.push_back(-1.0);
@@ -364,7 +374,7 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
     return PostSolveRetcode::DIMENSION_MISMATCH;
   }
 
-  if (x_current_.empty() || y_current_.empty()) {
+  if (x_current_.empty() || (y_current_.empty() && lp_.num_row_ > 0)) {
     return PostSolveRetcode::INVALID_SOLUTION;
   }
 
@@ -415,14 +425,19 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   for (HighsInt orig_row = 0; orig_row < original_lp_->num_row_; ++orig_row) {
     HighsInt reordered_row = constraint_new_idx_[orig_row];
 
+    if (constraint_types_[orig_row] == FREE) {
+      solution.row_dual[orig_row] = 0.0;  // Free rows have zero duals
+      continue;
+    }
+
     // Get the dual value from the reordered position
     double dual_value = y_reordered[reordered_row];
 
     // Apply sign correction for LEQ constraints
     if (constraint_types_[orig_row] == LEQ) {
-      solution.row_dual[orig_row] = -dual_value;
+      solution.row_dual[orig_row] = -dual_value * sense_origin_;
     } else {
-      solution.row_dual[orig_row] = dual_value;
+      solution.row_dual[orig_row] = dual_value * sense_origin_;
     }
   }
 
@@ -445,8 +460,9 @@ PostSolveRetcode PDLPSolver::postprocess(HighsSolution& solution) {
   std::vector<double> ax_original(original_lp_->num_row_, 0.0);
 
   // Get original matrix in column-wise format
-  HighsSparseMatrix orig_matrix = original_lp_->a_matrix_;
-  orig_matrix.ensureColwise();
+  HighsSparseMatrix orig_matrix = original_lp_->a_matrix_.getColwise();
+  assert(orig_matrix.isColwise());
+  // orig_matrix.ensureColwise(); is now redundant
 
   // Compute ax using only the original columns (not slack variables)
   for (HighsInt col = 0; col < original_num_col_; ++col) {
@@ -529,17 +545,17 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
   sum_weights_gpu_ = 0.0;
 
   GPU_CHECK(gpuMemcpy(d_x_current_, x_current_.data(),
-                        lp_.num_col_ * sizeof(double), gpuMemcpyHostToDevice));
+                      lp_.num_col_ * sizeof(double), gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMemcpy(d_y_current_, y_current_.data(),
-                        lp_.num_row_ * sizeof(double), gpuMemcpyHostToDevice));
+                      lp_.num_row_ * sizeof(double), gpuMemcpyHostToDevice));
 
   if (params_.use_halpern_restart) {
     GPU_CHECK(gpuMemcpy(d_x_anchor_, d_x_current_,
-                          lp_.num_col_ * sizeof(double),
-                          gpuMemcpyDeviceToDevice));
+                        lp_.num_col_ * sizeof(double),
+                        gpuMemcpyDeviceToDevice));
     GPU_CHECK(gpuMemcpy(d_y_anchor_, d_y_current_,
-                          lp_.num_row_ * sizeof(double),
-                          gpuMemcpyDeviceToDevice));
+                        lp_.num_row_ * sizeof(double),
+                        gpuMemcpyDeviceToDevice));
   }
 
   linalgGpuAx(d_x_current_, d_ax_current_);
@@ -584,8 +600,8 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     GpuStepParams h_step_params{stepsize_.primal_step, stepsize_.dual_step,
                                 halpern_iteration_};
     GPU_CHECK(gpuMemcpyAsync(d_step_params_, &h_step_params,
-                               sizeof(GpuStepParams), gpuMemcpyHostToDevice,
-                               gpu_stream_));
+                             sizeof(GpuStepParams), gpuMemcpyHostToDevice,
+                             gpu_stream_));
     performHalpernPdhgStepGpu(true, 1);
 #else
     performHalpernPdhgStep(true, 1);
@@ -603,8 +619,7 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     // -- Steps 2 to PDHG_CHECK_INTERVAL - 1 (Minor) --
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
     if (!graph_created) {
-      GPU_CHECK(
-          gpuStreamBeginCapture(gpu_stream_, gpuStreamCaptureModeGlobal));
+      GPU_CHECK(gpuStreamBeginCapture(gpu_stream_, gpuStreamCaptureModeGlobal));
 
       for (int i = 2; i <= PDHG_CHECK_INTERVAL - 1; i++) {
         performHalpernPdhgStepGpu(false, i);
@@ -660,17 +675,17 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       }
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
       GPU_CHECK(gpuMemcpy(d_x_anchor_, d_pdhg_primal_,
-                            lp_.num_col_ * sizeof(double),
-                            gpuMemcpyDeviceToDevice));
+                          lp_.num_col_ * sizeof(double),
+                          gpuMemcpyDeviceToDevice));
       GPU_CHECK(gpuMemcpy(d_y_anchor_, d_pdhg_dual_,
-                            lp_.num_row_ * sizeof(double),
-                            gpuMemcpyDeviceToDevice));
+                          lp_.num_row_ * sizeof(double),
+                          gpuMemcpyDeviceToDevice));
       GPU_CHECK(gpuMemcpy(d_x_current_, d_pdhg_primal_,
-                            lp_.num_col_ * sizeof(double),
-                            gpuMemcpyDeviceToDevice));
+                          lp_.num_col_ * sizeof(double),
+                          gpuMemcpyDeviceToDevice));
       GPU_CHECK(gpuMemcpy(d_y_current_, d_pdhg_dual_,
-                            lp_.num_row_ * sizeof(double),
-                            gpuMemcpyDeviceToDevice));
+                          lp_.num_row_ * sizeof(double),
+                          gpuMemcpyDeviceToDevice));
 #else
       x_anchor_ = x_next_;
       y_anchor_ = y_next_;
@@ -739,17 +754,16 @@ double PDLPSolver::computeFixedPointErrorGpu() {
   // 1. delta_x = x_next_ - reflected_x_
   // (Assuming d_pdhg_primal_ maps to x_next_ and d_x_next_ is used as
   // reflected_x_ in your minor/major steps)
-  GPU_CHECK(gpuMemcpy(d_delta_x_, d_pdhg_primal_,
-                        a_num_cols_ * sizeof(double),
-                        gpuMemcpyDeviceToDevice));
+  GPU_CHECK(gpuMemcpy(d_delta_x_, d_pdhg_primal_, a_num_cols_ * sizeof(double),
+                      gpuMemcpyDeviceToDevice));
   GPU_BLAS_CHECK(gpuBlasDaxpy(cublas_handle_, a_num_cols_, &alpha_minus_one,
-                           d_x_next_, 1, d_delta_x_, 1));
+                              d_x_next_, 1, d_delta_x_, 1));
 
   // 2. delta_y = y_next_ - reflected_y_
   GPU_CHECK(gpuMemcpy(d_delta_y_, d_pdhg_dual_, a_num_rows_ * sizeof(double),
-                        gpuMemcpyDeviceToDevice));
+                      gpuMemcpyDeviceToDevice));
   GPU_BLAS_CHECK(gpuBlasDaxpy(cublas_handle_, a_num_rows_, &alpha_minus_one,
-                           d_y_next_, 1, d_delta_y_, 1));
+                              d_y_next_, 1, d_delta_y_, 1));
 
   // 3. AT_delta_y = A^T * delta_y
   linalgGpuATy(d_delta_y_, d_AT_delta_y_);
@@ -762,7 +776,7 @@ double PDLPSolver::computeFixedPointErrorGpu() {
   GPU_BLAS_CHECK(
       gpuBlasDnrm2(cublas_handle_, a_num_rows_, d_delta_y_, 1, &dual_norm));
   GPU_BLAS_CHECK(gpuBlasDdot(cublas_handle_, a_num_cols_, d_delta_x_, 1,
-                          d_AT_delta_y_, 1, &cross_term));
+                             d_AT_delta_y_, 1, &cross_term));
 
   double primal_norm_sq = primal_norm * primal_norm;
   double dual_norm_sq = dual_norm * dual_norm;
@@ -848,15 +862,13 @@ bool PDLPSolver::runConvergenceCheck(size_t iter, std::vector<double>& output_x,
     double* src_sn = prefer_avg ? d_dSlackNegAvg_ : d_dSlackNeg_;
 
     GPU_CHECK(gpuMemcpy(output_x.data(), src_x, lp_.num_col_ * sizeof(double),
-                          gpuMemcpyDeviceToHost));
+                        gpuMemcpyDeviceToHost));
     GPU_CHECK(gpuMemcpy(output_y.data(), src_y, lp_.num_row_ * sizeof(double),
-                          gpuMemcpyDeviceToHost));
+                        gpuMemcpyDeviceToHost));
     GPU_CHECK(gpuMemcpy(dSlackPos_.data(), src_sp,
-                          lp_.num_col_ * sizeof(double),
-                          gpuMemcpyDeviceToHost));
+                        lp_.num_col_ * sizeof(double), gpuMemcpyDeviceToHost));
     GPU_CHECK(gpuMemcpy(dSlackNeg_.data(), src_sn,
-                          lp_.num_col_ * sizeof(double),
-                          gpuMemcpyDeviceToHost));
+                        lp_.num_col_ * sizeof(double), gpuMemcpyDeviceToHost));
 #else
     if (prefer_avg) {
       output_x = x_avg_;
@@ -1057,9 +1069,9 @@ void PDLPSolver::prepareNextIteration() {
   } else {
     // Standard PDHG: swap device pointers instead of copying device memory.
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
-    std::swap(d_x_current_,   d_x_next_);
-    std::swap(d_y_current_,   d_y_next_);
-    std::swap(d_ax_current_,  d_ax_next_);
+    std::swap(d_x_current_, d_x_next_);
+    std::swap(d_y_current_, d_y_next_);
+    std::swap(d_ax_current_, d_ax_next_);
     std::swap(d_aty_current_, d_aty_next_);
 #else
     x_current_ = x_next_;
@@ -1698,12 +1710,10 @@ double PDLPSolver::powerMethodGpu() {
 
   GPU_SPARSE_CHECK(gpuSparseSpMV_bufferSize(
       cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &one, mat_a_T_csr_,
-      vecEigen, &zero, vecDual, GPU_R_64F, GPU_SPMV_CSR_ALG2,
-      &buffer_size_at));
+      vecEigen, &zero, vecDual, GPU_R_64F, GPU_SPMV_CSR_ALG2, &buffer_size_at));
   GPU_SPARSE_CHECK(gpuSparseSpMV_bufferSize(
-      cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &one, mat_a_csr_,
-      vecDual, &zero, vecNextEigen, GPU_R_64F, GPU_SPMV_CSR_ALG2,
-      &buffer_size_a));
+      cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &one, mat_a_csr_, vecDual,
+      &zero, vecNextEigen, GPU_R_64F, GPU_SPMV_CSR_ALG2, &buffer_size_a));
 
   GPU_CHECK(gpuMalloc(&d_buffer_at, buffer_size_at));
   GPU_CHECK(gpuMalloc(&d_buffer_a, buffer_size_a));
@@ -1712,8 +1722,7 @@ double PDLPSolver::powerMethodGpu() {
 
   for (int iter = 0; iter < max_iter; ++iter) {
     GPU_CHECK(gpuMemcpy(d_next_eigenvector, d_eigenvector,
-                        a_num_rows_ * sizeof(double),
-                        gpuMemcpyDeviceToDevice));
+                        a_num_rows_ * sizeof(double), gpuMemcpyDeviceToDevice));
 
     double eigenvector_norm = 0.0;
     GPU_BLAS_CHECK(gpuBlasDnrm2(cublas_handle_, a_num_rows_, d_next_eigenvector,
@@ -1727,16 +1736,15 @@ double PDLPSolver::powerMethodGpu() {
     GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vecNextEigen, d_next_eigenvector));
     GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vecDual, d_dual_product));
 
-    GPU_SPARSE_CHECK(
-        gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &one,
-                      mat_a_T_csr_, vecNextEigen, &zero, vecDual, GPU_R_64F,
-                      GPU_SPMV_CSR_ALG2, d_buffer_at));
+    GPU_SPARSE_CHECK(gpuSparseSpMV(cusparse_handle_,
+                                   GPU_OPERATION_NON_TRANSPOSE, &one,
+                                   mat_a_T_csr_, vecNextEigen, &zero, vecDual,
+                                   GPU_R_64F, GPU_SPMV_CSR_ALG2, d_buffer_at));
 
     GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vecEigen, d_eigenvector));
-    GPU_SPARSE_CHECK(
-        gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &one,
-                      mat_a_csr_, vecDual, &zero, vecEigen, GPU_R_64F,
-                      GPU_SPMV_CSR_ALG2, d_buffer_a));
+    GPU_SPARSE_CHECK(gpuSparseSpMV(
+        cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &one, mat_a_csr_,
+        vecDual, &zero, vecEigen, GPU_R_64F, GPU_SPMV_CSR_ALG2, d_buffer_a));
 
     GPU_BLAS_CHECK(gpuBlasDdot(cublas_handle_, a_num_rows_, d_next_eigenvector,
                                1, d_eigenvector, 1, &sigma_max_sq));
@@ -1766,7 +1774,7 @@ double PDLPSolver::powerMethodGpu() {
 }
 #endif
 
-void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
+HighsStatus PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   logger_.initialise(options.log_dev_level, options.log_options, &timer);
   logger_.printHeader();
   highs_timer_p_ = &timer;
@@ -1779,17 +1787,34 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
 #endif
   );
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
-  HighsInt n_devices = 0;
-  gpuGetDeviceCount(&n_devices);
+  // Fail gracefully if the GPU runtime reports no usable device, rather than
+  // reading uninitialised device properties and aborting in setupGpu()
+  int n_devices = 0;
+  const gpuError_t device_count_error = gpuGetDeviceCount(&n_devices);
+  if (device_count_error != gpuSuccess || n_devices < 1) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "HiPDLP was built for %s GPUs, but no %s device is "
+                 "available (%s)\n",
+                 GPU_BACKEND_NAME, GPU_BACKEND_NAME,
+                 device_count_error != gpuSuccess
+                     ? gpuGetErrorString(device_count_error)
+                     : "device count is zero");
+    return HighsStatus::kError;
+  }
   if (n_devices != 1)
-    highsLogUser(
-        options.log_options, HighsLogType::kInfo,
-        "Number of CUDA-enabled devices is %d: device 0 will be used\n",
-        n_devices);
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Number of %s devices is %d: device 0 will be used\n",
+                 GPU_BACKEND_NAME, n_devices);
   gpuDeviceProp_t prop;
-  gpuGetDeviceProperties(&prop, 0);
-  highsLogUser(options.log_options, HighsLogType::kInfo, "Cuda device: %s\n",
-               prop.name);
+  const gpuError_t device_properties_error = gpuGetDeviceProperties(&prop, 0);
+  if (device_properties_error != gpuSuccess) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "HiPDLP cannot query %s device 0 (%s)\n", GPU_BACKEND_NAME,
+                 gpuGetErrorString(device_properties_error));
+    return HighsStatus::kError;
+  }
+  highsLogUser(options.log_options, HighsLogType::kInfo, "%s device: %s\n",
+               GPU_BACKEND_NAME, prop.name);
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Global memory available on device (GB): %f\n",
                (float(prop.totalGlobalMem)) / 1e9);
@@ -1857,6 +1882,7 @@ void PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
   params_.log_options_ = options.log_options;
   // log the options
   logger_.printParams(params_);
+  return HighsStatus::kOk;
 }
 
 void PDLPSolver::scaleProblem() {
@@ -2391,8 +2417,9 @@ void PDLPSolver::setupGpu() {
   a_num_cols_ = lp_.num_col_;
   a_nnz_ = lp_.a_matrix_.numNz();
 
-  HighsSparseMatrix lp_csr = lp_.a_matrix_;
-  lp_csr.ensureRowwise();
+  HighsSparseMatrix lp_csr = lp_.a_matrix_.getRowwise();
+  assert(lp_csr.isRowwise());
+  // lp_csr.ensureRowwise(); is now redundant
 
   const std::vector<HighsInt>& h_a_row_ptr = lp_csr.start_;
   const std::vector<HighsInt>& h_a_col_ind = lp_csr.index_;
@@ -2404,17 +2431,16 @@ void PDLPSolver::setupGpu() {
   GPU_CHECK(gpuMalloc((void**)&d_a_col_ind_, a_nnz_ * sizeof(HighsInt)));
   GPU_CHECK(gpuMalloc((void**)&d_a_val_, a_nnz_ * sizeof(double)));
   GPU_CHECK(gpuMemcpy(d_a_row_ptr_, h_a_row_ptr.data(),
-                        (a_num_rows_ + 1) * sizeof(HighsInt),
-                        gpuMemcpyHostToDevice));
+                      (a_num_rows_ + 1) * sizeof(HighsInt),
+                      gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMemcpy(d_a_col_ind_, h_a_col_ind.data(),
-                        a_nnz_ * sizeof(HighsInt), gpuMemcpyHostToDevice));
+                      a_nnz_ * sizeof(HighsInt), gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMemcpy(d_a_val_, h_a_val.data(), a_nnz_ * sizeof(double),
-                        gpuMemcpyHostToDevice));
+                      gpuMemcpyHostToDevice));
 
-  GPU_SPARSE_CHECK(gpuSparseCreateCsr(&mat_a_csr_, a_num_rows_, a_num_cols_,
-                                   a_nnz_, d_a_row_ptr_, d_a_col_ind_, d_a_val_,
-                                   GPU_INDEX_32I, GPU_INDEX_32I,
-                                   GPU_INDEX_BASE_ZERO, GPU_R_64F));
+  GPU_SPARSE_CHECK(gpuSparseCreateCsr(
+      &mat_a_csr_, a_num_rows_, a_num_cols_, a_nnz_, d_a_row_ptr_, d_a_col_ind_,
+      d_a_val_, GPU_INDEX_32I, GPU_INDEX_32I, GPU_INDEX_BASE_ZERO, GPU_R_64F));
 
   // 4. Create matrix AT in CSR format = A in CSC
   const std::vector<HighsInt>& h_at_row_ptr = lp_.a_matrix_.start_;
@@ -2422,28 +2448,28 @@ void PDLPSolver::setupGpu() {
   const std::vector<double>& h_at_val = lp_.a_matrix_.value_;
 
   GPU_CHECK(gpuMalloc((void**)&d_at_row_ptr_,
-                        (a_num_cols_ + 1) * sizeof(HighsInt)));  // Fixed!
+                      (a_num_cols_ + 1) * sizeof(HighsInt)));  // Fixed!
   GPU_CHECK(gpuMalloc((void**)&d_at_col_ind_, a_nnz_ * sizeof(HighsInt)));
   GPU_CHECK(gpuMalloc((void**)&d_at_val_, a_nnz_ * sizeof(double)));
 
   GPU_CHECK(gpuMemcpy(d_at_row_ptr_, h_at_row_ptr.data(),
-                        (a_num_cols_ + 1) * sizeof(HighsInt),
-                        gpuMemcpyHostToDevice));
+                      (a_num_cols_ + 1) * sizeof(HighsInt),
+                      gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMemcpy(d_at_col_ind_, h_at_col_ind.data(),
-                        a_nnz_ * sizeof(HighsInt), gpuMemcpyHostToDevice));
+                      a_nnz_ * sizeof(HighsInt), gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMemcpy(d_at_val_, h_at_val.data(), a_nnz_ * sizeof(double),
-                        gpuMemcpyHostToDevice));
+                      gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMalloc(&d_step_params_, sizeof(GpuStepParams)));
   GPU_CHECK(gpuMemset(d_step_params_, 0, sizeof(GpuStepParams)));
-  d_primal_step_size_  = &d_step_params_->primal_step;
-  d_dual_step_size_    = &d_step_params_->dual_step;
+  d_primal_step_size_ = &d_step_params_->primal_step;
+  d_dual_step_size_ = &d_step_params_->dual_step;
   d_halpern_iteration_ = &d_step_params_->halpern_iteration;
 
   // Create AT descriptor with swapped dimensions
   GPU_SPARSE_CHECK(gpuSparseCreateCsr(
       &mat_a_T_csr_, a_num_cols_, a_num_rows_, a_nnz_,  // Dimensions swapped!
-      d_at_row_ptr_, d_at_col_ind_, d_at_val_, GPU_INDEX_32I,
-      GPU_INDEX_32I, GPU_INDEX_BASE_ZERO, GPU_R_64F));
+      d_at_row_ptr_, d_at_col_ind_, d_at_val_, GPU_INDEX_32I, GPU_INDEX_32I,
+      GPU_INDEX_BASE_ZERO, GPU_R_64F));
 
   GPU_CHECK(gpuMalloc(&d_col_cost_, a_num_cols_ * sizeof(double)));
   GPU_CHECK(gpuMalloc(&d_col_lower_, a_num_cols_ * sizeof(double)));
@@ -2493,19 +2519,19 @@ void PDLPSolver::setupGpu() {
       gpuSparseCreateDnVec(&vec_x_desc_, a_num_cols_, d_x_current_, GPU_R_64F));
   GPU_SPARSE_CHECK(
       gpuSparseCreateDnVec(&vec_y_desc_, a_num_rows_, d_y_current_, GPU_R_64F));
-  GPU_SPARSE_CHECK(gpuSparseCreateDnVec(&vec_ax_desc_, a_num_rows_, d_ax_current_,
-                                     GPU_R_64F));
+  GPU_SPARSE_CHECK(gpuSparseCreateDnVec(&vec_ax_desc_, a_num_rows_,
+                                        d_ax_current_, GPU_R_64F));
   GPU_SPARSE_CHECK(gpuSparseCreateDnVec(&vec_aty_desc_, a_num_cols_,
-                                     d_aty_current_, GPU_R_64F));
+                                        d_aty_current_, GPU_R_64F));
 
   GPU_CHECK(gpuMemcpy(d_col_cost_, lp_.col_cost_.data(),
-                        a_num_cols_ * sizeof(double), gpuMemcpyHostToDevice));
+                      a_num_cols_ * sizeof(double), gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMemcpy(d_col_lower_, lp_.col_lower_.data(),
-                        a_num_cols_ * sizeof(double), gpuMemcpyHostToDevice));
+                      a_num_cols_ * sizeof(double), gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMemcpy(d_col_upper_, lp_.col_upper_.data(),
-                        a_num_cols_ * sizeof(double), gpuMemcpyHostToDevice));
+                      a_num_cols_ * sizeof(double), gpuMemcpyHostToDevice));
   GPU_CHECK(gpuMemcpy(d_row_lower_, lp_.row_lower_.data(),
-                        a_num_rows_ * sizeof(double), gpuMemcpyHostToDevice));
+                      a_num_rows_ * sizeof(double), gpuMemcpyHostToDevice));
   std::vector<uint8_t> temp_equality(a_num_rows_);
   for (HighsInt i = 0; i < a_num_rows_; ++i) {
     temp_equality[i] = is_equality_row_[i] ? 1 : 0;
@@ -2513,7 +2539,7 @@ void PDLPSolver::setupGpu() {
 
   // Copy to device
   GPU_CHECK(gpuMemcpy(d_is_equality_row_, temp_equality.data(),
-                        a_num_rows_ * sizeof(uint8_t), gpuMemcpyHostToDevice));
+                      a_num_rows_ * sizeof(uint8_t), gpuMemcpyHostToDevice));
 
   // 6. Preallocate the SpMV buffers and run the one-time preprocess() analysis
   // for the main-loop algorithm. bufferSize, preprocess and the per-iteration
@@ -2564,11 +2590,9 @@ void PDLPSolver::setupGpu() {
 
   if (scaling_.isScaled()) {
     GPU_CHECK(gpuMemcpy(d_col_scale_, scaling_.getColScaling().data(),
-                          a_num_cols_ * sizeof(double),
-                          gpuMemcpyHostToDevice));
+                        a_num_cols_ * sizeof(double), gpuMemcpyHostToDevice));
     GPU_CHECK(gpuMemcpy(d_row_scale_, scaling_.getRowScaling().data(),
-                          a_num_rows_ * sizeof(double),
-                          gpuMemcpyHostToDevice));
+                        a_num_rows_ * sizeof(double), gpuMemcpyHostToDevice));
   } else {
     gpuFree(d_col_scale_);
     d_col_scale_ = nullptr;
@@ -2652,10 +2676,10 @@ void PDLPSolver::linalgGpuAx(const double* d_x_in, double* d_ax_out) {
   // would be illegal inside the graph capture of the main loop.
   GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vec_x_desc_, (void*)d_x_in));
   GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vec_ax_desc_, (void*)d_ax_out));
-  GPU_SPARSE_CHECK(
-      gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha,
-                   mat_a_csr_, vec_x_desc_, &beta, vec_ax_desc_, GPU_R_64F,
-                   GPU_SPMV_ALG_MAIN, d_spmv_buffer_ax_));
+  GPU_SPARSE_CHECK(gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE,
+                                 &alpha, mat_a_csr_, vec_x_desc_, &beta,
+                                 vec_ax_desc_, GPU_R_64F, GPU_SPMV_ALG_MAIN,
+                                 d_spmv_buffer_ax_));
 }
 
 void PDLPSolver::linalgGpuATy(const double* d_y_in, double* d_aty_out) {
@@ -2666,10 +2690,10 @@ void PDLPSolver::linalgGpuATy(const double* d_y_in, double* d_aty_out) {
   // Same as linalgGpuAx: the buffer comes from setupGpu().
   GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vec_y_desc_, (void*)d_y_in));
   GPU_SPARSE_CHECK(gpuSparseSetDnVecValues(vec_aty_desc_, (void*)d_aty_out));
-  GPU_SPARSE_CHECK(
-      gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE, &alpha,
-                   mat_a_T_csr_, vec_y_desc_, &beta, vec_aty_desc_, GPU_R_64F,
-                   GPU_SPMV_ALG_MAIN, d_spmv_buffer_aty_));
+  GPU_SPARSE_CHECK(gpuSparseSpMV(cusparse_handle_, GPU_OPERATION_NON_TRANSPOSE,
+                                 &alpha, mat_a_T_csr_, vec_y_desc_, &beta,
+                                 vec_aty_desc_, GPU_R_64F, GPU_SPMV_ALG_MAIN,
+                                 d_spmv_buffer_aty_));
 }
 
 void PDLPSolver::launchKernelUpdateX(double primal_step) {
@@ -2716,7 +2740,7 @@ bool PDLPSolver::checkConvergenceGpu(const HighsInt iter, const double* d_x,
 
   double h_results[4];
   GPU_CHECK(gpuMemcpy(h_results, d_convergence_results_, 4 * sizeof(double),
-                        gpuMemcpyDeviceToHost));
+                      gpuMemcpyDeviceToHost));
 
   double primal_feas_sq = h_results[0];
   double dual_feas_sq = h_results[1];
@@ -2802,7 +2826,7 @@ void PDLPSolver::computeAverageIterateGpu() {
 #if PDLP_DEBUG_LOG
   // copy x_avg to host
   GPU_CHECK(gpuMemcpy(x_avg_.data(), d_x_avg_, a_num_cols_ * sizeof(double),
-                        gpuMemcpyDeviceToHost));
+                      gpuMemcpyDeviceToHost));
   debug_pdlp_data_.x_average_norm = linalg::vectorNormSquared(x_avg_);
 #endif
 }
@@ -2833,21 +2857,21 @@ double PDLPSolver::computeNonlinearityGpu(const double* d_x_new,
                                           const double* d_aty_old) {
   // 1. Compute delta_x = x_new - x_old
   GPU_CHECK(gpuMemcpy(d_buffer_, d_x_new, a_num_cols_ * sizeof(double),
-                        gpuMemcpyDeviceToDevice));
+                      gpuMemcpyDeviceToDevice));
   double alpha = -1.0;
   GPU_BLAS_CHECK(gpuBlasDaxpy(cublas_handle_, a_num_cols_, &alpha, d_x_old, 1,
-                           d_buffer_, 1));
+                              d_buffer_, 1));
 
   // 2. Compute delta_aty = aty_new - aty_old
   GPU_CHECK(gpuMemcpy(d_buffer2_, d_aty_new, a_num_cols_ * sizeof(double),
-                        gpuMemcpyDeviceToDevice));
+                      gpuMemcpyDeviceToDevice));
   GPU_BLAS_CHECK(gpuBlasDaxpy(cublas_handle_, a_num_cols_, &alpha, d_aty_old, 1,
-                           d_buffer2_, 1));
+                              d_buffer2_, 1));
 
   // 3. Compute Dot product: delta_x' * delta_aty
   double result;
-  GPU_BLAS_CHECK(gpuBlasDdot(cublas_handle_, a_num_cols_, d_buffer_, 1, d_buffer2_,
-                          1, &result));
+  GPU_BLAS_CHECK(gpuBlasDdot(cublas_handle_, a_num_cols_, d_buffer_, 1,
+                             d_buffer2_, 1, &result));
 
   return result;
 }

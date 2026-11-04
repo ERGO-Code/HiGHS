@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <fstream>
+#include <utility>
 
 #include "HCheckConfig.h"
 #include "Highs.h"
@@ -542,6 +543,54 @@ TEST_CASE("default-options", "[highs_options]") {
   REQUIRE(h.passOptions(options) == HighsStatus::kError);
   options.solver = kSimplexString;
   REQUIRE(h.passOptions(options) == HighsStatus::kOk);
+}
+
+TEST_CASE("options-copy-move", "[highs_options]") {
+  // the option records of a copied or moved HighsOptions object must refer
+  // to its own members, not to those of the source
+  auto setSource = [](HighsOptions& source) {
+    source.output_flag = dev_run;
+    source.simplex_strategy = kSimplexStrategyDual;
+  };
+  auto checkRecords = [](HighsOptions& options, HighsOptions& source) {
+    REQUIRE(options.simplex_strategy == kSimplexStrategyDual);
+    const HighsInt source_strategy = source.simplex_strategy;
+    REQUIRE(setLocalOptionValue(
+                options.log_options, "simplex_strategy", options.records,
+                HighsInt{kSimplexStrategyPrimal}) == OptionStatus::kOk);
+    REQUIRE(options.simplex_strategy == kSimplexStrategyPrimal);
+    REQUIRE(source.simplex_strategy == source_strategy);
+  };
+  {
+    // copy constructor
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options(source);
+    checkRecords(options, source);
+  }
+  {
+    // move constructor
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options(std::move(source));
+    checkRecords(options, source);
+  }
+  {
+    // copy assignment
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options;
+    options = source;
+    checkRecords(options, source);
+  }
+  {
+    // move assignment
+    HighsOptions source;
+    setSource(source);
+    HighsOptions options;
+    options = std::move(source);
+    checkRecords(options, source);
+  }
 }
 
 TEST_CASE("incomplete-options-file-line", "[highs_options]") {

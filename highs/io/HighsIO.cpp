@@ -102,6 +102,11 @@ std::array<char, 32> highsDoubleToString(const double val,
   return printString;
 }
 
+std::array<char, 32> highsGapToString(const double gap) {
+  return highsDoubleToString(100.0 * gap,
+                             std::max(std::min(1e-2, 1e-1 * gap), 1e-6));
+}
+
 void highsLogUser(const HighsLogOptions& log_options_, const HighsLogType type,
                   const char* format, ...) {
   if (!*log_options_.output_flag) return;
@@ -254,7 +259,7 @@ void highsFprintfString(FILE* file, const HighsLogOptions& log_options_,
 
 std::string getFilenameExt(const std::string& filename) {
   std::string name = filename;
-  std::size_t found = name.find_last_of(".");
+  std::size_t found = name.find_last_of('.');
   if (found < name.size()) {
     name = name.substr(found + 1);
   } else {
@@ -291,6 +296,11 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
          *log_options_.log_dev_level);
 }
 
+void highsPrintStringAsHeading(const std::string& text) {
+  printf("\n%s\n %s\n%s\n", std::string(text.length() + 2, '=').c_str(),
+         text.c_str(), std::string(text.length() + 2, '=').c_str());
+}
+
 std::string highsFormatToString(const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
@@ -313,6 +323,10 @@ const std::string highsBoolToString(const bool b, const HighsInt field_width) {
 const std::string highsIntToPlural(const HighsInt i, const bool y) {
   if (y) return i == 1 ? "y" : "ies";
   return i == 1 ? "" : "s";
+}
+
+const std::string highsIntToBe(const HighsInt i) {
+  return (i == 1 ? "is" : "are");
 }
 
 const std::string highsTimeToString(const double time) {

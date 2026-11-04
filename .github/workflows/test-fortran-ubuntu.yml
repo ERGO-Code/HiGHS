@@ -40,7 +40,7 @@ jobs:
       - name: Build
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --parallel
+        run: cmake --build . -j2
 
       - name: Test
         shell: bash

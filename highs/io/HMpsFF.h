@@ -57,7 +57,7 @@ class HMpsFF {
  public:
   HMpsFF() {}
   FreeFormatParserReturnCode loadProblem(const HighsLogOptions& log_options,
-                                         const std::string filename,
+                                         const std::string& filename,
                                          HighsModel& model);
 
   double time_limit_ = kHighsInf;

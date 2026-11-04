@@ -218,7 +218,7 @@ class SimplexTimer {
   }
 
   bool reportSimplexClockList(
-      const char* grepStamp, const std::vector<HighsInt> simplex_clock_list,
+      const char* grepStamp, const std::vector<HighsInt>& simplex_clock_list,
       const HighsTimerClock& simplex_timer_clock,
       const double tolerance_percent_report_ = -1) const {
     HighsTimer* timer_pointer = simplex_timer_clock.timer_pointer_;
@@ -237,7 +237,7 @@ class SimplexTimer {
         grepStamp, clockList, ideal_sum_time, tolerance_percent_report);
   };
 
-  void reportChuzc4ClockList(const std::vector<HighsInt> simplex_clock_list,
+  void reportChuzc4ClockList(const std::vector<HighsInt>& simplex_clock_list,
                              const HighsTimerClock& simplex_timer_clock) const {
     HighsTimer* timer_pointer = simplex_timer_clock.timer_pointer_;
     const std::vector<HighsInt>& clock = simplex_timer_clock.clock_;

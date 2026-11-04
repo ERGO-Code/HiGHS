@@ -65,12 +65,14 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
             bool dualized = iterate_->model().dualized();
             double pobjective = iterate_->pobjective_after_postproc();
             double dobjective = iterate_->dobjective_after_postproc();
-            if (dobjective > std::max(10.0 * std::abs(pobjective), 1.0)) {
+            if (iterate_->presidual() > iterate_->feasibility_tol() * (1.0 + model.norm_bounds()) &&
+		dobjective > std::max(10.0 * std::abs(pobjective), 1.0)) {
                 // Dual objective tends to positive infinity. Looks like the
                 // model is dual unbounded, i.e. primal infeasible.
                 info->status_ipm = dualized ?
                     IPX_STATUS_dual_infeas : IPX_STATUS_primal_infeas;
-            } else if (pobjective < -std::max(10.0 * std::abs(dobjective), 1.0)) {
+            } else if (iterate_->dresidual() > iterate_->feasibility_tol() * (1.0 + model.norm_c()) &&
+		       pobjective < -std::max(10.0 * std::abs(dobjective), 1.0)) {
                 // Primal objective tends to negative infinity. Looks like the
                 // model is primal unbounded, i.e. dual infeasible.
                 info->status_ipm = dualized ?
@@ -691,10 +693,42 @@ void IPM::StepSizes(const Step& step, bool isCentring) {
 
 void IPM::MakeStep(const Step& step, bool isCentring) {
     StepSizes(step, isCentring);
+
+    const double presidual = iterate_->presidual();
+    const double dresidual = iterate_->dresidual();
+    const double complementarity = iterate_->complementarity();
+    
     iterate_->Update(step_primal_, &step.x[0], &step.xl[0], &step.xu[0],
                      step_dual_,   &step.y[0], &step.zl[0], &step.zu[0]);
     if (!isCentring){
-        if (std::min(step_primal_, step_dual_) < 0.05)
+        // A step of length alpha should reduce the residuals by the factor
+        // (1-alpha). If a residual that is not yet small hardly decreases
+        // although the step is long, the Newton systems are inconsistent,
+        // as for a primal or dual infeasible LP. The complementarity gap may
+        // still decrease, so the iteration must be counted as bad for
+        // Driver() to detect infeasibility. Similarly, if the
+        // complementarity gap doesn't decrease although the step is long,
+        // the iterate has stagnated (for example when rounding errors in
+        // the objective prevent the optimality test from being satisfied).
+        const double large_step_thresh = 0.9;
+        const double reduction_thresh = 0.9;
+
+        const Model& model = iterate_->model();
+        const double tol = iterate_->feasibility_tol();
+        const bool presidual_stalled =
+            step_primal_ >= large_step_thresh 
+            && iterate_->presidual() > reduction_thresh * presidual 
+            && iterate_->presidual() > tol * (1.0+model.norm_bounds());
+        const bool dresidual_stalled =
+            step_dual_ >= large_step_thresh 
+            && iterate_->dresidual() > reduction_thresh * dresidual 
+            && iterate_->dresidual() > tol * (1.0+model.norm_c());
+        const bool complementarity_stalled =
+            std::min(step_primal_, step_dual_) >= large_step_thresh 
+            && iterate_->complementarity() > reduction_thresh * complementarity;
+
+        if (std::min(step_primal_, step_dual_) < 0.05 ||
+            presidual_stalled || dresidual_stalled || complementarity_stalled)
             num_bad_iter_++;
         else
             num_bad_iter_ = 0;

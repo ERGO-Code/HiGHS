@@ -25,7 +25,7 @@ void testDualObjective(const std::string model) {
       std::max(1.0, std::fabs(primal_objective));
   REQUIRE(relative_primal_dual_gap < 1e-12);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
@@ -41,7 +41,7 @@ TEST_CASE("mip-with-lp-solver", "[highs_lp_solver]") {
   status = highs.run();
   REQUIRE(status == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
@@ -169,7 +169,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   if (dev_run) printf("\nOptimal objective value error = %g\n", error);
   REQUIRE(error < 1e-10);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
@@ -204,7 +204,7 @@ TEST_CASE("blending-lp-ipm", "[highs_lp_solver]") {
   }
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-objective-max", "[highs_lp_solver]") {
@@ -234,7 +234,7 @@ TEST_CASE("dual-objective-max", "[highs_lp_solver]") {
       std::max(1.0, std::fabs(primal_objective));
   REQUIRE(relative_primal_dual_gap < 1e-12);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dual-objective", "[highs_lp_solver]") {
@@ -248,8 +248,8 @@ void testStandardForm(const HighsLp& lp) {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsInt sense = HighsInt(lp.sense_);
-  highs.passModel(lp);
-  highs.run();
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
   //  highs.writeSolution("", kSolutionStylePretty);
   double required_objective_function_value =
       highs.getInfo().objective_function_value;
@@ -305,7 +305,7 @@ void testStandardForm(const HighsLp& lp) {
     highs.writeModel("");
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void testStandardFormModel(const std::string model) {
@@ -318,7 +318,7 @@ void testStandardFormModel(const std::string model) {
   HighsLp lp = highs.getLp();
   testStandardForm(lp);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("standard-form-mps", "[highs_lp_solver]") {
@@ -363,7 +363,24 @@ TEST_CASE("standard-form-lp", "[highs_lp_solver]") {
         "maximizing\n");
   testStandardForm(highs.getLp());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("standard-form-empty-lp", "[highs_lp_solver]") {
+  // Exposed that standard_form_valid_ was not initialised if a model
+  // had not been loaded - ie empty or built
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  HighsInt num_col;
+  HighsInt num_row;
+  HighsInt num_nz;
+  double offset;
+  REQUIRE(h.getStandardFormLp(num_col, num_row, num_nz, offset) ==
+          HighsStatus::kOk);
+  REQUIRE(num_col == 0);
+  REQUIRE(num_row == 0);
+  REQUIRE(num_nz == 0);
 }
 
 TEST_CASE("simplex-stats", "[highs_lp_solver]") {
@@ -400,7 +417,7 @@ TEST_CASE("simplex-stats", "[highs_lp_solver]") {
   REQUIRE(simplex_stats.row_DSE_density > 0);
   if (dev_run) h.reportSimplexStats(stdout);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("use_warm_start", "[highs_lp_solver]") {
@@ -417,7 +434,7 @@ TEST_CASE("use_warm_start", "[highs_lp_solver]") {
   HighsInt iteration_count = h.getInfo().simplex_iteration_count;
   REQUIRE(iteration_count == required_iteration_count);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 bool fileExists(const std::string& file_name) {
@@ -462,7 +479,7 @@ TEST_CASE("highs-files-lp", "[highs_lp_solver]") {
   std::remove(write_solution_file.c_str());
   std::remove(write_basis_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
@@ -496,7 +513,7 @@ TEST_CASE("highs-files-mip", "[highs_lp_solver]") {
   std::remove(write_model_file.c_str());
   std::remove(write_solution_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 /*
@@ -514,7 +531,7 @@ TEST_CASE("highs-debug-level", "[highs_lp_solver]") {
   h.run();
   h.setOptionValue("highs_debug_level",  3);
   h.run();
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
 TEST_CASE("solver-string", "[highs_lp_solver]") {
@@ -551,7 +568,7 @@ TEST_CASE("choose-lp-solver", "[highs_lp_solver]") {
   h.run();
   REQUIRE(h.getInfo().ipm_iteration_count > 0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("releaseMemory", "[highs_lp_solver]") {
@@ -580,5 +597,25 @@ TEST_CASE("releaseMemory", "[highs_lp_solver]") {
   // Verify objectives are different (different problems)
   REQUIRE(first_objective != second_objective);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-2300", "[highs_lp_solver]") {
+  // After presolve, the only dual infeasibility at the start is that
+  // of a free nonbasic variable. Dual phase 2 is forced, hands over to
+  // dual phase 1 without iterating, and phase 1 must not then use the
+  // list of free variables that phase 2 created
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/issue-2300.mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  if (dev_run) h.setOptionValue("log_dev_level", 1);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const double optimal_objective = 4.0735475989e-04;
+  REQUIRE(std::fabs(h.getInfo().objective_function_value - optimal_objective) <
+          1e-12);
+
+  h.resetThreadScheduler(true);
 }

@@ -38,6 +38,7 @@ struct PreprocessAction {
 
 struct PreprocessEmptyRows : public PreprocessAction {
   std::vector<Int> rows_shift;
+  std::vector<double> b_pre;
   Int empty_rows{};
 
   void apply(Model& model) override;

@@ -157,7 +157,14 @@ void Iterate::dualObj() {
 }
 void Iterate::pdGap() {
   // relative primal-dual gap
-  pdgap = std::abs(pobj - dobj) / (1.0 + 0.5 * std::abs(pobj + dobj));
+  // Uses the offset-free objectives.
+  // Assume pobj = offset + p, dobj = offset + d.
+  // If |offset| >> |p|,|d| then |pobj+dobj| ~ 2*offset and the gap gets small
+  // much earlier than it should.
+  // If offset ~ -p, -d, then |pobj+dobj| ~ 0, so the gap gets small much later
+  // than it should.
+  pdgap = std::abs(pobj - dobj) /
+          (1.0 + 0.5 * std::abs(pobj + dobj - 2 * model.offset()));
 }
 
 void Iterate::primalInfeas() {

@@ -10,6 +10,18 @@ endif()
 
 set(BLAS_ROOT "" CACHE STRING "Root directory of BLAS or OpenBLAS")
 
+# MSVC (cl.exe) cannot compile OpenBLAS's optimised x64 or ARM64 kernels, so
+# with BUILD_OPENBLAS it would only get the slow portable GENERIC target. When
+# clang-cl and Ninja are available, OpenBLAS is built with clang-cl instead, as
+# a separate project (it is ABI-compatible with MSVC).
+option(BUILD_OPENBLAS_CLANG_CL
+    "With MSVC on Windows x64 or ARM64, build OpenBLAS with clang-cl to get optimised kernels"
+    ON)
+
+option(HIGHS_OPENBLAS_REQUIRE_OPTIMIZED
+    "With BUILD_OPENBLAS on Windows x64 or ARM64, fail instead of falling back to generic OpenBLAS kernels when clang-cl or Ninja is unavailable"
+    OFF)
+
 # set appropriate BLAS linking information
 function(highs_configure_blas_target)
     set(HIGHS_BLAS_TARGET "" PARENT_SCOPE)
@@ -30,6 +42,13 @@ endfunction()
 # set appropriate BLAS dependency licensing metadata
 function(highs_configure_blas_metadata)
     set(HIGHS_BLAS_COMPILE_DEFINITION "" PARENT_SCOPE)
+
+    # if OpenBLAS is passed directly via BLAS_LIBRARIES, the vendor is not
+    # known to CMake, so detect it from the library name
+    string(TOLOWER "${BLAS_LIBRARIES}" BLAS_LIBRARIES_LOWER)
+    if(BLAS_LIBRARIES_LOWER MATCHES "openblas")
+        set(BLA_VENDOR OpenBLAS)
+    endif()
 
     if(OpenBLAS_FOUND OR OPENBLAS_LIB OR BLA_VENDOR MATCHES "OpenBLAS")
         set(HIGHS_BLAS_VENDOR OpenBLAS PARENT_SCOPE)
@@ -70,6 +89,243 @@ macro(highs_export_blas_state)
     endforeach()
 endmacro()
 
+# With MSVC on Windows x64 or ARM64, build OpenBLAS with clang-cl and Ninja as
+# a separate project, since MSVC can only build OpenBLAS's generic C kernels,
+# which are several times slower; HiGHS itself is still compiled with the main
+# compiler. Sets result_var to TRUE on success.
+function(highs_build_openblas_clang_cl version result_var)
+    set(${result_var} FALSE PARENT_SCOPE)
+
+    if(NOT WIN32)
+        return()
+    endif()
+
+    # With MSVC, CMAKE_SYSTEM_PROCESSOR reports the host, not the -A target.
+    if(MSVC AND CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+        string(TOLOWER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}" _target_arch)
+    else()
+        string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _target_arch)
+    endif()
+    if(_target_arch MATCHES "^(x64|amd64|x86_64)$")
+        # A clang-cl main build already gets the optimised kernels in-tree
+        if(NOT CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+            return()
+        endif()
+        set(_arch x64)
+        set(_host_arch_regex "^(x64|amd64|x86_64)$")
+    elseif(_target_arch MATCHES "^(arm64|aarch64)$")
+        set(_arch ARM64)
+        set(_host_arch_regex "^(arm64|aarch64)$")
+    else()
+        return()
+    endif()
+
+    set(_fallback_msg "OpenBLAS will be built with the main compiler using generic C kernels, which are several times slower.")
+    if(HIGHS_OPENBLAS_REQUIRE_OPTIMIZED)
+        set(_fallback_level FATAL_ERROR)
+        set(_fallback_msg "HIGHS_OPENBLAS_REQUIRE_OPTIMIZED is ON, so not falling back to generic OpenBLAS kernels.")
+    else()
+        set(_fallback_level WARNING)
+    endif()
+
+    if(NOT BUILD_OPENBLAS_CLANG_CL)
+        if(HIGHS_OPENBLAS_REQUIRE_OPTIMIZED)
+            message(FATAL_ERROR "BUILD_OPENBLAS_CLANG_CL is OFF. ${_fallback_msg}")
+        endif()
+        return()
+    endif()
+
+    # OpenBLAS runs its getarch tool while it is configured
+    string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" _host_arch)
+    if(NOT _host_arch MATCHES "${_host_arch_regex}")
+        message(${_fallback_level} "Building OpenBLAS with clang-cl for Windows ${_arch} requires a native ${_arch} host. ${_fallback_msg}")
+        return()
+    endif()
+
+    if(CMAKE_GENERATOR_INSTANCE)
+        set(_vs_root "${CMAKE_GENERATOR_INSTANCE}")
+    else()
+        string(REGEX REPLACE "/VC/Tools/.*$" "" _vs_root "${CMAKE_CXX_COMPILER}")
+    endif()
+
+    if(NOT HIGHS_OPENBLAS_C_COMPILER
+       AND CMAKE_C_COMPILER_ID STREQUAL "Clang"
+       AND CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        set(HIGHS_OPENBLAS_C_COMPILER "${CMAKE_C_COMPILER}" CACHE FILEPATH
+            "clang-cl used to build OpenBLAS on Windows")
+    endif()
+    find_program(HIGHS_OPENBLAS_C_COMPILER
+        NAMES clang-cl
+        HINTS "$ENV{LLVM_ROOT}/bin" "$ENV{ProgramFiles}/LLVM/bin"
+              "${_vs_root}/VC/Tools/Llvm/${_arch}/bin"
+        DOC "clang-cl used to build OpenBLAS on Windows")
+
+    if(CMAKE_GENERATOR MATCHES "Ninja")
+        set(HIGHS_OPENBLAS_NINJA "${CMAKE_MAKE_PROGRAM}")
+    else()
+        find_program(HIGHS_OPENBLAS_NINJA
+            NAMES ninja
+            HINTS "${_vs_root}/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja"
+            DOC "Ninja used to build OpenBLAS on Windows")
+    endif()
+
+    if(NOT HIGHS_OPENBLAS_C_COMPILER OR NOT HIGHS_OPENBLAS_NINJA)
+        message(${_fallback_level} "clang-cl and Ninja are needed to build optimised OpenBLAS kernels for Windows ${_arch} "
+                "(install the \"C++ Clang Compiler for Windows\" Visual Studio component or LLVM, "
+                "or set HIGHS_OPENBLAS_C_COMPILER). ${_fallback_msg}")
+        return()
+    endif()
+
+    # Match the static/dynamic CRT choice of the main build. OpenBLAS is always
+    # built in Release, so only the release runtime variants are used.
+    set(_runtime MultiThreadedDLL)
+    if(DEFINED CMAKE_MSVC_RUNTIME_LIBRARY AND NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL")
+        set(_runtime MultiThreaded)
+    endif()
+
+    set(_prefix "${CMAKE_BINARY_DIR}/_deps/openblas-clang")
+    set(_install_dir "${_prefix}/install")
+    set(_lib "${_install_dir}/lib/openblas.lib")
+
+    if(_arch STREQUAL "x64")
+        get_filename_component(_llvm_bin_dir "${HIGHS_OPENBLAS_C_COMPILER}" DIRECTORY)
+        find_program(HIGHS_OPENBLAS_LINKER lld-link HINTS "${_llvm_bin_dir}" NO_DEFAULT_PATH)
+        find_program(HIGHS_OPENBLAS_AR llvm-lib HINTS "${_llvm_bin_dir}" NO_DEFAULT_PATH)
+
+        # Check that clang-cl can compile and link a program using the GNU
+        # inline asm and target attributes that the x64 kernels rely on, so
+        # that a broken or too old installation is detected here rather than
+        # when OpenBLAS is built.
+        set(_probe_dir "${_prefix}/probe")
+        file(WRITE "${_probe_dir}/probe.c" [=[
+#include <stdio.h>
+#include <immintrin.h>
+__attribute__((target("avx2,fma"))) static double probe_avx2(const double* x) {
+  __m256d v = _mm256_loadu_pd(x);
+  v = _mm256_fmadd_pd(v, v, v);
+  double r[4];
+  _mm256_storeu_pd(r, v);
+  return r[0];
+}
+int main(int argc, char** argv) {
+  unsigned int a, b, c, d;
+  __asm__ __volatile__("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(0), "c"(0));
+  double x[4] = {1.0, 2.0, 3.0, 4.0};
+  printf("%u %f\n", a, argc > 1 ? probe_avx2(x) : 0.0);
+  return 0;
+}
+]=])
+        set(_probe_cmd "${HIGHS_OPENBLAS_C_COMPILER}" /nologo /O2 probe.c /Fe:probe.exe)
+        if(HIGHS_OPENBLAS_LINKER)
+            list(APPEND _probe_cmd -fuse-ld=lld)
+        endif()
+        execute_process(COMMAND ${_probe_cmd}
+            WORKING_DIRECTORY "${_probe_dir}"
+            RESULT_VARIABLE _probe_result
+            OUTPUT_VARIABLE _probe_output
+            ERROR_VARIABLE _probe_output)
+        if(NOT _probe_result EQUAL 0)
+            message(${_fallback_level} "clang-cl (${HIGHS_OPENBLAS_C_COMPILER}) failed to build a test program. "
+                "Set HIGHS_OPENBLAS_C_COMPILER to use another clang-cl. ${_fallback_msg}\n${_probe_output}")
+            return()
+        endif()
+
+        # DYNAMIC_ARCH selects the kernels for the CPU at runtime. HiPO always
+        # runs OpenBLAS with one thread, so build it without its thread pool,
+        # and with locking so that it can be called concurrently: a thread pool
+        # inside highs_extras.dll can crash at exit, when the DLL is unloaded
+        # while its threads are being terminated. Keep CMake's default
+        # /DWIN32 /D_WINDOWS, which setting CMAKE_C_FLAGS drops; recent clang
+        # turns incompatible pointer types, which some kernels (e.g. the
+        # SKYLAKEX prefetch intrinsics) have, into errors.
+        set(_arch_cache_args
+            -DDYNAMIC_ARCH:BOOL=ON
+            -DUSE_THREAD:BOOL=OFF
+            -DUSE_LOCKING:BOOL=ON
+            "-DCMAKE_C_FLAGS:STRING=/DWIN32 /D_WINDOWS -Wno-error=incompatible-pointer-types -Wno-everything")
+        if(HIGHS_OPENBLAS_LINKER)
+            list(APPEND _arch_cache_args -DCMAKE_LINKER:FILEPATH=${HIGHS_OPENBLAS_LINKER})
+        endif()
+        if(HIGHS_OPENBLAS_AR)
+            list(APPEND _arch_cache_args -DCMAKE_AR:FILEPATH=${HIGHS_OPENBLAS_AR})
+        endif()
+        if(NO_AVX512)
+            list(APPEND _arch_cache_args -DNO_AVX512:BOOL=ON)
+        endif()
+    else()
+        # There is no runtime CPU detection for ARM64 on Windows (DYNAMIC_ARCH
+        # always selects the baseline), so build the ARMV8 kernels directly.
+        # As for x64, build without the thread pool, which HiPO never uses and
+        # which intermittently segfaults when highs_extras.dll is unloaded at
+        # exit, and with locking, since HiPO calls BLAS from several threads.
+        set(_arch_cache_args
+            -DTARGET:STRING=ARMV8
+            -DDYNAMIC_ARCH:BOOL=OFF
+            -DUSE_THREAD:BOOL=OFF
+            -DUSE_LOCKING:BOOL=ON)
+    endif()
+
+    include(ExternalProject)
+    include(GNUInstallDirs)
+
+    message(STATUS "Building OpenBLAS ${version} for Windows ${_arch} with ${HIGHS_OPENBLAS_C_COMPILER}")
+
+    ExternalProject_Add(openblas_clang
+        GIT_REPOSITORY "https://github.com/OpenMathLib/OpenBLAS.git"
+        GIT_TAG "v${version}"
+        GIT_SHALLOW TRUE
+        PREFIX "${_prefix}"
+        UPDATE_DISCONNECTED TRUE
+        CMAKE_GENERATOR Ninja
+        CMAKE_CACHE_ARGS
+            -DCMAKE_BUILD_TYPE:STRING=Release
+            -DCMAKE_C_COMPILER:FILEPATH=${HIGHS_OPENBLAS_C_COMPILER}
+            -DCMAKE_MAKE_PROGRAM:FILEPATH=${HIGHS_OPENBLAS_NINJA}
+            -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=${_runtime}
+            -DCMAKE_INSTALL_PREFIX:PATH=${_install_dir}
+            -DCMAKE_INSTALL_LIBDIR:PATH=lib
+            -DBUILD_SHARED_LIBS:BOOL=OFF
+            -DBUILD_TESTING:BOOL=OFF
+            ${_arch_cache_args}
+            -DNOFORTRAN:BOOL=ON
+            -DONLY_CBLAS:BOOL=ON
+            -DNO_LAPACK:BOOL=ON
+            -DNO_LAPACKE:BOOL=ON
+            -DBUILD_WITHOUT_LAPACK:BOOL=ON
+            -DBUILD_DOUBLE:BOOL=ON
+            -DBUILD_SINGLE:BOOL=OFF
+            -DBUILD_COMPLEX:BOOL=OFF
+            -DBUILD_COMPLEX16:BOOL=OFF
+        BUILD_BYPRODUCTS "${_lib}"
+        LOG_CONFIGURE TRUE
+        LOG_BUILD TRUE
+        LOG_INSTALL TRUE
+        LOG_OUTPUT_ON_FAILURE TRUE)
+
+    # An INTERFACE (rather than IMPORTED) target can be installed and exported
+    # alongside highs_extras, which links to it.
+    if(NOT TARGET highs_openblas)
+        add_library(highs_openblas INTERFACE)
+        add_dependencies(highs_openblas openblas_clang)
+        target_link_libraries(highs_openblas INTERFACE
+            "$<BUILD_INTERFACE:${_lib}>"
+            "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_LIBDIR}/openblas.lib>")
+
+        install(FILES "${_lib}"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT libs)
+        install(TARGETS highs_openblas
+            EXPORT highs-targets
+            COMPONENT libs)
+        if(DEFINED HIGHS_BINARY_DIR)
+            export(TARGETS highs_openblas
+                APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+        endif()
+    endif()
+
+    set(${result_var} TRUE PARENT_SCOPE)
+endfunction()
+
 # discover BLAS (build if necessary) and set cmake variables for linking and metadata
 function(highs_configure_blas)
     if(HIGHS_BLAS_CONFIGURED)
@@ -84,6 +340,18 @@ function(highs_configure_blas)
 
     if(BUILD_OPENBLAS)
         set(_highs_openblas_version "0.3.30")
+
+        highs_build_openblas_clang_cl(${_highs_openblas_version} _highs_openblas_clang_cl)
+        if(_highs_openblas_clang_cl)
+            set(OpenBLAS_FOUND TRUE)
+            set(OpenBLAS_VERSION "${_highs_openblas_version}")
+            set(HIGHS_BLAS_TARGET highs_openblas)
+            highs_configure_blas_metadata()
+
+            set(HIGHS_BLAS_CONFIGURED TRUE)
+            highs_export_blas_state()
+            return()
+        endif()
 
         include(FetchContent)
         set(FETCHCONTENT_QUIET OFF)
@@ -170,6 +438,22 @@ function(highs_configure_blas)
         if(UNIX AND NOT APPLE)
             message(STATUS "Disabling AVX512 in OpenBLAS (unreliable with DYNAMIC_ARCH's CMake build).")
             set(NO_AVX512 ON CACHE BOOL "Build OpenBLAS without AVX512" FORCE)
+        endif()
+
+        if(UNIX AND NOT APPLE AND NOT CMAKE_SIZEOF_VOID_P EQUAL 4
+           AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+            # OpenBLAS' CMake build (kernel/CMakeLists.txt's build_core()) sets
+            # -mavx2 for DYNAMIC_ARCH's AVX2 cores (HASWELL, ZEN, EXCAVATOR, ...)
+            # but never adds -mfma, even though those cores' C-level packing/copy
+            # routines are meant to run with AVX2+FMA3 to match their hand-written
+            # assembly GEMM kernels. The Makefile build (what Debian/Ubuntu and
+            # vcpkg ship) does set it. Measured impact on a Haswell-dispatching
+            # host: ~35% slower without it. Shadow CMAKE_C_FLAGS locally (no
+            # CACHE) so this only reaches the OpenBLAS subbuild below and reverts
+            # once this function returns - HiGHS's own targets must stay runnable
+            # on any x86_64 host regardless of FMA support.
+            message(STATUS "Adding -mfma for OpenBLAS's AVX2 DYNAMIC_ARCH kernels (missing from its CMake build).")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfma")
         endif()
 
         set(OPENBLAS_BUILD_TYPE "Release" CACHE STRING "Build type for OpenBLAS" FORCE)
@@ -349,6 +633,19 @@ function(highs_configure_blas)
     else()
         if(NOT BLAS_LIBRARIES AND NOT BLA_VENDOR)
             find_package(OpenBLAS CONFIG)
+            # OpenBLAS 0.3.29+ generates a config that assumes the library is in
+            # <prefix>/lib, so on multiarch systems (e.g. Ubuntu 26.04) it points
+            # at /usr/lib/lib/libopenblas.so: ignore it and use FindBLAS instead
+            if(OpenBLAS_FOUND AND NOT TARGET OpenBLAS::OpenBLAS)
+                foreach(_highs_openblas_lib ${OpenBLAS_LIBRARIES})
+                    if(NOT EXISTS "${_highs_openblas_lib}")
+                        message(STATUS "Ignoring OpenBLAS CMake config in ${OpenBLAS_DIR}: ${_highs_openblas_lib} does not exist")
+                        set(OpenBLAS_FOUND FALSE)
+                        break()
+                    endif()
+                endforeach()
+            endif()
+
             if(OpenBLAS_FOUND)
                 message(STATUS "OpenBLAS CMake config path: ${OpenBLAS_DIR}")
 

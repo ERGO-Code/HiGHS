@@ -46,6 +46,9 @@ void writeModelObjective(FILE* file, const HighsLogOptions& log_options,
                          const HighsModel& model,
                          const std::vector<double>& primal_solution);
 
+void writeMipBoundGap(FILE* file, const HighsLogOptions& log_options,
+                      const double mip_dual_bound, const double mip_gap);
+
 void writeLpObjective(FILE* file, const HighsLogOptions& log_options,
                       const HighsLp& lp,
                       const std::vector<double>& primal_solution);
@@ -56,11 +59,13 @@ void writeObjectiveValue(FILE* file, const HighsLogOptions& log_options,
 void writePrimalSolution(FILE* file, const HighsLogOptions& log_options,
                          const HighsLp& lp,
                          const std::vector<double>& primal_solution,
-                         const bool sparse = false);
+                         const bool sparse, const bool partial = false);
 
 void writeModelSolution(FILE* file, const HighsLogOptions& log_options,
-                        const HighsModel& model, const HighsSolution& solution,
-                        const HighsInfo& info, const bool sparse = false);
+                        const HighsModel& model,
+                        const HighsModelStatus model_status,
+                        const HighsSolution& solution, const HighsInfo& info,
+                        const bool sparse, const bool partial);
 
 bool replaceSpacesByUnderscores(std::string& name);
 
@@ -77,7 +82,7 @@ HighsStatus normaliseNames(const HighsLogOptions& log_options, bool column,
                            HighsNameHash& name_hash,
                            HighsFileType type = HighsFileType::kMps);
 
-HighsFileType getFileType(const std::string filename);
+HighsFileType getFileType(const std::string& filename);
 
 void writeSolutionFile(FILE* file, const HighsOptions& options,
                        const HighsModel& model, const HighsBasis& basis,
@@ -92,7 +97,7 @@ void writeGlpsolCostRow(FILE* file, const HighsLogOptions& log_options,
                         const double objective_function_value);
 
 void writeGlpsolSolution(FILE* file, const HighsOptions& options,
-                         const HighsModel& model, const HighsBasis& basis,
+                         const HighsLp& lp, const HighsBasis& basis,
                          const HighsSolution& solution,
                          const HighsModelStatus model_status,
                          const HighsInfo& info, const bool raw);
@@ -114,6 +119,9 @@ StatusString utilBasisStatusToString(const HighsBasisStatus basis_status);
 std::string utilBasisValidityToString(const HighsInt basis_validity);
 
 std::string utilPresolveRuleTypeToString(const HighsInt rule_type);
+
+std::string utilPostsolveStatusToString(
+    const HighsPostsolveStatus postsolve_status);
 
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status);
 

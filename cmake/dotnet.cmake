@@ -11,7 +11,15 @@ set(DOTNET_PACKAGES_DIR "${PROJECT_BINARY_DIR}/dotnet")
 
 # Runtime IDentifier
 # see: https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+# With MSVC, CMAKE_SYSTEM_PROCESSOR reports the host rather than the -A target
+# platform, so prefer the compiler's target architecture.
+if(MSVC AND CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+  string(TOLOWER "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}" DOTNET_TARGET_ARCH)
+else()
+  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" DOTNET_TARGET_ARCH)
+endif()
+
+if(DOTNET_TARGET_ARCH MATCHES "^(aarch64|arm64)")
   set(DOTNET_PLATFORM arm64)
 elseif(WIN32 AND (CMAKE_GENERATOR_PLATFORM STREQUAL "Win32" OR CMAKE_SIZEOF_VOID_P EQUAL 4))
   set(DOTNET_PLATFORM x86)

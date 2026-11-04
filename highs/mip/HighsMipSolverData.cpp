@@ -22,8 +22,6 @@
 
 HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
     : mipsolver(mipsolver),
-      lps(1, HighsLpRelaxation(mipsolver)),
-      domains(1, HighsDomain(mipsolver)),
       pseudocosts(1),
       parallel_lock(false),
       heuristics(mipsolver),
@@ -75,6 +73,8 @@ HighsMipSolverData::HighsMipSolverData(HighsMipSolver& mipsolver)
       upper_limit(kHighsInf),
       optimality_limit(kHighsInf),
       debugSolution(mipsolver) {
+  lps.emplace_back(mipsolver);
+  domains.emplace_back(mipsolver);
   conflictpools.emplace_back(5 * mipsolver.options_mip_->mip_pool_age_limit,
                              mipsolver.options_mip_->mip_pool_soft_limit);
   cutpools.emplace_back(mipsolver.numCol(),
@@ -428,18 +428,8 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     ipm.setOptionValue("presolve", kHighsOffString);
     // Determine the solver
     const std::string mip_ipm_solver = mipsolver.options_mip_->mip_ipm_solver;
-    // Currently use IPX by default and take action on failure here if
-    // using HiPO.
-    bool use_hipo =
-        /*
-  #ifdef HIPO
-        // Later use HiPO by default
-        mip_ipm_solver == kHighsChooseString ||
-  #endif
-        */
-        mip_ipm_solver == kHipoString;
-    // Later still, pass mip_ipm_solver and take action on failure in
-    // solveLp
+    // HiPO does not have centring yet, so use IPX
+    const bool use_hipo = false;
     const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
     ipm.setOptionValue("solver", ipm_solver);
     ipm.setOptionValue("ipm_iteration_limit", 200);
@@ -486,6 +476,12 @@ void HighsMipSolverData::startAnalyticCenterComputation(
     }
     if (HighsInt(sol.size()) != mipsolver.numCol()) return;
     analyticCenterStatus = ipm.getModelStatus();
+    // The model status only indicates that the LP is solved, which is
+    // true for any feasible point since the costs are zero. Fixing
+    // variables in finishAnalyticCenterComputation requires the point to
+    // be centred, so only accept an optimal status if centring succeeded
+    if (ipm.getInfo().centring_status != kCentringStatusSuccess)
+      analyticCenterStatus = HighsModelStatus::kUnknown;
     analyticCenter = sol;
   });
 }
@@ -506,7 +502,11 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
     fflush(stdout);
   }
   analyticCenterComputed = true;
-  if (analyticCenterStatus == HighsModelStatus::kOptimal) {
+  // Disable fixings if presolve=off as it possible to produce valid analytic
+  // centers close to a bound when adding sets of equalities and redundant
+  // constraints
+  if (analyticCenterStatus == HighsModelStatus::kOptimal &&
+      mipsolver.options_mip_->presolve != kHighsOffString) {
     HighsInt nfixed = 0;
     HighsInt nintfixed = 0;
     for (HighsInt i = 0; i != mipsolver.numCol(); ++i) {
@@ -514,8 +514,8 @@ void HighsMipSolverData::finishAnalyticCenterComputation(
                           mipsolver.mipdata_->getDomain().col_lower_[i];
       if (boundRange == 0.0) continue;
 
-      double tolerance =
-          mipsolver.mipdata_->feastol * std::min(boundRange, 1.0);
+      const double tolerance =
+          (mipsolver.mipdata_->feastol / 10) * std::min(boundRange, 1.0);
 
       if (analyticCenter[i] <= mipsolver.model_->col_lower_[i] + tolerance) {
         mipsolver.mipdata_->getDomain().changeBound(
@@ -556,7 +556,8 @@ void HighsMipSolverData::startSymmetryDetection(
   if (detectSymmetries) {
     taskGroup.spawn([&]() {
       double startTime = mipsolver.timer_.getWallTime();
-      symData->symDetection.run(symData->symmetries);
+      symData->symDetection.run(symData->symmetries, &mipsolver.timer_,
+                                mipsolver.options_mip_->time_limit);
       symData->detectionTime = mipsolver.timer_.getWallTime() - startTime;
     });
   } else
@@ -805,6 +806,8 @@ void HighsMipSolverData::init() {
   worker_lp_iterations_stop.store(std::numeric_limits<int64_t>::max(),
                                   std::memory_order_relaxed);
   primal_dual_integral.initialise();
+  // The P-D integral is measured from the start of the MIP solver
+  primal_dual_integral.prev_time = mipsolver.timer_.read();
 
   if (mipsolver.options_mip_->mip_report_level == 0)
     dispfreq = 0;
@@ -823,7 +826,9 @@ void HighsMipSolverData::runMipPresolve(
   presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
-  if (presolve_status == HighsPresolveStatus::kOutOfMemory) return;
+  if (presolve_status == HighsPresolveStatus::kOutOfMemory ||
+      presolve_status == HighsPresolveStatus::kException)
+    return;
   // Report the final presolve reductions unless this is a restart
   if (mipsolver.options_mip_->presolve != kHighsOffString && numRestarts == 0)
     reportPresolveReductions(mipsolver.options_mip_->log_options,
@@ -832,6 +837,7 @@ void HighsMipSolverData::runMipPresolve(
 }
 
 void HighsMipSolverData::checkAddSolution() {
+  // Run when (re-)starting the MIP solver
   if (mipsolver.solution_objective_ != kHighsInf) {
     // Assigning new incumbent
     incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
@@ -839,17 +845,58 @@ void HighsMipSolverData::checkAddSolution() {
     double solobj =
         mipsolver.solution_objective_ * (int)mipsolver.orig_model_->sense_ -
         mipsolver.model_->offset_;
-    bool feasible = mipsolver.bound_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance &&
-                    mipsolver.integrality_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance &&
-                    mipsolver.row_violation_ <=
-                        mipsolver.options_mip_->mip_feasibility_tolerance;
+    const bool feasible =
+        mipsolver.bound_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance &&
+        mipsolver.integrality_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance &&
+        mipsolver.row_violation_ <=
+            mipsolver.options_mip_->mip_feasibility_tolerance;
     if (numRestarts == 0) {
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "\nMIP start solution is %s, objective value is %.12g\n",
-                   feasible ? "feasible" : "infeasible",
-                   mipsolver.solution_objective_);
+      // Perform logging and checking of the MIP start solution
+      if (feasible) {
+        highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+            "\nMIP start solution is feasible: objective value is %.12g\n",
+            mipsolver.solution_objective_);
+      } else {
+        // The initial solution shouldn't be infeasible in the
+        // original space, since it's tested externally
+        highsLogUser(
+            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+            "\nMIP start solution is infeasible: objective value is "
+            "%.12g with violations:"
+            " variable bound = %.4g; constraint bound = %.4g; "
+            "integrality = %.4g\n",
+            mipsolver.solution_objective_, mipsolver.bound_violation_,
+            mipsolver.row_violation_, mipsolver.integrality_violation_);
+      }
+      // Since the supplied solution (mipsolver.solution_) may not
+      // correspond to postsolve applied to incumbent (#3510), compute
+      // the objective locally using incumbent, saving the value of
+      // mipsolver.solution_objective_ to identify changes
+      const double previous_mipsolver_solution_objective =
+          mipsolver.solution_objective_;
+      double mipsolver_solution_objective =
+          double(mipsolver.model_->objectiveCDoubleValue(incumbent));
+      mipsolver.solution_objective_ =
+          int(mipsolver.orig_model_->sense_) * mipsolver_solution_objective;
+      const bool has_start_solution_objective_difference =
+          std::fabs(mipsolver.solution_objective_ -
+                    previous_mipsolver_solution_objective) /
+              (1 + std::fabs(previous_mipsolver_solution_objective)) >
+          mipsolver.options_mip_->mip_feasibility_tolerance;
+      // This affects solobj - which is use used to determine bounds
+      // etc (without the objective offset)
+      solobj = mipsolver_solution_objective - mipsolver.model_->offset_;
+      if (has_start_solution_objective_difference) {
+        const bool reduced = postSolveStack.numReductions() > 0;
+        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                     "MIP start solution is %s%s: objective value is %.12g\n",
+                     feasible ? "feasible" : "infeasible",
+                     reduced ? " in the reduced space" : "",
+                     mipsolver.solution_objective_);
+      }
     }
     if (feasible && solobj < upper_bound) {
       double prev_upper_bound = upper_bound;
@@ -952,6 +999,22 @@ void HighsMipSolverData::runSetup() {
   }
 
   rowintegral.resize(mipsolver.numRow());
+
+#ifdef HIGHS_DEBUGSOL
+  if (debugSolution.debugSolActive) {
+    debugSolution.debugSolution.clear();
+    debugSolution.debugSolution = postSolveStack.getReducedPrimalSolution(
+        debugSolution.debugOrigSolution);
+    debugSolution.debugSolObjective = 0;
+    HighsCDouble debugsolobj = 0.0;
+    for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
+      debugsolobj += static_cast<HighsCDouble>(mipsolver.colCost(i)) *
+                     debugSolution.debugSolution[i];
+    debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
+    debugSolution.registerDomain(getDomain());
+    assert(checkSolution(debugSolution.debugSolution));
+  }
+#endif
 
   // compute the maximal absolute coefficients to filter propagation
   maxAbsRowCoef.resize(mipsolver.numRow());
@@ -1101,19 +1164,19 @@ void HighsMipSolverData::runSetup() {
 		 "%" HIGHSINT_FORMAT " continuous, "
 		 "%" HIGHSINT_FORMAT " domain fixed)\n"
 		 "   %" HIGHSINT_FORMAT " nonzero%s\n"
-		 "   Thread count %" HIGHSINT_FORMAT " (of "
-		 "%" HIGHSINT_FORMAT " threads). "
-		 "Using %" HIGHSINT_FORMAT " max workers. "
-		 "Parallel search %s\n",
+		 "   Thread count: "
+		 "%" HIGHSINT_FORMAT " available cores, "
+		 "%" HIGHSINT_FORMAT " logical processors, "
+		 "using up to %" HIGHSINT_FORMAT " workers "
+		 "across %" HIGHSINT_FORMAT " threads.\n",
         // clang-format on
         mipsolver.numRow(), mipsolver.numRow() == 1 ? "" : "s", num_col,
         num_col == 1 ? "" : "s", num_binary, num_general_integer,
         num_implied_integer, num_continuous, num_domain_fixed,
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
-        HighsInt{highs::parallel::num_threads()},
         HighsInt{static_cast<int>(highs::parallel::available_core_count())},
-        mipsolver.getMaxNumWorkers(),
-        mipsolver.getMaxNumWorkers() > 1 ? "on" : "off");
+        HighsInt{static_cast<int>(std::thread::hardware_concurrency())},
+        mipsolver.getMaxNumWorkers(), HighsInt{highs::parallel::num_threads()});
   } else {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "Model after restart has "
@@ -1135,22 +1198,6 @@ void HighsMipSolverData::runSetup() {
   }
 
   heuristics.setupIntCols();
-
-#ifdef HIGHS_DEBUGSOL
-  if (debugSolution.debugSolActive) {
-    debugSolution.debugSolution.clear();
-    debugSolution.debugSolution = postSolveStack.getReducedPrimalSolution(
-        debugSolution.debugOrigSolution);
-    debugSolution.debugSolObjective = 0;
-    HighsCDouble debugsolobj = 0.0;
-    for (HighsInt i = 0; i != mipsolver.numCol(); ++i)
-      debugsolobj += static_cast<HighsCDouble>(mipsolver.colCost(i)) *
-                     debugSolution.debugSolution[i];
-    debugSolution.debugSolObjective = static_cast<double>(debugsolobj);
-    debugSolution.registerDomain(getDomain());
-    assert(checkSolution(debugSolution.debugSolution));
-  }
-#endif
 
   if (upper_limit == kHighsInf) analyticCenterComputed = false;
   analyticCenterStatus = HighsModelStatus::kNotset;
@@ -1188,15 +1235,15 @@ try_again:
       mipsolver.orig_model_, solution.col_value, &solution.row_value, violation,
       mipsolver_quad_objective_value);
   double bound_violation_ = 0;
-  double integrality_violation_ = 0;
   double row_violation_ = 0;
-  violation.copy(bound_violation_, integrality_violation_, row_violation_);
+  double integrality_violation_ = 0;
+  violation.copy(bound_violation_, row_violation_, integrality_violation_);
   double mipsolver_objective_value = double(mipsolver_quad_objective_value);
   if (!feasible && allow_try_again) {
     // printf(
-    //     "trying to repair sol that is violated by %.12g bounds, %.12g "
-    //     "integrality, %.12g rows\n",
-    //     bound_violation_, integrality_violation_, row_violation_);
+    //     "trying to repair sol that is violated by %.12g bounds, %.12g rows,
+    //     %.12g "integrality\n", bound_violation_, row_violation_,
+    //     integrality_violation_);
     HighsLp fixedModel = *mipsolver.orig_model_;
     fixedModel.integrality_.clear();
     for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
@@ -2758,7 +2805,7 @@ void HighsMipSolverData::setCallbackDataOut(
 
 bool HighsMipSolverData::interruptFromCallbackWithData(
     const int callback_type, const double mipsolver_objective_value,
-    const std::string message) const {
+    const std::string& message) const {
   if (!mipsolver.callback_->callbackActive(callback_type)) return false;
   assert(!mipsolver.submip);
   setCallbackDataOut(mipsolver_objective_value);
@@ -2806,22 +2853,25 @@ void HighsMipSolverData::queryExternalSolution(
           mipsolver.orig_model_, user_solution, nullptr, violation,
           user_solution_quad_objective_value);
       double bound_violation_ = 0;
-      double integrality_violation_ = 0;
       double row_violation_ = 0;
-      violation.copy(bound_violation_, integrality_violation_, row_violation_);
-      double user_solution_objective_value =
-          double(user_solution_quad_objective_value);
+      double integrality_violation_ = 0;
+      violation.copy(bound_violation_, row_violation_, integrality_violation_);
       if (!feasible) {
         violation.log(mipsolver.options_mip_->log_options,
-                      user_solution_objective_value, "User-supplied solution");
+                      double(user_solution_quad_objective_value),
+                      "User-supplied solution");
         return;
       }
       std::vector<double> reduced_user_solution;
       reduced_user_solution =
           postSolveStack.getReducedPrimalSolution(user_solution);
+      const double reduced_user_solution_objective_value =
+          double(HighsInt(mipsolver.orig_model_->sense_) *
+                     user_solution_quad_objective_value -
+                 mipsolver.model_->offset_);
       const bool print_display_line = true;
       const bool is_user_solution = true;
-      addIncumbent(reduced_user_solution, user_solution_objective_value,
+      addIncumbent(reduced_user_solution, reduced_user_solution_objective_value,
                    kSolutionSourceUserSolution, print_display_line,
                    is_user_solution);
     }
@@ -2853,7 +2903,8 @@ void HighsMipSolverData::terminatorReport() const {
 }
 
 void HighsMipSolverData::reportOriginalPresolvedCol(
-    const HighsInt original_col, const std::vector<double> presolved_solution) {
+    const HighsInt original_col,
+    const std::vector<double>& presolved_solution) {
   if (original_col < 0 || original_col >= mipsolver.orig_model_->num_col_)
     return;
   // Find this column in the presolved model
@@ -2971,46 +3022,42 @@ void HighsMipSolverData::updatePrimalDualIntegral(const double from_lower_bound,
       }
     }
   }
-  if (pdi.value > -kHighsInf) {
-    // updatePrimalDualIntegral has been called previously, so can
-    // usually test housekeeping, even if gap is still inf
-    //
-    // The one case where the checking can't be done comes after restart, where
-    // the
-    //
-    if (check_prev_data) {
-      // These housekeeping tests check that the previous saved
-      // lower/upper bounds and gap are very close to the "from"
-      // lower/upper bounds and corresponding gap. They are usually
-      // identical, but rounding error can occur when passing through
-      // reset, when the old/new offsets are added/subtracted from the
-      // bounds due to changes in offset during presolve.
-      const double lb_inconsistency =
-          possInfRelDiff(from_lb, pdi.prev_lb, pdi.prev_lb);
-      const bool lb_consistent = lb_inconsistency < 1e-12;
-      const double ub_inconsistency =
-          possInfRelDiff(from_ub, pdi.prev_ub, pdi.prev_ub);
-      const bool ub_consistent = ub_inconsistency < 1e-12;
-      const double gap_inconsistency =
-          possInfRelDiff(from_gap, pdi.prev_gap, 1.0);
-      const bool gap_consistent = gap_inconsistency < 1e-12;
-      assert(lb_consistent);
-      assert(ub_consistent);
-      assert(gap_consistent);
-    }
-    if (to_gap < kHighsInf) {
-      double time = mipsolver.timer_.read();
-      if (from_gap < kHighsInf) {
-        // Need to update the P-D integral
-        double time_diff = time - pdi.prev_time;
-        assert(time_diff >= 0);
-        pdi.value += time_diff * pdi.prev_gap;
-      }
-      pdi.prev_time = time;
-    }
-  } else {
+  if (pdi.value <= -kHighsInf) {
+    // First call, so zero the P-D integral and no housekeeping to
+    // test
     pdi.value = 0;
+    pdi.prev_gap = 1.0;
+  } else if (check_prev_data) {
+    // updatePrimalDualIntegral has been called previously, so can
+    // test housekeeping, except after restart
+    //
+    // These housekeeping tests check that the previous saved
+    // lower/upper bounds and gap are very close to the "from"
+    // lower/upper bounds and corresponding gap. They are usually
+    // identical, but rounding error can occur when passing through
+    // reset, when the old/new offsets are added/subtracted from the
+    // bounds due to changes in offset during presolve.
+    const double lb_inconsistency =
+        possInfRelDiff(from_lb, pdi.prev_lb, pdi.prev_lb);
+    const bool lb_consistent = lb_inconsistency < 1e-12;
+    const double ub_inconsistency =
+        possInfRelDiff(from_ub, pdi.prev_ub, pdi.prev_ub);
+    const bool ub_consistent = ub_inconsistency < 1e-12;
+    const double gap_inconsistency =
+        possInfRelDiff(from_gap, pdi.prev_gap, 1.0);
+    const bool gap_consistent = gap_inconsistency < 1e-12;
+    assert(lb_consistent);
+    assert(ub_consistent);
+    assert(gap_consistent);
   }
+  // Update the P-D integral using the gap capped at 1, so an infinite
+  // gap (no incumbent, no lower bound, or gap bigger than 1)
+  // contributes 1
+  double time = mipsolver.timer_.read();
+  double time_diff = time - pdi.prev_time;
+  assert(time_diff >= 0);
+  pdi.value += time_diff * std::min(pdi.prev_gap, 1.0);
+  pdi.prev_time = time;
   pdi.prev_lb = to_lb;
   pdi.prev_ub = to_ub;
   pdi.prev_gap = to_gap;
@@ -3049,7 +3096,7 @@ HighsModelStatus HighsTerminator::terminationStatus() const {
   return HighsModelStatus::kNotset;
 }
 
-void HighsTerminator::report(const HighsLogOptions log_options) const {
+void HighsTerminator::report(const HighsLogOptions& log_options) const {
   highsLogUser(log_options, HighsLogType::kInfo, "\nTerminator:        ");
   for (HighsInt instance = 0; instance < this->num_instance; instance++)
     highsLogUser(log_options, HighsLogType::kInfo, " %20d",

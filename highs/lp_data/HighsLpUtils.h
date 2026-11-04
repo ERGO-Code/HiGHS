@@ -30,11 +30,11 @@ using std::vector;
 void writeBasisFile(FILE*& file, const HighsOptions& options, const HighsLp& lp,
                     const HighsBasis& basis);
 
-HighsStatus getIndexFromName(
-    const HighsLogOptions& log_options, std::string& from_method,
-    const bool is_column, const std::string& name,
-    const std::unordered_map<std::string, int>& name2index, HighsInt& index,
-    const std::vector<std::string>& names);
+HighsStatus getIndexFromName(const HighsLogOptions& log_options,
+                             std::string& from_method, const bool is_column,
+                             const std::string& name, HighsNameHash& name_hash,
+                             HighsInt& index,
+                             const std::vector<std::string>& names);
 
 HighsStatus readBasisFile(const HighsLogOptions& log_options, HighsLp& lp,
                           HighsBasis& basis, const std::string& filename);
@@ -43,9 +43,6 @@ HighsStatus readBasisStream(const HighsLogOptions& log_options, HighsLp& lp,
 
 // Methods taking HighsLp as an argument
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options);
-
-bool lpDimensionsOk(const std::string& message, const HighsLp& lp,
-                    const HighsLogOptions& log_options);
 
 HighsStatus assessCosts(const HighsOptions& options, const HighsInt ml_col_os,
                         const HighsIndexCollection& index_collection,
@@ -121,14 +118,15 @@ void appendRowsToLpVectors(HighsLp& lp, const HighsInt num_new_row,
 void deleteScale(vector<double>& scale,
                  const HighsIndexCollection& index_collection);
 
-void changeLpMatrixCoefficient(HighsLp& lp, const HighsInt row,
-                               const HighsInt col, const double new_value,
-                               const bool zero_new_value);
+HighsStatus changeLpMatrixCoeff(const HighsLogOptions& log_options, HighsLp& lp,
+                                const HighsInt row, const HighsInt col,
+                                const double new_value,
+                                const double small_matrix_value);
 
 HighsStatus changeLpIntegrality(HighsLp& lp,
                                 const HighsIndexCollection& index_collection,
                                 const vector<HighsVarType>& new_integrality,
-                                const HighsOptions options);
+                                const HighsOptions& options);
 
 void changeLpCosts(HighsLp& lp, const HighsIndexCollection& index_collection,
                    const vector<double>& new_col_cost,
@@ -242,13 +240,19 @@ bool readSolutionFileHashKeywordIntLineOk(std::string& hash,
                                           std::string& value_string,
                                           HighsInt& value,
                                           std::ifstream& in_file);
+bool readSolutionFileColumnHeaderLineOk(
+    std::string& hash, std::string& keyword, std::string& value_string,
+    HighsInt& value, std::string& qualifier_string,
+    std::stringstream& column_section_line_ss);
+bool readSolutionFileColumnLineOk(std::string& id, double& value,
+                                  HighsInt& index,
+                                  std::stringstream& column_section_line_ss);
 bool readSolutionFileIdIgnoreLineOk(std::string& id, std::ifstream& in_file);
 bool readSolutionFileIdDoubleLineOk(std::string& id, double& value,
                                     std::ifstream& in_file);
-bool readSolutionFileIdDoubleIntLineOk(std::string& id, double& value,
-                                       HighsInt& index, std::ifstream& in_file);
 
-void assessColPrimalSolution(const HighsOptions& options, const double primal,
+void assessColPrimalSolution(const bool assess_as_mip,
+                             const HighsOptions& options, const double primal,
                              const double lower, const double upper,
                              const HighsVarType type, double& col_infeasibility,
                              double& integer_infeasibility);

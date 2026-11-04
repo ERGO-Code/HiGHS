@@ -736,9 +736,9 @@ void HEkkPrimal::rebuild() {
     // Should only happen when backtracking
     assert(info.backtracking_);
     ekk_instance_.initialisePartitionedRowwiseMatrix();
-    assert(ekk_instance_.ar_matrix_.debugPartitionOk(
-        ekk_instance_.basis_.nonbasicFlag_.data()));
   }
+  assert(ekk_instance_.ar_matrix_.debugPartitionOk(
+      ekk_instance_.basis_.nonbasicFlag_.data()));
 
   if (info.backtracking_) {
     // If backtracking, may change phase, so drop out
@@ -2872,7 +2872,7 @@ void HEkkPrimal::savePrimalRay() {
   ekk_instance_.primal_ray_record_.sign = -move_in;
 }
 
-HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
+HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string& message,
                                                 const bool initialise) {
   HighsDebugStatus return_status =
       ekk_instance_.debugSimplex(message, algorithm, solve_phase, initialise);
@@ -2885,7 +2885,7 @@ HighsDebugStatus HEkkPrimal::debugPrimalSimplex(const std::string message,
 }
 
 HighsDebugStatus HEkkPrimal::debugPrimalSteepestEdgeWeights(
-    const std::string message) {
+    const std::string& message) {
   // Possibly force the expensive check for development work
   const bool check_primal_edge_weights = true;
   if (check_primal_edge_weights) {

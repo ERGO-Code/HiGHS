@@ -72,7 +72,7 @@ struct QpVector {
     return vec;
   }
 
-  void report(std::string name = "") const {
+  void report(const std::string& name = "") const {
     if (name != "") {
       printf("%s: ", name.c_str());
     }

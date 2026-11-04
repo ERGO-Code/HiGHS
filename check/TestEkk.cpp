@@ -32,7 +32,7 @@ void ekk_solve(Highs& highs, std::string presolve,
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
   highs.setOptionValue("output_flag", dev_run);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void ekk_distillation(Highs& highs) {
@@ -89,7 +89,7 @@ TEST_CASE("Ekk", "[highs_test_ekk]") {
     //    ekk_scipLpi3(highs);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
@@ -97,4 +97,37 @@ TEST_CASE("EkkPrimal-all", "[highs_test_ekk]") {
   if (!dev_run) highs.setOptionValue("output_flag", false);
   ekk_distillation(highs);
   ekk_blending(highs);
+}
+
+TEST_CASE("Ekk-excessive-primal-value", "[highs_test_ekk]") {
+  std::string log;
+  Highs highs;
+  REQUIRE(highs.setOptionValue("log_to_console", dev_run) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("log_dev_level", kHighsLogDevLevelInfo) ==
+          HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("presolve", "off") == HighsStatus::kOk);
+  REQUIRE(highs.setCallback(
+              [&log](int callback_type, const std::string& message,
+                     const HighsCallbackOutput*, HighsCallbackInput*, void*) {
+                if (callback_type == kCallbackLogging) log += message;
+              }) == HighsStatus::kOk);
+  REQUIRE(highs.startCallback(kCallbackLogging) == HighsStatus::kOk);
+
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {0, 0};
+  lp.col_lower_ = {-kHighsInf, -kHighsInf};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {0, 0, -1e16};
+  lp.a_matrix_.start_ = {0, 2, 5};
+  lp.a_matrix_.index_ = {0, 1, 0, 1, 2};
+  lp.a_matrix_.value_ = {1e-6, -1e6, -2, -1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(log.find("Excessive primal value") != std::string::npos);
+
+  highs.resetThreadScheduler(true);
 }

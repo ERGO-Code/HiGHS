@@ -56,7 +56,10 @@ class HighsSparseVectorSum {
 
   const std::vector<HighsInt>& getNonzeros() const { return nonzeroinds; }
 
-  double getValue(HighsInt index) const { return double(values[index]); }
+  template <typename T = double>
+  T getValue(HighsInt index) const {
+    return static_cast<T>(values[index]);
+  }
 
   void clear() {
     if (10 * nonzeroinds.size() < 3 * values.size())
