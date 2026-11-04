@@ -102,7 +102,7 @@ cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsyste
 
 ##### Windows: OpenBLAS from vcpkg, built with clang-cl
 
-vcpkg's standard Windows triplets, such as `x64-windows-static`, build OpenBLAS with MSVC. That gives only the generic kernels, which make HiPO several times slower (see [Windows: clang-cl](@ref install-blas-clang-cl)). HiGHS therefore provides the triplets `x64-windows-static-clang` and `arm64-windows-static-clang` in `cmake/vcpkg-triplets`. They are the same as `x64-windows-static` and `arm64-windows-static`, except that the ports are built with `clang-cl`, which is searched for on `PATH` and in the default LLVM install location. HiGHS itself can still be compiled with MSVC.
+vcpkg's standard Windows triplets, such as `x64-windows-static`, build OpenBLAS with MSVC. That gives only the generic kernels, which make HiPO several times slower (see [Windows: clang-cl](@ref install-blas-clang-cl)). HiGHS therefore provides the triplets `x64-windows-static-clang` and `arm64-windows-static-clang` in `cmake/vcpkg-triplets`. They are the same as `x64-windows-static` and `arm64-windows-static`, except that the ports are built with `clang-cl`, which is searched for on `PATH`, in the default LLVM install location, and in Visual Studio installs with the "C++ Clang Compiler for Windows" component. HiGHS itself can still be compiled with MSVC.
 
 When HiGHS is configured with `-DHIGHS_VCPKG=ON`, these triplets are used by default on Windows x64 and ARM64 if `clang-cl` is found. Add `-DHIGHS_VCPKG_CLANG_CL=OFF` to use `x64-windows-static` or `arm64-windows-static` instead.
 

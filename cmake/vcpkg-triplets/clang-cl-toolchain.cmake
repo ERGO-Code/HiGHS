@@ -1,7 +1,9 @@
-# Makes the vcpkg build of each port use clang-cl as its compiler. clang-cl is
-# searched for on PATH and in the default LLVM install location.
-find_program(CLANG_CL_EXECUTABLE clang-cl
-    PATHS "$ENV{ProgramFiles}/LLVM/bin" REQUIRED)
+# Makes the vcpkg build of each port use clang-cl as its compiler.
+include("${CMAKE_CURRENT_LIST_DIR}/find-clang-cl.cmake")
+highs_find_clang_cl(CLANG_CL_EXECUTABLE)
+if(NOT CLANG_CL_EXECUTABLE)
+    message(FATAL_ERROR "clang-cl not found")
+endif()
 set(CMAKE_C_COMPILER "${CLANG_CL_EXECUTABLE}")
 set(CMAKE_CXX_COMPILER "${CLANG_CL_EXECUTABLE}")
 # Ninja would pass rc.exe flags to clang-cl when scanning .rc files

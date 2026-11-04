@@ -112,16 +112,16 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT "$ENV{VCPKG_ROOT}" STREQUAL "")
         "On Windows x64 and arm64, use the *-windows-static-clang vcpkg triplets when clang-cl is found"
         ON)
       if(HIGHS_VCPKG_CLANG_CL AND _vcpkg_arch MATCHES "^(x64|arm64)$")
-        find_program(HIGHS_VCPKG_CLANG_CL_EXECUTABLE clang-cl
-          PATHS "$ENV{ProgramFiles}/LLVM/bin"
-          DOC "clang-cl used by the *-windows-static-clang vcpkg triplets")
+        include("${CMAKE_CURRENT_LIST_DIR}/vcpkg-triplets/find-clang-cl.cmake")
+        highs_find_clang_cl(HIGHS_VCPKG_CLANG_CL_EXECUTABLE)
         if(HIGHS_VCPKG_CLANG_CL_EXECUTABLE)
           set(_vcpkg_triplet "${_vcpkg_arch}-windows-static-clang")
         else()
           message(WARNING
             "clang-cl not found, so vcpkg will build OpenBLAS with MSVC "
             "using generic kernels, which are several times slower. Install "
-            "LLVM, or put clang-cl on PATH, to use the "
+            "the \"C++ Clang Compiler for Windows\" Visual Studio component "
+            "or LLVM, or put clang-cl on PATH, to use the "
             "${_vcpkg_arch}-windows-static-clang triplet instead.")
         endif()
       endif()
