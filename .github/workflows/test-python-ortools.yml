@@ -1,0 +1,35 @@
+name: test-python-ortools
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-2022]
+        python: [3.12]
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install correct python version
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      # OR-Tools is pinned to a release that bundles a separate libhighs with
+      # the same name as a shared libhighs in highspy would have. A later
+      # release that isolates its HiGHS would stop this test catching a clash.
+      - name: Install test dependencies
+        run: python -m pip install pytest ortools==9.15.6755
+
+      - name: Install highspy
+        run: python -m pip install .
+
+      - name: Test highspy and OR-Tools in the same process
+        run: pytest -v ./highspy/tests/test_ortools.py
