@@ -1020,7 +1020,7 @@ class HighsOptions : public HighsOptionsStruct {
         "pretty = human-readable): "
         "-1 => HiGHS old raw (deprecated); 0 => HiGHS raw; "
         "1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; "
-        "4 => HiGHS sparse raw",
+        "4 => HiGHS sparse raw; 5 => HiGHS partial raw",
         advanced, &write_solution_style, kSolutionStyleMin, kSolutionStyleRaw,
         kSolutionStyleMax);
     records.push_back(record_int);
@@ -1108,6 +1108,13 @@ class HighsOptions : public HighsOptionsStruct {
         kWriteIisModelFileString, "Write IIS model file", advanced,
         &write_iis_model_file, kHighsFilenameDefault);
     records.push_back(record_string);
+
+    record_int = new OptionRecordInt(
+        "presolve_mode",
+        "Presolve mode 0 => default; 1 => initial sweep; 2 => light; 3 => full",
+        advanced, &presolve_mode, kPresolveModeMin, kPresolveModeDefault,
+        kPresolveModeMax);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
         "mip_detect_symmetry", "Whether MIP symmetry should be detected",
@@ -1337,6 +1344,19 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_parallel_type, kHighsChooseString);
     records.push_back(record_string);
 
+    record_int = new OptionRecordInt(
+        "hipo_parallel_force", "Bit mask to force parallel techniques in HiPO",
+        advanced, &hipo_parallel_force, 0, 0,
+        static_cast<int>(hipo::ParallelTechnique::kMaxSum));
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("hipo_parallel_forbid",
+                            "Bit mask to forbid parallel techniques in HiPO",
+                            advanced, &hipo_parallel_forbid, 0, 0,
+                            static_cast<int>(hipo::ParallelTechnique::kMaxSum));
+    records.push_back(record_int);
+
     record_string = new OptionRecordString(
         kHipoOrderingString,
         "HiPO matrix reordering: \"choose\", \"metis\", \"amd\" or \"rcm\"",
@@ -1353,19 +1373,6 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "hipo_parallel_force", "Bit mask to force parallel techniques in HiPO",
-        advanced, &hipo_parallel_force, 0, 0,
-        static_cast<int>(hipo::ParallelTechnique::kMaxSum));
-    records.push_back(record_int);
-
-    record_int =
-        new OptionRecordInt("hipo_parallel_forbid",
-                            "Bit mask to forbid parallel techniques in HiPO",
-                            advanced, &hipo_parallel_forbid, 0, 0,
-                            static_cast<int>(hipo::ParallelTechnique::kMaxSum));
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
@@ -1658,13 +1665,6 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve_pivot_threshold, kMinPivotThreshold, 0.01,
         kMaxPivotThreshold);
     records.push_back(record_double);
-
-    record_int = new OptionRecordInt(
-        "presolve_mode",
-        "Presolve mode 0 => default; 1 => initial sweep; 2 => light; 3 => full",
-        advanced, &presolve_mode, kPresolveModeMin, kPresolveModeDefault,
-        kPresolveModeMax);
-    records.push_back(record_int);
 
     record_int = new OptionRecordInt(
         "presolve_reduction_limit",
