@@ -174,25 +174,15 @@ HighsCallbackInput HighsCallbackInput::operator=(
 // User provides a full solution
 HighsStatus HighsCallbackInput::setSolution(HighsInt num_entries,
                                             const double* value) {
-  if (num_entries != highs->getNumCol()) {
-    highsLogUser(highs->getOptions().log_options, HighsLogType::kError,
-                 "setSolution: num_entries (%d) is not equal to num_col (%d)",
-                 int(num_entries), int(highs->getNumCol()));
-
-    return HighsStatus::kError;
-  }
   return this->setSolution(num_entries, nullptr, value);
 }
 
-// User provides a partial solution
+// User provides a partial solution which, in a special case could -
+// via the call from setSolution(num_entries, value), or by a user -
+// be a full solution with/without index being nullptr
 HighsStatus HighsCallbackInput::setSolution(HighsInt num_entries,
                                             const HighsInt* index,
                                             const double* value) {
-  if (index && num_entries == 0) {
-    // No solution provided, so nothing to do
-    return HighsStatus::kOk;
-  }
-
   const auto& lp = highs->getLp();
   const auto& options = highs->getOptions();
 
@@ -200,7 +190,7 @@ HighsStatus HighsCallbackInput::setSolution(HighsInt num_entries,
 
   HighsStatus return_status =
       assessUserColValues(lp, options, num_entries, index, value);
-  if (return_status == HighsStatus::kError) return HighsStatus::kError;
+  if (return_status != HighsStatus::kOk) return return_status;
 
   assignUserColValues(lp.num_col_, user_solution, num_entries, index, value);
 

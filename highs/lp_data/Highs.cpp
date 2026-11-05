@@ -2793,36 +2793,13 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
                                const HighsInt* index, const double* value) {
   this->logHeader();
   HighsLp& lp = this->model_.lp_;
-  const bool packed = index != nullptr;
-  const HighsInt to_ix = packed ? num_entries : lp.num_col_;
-  if (packed) {
-    const bool ok_num_entries = num_entries >= 0;
-    if (!ok_num_entries) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: Packed user solution has %d < 0 entries\n",
-                   int(num_entries));
-      assert(ok_num_entries);
-      return HighsStatus::kError;
-    }
-  } else {
-    const bool ok_num_entries = num_entries == lp.num_col_;
-    if (!ok_num_entries) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: Packed user solution has %d != %d entries\n",
-                   int(num_entries), int(lp.num_col_));
-      assert(ok_num_entries);
-      return HighsStatus::kError;
-    }
-  }
-  HighsStatus return_status = HighsStatus::kOk;
-  if (lp.num_col_ == 0) return return_status;
-
+  if (lp.num_col_ == 0) return HighsStatus::kOk;
   // Check for illegalities, and warn about duplicates in index, but
   // don't check for feasibility of values, as this will be done when
   // setSolution is called below.
   const bool perform_feasibility_check = false;
-  return_status = assessUserColValues(lp, options_, num_entries, index, value,
-                                      perform_feasibility_check);
+  HighsStatus return_status = assessUserColValues(
+      lp, options_, num_entries, index, value, perform_feasibility_check);
   if (return_status == HighsStatus::kError) return return_status;
 
   // Clear the solution, indicate the values not determined by the
