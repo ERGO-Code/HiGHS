@@ -2659,8 +2659,13 @@ bool HighsDomain::propagate() {
     changedboundsize = std::max(
         changedboundsize, cutpoolprop.cutpool->getMatrix().nonzeroCapacity());
 
-  std::unique_ptr<HighsDomainChange[]> changedbounds(
-      new HighsDomainChange[changedboundsize]);
+  if (changedboundsize > changedBoundsSize_ ||
+      changedboundsize < changedBoundsSize_ / 2) {
+    changedBounds_.reset(new HighsDomainChange[changedboundsize]);
+    changedBoundsSize_ = changedboundsize;
+  }
+
+  HighsDomainChange* changedbounds = changedBounds_.get();
 
   while (havePropagationRows()) {
     if (objProp_.isActive()) objProp_.propagate();

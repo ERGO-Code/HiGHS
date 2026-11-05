@@ -457,6 +457,9 @@ class HighsDomain {
   Reason infeasible_reason;
   HighsInt infeasible_pos;
 
+  size_t changedBoundsSize_ = 0;
+  std::unique_ptr<HighsDomainChange[]> changedBounds_;
+
   void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
 
   void updateActivityUbChange(HighsInt col, double oldbound, double newbound);
