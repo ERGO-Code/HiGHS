@@ -4,23 +4,14 @@ Steps in order. Steps 1–6 should not change results, so a test run
 that matches the previous one is enough after each. Steps 7 and 8
 change behaviour.
 
-1. **Options undoer.**
-   - Add `util/HighsUndoStack.h`, and list it in `cmake/sources.cmake`
-     and `highs/meson.build`.
-   - Replace the manual save and restore of options with `set`,
-     `mark` and `resetTo` in `Highs.cpp`, `HighsInterface.cpp`,
-     `HighsSolve.cpp` and `simplex/HApp.h`.
-   - Each block takes its own local mark. A lambda that writes to a
-     shared outer mark leaves options unrestored.
-
-2. **`Context` struct.**
+1. **`Context` struct.**
    - Create it in `optimizeModelTryCatch()` and pass it to
      `calledOptimizeModel()`.
-   - It holds the status, the timings, the debug level, `undo_mods`
-     and `options_undo`.
+   - It holds the status, the timings, the debug level and
+     `undo_mods`.
    - This only moves locals into the struct.
 
-3. **Extract the top-level phases, without reordering anything.**
+2. **Extract the top-level phases, without reordering anything.**
    - `optimizeModelPreChecks`, `optimizeModelPrepare`,
      `optimizeModelQp`, `optimizeModelMip`, `optimizeModelLp`,
      `lpICrash`, `lpReportTimes`.
@@ -33,16 +24,23 @@ change behaviour.
      `context.status` set.
    - Use the final names (`lp*`, `Context`, `LpState`) from the
      start, to avoid a rename pass later.
+   - Move any manual save and restore of options with the code it
+     belongs to. Step 5 replaces it.
 
-4. **Make presolve and postsolve parameterised.**
+3. **Make presolve and postsolve parameterised.**
    - Add overloads `runPresolve(PresolveComponent&, HighsLp&, ...)`
      and `runPostsolve(PresolveComponent&, const HighsLp&)`.
    - Keep the old signatures as wrappers that pass `presolve_` and
      `model_.lp_`, so `presolve()` and `postsolve()` are unchanged.
    - Set `presolve_log_` only when the component is `presolve_`.
 
-5. **Split up the LP pipeline as pure moves.**
+4. **Split up the LP pipeline as pure moves.**
    - Add `LpState` and turn the solve lambda into `lpTimedSolve()`.
+   - Add `lpSolve()`, which calls `lpTimedSolve()`, merges the result
+     into `context.status` with `interpretCallStatus()`, and returns
+     whether it is an error. Use it wherever a solve is followed by
+     that interpretation. `lpResolveUnboundedOrInfeasible` keeps
+     calling `lpTimedSolve()` directly, since it ignores the status.
    - Extract `lpSetup`, `lpUsePresolve`, `lpSolveUnreduced` and
      `lpFinish`.
    - Extract `lpPresolve`, which takes `HighsLp*&` and moves it to
@@ -54,6 +52,23 @@ change behaviour.
      `postsolve_recovered_basis` and `presolved_lp_info` to `LpState`.
      It is the only step that splits existing code apart, so review
      it most carefully.
+
+5. **Options undoer.**
+   - Add `util/HighsUndoStack.h`, and list it in `cmake/sources.cmake`
+     and `highs/meson.build`.
+   - Replace the manual save and restore of options with a local
+     `HighsUndoStack` in each function that changes them:
+     `lpTimedSolve`, `lpSolveReduced`, `lpCleanupOriginal` and
+     `lpResolveUnboundedOrInfeasible`, and also in
+     `HighsInterface.cpp`, `HighsSolve.cpp` and `simplex/HApp.h`.
+     Its destructor restores the options, so use a `{ }` block for a
+     change that only lasts part of a function. Each change is then
+     restored on every return, including early ones.
+   - Add `options_undo` to `Context` only for changes that must last
+     until the end of the solve. The only one is raising
+     `highs_debug_level` in `optimizeModelPreChecks`. The old code
+     never restored it, but it only applies if the option is below
+     its minimum, so in practice nothing changes.
 
 6. **Single exit.**
    - `calledOptimizeModel()` calls `returnFromOptimizeModel(context)`

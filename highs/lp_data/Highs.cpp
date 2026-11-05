@@ -1358,7 +1358,9 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
 
 bool Highs::optimizeModelPreChecks(Context& context) {
   // Prevent optimizeModel() being called from within optimizeModel(),
-  // before anything is changed
+  // before anything is changed. Don't use
+  // returnFromOptimizeModelBeforeRunning(), since the data of the
+  // running solve must be left untouched
   if (optimize_model_running_) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Highs::optimizeModel() called while it is running\n");
@@ -1407,11 +1409,6 @@ bool Highs::optimizeModelApplyMods(Context& context) {
     context.status = HighsStatus::kOk;
     return false;
   }
-  auto returnAndStop = [&](HighsStatus return_status) {
-    optimizeModelUndoMods(context, return_status);
-    context.status = return_status;
-    return true;
-  };
   HighsLp& lp = model_.lp_;
   // Lambda to record that the mods have been applied, so must be
   // undone
@@ -1429,8 +1426,8 @@ bool Highs::optimizeModelApplyMods(Context& context) {
     HighsStatus inf_cost_status = handleInfCost();
     if (inf_cost_status != HighsStatus::kOk) {
       assert(inf_cost_status == HighsStatus::kError);
-      setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kUnknown);
-      return returnAndStop(inf_cost_status);
+      return returnFromOptimizeModelBeforeRunning(context,
+                                                  HighsModelStatus::kUnknown);
     }
     assert(!lp.has_infinite_cost_);
     recordMods();
@@ -1452,9 +1449,8 @@ bool Highs::optimizeModelApplyMods(Context& context) {
       // No semi-variable mods are made when there is an error, but
       // any infinite cost mods must be undone
       assert(!made_semi_variable_mods);
-      setHighsModelStatusAndClearSolutionAndBasis(
-          HighsModelStatus::kSolveError);
-      return returnAndStop(HighsStatus::kError);
+      return returnFromOptimizeModelBeforeRunning(
+          context, HighsModelStatus::kSolveError);
     }
   }
   if (made_semi_variable_mods) recordMods();
@@ -1475,11 +1471,32 @@ bool Highs::optimizeModelCompleteSolution(Context& context) {
   // The nested call to optimizeModel() sees the model with mods
   // already applied, so doesn't apply or undo any itself
   if (completeSolutionFromDiscreteAssignment() != HighsStatus::kOk) {
-    context.status = HighsStatus::kError;
-    optimizeModelUndoMods(context, context.status);
-    return true;
+    // Retain the (error) model status from the nested call to
+    // optimizeModel()
+    return returnFromOptimizeModelBeforeRunning(context, model_status_);
   }
   return false;
+}
+
+bool Highs::returnFromOptimizeModelBeforeRunning(
+    Context& context, const HighsModelStatus model_status) {
+  // Error return from calledOptimizeModel() before
+  // optimize_model_running_ is set, so returnFromOptimizeModel() isn't
+  // reached. Leave the Highs object in a consistent state: nothing
+  // from any previous solve is valid, and the incumbent model is
+  // unmodified.
+  //
+  // Not to be used when refusing a call to optimizeModel() made while
+  // it is running, since that must leave the running solve untouched
+  model_status_ = model_status;
+  invalidateInfo();
+  invalidateRunData();
+  invalidateSolution();
+  invalidateBasis();
+  context.status = HighsStatus::kError;
+  optimizeModelUndoMods(context, context.status);
+  context.status = HighsStatus::kError;
+  return true;
 }
 
 void Highs::optimizeModelUndoMods(Context& context,
