@@ -364,7 +364,7 @@ HighsStatus Highs::assessUserSolution(const HighsInt num_entries,
     if (iCol < 0 || iCol >= lp.num_col_) {
       assert(packed);
       highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: Entry %d of user solution has index %d out of "
+                   "setSolution: Entry %d of solution has index %d out of "
                    "range [0, %d)\n",
                    int(iX), int(iCol), int(lp.num_col_));
       return HighsStatus::kError;
@@ -373,7 +373,7 @@ HighsStatus Highs::assessUserSolution(const HighsInt num_entries,
       num_infeasible_value++;
       if (num_infeasible_value <= max_warning)
 	highsLogUser(options_.log_options, HighsLogType::kWarning,
-		     "setSolution: Entry %d of user solution has value %g: infeasible "
+		     "setSolution: Entry %d of solution has value %g: infeasible "
 		     "for bounds [%g, %g]\n",
 		     int(iX), value[iX], lp.col_lower_[iCol],
 		     lp.col_upper_[iCol]);
@@ -385,7 +385,7 @@ HighsStatus Highs::assessUserSolution(const HighsInt num_entries,
   if (num_duplicates > 0) {
     assert(packed);
     highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "setSolution: User set of indices has %d duplicate%s: last "
+                 "setSolution: Set of solution indices has %d duplicate%s: last "
                  "value used\n",
                  int(num_duplicates), num_duplicates == 1 ? "" : "s");
     return_status = HighsStatus::kWarning;
@@ -393,7 +393,7 @@ HighsStatus Highs::assessUserSolution(const HighsInt num_entries,
   if (num_infeasible_value > max_warning) {
     assert(return_status == HighsStatus::kWarning);
     highsLogUser(options_.log_options, HighsLogType::kWarning,
-		 "setSolution: %d entries of user solution are infeasible\n",
+		 "setSolution: %d entries of solution are infeasible\n",
 		 int(num_infeasible_value));
     return_status = HighsStatus::kWarning;
   }
