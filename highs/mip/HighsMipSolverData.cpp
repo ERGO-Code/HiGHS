@@ -556,7 +556,8 @@ void HighsMipSolverData::startSymmetryDetection(
   if (detectSymmetries) {
     taskGroup.spawn([&]() {
       double startTime = mipsolver.timer_.getWallTime();
-      symData->symDetection.run(symData->symmetries);
+      symData->symDetection.run(symData->symmetries, &mipsolver.timer_,
+                                mipsolver.options_mip_->time_limit);
       symData->detectionTime = mipsolver.timer_.getWallTime() - startTime;
     });
   } else

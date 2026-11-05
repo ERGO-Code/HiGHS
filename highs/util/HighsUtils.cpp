@@ -1231,6 +1231,14 @@ double nearestPowerOfTwoScale(const double value) {
   return scale;
 }
 
+bool termIsZero(const double val, const double lb, const double ub,
+                const double epsilon) {
+  const double absVal = std::abs(val);
+  if (absVal <= std::numeric_limits<double>::min()) return true;
+  return absVal <= epsilon &&
+         absVal * std::max(std::abs(lb), std::abs(ub)) <= epsilon;
+}
+
 void highsAssert(const bool assert_condition, const std::string& message) {
   if (assert_condition) return;
   printf("Failing highsAssert(\"%s\")\n", message.c_str());

@@ -1,6 +1,7 @@
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 from sys import platform
 from unittest.mock import patch
 
@@ -2593,3 +2594,10 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         result = expr * x
         self.assertEqualExpr(result, [x], [5.0])
         self.assertRaises(HighsError, lambda: expr * "bad")  # type: ignore
+
+
+class TestHighsPyPackaging(unittest.TestCase):
+    def test_no_separate_libhighs(self):
+        """A libhighs in the wheel can be swapped with another package's copy, e.g. OR-Tools"""
+        package_dir = Path(highspy.__file__).parent
+        self.assertEqual(sorted(p.name for p in package_dir.glob("libhighs*")), [])

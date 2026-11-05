@@ -1,0 +1,9 @@
+[package]
+name = "highs-rust-smoke"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+highs = "2"
+# "discover" links the HiGHS found via pkg-config instead of the bundled copy
+highs-sys = { version = "1", features = ["discover"] }
