@@ -1,3 +1,4 @@
+#include <cstdlib>
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
@@ -1796,6 +1797,19 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (cliquetable.numNeighbourhoodQueries > splayContingent) break;
 
       if (probingContingent - numProbed < 0) break;
+      // Restart presolve: the model was already probed in the initial
+      // presolve; restart-time probing on the (newly binary) reduced-cost
+      // fixed columns is costly and rarely decisive. Cap its effort
+      // (SCIP likewise limits probing rounds/calls after restarts,
+      // Achterberg 2007, sec. 10.6; Gamrath et al. 2015 restart study).
+      {
+        static const HighsInt kRestartProbeCap =
+            50;
+        if (mipsolver && mipsolver->mipdata_ &&
+            mipsolver->mipdata_->numRestarts > 0 &&
+            numProbed - oldNumProbed >= kRestartProbeCap)
+          break;
+      }
 
       HighsInt numBoundChgs = 0;
       HighsInt numNewCliques = -cliquetable.numCliques();

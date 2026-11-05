@@ -66,8 +66,11 @@ void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
   getKktFailures(options, false, lp, lp.col_cost_, solution, highs_info,
                  get_residuals);
   getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
-  getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
-                            primal_dual_errors);
+  // glpsol-style errors are diagnostic only (debug reporting); skip in the
+  // hot path of repeated LP solves
+  if (options.highs_debug_level > kHighsDebugLevelCheap)
+    getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
+                              primal_dual_errors);
 }
 
 void getKktFailures(const HighsOptions& options, const bool is_qp,

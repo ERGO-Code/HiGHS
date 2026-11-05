@@ -45,9 +45,11 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
         lurkingColUpper[col].begin(),
         lurkingColUpper[col].upper_bound(mipsolver.mipdata_->lower_bound));
 
+    // By the staircase invariant (see addRootRedcost) the first active entry
+    // carries the tightest bound; later active entries are implied by it.
     for (auto it =
              lurkingColLower[col].lower_bound(mipsolver.mipdata_->upper_limit);
-         it != lurkingColLower[col].end(); ++it) {
+         it != lurkingColLower[col].end(); it = lurkingColLower[col].end()) {
       if (it->second > mipsolver.mipdata_->getDomain().col_lower_[col]) {
         mipsolver.mipdata_->getDomain().changeBound(
             HighsBoundType::kLower, col, (double)it->second,
@@ -56,9 +58,11 @@ void HighsRedcostFixing::propagateRootRedcost(const HighsMipSolver& mipsolver) {
       }
     }
 
+    // By the staircase invariant (see addRootRedcost) the first active entry
+    // carries the tightest bound; later active entries are implied by it.
     for (auto it =
              lurkingColUpper[col].lower_bound(mipsolver.mipdata_->upper_limit);
-         it != lurkingColUpper[col].end(); ++it) {
+         it != lurkingColUpper[col].end(); it = lurkingColUpper[col].end()) {
       if (it->second < mipsolver.mipdata_->getDomain().col_upper_[col]) {
         mipsolver.mipdata_->getDomain().changeBound(
             HighsBoundType::kUpper, col, (double)it->second,
@@ -252,7 +256,25 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
         double shift = direction * (1 - 10 * mipsolver.mipdata_->feastol);
         step *= direction;
 
-        for (HighsInt lurkingBound = bound;
+        // requiredCutoffBound grows linearly with the step index j, so jump
+        // straight to the first j whose cutoff can exceed the lower bound
+        // (the in-loop test still guards the boundary). Exact.
+        HighsInt startBound = bound;
+        {
+          double denom = double(step) * redCost;
+          double lbnd = mipsolver.mipdata_->lower_bound +
+                        mipsolver.mipdata_->feastol;
+          if (denom > 0 && lbnd > -kHighsInf) {
+            double j = std::floor((lbnd - lpObjective - shift * redCost) / denom) - 1;
+            if (j > 0) {
+              double maxj = double(direction * (lastBound - bound)) /
+                                double(direction * step) + 1;
+              if (j > maxj) j = maxj;
+              startBound = bound + HighsInt(j) * step;
+            }
+          }
+        }
+        for (HighsInt lurkingBound = startBound;
              direction * lurkingBound <= direction * lastBound;
              lurkingBound += step) {
           double fracBound = lurkingBound - bound + shift;
@@ -261,29 +283,27 @@ void HighsRedcostFixing::addRootRedcost(const HighsMipSolver& mipsolver,
               mipsolver.mipdata_->lower_bound + mipsolver.mipdata_->feastol)
             continue;
 
-          // check if we already have a better lurking bound stored
-          bool useful = true;
+          // Invariant (kept by this function and by the prefix erases in
+          // propagateRootRedcost): along increasing key, direction*bound is
+          // strictly increasing. Hence the entry at pos carries the smallest
+          // bound among keys >= requiredCutoffBound, and the entries dominated
+          // by the new one form a contiguous block right before pos. This
+          // replaces the former O(n) scans per insertion (O(n^2) per column
+          // with up to 1024 steps) by O(log n + #erased); result is identical.
           auto pos = lurkingBounds.lower_bound(requiredCutoffBound);
-          for (auto it = pos; it != lurkingBounds.end(); ++it) {
-            useful =
-                direction * it->second >= direction * (lurkingBound + step);
-            if (!useful) break;
-          }
-          if (!useful) continue;
+          if (pos != lurkingBounds.end() &&
+              !(direction * pos->second >= direction * (lurkingBound + step)))
+            continue;
 
-          // we have no better lurking bound stored; store this lurking bound
-          // and check if it dominates one that is already stored
+          // store this lurking bound and drop the entries it dominates
           auto it = lurkingBounds.emplace_hint(pos, requiredCutoffBound,
                                                lurkingBound);
-
-          auto i = lurkingBounds.begin();
-          while (i != it) {
-            if (direction * i->second >= direction * lurkingBound) {
-              auto del = i++;
-              lurkingBounds.erase(del);
-            } else {
-              ++i;
-            }
+          while (it != lurkingBounds.begin()) {
+            auto prev = std::prev(it);
+            if (direction * prev->second >= direction * lurkingBound)
+              lurkingBounds.erase(prev);
+            else
+              break;
           }
         }
       };
