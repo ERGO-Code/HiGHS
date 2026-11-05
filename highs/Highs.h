@@ -1732,8 +1732,8 @@ class Highs {
   bool optimizeModelPreChecks(Context& context);
   bool optimizeModelApplyMods(Context& context);
   void optimizeModelUndoMods(Context& context, HighsStatus& return_status);
-  bool returnFromOptimizeModelBeforeRunning(Context& context,
-                                            const HighsModelStatus model_status);
+  bool returnFromOptimizeModelBeforeRunning(
+      Context& context, const HighsModelStatus model_status);
   bool optimizeModelCompleteSolution(Context& context);
   bool optimizeModelPrepare(Context& context);
   void optimizeModelQp(Context& context);
