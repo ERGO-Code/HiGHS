@@ -1288,13 +1288,10 @@ HighsStatus Highs::optimizeModelTryCatch() {
   Context context;
   HighsStatus status;
   auto handleCatch = [&]() {
-    // The exception may have been thrown after
-    // called_return_from_optimize_model was set false, in which case
-    // returnFromOptimizeModel() won't have been called. Set it true
-    // so that the checks in returnFromHighs() - called by
-    // clearSolver() - and any subsequent call to optimizeModel()
-    // don't fail
-    called_return_from_optimize_model = true;
+    // The exception may have been thrown while optimizeModel() was
+    // running, in which case returnFromOptimizeModel() won't have
+    // been called, so clear the flag here to allow subsequent calls
+    optimize_model_running_ = false;
     // Clear all solver data, since there may be nothing useful,
     // retaining the model status set when the exception was caught
     const HighsModelStatus model_status = model_status_;
@@ -1346,11 +1343,9 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
     // variables
     //
     // Since completeSolutionFromDiscreteAssignment() may require a
-    // call to optimizeModel() - with initial check that
-    // called_return_from_optimize_model is true -
-    // called_return_from_optimize_model cannot yet be set false. That
-    // call sees the model with mods already applied, so doesn't apply
-    // or undo any itself
+    // call to optimizeModel(), optimize_model_running_ cannot yet be
+    // set. That call sees the model with mods already applied, so
+    // doesn't apply or undo any itself
     HighsStatus call_status = completeSolutionFromDiscreteAssignment();
     if (call_status != HighsStatus::kOk) {
       context.status = HighsStatus::kError;
@@ -1359,13 +1354,11 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
     }
   }
 
-  // returnFromOptimizeModel() is a common exit method to ensure
-  // consistency of values set by optimizeModel() and many other
-  // things. It's important to be able to check that it's been called,
-  // and this is done with this->called_return_from_optimize_model
-  // Set this so that calls to returnFromOptimizeModel() can be checked: from
-  // here the only return statement executes returnFromOptimizeModel()
-  called_return_from_optimize_model = false;
+  // From here on, preliminary stuff has completed and optimizeModel is
+  // considered to be running. Nested calls to optimizeModel (for example from
+  // a callback) are refused by optimizeModelPreChecks(), until
+  // returnFromOptimizeModel() clears the flag.
+  optimize_model_running_ = true;
 
   if (!optimizeModelPrepare(context)) {
     if (model_.isQp())
@@ -1380,6 +1373,15 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
 }
 
 bool Highs::optimizeModelPreChecks(Context& context) {
+  // Prevent optimizeModel() being called from within optimizeModel(),
+  // before anything is changed
+  if (optimize_model_running_) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Highs::optimizeModel() called while it is running\n");
+    context.status = HighsStatus::kError;
+    return true;
+  }
+
   context.min_highs_debug_level = kHighsDebugLevelMin;
   // kHighsDebugLevelCostly;
   // kHighsDebugLevelMax;
@@ -1395,17 +1397,6 @@ bool Highs::optimizeModelPreChecks(Context& context) {
   if (!options_.use_warm_start) this->clearSolver();
   if (ekk_instance_.status_.has_nla)
     assert(ekk_instance_.lpFactorRowCompatible(model_.lp_.num_row_));
-
-  // Make sure here that returnFromOptimizeModel() has been called
-  // after any previous call to optimizeModel()
-  assert(called_return_from_optimize_model);
-  if (!called_return_from_optimize_model) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Highs::optimizeModel() called with "
-                "called_return_from_optimize_model false\n");
-    context.status = HighsStatus::kError;
-    return true;
-  }
 
   // Ensure that all vectors in the model have exactly the right size
   exactResizeModel();
@@ -4950,7 +4941,6 @@ HighsStatus Highs::returnFromWriteSolution(FILE* file,
 
 // Applies checks before returning from optimizeModel()
 HighsStatus Highs::returnFromOptimizeModel(Context& context) {
-  assert(!called_return_from_optimize_model);
   const HighsStatus run_return_status = context.status;
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   if (return_status != run_return_status) {
@@ -5116,8 +5106,8 @@ HighsStatus Highs::returnFromOptimizeModel(Context& context) {
                 model_status_) == HighsDebugStatus::kLogicalError)
     return_status = HighsStatus::kError;
 
-  // Record that returnFromOptimizeModel() has been called
-  called_return_from_optimize_model = true;
+  // optimizeModel() is no longer running
+  optimize_model_running_ = false;
 
   // Undo any mods applied by optimizeModelApplyMods()
   optimizeModelUndoMods(context, return_status);
@@ -5152,13 +5142,6 @@ HighsStatus Highs::returnFromHighs(HighsStatus highs_return_status) {
                  "returnFromHighs: Retained Ekk data not OK\n");
     assert(retained_ekk_data_ok);
     return_status = HighsStatus::kError;
-  }
-  // Check that returnFromOptimizeModel() has been called
-  if (!called_return_from_optimize_model) {
-    highsLogDev(options_.log_options, HighsLogType::kError,
-                "Highs::returnFromHighs() called with "
-                "called_return_from_optimize_model false\n");
-    assert(called_return_from_optimize_model);
   }
   // Stop the HiGHS run clock if it is running
   if (timer_.running()) timer_.stop();

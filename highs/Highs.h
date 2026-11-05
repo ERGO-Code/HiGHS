@@ -1665,11 +1665,9 @@ class Highs {
   HighsProfiling* profiling_ = nullptr;
 
   HighsInt max_threads_ = 0;
-  // This is strictly for debugging. It's used to check whether
-  // returnFromOptimizeModel() was called after the previous call to
-  // Highs::optimizeModel() and, assuming that this is always done, it checks
-  // whether Highs::optimizeModel() is called recursively.
-  bool called_return_from_optimize_model = true;
+  // Set while Highs::optimizeModel() is solving, so that it can't be
+  // called again from within the solve, for example by a callback
+  bool optimize_model_running_ = false;
   // Set when optimizeModelApplyMods() has modified the incumbent
   // model, so that nested calls to Highs::optimizeModel() (from
   // completeSolutionFromDiscreteAssignment()) don't apply or undo mods

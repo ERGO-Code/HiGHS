@@ -59,6 +59,15 @@ change behaviour.
      instead of `returnFromOptimizeModel()`. This also fixes the
      `assert(!called_return_from_optimize_model)` that fails on those
      paths in debug builds.
+   - Replace `called_return_from_optimize_model` with
+     `optimize_model_running_`, used only to stop `optimizeModel()`
+     being called from within a solve. Set it where the old flag was
+     set false, clear it in `returnFromOptimizeModel()` and
+     `handleCatch`, and check it at the start of
+     `optimizeModelPreChecks()`, before anything is changed, with a
+     user error and no assert. Remove the assert at the start of
+     `returnFromOptimizeModel()` and the check in `returnFromHighs()`,
+     which the single exit makes redundant.
 
 7. **Reorder the mods.** This is the main change in behaviour.
    - `optimizeModelApplyMods()` and `optimizeModelUndoMods()` handle
