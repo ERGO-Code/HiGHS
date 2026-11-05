@@ -192,6 +192,9 @@ class HEkk {
 
   bool simplex_in_scaled_space_;
   HighsSparseMatrix ar_matrix_;
+  std::vector<HighsInt> rwc_cs_, rwc_ci_, rwc_rs_, rwc_ri_;
+  std::vector<double> rwc_cv_, rwc_rv_;
+  HighsInt rwc_nrow_ = -1, rwc_ncol_ = -1;
   HighsSparseMatrix scaled_a_matrix_;
   HSimplexNla simplex_nla_;
 

@@ -77,6 +77,8 @@ HighsDebugStatus debugHighsSolution(
   //
   // Refer to info as highs_info so general method can be used
   //
+  if (options.highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kNotChecked;
   const HighsInfo& highs_info = info;
   const bool check_model_status_and_highs_info = true;
   return debugHighsSolution(message, options, model.lp_, model.hessian_,
