@@ -746,20 +746,64 @@ TEST_CASE("issue-3317", "[highs_check_solution]") {
   h.resetThreadScheduler(true);
 }
 
-TEST_CASE("issue-3499", "[highs_check_solution]") {
-  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
-  std::string sol_file = test_name + ".sol";
-
-  FILE* file = fopen(sol_file.c_str(), "w");
-  REQUIRE(file != nullptr);
-  std::string file_content =
-      "Model status\nOptimal\n\n# Primal solution values\nFeasible\nObjective "
-      "2\n";
-  fprintf(file, "%s", file_content.c_str());
-  fclose(file);
+TEST_CASE("lp-set-solution", "[highs_check_solution]") {
+  std::string model = "shell";//"adlittle";//
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.readSolution(sol_file) == HighsStatus::kError);
+  // h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("log_dev_level", 1);
+   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
-  std::remove(sol_file.c_str());
+   const HighsInfo& info = h.getInfo();
+   highsPrintStringAsHeading("No initial solution");
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+  
+
+  const HighsLp& lp = h.getLp();
+  
+  HighsSolution solution;
+  std::vector<double>& col_value = solution.col_value;
+  std::vector<HighsInt> col_index;
+
+  col_value.assign(lp.num_col_, 0);
+  REQUIRE(h.setSolution(solution) != HighsStatus::kError);
+
+   highsPrintStringAsHeading("Zero initial solution");
+   REQUIRE(h.run() == HighsStatus::kOk);
+ 
+  col_value.assign(lp.num_col_, 1);
+  REQUIRE(h.setSolution(solution) != HighsStatus::kError);
+
+   highsPrintStringAsHeading("Unit initial solution");
+   REQUIRE(h.run() == HighsStatus::kOk);
+ 
+  HighsRandom random;
+
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    col_value[iCol] = random.fraction();
+  REQUIRE(h.setSolution(solution) != HighsStatus::kError);
+
+   highsPrintStringAsHeading("Random initial solution");
+   REQUIRE(h.run() == HighsStatus::kOk);
+
+   col_index.clear();
+   col_value.clear();
+   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+     if (random.fraction() < 0.5) continue;
+     col_index.push_back(iCol);
+     col_value.push_back(1);
+   }
+   HighsInt num_entries = col_value.size();
+   REQUIRE(h.setSolution(num_entries, col_index.data(), col_value.data()) != HighsStatus::kError);
+
+   highsPrintStringAsHeading("Partial initial solution");
+   REQUIRE(h.run() == HighsStatus::kOk);
+
+
+  h.resetThreadScheduler(true);
+
 }
+

@@ -2782,7 +2782,9 @@ HighsStatus Highs::getColOrRowName(const HighsLp& lp, const bool is_col,
 HighsStatus Highs::setSolution(const HighsInt num_entries,
                                const HighsInt* index, const double* value) {
   this->logHeader();
+  HighsLp& lp = this->model_.lp_;
   const bool packed = index != nullptr;
+  const HighsInt to_ix = packed ? num_entries : lp.num_col_;
   if (packed) {
     const bool ok_num_entries = num_entries >= 0;
     if (!ok_num_entries) {
@@ -2793,59 +2795,27 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
       return HighsStatus::kError;
     }
   } else {
-    const bool ok_num_entries = num_entries == model_.lp_.num_col_;
+    const bool ok_num_entries = num_entries == lp.num_col_;
     if (!ok_num_entries) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "setSolution: Packed user solution has %d != %d entries\n",
-                   int(num_entries), int(model_.lp_.num_col_));
+                   int(num_entries), int(lp.num_col_));
       assert(ok_num_entries);
       return HighsStatus::kError;
     }
   }
   HighsStatus return_status = HighsStatus::kOk;
-  if (model_.lp_.num_col_ == 0) return return_status;
-  // Warn about duplicates in index
-  HighsInt num_duplicates = 0;
-  std::vector<HighsBool> is_set;
-  is_set.assign(model_.lp_.num_col_, false);
-  const HighsInt to_ix = packed ? num_entries : model_.lp_.num_col_;
-  for (HighsInt iX = 0; iX < to_ix; iX++) {
-    HighsInt iCol = packed ? index[iX] : iX;
-    if (iCol < 0 || iCol >= model_.lp_.num_col_) {
-      assert(packed);
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: User solution index %d has value %d out of "
-                   "range [0, %d)\n",
-                   int(iX), int(iCol), int(model_.lp_.num_col_));
-      return HighsStatus::kError;
-    } else if (value[iX] < model_.lp_.col_lower_[iCol] -
-                               options_.primal_feasibility_tolerance ||
-               model_.lp_.col_upper_[iCol] +
-                       options_.primal_feasibility_tolerance <
-                   value[iX]) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: User solution value %d of %g is infeasible "
-                   "for bounds [%g, %g]\n",
-                   int(iX), value[iX], model_.lp_.col_lower_[iCol],
-                   model_.lp_.col_upper_[iCol]);
-      return HighsStatus::kError;
-    }
-    if (is_set[iCol]) num_duplicates++;
-    is_set[iCol] = true;
-  }
-  if (num_duplicates > 0) {
-    assert(packed);
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "setSolution: User set of indices has %d duplicate%s: last "
-                 "value used\n",
-                 int(num_duplicates), num_duplicates == 1 ? "" : "s");
-    return_status = HighsStatus::kWarning;
-  }
+  if (lp.num_col_ == 0) return return_status;
+  
+  // Check for illegalities, and warn about duplicates in index and
+  // infeasibilities in value
+  return_status = this->assessUserSolution(num_entries, index, value);
+  if (return_status == HighsStatus::kError) return return_status;
 
   // Clear the solution, indicate the values not determined by the
   // user, and insert the values determined by the user
   HighsSolution new_solution;
-  new_solution.col_value.assign(model_.lp_.num_col_, kHighsUndefined);
+  new_solution.col_value.assign(lp.num_col_, kHighsUndefined);
   for (HighsInt iX = 0; iX < to_ix; iX++) {
     HighsInt iCol = packed ? index[iX] : iX;
     new_solution.col_value[iCol] = value[iX];
@@ -2968,13 +2938,14 @@ HighsStatus Highs::stopCallback(const HighsCallbackType callback_type) {
 HighsStatus Highs::setBasis(const HighsBasis& basis,
                             const std::string& origin) {
   this->logHeader();
+  HighsLp& lp = this->model_.lp_;
   if (basis.alien) {
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
-    if (model_.lp_.num_row_ == 0) {
+    if (lp.num_row_ == 0) {
       // Special case where there are no rows, so no singularity
       // issues. All columns with basic status must be set nonbasic
-      for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++)
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
         basis_.col_status[iCol] =
             basis.col_status[iCol] == HighsBasisStatus::kBasic
                 ? HighsBasisStatus::kNonbasic
@@ -2982,14 +2953,14 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       basis_.alien = false;
     } else {
       // Check whether a new basis can be defined
-      if (!isBasisRightSize(model_.lp_, basis)) {
+      if (!isBasisRightSize(lp, basis)) {
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "setBasis: User basis is rejected due to mismatch between "
             "size of column and row status vectors (%d, %d) and number "
             "of columns and rows in the model (%d, %d)\n",
             int(basis_.col_status.size()), int(basis_.row_status.size()),
-            int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+            int(lp.num_col_), int(lp.num_row_));
         return HighsStatus::kError;
       }
       HighsBasis modifiable_basis = basis;
@@ -3001,7 +2972,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       const bool already_profiling = this->profiling_;
       if (!already_profiling)
         this->initializeSingleThreadedProfiling(&profiling);
-      HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
+      HighsLpSolverObject solver_object(lp, modifiable_basis, solution_,
                                         info_, ekk_instance_, callback_,
                                         options_, timer_);
       solver_object.setProfiling(this->profiling_);
@@ -3013,7 +2984,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
     }
   } else {
     // Check the user-supplied basis
-    if (!isBasisConsistent(model_.lp_, basis)) {
+    if (!isBasisConsistent(lp, basis)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "setBasis: invalid basis\n");
       return HighsStatus::kError;
