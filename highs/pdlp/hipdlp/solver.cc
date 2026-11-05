@@ -14,6 +14,8 @@ namespace {
 constexpr double kEta = 0.99;
 constexpr int64_t kCheckInterval = 40;
 constexpr int64_t kMinBalanceEpoch = 400;
+constexpr int64_t kCertificateInterval = 200;
+constexpr double kCertificateTolerance = 1e-8;
 const double kInfinity = std::numeric_limits<double>::infinity();
 
 struct Csr {
@@ -45,7 +47,13 @@ struct Report {
   std::vector<double> x, y, z, row_activity;
   double l2_primal = 0, l2_dual = 0, l2_gap = 0, primal_objective = 0,
          dual_objective = 0;
+  double primal = 0;  // largest bound violation over 1 + |violated bound|
   bool bad = false;
+};
+
+// What the certificate checks of all directions found so far (sticky).
+struct Verdict {
+  bool farkas = false, ray = false, bad = false;
 };
 
 Model Prepare(const HostLp& lp) {
@@ -300,6 +308,10 @@ Report Measure(const HostLp& lp, const Model& m, const Iterate& it,
     d += BoundProduct(r.z[j], l, u);
     const double violation = std::max(std::max(l - x, x - u), 0.0);
     primal_sq += violation * violation;
+    if (std::isfinite(l))
+      r.primal = std::max(r.primal, (l - x) / (1 + std::fabs(l)));
+    if (std::isfinite(u))
+      r.primal = std::max(r.primal, (x - u) / (1 + std::fabs(u)));
     const bool at_lower = std::isfinite(l) && (x - l) * (x - l) <= tolerance;
     const bool at_upper = std::isfinite(u) && (x - u) * (x - u) <= tolerance;
     const double z = at_lower && at_upper ? raw_z
@@ -315,6 +327,10 @@ Report Measure(const HostLp& lp, const Model& m, const Iterate& it,
                  ax = r.row_activity[i];
     const double violation = std::max(std::max(l - ax, ax - u), 0.0);
     primal_sq += violation * violation;
+    if (std::isfinite(l))
+      r.primal = std::max(r.primal, (l - ax) / (1 + std::fabs(l)));
+    if (std::isfinite(u))
+      r.primal = std::max(r.primal, (ax - u) / (1 + std::fabs(u)));
     if (std::isfinite(l) && l != u) b_sq += l * l;
     if (std::isfinite(u)) b_sq += u * u;
     const double product = BoundProduct(r.y[i], l, u);
@@ -331,18 +347,177 @@ Report Measure(const HostLp& lp, const Model& m, const Iterate& it,
   return r;
 }
 
+// The part of v a variable with these bounds can move along without leaving
+// them: no decrease below a finite lower bound, no increase above a finite
+// upper bound.
+double Recession(double v, double lower, double upper) {
+  if (std::isfinite(lower)) v = std::max(v, 0.0);
+  if (std::isfinite(upper)) v = std::min(v, 0.0);
+  return v;
+}
+
+// How far v points out of the cone of directions allowed by the bounds.
+double ConeViolation(double v, double lower, double upper) {
+  double error = 0;
+  if (std::isfinite(lower)) error = std::max(error, -v);
+  if (std::isfinite(upper)) error = std::max(error, v);
+  return error;
+}
+
+std::vector<double> LineNorms(const Csr& a, bool rows) {
+  std::vector<double> norm(rows ? a.rows : a.cols, 0.0);
+  for (int i = 0; i < a.rows; ++i)
+    for (int k = a.start[i]; k < a.start[i + 1]; ++k)
+      norm[rows ? i : a.index[k]] += std::fabs(a.value[k]);
+  return norm;
+}
+
+// Farkas: row multipliers f (already of a legal sign) prove infeasibility when
+// B = sum of the bound products of f and g = -A'f is positive: every feasible
+// point would have to satisfy 0 >= B.
+bool FarkasCertificate(const HostLp& lp, const Model& m, std::vector<double> f,
+                       const Report& report, bool& bad) {
+  const int n = m.a.cols, rows = m.a.rows;
+  std::vector<double> atf, g(n);
+  MultiplyTranspose(m.original, f, atf);
+  double norm = 0;
+  for (int i = 0; i < rows; ++i) norm = std::max(norm, std::fabs(f[i]));
+  for (int j = 0; j < n; ++j) {
+    if (!std::isfinite(atf[j])) bad = true;
+    g[j] = Multiplier(-atf[j], lp.column_lower[j], lp.column_upper[j]);
+    norm = std::max(norm, std::fabs(g[j]));
+  }
+  if (!std::isfinite(norm)) bad = true;
+  if (bad || !(norm > 0)) return false;
+  for (int i = 0; i < rows; ++i) f[i] /= norm;
+  for (int j = 0; j < n; ++j) g[j] /= norm;
+  MultiplyTranspose(m.original, f, atf);
+
+  const std::vector<double> column_norm = LineNorms(m.original, false);
+  double d = 0, absolute = 0, stationarity = 0, exposure = 0;
+  for (int i = 0; i < rows; ++i) {
+    const double b = BoundProduct(f[i], lp.row_lower[i], lp.row_upper[i]);
+    d += b;
+    absolute += std::fabs(b);
+  }
+  for (int j = 0; j < n; ++j) {
+    const double b = BoundProduct(g[j], lp.column_lower[j], lp.column_upper[j]);
+    d += b;
+    absolute += std::fabs(b);
+    const double residual = std::fabs(atf[j] + g[j]);
+    stationarity =
+        std::max(stationarity, residual / std::max(1.0, column_norm[j]));
+    exposure += residual * std::max(1.0, std::fabs(report.x[j]));
+  }
+  if (!std::isfinite(d) || !std::isfinite(absolute) ||
+      !std::isfinite(stationarity)) {
+    bad = true;
+    return false;
+  }
+  const double margin = 100 * kCertificateTolerance * std::max(1.0, absolute);
+  return stationarity <= kCertificateTolerance && d > margin &&
+         d - exposure > margin;
+}
+
+// Primal ray: a direction d that keeps all bounds (A d in the cone of the row
+// bounds, d in the cone of the column bounds) and decreases the cost.
+bool RayCertificate(const HostLp& lp, const Model& m, std::vector<double> ray,
+                    bool& bad) {
+  const int n = m.a.cols, rows = m.a.rows;
+  double norm = 0;
+  for (int j = 0; j < n; ++j) norm = std::max(norm, std::fabs(ray[j]));
+  if (!std::isfinite(norm)) bad = true;
+  if (bad || !(norm > 0)) return false;
+  for (int j = 0; j < n; ++j) ray[j] /= norm;
+  std::vector<double> ad;
+  Multiply(m.original, ray, ad);
+
+  const std::vector<double> row_norm = LineNorms(m.original, true);
+  double p = 0, absolute = 0, column_violation = 0, row_violation = 0;
+  for (int j = 0; j < n; ++j) {
+    const double c = lp.sense * lp.cost[j] * ray[j];
+    p += c;
+    absolute += std::fabs(c);
+    column_violation =
+        std::max(column_violation,
+                 ConeViolation(ray[j], lp.column_lower[j], lp.column_upper[j]));
+  }
+  for (int i = 0; i < rows; ++i)
+    row_violation = std::max(
+        row_violation, ConeViolation(ad[i], lp.row_lower[i], lp.row_upper[i]) /
+                           std::max(1.0, row_norm[i]));
+  if (!std::isfinite(p) || !std::isfinite(absolute) ||
+      !std::isfinite(column_violation) || !std::isfinite(row_violation)) {
+    bad = true;
+    return false;
+  }
+  return column_violation <= kCertificateTolerance &&
+         row_violation <= kCertificateTolerance &&
+         -p > 100 * kCertificateTolerance * std::max(1.0, absolute);
+}
+
+// Tries the six directions of the current check: source 0 (x - anchor),
+// source 1 (x - reflection), source 2 (displacement of the last finished
+// epoch), each with both signs.
+Verdict Certificates(const HostLp& lp, const Model& m, const Iterate& it,
+                     const Report& report, int64_t iterations) {
+  const int n = m.a.cols, rows = m.a.rows;
+  Verdict verdict;
+  for (int source = 0; source < 3; ++source) {
+    for (int sign = 1; sign >= -1; sign -= 2) {
+      std::vector<double> ray(n), f(rows);
+      for (int j = 0; j < n; ++j) {
+        double d = source == 2   ? it.epoch_dx[j]
+                   : source == 0 ? it.x[j] - it.xa[j]
+                                 : it.x[j] - it.xr[j];
+        d *= sign * m.column_scale[j];
+        if (!std::isfinite(d)) verdict.bad = true;
+        ray[j] = Recession(d, lp.column_lower[j], lp.column_upper[j]);
+      }
+      for (int i = 0; i < rows; ++i) {
+        double v;
+        if (iterations == 0 && source != 2) {
+          // Before the first step: the rows the start point violates.
+          const double ax = report.row_activity[i];
+          v = ax < lp.row_lower[i] ? 1 : (ax > lp.row_upper[i] ? -1 : 0);
+        } else {
+          v = source == 2   ? it.epoch_dy[i]
+              : source == 0 ? it.y[i] - it.ya[i]
+                            : it.y[i] - it.yr[i];
+          v *= m.row_scale[i];
+        }
+        v *= sign;
+        if (!std::isfinite(v)) verdict.bad = true;
+        f[i] = Multiplier(v, lp.row_lower[i], lp.row_upper[i]);
+      }
+      const bool farkas = FarkasCertificate(lp, m, f, report, verdict.bad);
+      const bool unbounded_ray = RayCertificate(lp, m, ray, verdict.bad);
+      verdict.farkas = verdict.farkas || farkas;
+      verdict.ray = verdict.ray || unbounded_ray;
+    }
+  }
+  return verdict;
+}
+
 double Seconds(std::chrono::steady_clock::time_point since) {
   return std::chrono::duration<double>(std::chrono::steady_clock::now() - since)
       .count();
 }
 
-Status NextStatus(const Report& report, const SolveOptions& options,
-                  int64_t iterations, double seconds) {
-  const bool optimal = !report.bad && report.l2_primal <= options.tolerance &&
+Status NextStatus(const Report& report, const Verdict& seen, bool feasible,
+                  const SolveOptions& options, int64_t iterations,
+                  double seconds) {
+  const bool bad = report.bad || seen.bad;
+  const bool optimal = !bad && report.l2_primal <= options.tolerance &&
                        report.l2_dual <= options.tolerance &&
                        report.l2_gap <= options.tolerance;
-  if (report.bad) return Status::kNumericalError;
+  const bool unbounded = seen.ray && feasible;
+  // Contradictory conclusions are an error, never resolved by order.
+  if (bad || int(optimal) + int(seen.farkas) + int(unbounded) > 1)
+    return Status::kNumericalError;
   if (optimal) return Status::kOptimal;
+  if (seen.farkas) return Status::kInfeasible;
+  if (unbounded) return Status::kUnbounded;
   if (seconds >= options.time_limit_seconds) return Status::kTimeLimit;
   if (iterations >= options.iteration_limit) return Status::kIterationLimit;
   return Status::kRunning;
@@ -384,8 +559,11 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
   };
 
   Report report = Measure(lp, m, it, options.tolerance);
-  int64_t kkt_checks = 1;
-  status = NextStatus(report, options, iterations, Seconds(start));
+  int64_t kkt_checks = 1, certificate_rounds = 1;
+  bool feasible = !report.bad && report.primal <= options.tolerance;
+  Verdict seen = Certificates(lp, m, it, report, iterations);
+  status =
+      NextStatus(report, seen, feasible, options, iterations, Seconds(start));
   log_decision(false);
   if (status == Status::kRunning) {
     Evaluate(m, it, w.omega);
@@ -405,7 +583,18 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
     fpe = FixedPointError(m, it, w.omega);
     report = Measure(lp, m, it, options.tolerance);
     ++kkt_checks;
-    status = NextStatus(report, options, iterations, Seconds(start));
+    if (!report.bad && report.primal <= options.tolerance) feasible = true;
+    if (iterations % kCertificateInterval == 0 ||
+        iterations >= options.iteration_limit ||
+        Seconds(start) >= options.time_limit_seconds) {
+      const Verdict now = Certificates(lp, m, it, report, iterations);
+      ++certificate_rounds;
+      seen.farkas = seen.farkas || now.farkas;
+      seen.ray = seen.ray || now.ray;
+      seen.bad = seen.bad || now.bad;
+    }
+    status =
+        NextStatus(report, seen, feasible, options, iterations, Seconds(start));
     // A balance deadline only interrupts an epoch whose FPE has not fallen by
     // half.
     const bool restart =
@@ -441,6 +630,10 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
   result.iterations = iterations;
   result.restarts = restarts;
   result.kkt_checks = kkt_checks;
+  // Each round tries 6 directions, each for a Farkas and a ray certificate.
+  result.certificate_checks = 12 * certificate_rounds;
+  result.certificate_valid = seen.farkas;
+  result.ray_valid = seen.ray;
   result.metrics_valid = !report.bad;
   result.primal_valid = !report.bad && report.l2_primal <= options.tolerance;
   result.dual_valid = status == Status::kOptimal;
