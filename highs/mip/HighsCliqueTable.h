@@ -96,6 +96,9 @@ class HighsCliqueTable {
   std::vector<HighsInt> deletedrows;
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<HighsBool> iscandidate;
+  // position of each literal in the vector that is currently partitioned into
+  // cliques (-1 if absent)
+  std::vector<HighsInt> literalPosition;
   std::vector<HighsBool> colDeleted;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
@@ -179,6 +182,17 @@ class HighsCliqueTable {
                           int64_t& numNeighbourhoodqueries, CliqueVar v,
                           CliqueVar* q, HighsInt N) const;
 
+  bool findNeighbourhoodByCliques(std::vector<HighsInt>& neighbourhoodInds,
+                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
+                                  HighsInt N,
+                                  const std::vector<HighsInt>& literalPosition,
+                                  HighsInt offset) const;
+
+  void setLiteralPositions(const std::vector<CliqueVar>& clqVars,
+                           HighsInt start, HighsInt end);
+
+  void clearLiteralPositions(const std::vector<CliqueVar>& clqVars);
+
   void recordSubstitution(Substitution substitution);
 
   void replaceLiteral(CliqueVar substitutedVar, CliqueVar replacementVar);
@@ -211,6 +225,7 @@ class HighsCliqueTable {
     invertedHashList.resize(2 * ncols);
     invertedHashListSizeTwo.resize(2 * ncols);
     numcliquesvar.resize(2 * ncols, 0);
+    literalPosition.resize(2 * ncols, -1);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
   }
@@ -225,9 +240,11 @@ class HighsCliqueTable {
 
   int64_t& getNumNeighbourhoodQueries() { return numNeighbourhoodQueries; }
 
-  HighsInt partitionNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
-                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
-                                  CliqueVar* q, HighsInt N) const;
+  HighsInt partitionNeighbourhood(
+      std::vector<HighsInt>& neighbourhoodInds,
+      int64_t& numNeighbourhoodqueries, CliqueVar v, CliqueVar* q, HighsInt N,
+      std::vector<HighsInt>* literalPosition = nullptr,
+      HighsInt offset = 0) const;
 
   HighsInt shrinkToNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
