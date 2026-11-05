@@ -1829,3 +1829,9 @@ HighsInt Highs_getScaledModelStatus(const void* highs) {
 void Highs_resetGlobalScheduler(HighsInt blocking) {
   Highs::resetGlobalScheduler(blocking != 0);
 }
+
+HighsInt Highs_initializeExtras(const char* directory,
+                                HighsInt search_if_empty) {
+  std::string dir((directory != nullptr) ? directory : "");
+  return (HighsInt)Highs::initializeExtras(dir, search_if_empty != 0);
+}

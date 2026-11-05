@@ -5196,6 +5196,13 @@ void Highs::resetGlobalScheduler(bool blocking) {
   resetThreadScheduler(blocking);
 }
 
+HighsStatus Highs::initializeExtras(const std::string& directory,
+                                    bool search_if_empty) {
+  return HighsExtras::initialize(directory, search_if_empty)
+             ? HighsStatus::kOk
+             : HighsStatus::kError;
+}
+
 void Highs::initializeSingleThreadedProfiling(HighsProfiling* profiling) {
   if (!profiling) return;
   profiling->multi_threaded = false;
