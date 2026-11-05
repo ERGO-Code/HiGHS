@@ -78,14 +78,14 @@ flowchart TD
     tryCatch --> called["calledOptimizeModel(context)"]
     tryCatch -.->|exception| catch["handleCatch:<br/>clearSolver() keeping model status,<br/>optimizeModelUndoMods()"]
 
-    called --> preChecks["optimizeModelPreChecks()<br/>re-entry check, debug level,<br/>name hashes, warm start, exactResizeModel()"]
+    called --> preChecks["optimizeModelPreChecks()<br/>re-entry check, debug level,<br/>name hashes, warm start, exactResizeModel(),<br/>model_.assess() assert"]
     preChecks -->|"called while running"| refuse["return kError,<br/>nothing touched"]
     preChecks --> applyMods["optimizeModelApplyMods()<br/>infinite costs, semi-variables"]
     applyMods --> complete["optimizeModelCompleteSolution()<br/>MIP with a (partial) solution:<br/>completeSolutionFromDiscreteAssignment(),<br/>may call optimizeModel() again"]
     applyMods -->|error| early["returnFromOptimizeModelBeforeRunning()<br/>invalidate data, undo mods"]
     complete -->|error| early
     complete --> running["optimize_model_running_ = true"]
-    running --> prepare["optimizeModelPrepare()<br/>reset info and timer; empty model,<br/>bound infeasibility, large values, assessLp"]
+    running --> prepare["optimizeModelPrepare()<br/>reset info and timer; empty model,<br/>bound infeasibility, debug assessLp"]
 
     prepare -->|QP| qp["optimizeModelQp()<br/>MIQP and convexity checks, callSolveQp()"]
     prepare -->|MIP| mip["optimizeModelMip()"]
@@ -258,7 +258,7 @@ before.
 | # | Change | Effect |
 |---|---|---|
 | B1 | **Order of mods.** Semi-variables are assessed (or relaxed) together with the infinite-cost handling, before `completeSolutionFromDiscreteAssignment()`. Before, only infinite costs came first. This is what makes F2 possible. | The completion step sees the assessed bounds and types: (a) a semi-continuous variable with lower bound 0 is now continuous, so the user's value for it is no longer fixed; (b) a semi-variable with inconsistent bounds is fixed at 0, so a non-zero user value makes the user's solution infeasible; (c) an upper bound above `kMaxSemiVariableUpper` has been tightened (or the lower bound relaxed with `solve_relaxation`) before the feasibility check. The completed solution, which is the MIP solver's starting point, can differ from before. The model solved by the MIP solver is unchanged. |
-| B2 | **Order of checks.** Semi-variable assessment now runs before the empty-model, bound-infeasibility, large-value and `assessLp` checks. | A model with both an invalid semi-variable and one of those problems now gets the semi-variable error (`kSolveError`). `processedBoundsFindsInfeasibility()` now sees assessed bounds. I found no case where its result changes. |
+| B2 | **Order of checks.** Semi-variable assessment now runs before the empty-model, bound-infeasibility and `assessLp` checks. | A model with both an invalid semi-variable and one of those problems now gets the semi-variable error (`kSolveError`). `processedBoundsFindsInfeasibility()` now sees assessed bounds. I found no case where its result changes. |
 | B3 | **Invalid semi-variable error** returns before the solve runs (follows from B2). | It goes through `returnFromOptimizeModelBeforeRunning()`, not `returnFromOptimizeModel()`, so there are no debug checks, no `reportSolvedLpQpStats()` and no `returnFromHighs()`. The status is still `kError` with `kSolveError`. |
 | B4 | **Failure to complete a MIP solution** now invalidates the solution (F9). | The user's partial solution is dropped on this error. The model status left by the nested call is kept. |
 | B5 | **QP exceptions** are handled by the single catch in `optimizeModelTryCatch()`, not by a catch around `callSolveQp()`. | `clearSolver()` instead of `returnFromOptimizeModel()`: no debug checks, no stats report, no `returnFromHighs()`. The status is the same (`kMemoryLimit` or `kSolveError`). Exceptions thrown inside the solvers themselves are still caught by `SOLVE_CATCH_CALL` in `HighsSolve.cpp`. |
@@ -297,10 +297,10 @@ option save/restore becoming `HighsUndoStack`.
 
 | Old part of `calledOptimizeModel()` | Now |
 |---|---|
-| Re-entry check, debug level, name hashes, warm start, `exactResizeModel()` | `optimizeModelPreChecks()` |
+| Re-entry check, debug level, name hashes, warm start, `exactResizeModel()`, `model_.assess()` assert (added in `latest`, moved here so that it checks the model before any mods) | `optimizeModelPreChecks()` |
 | `handleInfCost()`, `assessSemiVariables()`, `relaxSemiVariables()` (in the QP and MIP branches) | `optimizeModelApplyMods()`, undone by `optimizeModelUndoMods()` |
 | Call of `completeSolutionFromDiscreteAssignment()` | `optimizeModelCompleteSolution()` |
-| Reset info and timer, empty model, bounds, large values, `assessLp` | `optimizeModelPrepare()` |
+| Reset info and timer, empty model, bounds, `assessLp` (the large-value check was removed in `latest`, which checks the model with `model_.assess()` in `run()`) | `optimizeModelPrepare()` |
 | QP branch | `optimizeModelQp()` |
 | MIP branch | `optimizeModelMip()` |
 | Debug log level set-up, basis set-up | `lpSetup()` |
