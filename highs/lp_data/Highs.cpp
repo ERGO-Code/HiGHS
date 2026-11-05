@@ -1238,6 +1238,9 @@ HighsStatus Highs::run() {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "Highs::run: model_.assess returns status %s\n",
                  this->highsStatusToString(status).c_str());
+    // Undo any user objective and bound scaling, so that the
+    // incumbent model isn't left scaled
+    this->userUnscale(user_scale_data);
     return HighsStatus::kError;
   }
 
@@ -4193,7 +4196,7 @@ HighsPresolveStatus Highs::runPresolve(PresolveComponent& presolve, HighsLp& lp,
   if (options_.presolve == kHighsOffString && !force_presolve)
     return HighsPresolveStatus::kNotPresolved;
 
-  if (lp.num_col_ == 0 && lp.num_row_ == 0) {
+  if (lp.isEmpty()) {
     // Empty models shouldn't reach here, but this status would cause
     // no harm if one did
     assert(1 == 0);
@@ -4203,8 +4206,7 @@ HighsPresolveStatus Highs::runPresolve(PresolveComponent& presolve, HighsLp& lp,
   // Ensure that the LP is column-wise
   lp.ensureColwise();
 
-  if (lp.num_col_ == 0 && lp.num_row_ == 0)
-    return HighsPresolveStatus::kNullError;
+  if (lp.isEmpty()) return HighsPresolveStatus::kNullError;
 
   // Ensure that the timer is running
   if (!timer_.running()) timer_.start();
