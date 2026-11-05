@@ -120,11 +120,14 @@ void gcdSimplify(KnapsackRow& knapsack, bool& changed, bool& hasZeroWeight) {
   }
 }
 
-bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
-                          bool& changed) {
+void recogniseCardinality(KnapsackRow& knapsack, const double feastol,
+                          bool& changed, bool& skipDisaggregation) {
   HighsInt numTerms = static_cast<HighsInt>(knapsack.terms.size());
   HighsInt numZeros = 0;
-  if (numTerms <= 2) return false;
+  if (numTerms <= 2) {
+    skipDisaggregation = true;
+    return;
+  }
   std::vector<HighsInt> order;
   order.reserve(numTerms);
   for (HighsInt i = 0; i != numTerms; ++i) {
@@ -143,10 +146,16 @@ bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
     ++v;
   }
   const HighsInt numBig = v;
-  if (numBig == numNonZeroTerms) return true;
+  if (numBig == numNonZeroTerms) {
+    skipDisaggregation = true;
+    return;
+  }
   if (weight(numBig) == 1 && weight(numNonZeroTerms - 1) == 1) {
-    if (numNonZeroTerms - numBig - knapsack.capacity > 0) return true;
-    return false;
+    if (numNonZeroTerms - numBig - knapsack.capacity > 0) {
+      skipDisaggregation = true;
+      ;
+    }
+    return;
   }
 
   auto setCardinality = [&](const double newWeight) {
@@ -171,12 +180,15 @@ bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
   const HighsInt numExceed = v - numBig;
 
   if (exceedGap > 0) {
-    if (exceedGap <= feastol) return false;
+    if (exceedGap <= feastol) {
+      return;
+    }
     // There is some subset of small items that together exceed capacity
     if (v == numNonZeroTerms) {
       // All small items needed to exceed capacity
       setCardinality(static_cast<double>(numNonZeroTerms - numBig - 1));
-      return true;
+      skipDisaggregation = true;
+      return;
     }
     HighsCDouble exceedSumBack = 0;
     for (HighsInt i = numNonZeroTerms - 1; i >= numNonZeroTerms - numExceed;
@@ -187,7 +199,8 @@ bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
       // If the largest n small weights AND the smallest n small weights
       // both exceed capacity, then the row holds for all n combinations
       setCardinality(static_cast<double>(numExceed - 1));
-      return true;
+      skipDisaggregation = true;
+      return;
     }
   } else {
     // If all small terms don't exceed capacity, then the row can be rewritten
@@ -201,7 +214,7 @@ bool recogniseCardinality(KnapsackRow& knapsack, const double feastol,
       setCardinality(numNonZeroTerms - numBig);
     }
   }
-  return weight(numBig) != 1 || weight(numNonZeroTerms -1) != 1;
+  skipDisaggregation = weight(numBig) != 1 || weight(numNonZeroTerms - 1) != 1;
 }
 
 }  // namespace
@@ -454,8 +467,8 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     }
 
     // Recognise whether the knapsack can be upgraded to a "cardinality" row
-    bool skipDisaggregation =
-        recogniseCardinality(knapsack, primal_feastol, changed);
+    bool skipDisaggregation = false;
+    recogniseCardinality(knapsack, primal_feastol, changed, skipDisaggregation);
 
     if (changed) {
       changeRow(knapsack);
