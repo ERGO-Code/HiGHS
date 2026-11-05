@@ -618,6 +618,9 @@ HighsInt HighsCliqueTable::partitionNeighbourhood(
     queryNeighbourhood(neighbourhoodInds, numQueries, v,
                        vars.entries.data() + start, end - start);
 
+  // move the neighbours to the front of the candidates (keeping their order),
+  // so that the remaining candidates are [start, start + number of
+  // neighbours); swapping also updates the positions
   for (size_t i = 0; i < neighbourhoodInds.size(); ++i)
     vars.swap(start + static_cast<HighsInt>(i), start + neighbourhoodInds[i]);
 
