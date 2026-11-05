@@ -130,7 +130,9 @@ struct HighsExternalApi {
   const HighsExtrasFeatureInfo* extras_feature_info_ = nullptr;
 
   static void unload();
-  static bool tryLoad(const std::string& path = "");
+  static bool tryLoad(const std::string& directory,
+                      bool search_if_empty = false);
+
   static const std::string getLoadStatus() { return instance().status_; }
 
   // define <feature> functions, e.g. isAvailable<Feature1, Feature2, ...>()
@@ -139,7 +141,6 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
-    tryLoad();
     return traits::all_available();
   }
 
@@ -153,7 +154,6 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
-    tryLoad();
     HighsTextTable<4>::Row headers{{"key", "name", "version", "license"}};
     HighsTextTable<4> table(headers);
     traits::append_notice_rows(table);
@@ -167,7 +167,6 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
-    tryLoad();
     std::set<std::string> names;
     traits::append_missing_names(names);
 
@@ -203,6 +202,13 @@ struct HighsExternalApi {
 };
 
 namespace HighsExtras {
+
+inline bool initialize() { return HighsExternalApi::tryLoad("", true); }
+
+inline bool initialize(const std::string& path,
+                       bool search_default_dirs = false) {
+  return HighsExternalApi::tryLoad(path, search_default_dirs);
+}
 
 // allows static access to feature APIs via
 // HighsExtras::<feature>::<method>(...)

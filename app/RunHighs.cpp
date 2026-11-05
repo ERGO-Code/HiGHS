@@ -40,6 +40,9 @@ int runHighsReturn(Highs& highs, const HighsStatus status) {
 }
 
 int main(int argc, char** argv) {
+  // load HiGHS extras support (if available)
+  HighsExtras::initialize();
+
   // Create the Highs instance.
   Highs highs;
   const HighsOptions& options = highs.getOptions();
