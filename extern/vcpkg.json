@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "extras",
   "description": "External dependencies for HiGHS",
-  "builtin-baseline": "9eec002df1cd109f8f104cd966a763daf9751489",
+  "builtin-baseline": "827a2e1203bc19941126c657166da44f2623acc4",
   "dependencies": [
     {
       "name": "openblas",
