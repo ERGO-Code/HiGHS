@@ -25,8 +25,6 @@ HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object) {
                        solver_object.highs_info_, solver_object.callback_);
 }
 
-#ifdef HIGHS_HIPDLP_CUDA_DETECTED
-
 namespace {
 
 // HighsLp (column-wise) -> hipdlp::HostLp (CSR, sorted unique columns)
@@ -66,8 +64,8 @@ hipdlp::SolveOptions toSolveOptions(const HighsOptions& options,
                                 ? options.kkt_tolerance
                                 : options.pdlp_optimality_tolerance;
   // What decides "optimal" (see hipdlp::StopCriterion in hipdlp/solver.h):
-  //   kPdlpL2      the PDLP / cuPDLPx relative-L2 measures (the library default)
-  //   kLpKktCheck  the per-component measures of HiGHS lpKktCheck
+  //   kPdlpL2      the PDLP / cuPDLPx relative-L2 measures (the library
+  //   default) kLpKktCheck  the per-component measures of HiGHS lpKktCheck
   //   kStrict      the strict element-wise measures
   // Change this line to use another one.
   solve_options.stop = hipdlp::StopCriterion::kPdlpL2;
@@ -87,6 +85,23 @@ HighsStatus solveError(HighsModelStatus& model_status) {
   return HighsStatus::kError;
 }
 
+hipdlp::SolveResult solveHost(const HighsOptions& options,
+                              const hipdlp::HostLp& host,
+                              const hipdlp::SolveOptions& solve_options) {
+#ifdef HIGHS_HIPDLP_CUDA_DETECTED
+  if (options.hipdlp_backend != kHiPdlpBackendCpuString)
+    return hipdlp::Solve(host, solve_options);
+#else
+  if (options.hipdlp_backend == kHiPdlpBackendCudaString ||
+      options.hipdlp_backend == kHiPdlpBackendRocmString)
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "HiPDLP: hipdlp_backend=%s needs a GPU build; using the CPU "
+                 "solver\n",
+                 options.hipdlp_backend.c_str());
+#endif
+  return hipdlp::SolveCpu(host, solve_options);
+}
+
 }  // namespace
 
 HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
@@ -100,10 +115,10 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 
   const hipdlp::HostLp host = toHostLp(lp);
   const hipdlp::SolveResult result =
-      hipdlp::Solve(host, toSolveOptions(options, timer));
+      solveHost(options, host, toSolveOptions(options, timer));
 
-  highs_info.pdlp_iteration_count = static_cast<HighsInt>(
-      std::min<int64_t>(result.iterations, kHighsIInf));
+  highs_info.pdlp_iteration_count =
+      static_cast<HighsInt>(std::min<int64_t>(result.iterations, kHighsIInf));
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "HiPDLP: %s after %lld iterations; GPU time %.2fs, total "
                "%.2fs\n",
@@ -154,22 +169,3 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
   highs_solution.dual_valid = result.status == hipdlp::Status::kOptimal;
   return HighsStatus::kOk;
 }
-
-#else  // !HIGHS_HIPDLP_CUDA_DETECTED
-
-HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
-                          const HighsLp& lp, HighsBasis& highs_basis,
-                          HighsSolution& highs_solution,
-                          HighsModelStatus& model_status, HighsInfo& highs_info,
-                          HighsCallback& callback) {
-  resetModelStatusAndHighsInfo(model_status, highs_info);
-  highs_basis.valid = false;
-  highs_solution.clear();
-  highsLogUser(options.log_options, HighsLogType::kError,
-               "HiPDLP requires a CUDA build: configure with "
-               "-DHIGHS_HIPDLP_CUDA=ON\n");
-  model_status = HighsModelStatus::kSolveError;
-  return HighsStatus::kError;
-}
-
-#endif

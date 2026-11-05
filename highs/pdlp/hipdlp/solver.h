@@ -148,4 +148,6 @@ struct SolveResult {
 };
 SolveResult Solve(const HostLp& lp, const SolveOptions& options = {});
 
+SolveResult SolveCpu(const HostLp& lp, const SolveOptions& options = {});
+
 }  // namespace hipdlp

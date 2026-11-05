@@ -1739,31 +1739,10 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
 SolveResult Solve(const HostLp& lp, const SolveOptions& options) {
   return Run(SolveSource{&lp, nullptr}, options, nullptr, false, nullptr);
 }
-const char* StatusName(Status status) {
-  switch (status) {
-    case Status::kRunning:
-      return "RUNNING";
-    case Status::kOptimal:
-      return "OPTIMAL";
-    case Status::kInfeasible:
-      return "INFEASIBLE";
-    case Status::kUnbounded:
-      return "UNBOUNDED";
-    case Status::kTimeLimit:
-      return "TIME_LIMIT";
-    case Status::kIterationLimit:
-      return "ITERATION_LIMIT";
-    case Status::kInvalidModel:
-      return "INVALID_MODEL";
-    case Status::kUnsupportedModel:
-      return "UNSUPPORTED_MODEL";
-    case Status::kOutOfMemory:
-      return "OUT_OF_MEMORY";
-    case Status::kNumericalError:
-      return "NUMERICAL_ERROR";
-    case Status::kDeviceError:
-      return "DEVICE_ERROR";
-  }
-  return "DEVICE_ERROR";
+
+SolveResult SolveForTesting(const HostLp& lp, const SolveOptions& options, Snapshot* snapshot,
+                            bool fixed_weight) {
+  return Run(SolveSource{&lp, nullptr}, options, snapshot, fixed_weight, nullptr);
 }
+
 }  // namespace hipdlp
