@@ -1091,14 +1091,9 @@ template <bool Sort, typename Comparator>
 HighsInt HighsCliqueTable::extendClique(
     std::vector<HighsInt>& neighbourhoodInds, IndexedCliqueVars& vars,
     HighsInt seedPos, HighsInt extensionEnd, const Comparator& candidateOrder) {
-  std::vector<CliqueVar>& clqVars = vars.entries;
   for (HighsInt i = seedPos; i < extensionEnd; ++i) {
-    if (Sort) {
-      pdqsort_branchless(clqVars.begin() + i, clqVars.begin() + extensionEnd,
-                         candidateOrder);
-      vars.setPositions(i, extensionEnd);
-    }
-    CliqueVar v = clqVars[i];
+    if (Sort) vars.sort(i, extensionEnd, candidateOrder);
+    CliqueVar v = vars.entries[i];
     HighsInt extensionStart = i + 1;
     extensionEnd =
         partitionNeighbourhood(neighbourhoodInds, numNeighbourhoodQueries, v,
@@ -1161,12 +1156,8 @@ void HighsCliqueTable::cliquePartition(const std::vector<double>& objective,
     if (i == extensionEnd) {
       partitionStart.push_back(i);
       extensionEnd = numClqVars;
-      if (lastSwappedIndex >= i) {
-        pdqsort_branchless(clqVars.begin() + i,
-                           clqVars.begin() + lastSwappedIndex + 1,
-                           objectiveOrder);
-        vars.setPositions(i, lastSwappedIndex + 1);
-      }
+      if (lastSwappedIndex >= i)
+        vars.sort(i, lastSwappedIndex + 1, objectiveOrder);
       lastSwappedIndex = 0;
     }
     CliqueVar v = clqVars[i];

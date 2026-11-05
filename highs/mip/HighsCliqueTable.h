@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "lp_data/HConst.h"
+#include "pdqsort/pdqsort.h"
 #include "util/HighsHash.h"
 #include "util/HighsHashTree.h"
 #include "util/HighsRandom.h"
@@ -115,15 +116,22 @@ class HighsCliqueTable {
     ~IndexedCliqueVars() {
       for (CliqueVar v : entries) pos[v.index()] = -1;
     }
-    // set the positions of a range of entries, e.g. after sorting it
-    void setPositions(HighsInt start, HighsInt end) {
-      for (HighsInt i = start; i < end; ++i) pos[entries[i].index()] = i;
+    // sort a range of entries and update their positions
+    template <typename Comparator>
+    void sort(HighsInt start, HighsInt end, const Comparator& order) {
+      pdqsort_branchless(entries.begin() + start, entries.begin() + end, order);
+      setPositions(start, end);
     }
     // swap two entries and update their positions
     void swap(HighsInt i, HighsInt j) {
       std::swap(entries[i], entries[j]);
       pos[entries[i].index()] = i;
       pos[entries[j].index()] = j;
+    }
+
+   private:
+    void setPositions(HighsInt start, HighsInt end) {
+      for (HighsInt i = start; i < end; ++i) pos[entries[i].index()] = i;
     }
   };
   std::vector<HighsBool> colDeleted;
