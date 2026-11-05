@@ -291,7 +291,6 @@ const string kModelFileString = "model_file";
 const string kReadBasisFileString = "read_basis_file";
 const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
-const string kPresolveLightString = "presolve_light";
 const string kSolverString = "solver";
 const string kParallelString = "parallel";
 const string kThreadsString = "threads";
@@ -444,7 +443,6 @@ struct HighsOptionsStruct {
   bool lp_presolve_requires_basis_postsolve;
   bool mps_parser_type_free;
   bool use_warm_start;
-  std::string presolve_light;
   bool write_matrix_image;
   bool write_hessian_image;
   HighsInt keep_n_rows;
@@ -458,6 +456,7 @@ struct HighsOptionsStruct {
   HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
+  HighsInt presolve_mode;
   HighsInt presolve_reduction_limit;
   HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
@@ -621,7 +620,6 @@ struct HighsOptionsStruct {
         lp_presolve_requires_basis_postsolve(false),
         mps_parser_type_free(false),
         use_warm_start(true),
-        presolve_light(""),
         write_matrix_image(false),
         write_hessian_image(false),
         keep_n_rows(0),
@@ -635,6 +633,7 @@ struct HighsOptionsStruct {
         max_dual_simplex_phase1_cleanup_level(0),
         simplex_price_strategy(0),
         simplex_unscaled_solution_strategy(0),
+        presolve_mode(0),
         presolve_reduction_limit(0),
         restart_presolve_reduction_limit(0),
         presolve_substitution_maxfillin(0),
@@ -1021,7 +1020,7 @@ class HighsOptions : public HighsOptionsStruct {
         "pretty = human-readable): "
         "-1 => HiGHS old raw (deprecated); 0 => HiGHS raw; "
         "1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; "
-        "4 => HiGHS sparse raw",
+        "4 => HiGHS sparse raw; 5 => HiGHS partial raw",
         advanced, &write_solution_style, kSolutionStyleMin, kSolutionStyleRaw,
         kSolutionStyleMax);
     records.push_back(record_int);
@@ -1109,6 +1108,13 @@ class HighsOptions : public HighsOptionsStruct {
         kWriteIisModelFileString, "Write IIS model file", advanced,
         &write_iis_model_file, kHighsFilenameDefault);
     records.push_back(record_string);
+
+    record_int = new OptionRecordInt(
+        "presolve_mode",
+        "Presolve mode 0 => default; 1 => initial sweep; 2 => light; 3 => full",
+        advanced, &presolve_mode, kPresolveModeMin, kPresolveModeDefault,
+        kPresolveModeMax);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
         "mip_detect_symmetry", "Whether MIP symmetry should be detected",
@@ -1338,6 +1344,19 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_parallel_type, kHighsChooseString);
     records.push_back(record_string);
 
+    record_int = new OptionRecordInt(
+        "hipo_parallel_force", "Bit mask to force parallel techniques in HiPO",
+        advanced, &hipo_parallel_force, 0, 0,
+        static_cast<int>(hipo::ParallelTechnique::kMaxSum));
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("hipo_parallel_forbid",
+                            "Bit mask to forbid parallel techniques in HiPO",
+                            advanced, &hipo_parallel_forbid, 0, 0,
+                            static_cast<int>(hipo::ParallelTechnique::kMaxSum));
+    records.push_back(record_int);
+
     record_string = new OptionRecordString(
         kHipoOrderingString,
         "HiPO matrix reordering: \"choose\", \"metis\", \"amd\" or \"rcm\"",
@@ -1354,19 +1373,6 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "hipo_parallel_force", "Bit mask to force parallel techniques in HiPO",
-        advanced, &hipo_parallel_force, 0, 0,
-        static_cast<int>(hipo::ParallelTechnique::kMaxSum));
-    records.push_back(record_int);
-
-    record_int =
-        new OptionRecordInt("hipo_parallel_forbid",
-                            "Bit mask to forbid parallel techniques in HiPO",
-                            advanced, &hipo_parallel_forbid, 0, 0,
-                            static_cast<int>(hipo::ParallelTechnique::kMaxSum));
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
@@ -1523,12 +1529,6 @@ class HighsOptions : public HighsOptionsStruct {
                                        "Use any warm start that is available",
                                        advanced, &use_warm_start, true);
     records.push_back(record_bool);
-
-    record_string = new OptionRecordString(
-        kPresolveLightString,
-        "Use only low-cost presolve rules: \"off\", \"choose\" or \"on\"",
-        advanced, &presolve_light, kHighsChooseString);
-    records.push_back(record_string);
 
     record_bool = new OptionRecordBool(
         "write_matrix_image",
