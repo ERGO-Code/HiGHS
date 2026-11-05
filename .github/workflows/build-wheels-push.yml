@@ -49,13 +49,20 @@ jobs:
           - [windows-2022, win_amd64]
           - [windows-2022, win32]
           - [windows-11-arm, win_arm64]
-        python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp314", "cp314t"]
+        python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp314", "cp314t", "cp315", "cp315t"]
         exclude:
           # numpy (pulled in by the test suite) has no 32-bit linux free-threaded wheels
           - buildplat: [ubuntu-24.04, manylinux_i686]
             python: "cp314t"
           - buildplat: [ubuntu-24.04, musllinux_i686]
             python: "cp314t"
+          - buildplat: [ubuntu-24.04, manylinux_i686]
+            python: "cp315t"
+          - buildplat: [ubuntu-24.04, musllinux_i686]
+            python: "cp315t"
+          # highspy tests crash with an access violation on 32-bit Windows free-threaded 3.15
+          - buildplat: [windows-2022, win32]
+            python: "cp315t"
           # CPython for Windows ARM64 is only available from 3.11
           - buildplat: [windows-11-arm, win_arm64]
             python: "cp39"
@@ -64,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build wheels
-        uses: pypa/cibuildwheel@v4.0.0
+        uses: pypa/cibuildwheel@v4.3.2
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
 
@@ -92,13 +99,20 @@ jobs:
           - [windows-2022, win_amd64]
           - [windows-2022, win32]
           - [windows-11-arm, win_arm64]
-        python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp314", "cp314t"]
+        python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp314", "cp314t", "cp315", "cp315t"]
         exclude:
           # numpy (pulled in by the test suite) has no 32-bit linux free-threaded wheels
           - buildplat: [ubuntu-24.04, manylinux_i686]
             python: "cp314t"
           - buildplat: [ubuntu-24.04, musllinux_i686]
             python: "cp314t"
+          - buildplat: [ubuntu-24.04, manylinux_i686]
+            python: "cp315t"
+          - buildplat: [ubuntu-24.04, musllinux_i686]
+            python: "cp315t"
+          # highspy tests crash with an access violation on 32-bit Windows free-threaded 3.15
+          - buildplat: [windows-2022, win32]
+            python: "cp315t"
           # CPython for Windows ARM64 is only available from 3.11
           - buildplat: [windows-11-arm, win_arm64]
             python: "cp39"
@@ -108,7 +122,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v4.0.0
+        uses: pypa/cibuildwheel@v4.3.2
         with:
           package-dir: ./highspy-extras
         env:
