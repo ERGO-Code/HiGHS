@@ -141,6 +141,7 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
+    tryLoad("", false);
     return traits::all_available();
   }
 
@@ -154,6 +155,7 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
+    tryLoad("", false);
     HighsTextTable<4>::Row headers{{"key", "name", "version", "license"}};
     HighsTextTable<4> table(headers);
     traits::append_notice_rows(table);
@@ -167,6 +169,7 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
+    tryLoad("", false);
     std::set<std::string> names;
     traits::append_missing_names(names);
 
