@@ -1,6 +1,12 @@
-// Main file for unit testing with catch. The directive below tells cmake to
-// generate a main method for the tests. Define tests in a separate cpp file
-// with only the include below. Do not define CATCH_CONFIG_MAIN anywhere else.
-// See correct-print-options in TestSetup.cpp.
-#define CATCH_CONFIG_MAIN
+// Main file for unit testing with catch. We manually create the main function
+// and initialize the HiGHS external API. Do not define CATCH_CONFIG_MAIN
+// anywhere else. See correct-print-options in TestSetup.cpp.
+#define CATCH_CONFIG_RUNNER
+#include "HighsExternalApi.h"
 #include "catch.hpp"
+
+int main(int argc, char* argv[]) {
+  HighsExtras::initialize();  // ignore if not available, will throw errors in
+                              // tests if needed
+  return Catch::Session().run(argc, argv);
+}
