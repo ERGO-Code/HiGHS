@@ -1,3 +1,5 @@
+#include <cstdlib>
+#include <cstdio>
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
@@ -67,6 +69,7 @@ bool HighsImplications::computeImplications(HighsInt col, bool val) {
 
   HighsInt stackimplicend = domchgstack.size();
   numImplications += stackimplicend;
+  probeWork10 += numImplications;
   mipsolver.mipdata_->getPseudoCost().addInferenceObservation(
       col, numImplications, val);
 

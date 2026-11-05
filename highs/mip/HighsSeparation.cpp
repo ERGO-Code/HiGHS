@@ -178,7 +178,16 @@ HighsInt HighsSeparation::separationRound(HighsDomain& propdomain,
   return ncuts;
 }
 
+// Set while separating at a B&B node (not at the root). The tableau
+// separator is skipped there: on the guillotine suite it produced most of the
+// node-level cut-generation time without paying back in tree size.
+thread_local bool g_separatingAtNode = false;
+
 void HighsSeparation::separate(HighsDomain& propdomain) {
+  struct NodeFlag {
+    NodeFlag() { g_separatingAtNode = true; }
+    ~NodeFlag() { g_separatingAtNode = false; }
+  } nodeFlag;
   HighsLpRelaxation::Status status = lp->getStatus();
   const HighsMipSolver& mipsolver = lp->getMipSolver();
 

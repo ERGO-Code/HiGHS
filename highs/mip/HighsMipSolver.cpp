@@ -681,12 +681,32 @@ restart:
     return mipdata_->workers[i].getGlobalDomain().infeasible() || pruned;
   };
 
+  // Adaptive node separation (cf. SCIP's separator frequencies and
+  // Achterberg 2007, Ch. 8; Wesselmann & Stuhl 2012 on cut-loop effort):
+  // node cuts are only worth their LP re-solves when they move the node bound.
+  // After a node round closes < 1% of the node's gap to the incumbent, skip
+  // separation on the next 2^k nodes (k = consecutive ineffective rounds,
+  // capped at 6); any effective round resets k.
+  std::vector<HighsInt> sepaFails(mipdata_->workers.size(), 0),
+      sepaSkip(mipdata_->workers.size(), 0);
   auto separateAndStoreBasis = [&](HighsInt i) -> bool {
     HighsMipWorker& worker = mipdata_->workers[i];
-    if (options_mip_->mip_allow_cut_separation_at_nodes) {
+    if (options_mip_->mip_allow_cut_separation_at_nodes && sepaSkip[i] > 0) {
+      --sepaSkip[i];
+      worker.getCutPool().performAging();
+    } else if (options_mip_->mip_allow_cut_separation_at_nodes) {
       if (!mipdata_->parallelLockActive())
         profiling_->start(kMipClockNodeSearchSeparation);
+      const double objBefore = worker.getLpRelaxation().getObjective();
       worker.sepa_ptr_->separate(worker.search_ptr_->getLocalDomain());
+      const double objAfter = worker.getLpRelaxation().getObjective();
+      const double gap = mipdata_->upper_limit - objBefore;
+      if (gap < kHighsInf && gap > 0 &&
+          !(objAfter - objBefore >= 0.01 * gap)) {
+        sepaFails[i] = std::min<HighsInt>(sepaFails[i] + 1, 6);
+        sepaSkip[i] = (HighsInt{1} << sepaFails[i]) - 1;
+      } else
+        sepaFails[i] = 0;
       if (!mipdata_->parallelLockActive())
         profiling_->stop(kMipClockNodeSearchSeparation);
     } else {

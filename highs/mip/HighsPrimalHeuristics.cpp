@@ -1,3 +1,4 @@
+#include <cstdlib>
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
@@ -79,6 +80,14 @@ bool HighsPrimalHeuristics::solveSubMip(
     double fixingRate, std::vector<double> colLower,
     std::vector<double> colUpper, HighsInt maxleaves, HighsInt maxnodes,
     HighsInt stallnodes) {
+  // Limit recursive sub-MIP nesting (SCIP disables LNS heuristics inside
+  // sub-SCIPs, cf. Berthold 2014 "Heuristic algorithms in global MINLP
+  // solvers", ch. on LNS): deep chains of RINS/RENS inside sub-MIPs cost
+  // root time without improving the outer incumbent much.
+  {
+    static const int kMaxLvl = 1;
+    if (mipsolver.submip_level >= kMaxLvl) return true;
+  }
   HighsOptions submipoptions = *mipsolver.options_mip_;
   HighsLp submip = lp;
 
@@ -312,6 +321,19 @@ class HeuristicNeighbourhood {
 };
 
 void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
+  // Gate by model type: on models dominated by general (non-binary)
+  // integers with wide domains, fixing by lurking reduced-cost bounds only
+  // tightens bounds instead of fixing variables, so the sub-MIP neighbourhood
+  // stays large and expensive (cf. Berthold 2014: LNS pays off when the
+  // fixing rate yields a small sub-problem).
+  {
+    static const double kMaxGenInt = 0.5;
+    HighsInt ngen = 0;
+    const auto& dom = worker.getGlobalDomain();
+    for (HighsInt col : mipsolver.mipdata_->integral_cols)
+      if (dom.col_upper_[col] - dom.col_lower_[col] > 1.5) ++ngen;
+    if (ngen > kMaxGenInt * mipsolver.mipdata_->integral_cols.size()) return;
+  }
   std::vector<std::pair<double, HighsDomainChange>> lurkingBounds =
       mipsolver.mipdata_->redcostfixing.getLurkingBounds(
           mipsolver, worker.getGlobalDomain());
@@ -368,8 +390,7 @@ void HighsPrimalHeuristics::rootReducedCost(HighsMipWorker& worker) {
 
   solveSubMip(worker, *mipsolver.model_, mipsolver.mipdata_->firstrootbasis,
               fixingRate, localdom.col_lower_, localdom.col_upper_,
-              500,  // std::max(50, int(0.05 *
-                    // (mipsolver.mipdata_->num_leaves))),
+              500,
               200 + static_cast<HighsInt>(mipsolver.mipdata_->num_nodes / 20),
               12);
 }
@@ -1122,7 +1143,37 @@ void HighsPrimalHeuristics::randomizedRounding(
   HighsRandom& randgen =
       mipsolver.mipdata_->parallelLockActive() ? worker.randgen : this->randgen;
 
+  // Batch phase: integer columns that are already integral in the LP
+  // solution would be rounded to their LP value anyway; fix them all first
+  // and propagate once instead of once per column (the LP point stays
+  // feasible under these fixings). Then round the fractional ones one by one.
+  // Only on general-integer dominated models (where per-column propagation
+  // over wide domains is the bottleneck); binary models keep the original
+  // sequential scheme, whose propagation steers later roundings.
+  HighsInt ngenint = 0;
+  for (HighsInt i : intcols)
+    if (localdom.col_upper_[i] - localdom.col_lower_[i] > 1.5) ++ngenint;
+  if (2 * ngenint > (HighsInt)intcols.size()) {
+    const double ftol = mipsolver.mipdata_->feastol;
+    for (HighsInt i : intcols) {
+      double r = std::round(relaxationsol[i]);
+      if (std::abs(relaxationsol[i] - r) > ftol) continue;
+      if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
+      if (r < localdom.col_lower_[i] || r > localdom.col_upper_[i]) continue;
+      localdom.fixCol(i, r, HighsDomain::Reason::branching());
+      if (localdom.infeasible()) break;
+    }
+    if (!localdom.infeasible()) localdom.propagate();
+    if (localdom.infeasible()) {
+      localdom.conflictAnalysis(worker.getConflictPool(),
+                                worker.getGlobalDomain(),
+                                worker.getPseudocost());
+      return;
+    }
+  }
+
   for (HighsInt i : intcols) {
+    if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
     double intval;
     if (mipsolver.mipdata_->uplocks[i] == 0)
       intval = std::ceil(relaxationsol[i] - mipsolver.mipdata_->feastol);
@@ -1134,6 +1185,9 @@ void HighsPrimalHeuristics::randomizedRounding(
     intval = std::min(localdom.col_upper_[i], intval);
     intval = std::max(localdom.col_lower_[i], intval);
 
+    // already fixed by earlier propagation: fixCol would be a no-op and the
+    // propagation queue is unchanged, so skip both calls
+    if (localdom.col_lower_[i] == localdom.col_upper_[i]) continue;
     localdom.fixCol(i, intval, HighsDomain::Reason::branching());
     if (localdom.infeasible()) {
       localdom.conflictAnalysis(worker.getConflictPool(),

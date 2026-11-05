@@ -2390,8 +2390,38 @@ bool HighsDomain::propagate() {
     changedboundsize = std::max(
         changedboundsize, cutpoolprop.cutpool->getMatrix().nonzeroCapacity());
 
-  std::unique_ptr<HighsDomainChange[]> changedbounds(
-      new HighsDomainChange[changedboundsize]);
+  // 10xb: reuse a thread-local scratch buffer instead of allocating
+  // 2*nnz entries (often > mmap threshold => mmap/munmap + page faults)
+  // on every propagate() call. Falls back to a fresh allocation when
+  // re-entered.
+  struct PropBuf10 {
+    std::unique_ptr<HighsDomainChange[]> buf;
+    size_t cap = 0;
+    bool inUse = false;
+  };
+  static thread_local PropBuf10 propBuf10;
+  std::unique_ptr<HighsDomainChange[]> ownedBuf10;
+  HighsDomainChange* changedbounds;
+  bool usingShared10 = false;
+  if (!propBuf10.inUse) {
+    if (propBuf10.cap < changedboundsize) {
+      propBuf10.buf.reset(new HighsDomainChange[changedboundsize]);
+      propBuf10.cap = changedboundsize;
+    }
+    propBuf10.inUse = true;
+    usingShared10 = true;
+    changedbounds = propBuf10.buf.get();
+  } else {
+    ownedBuf10.reset(new HighsDomainChange[changedboundsize]);
+    changedbounds = ownedBuf10.get();
+  }
+  struct Release10 {
+    bool on;
+    PropBuf10& b;
+    ~Release10() {
+      if (on) b.inUse = false;
+    }
+  } release10{usingShared10, propBuf10};
 
   while (havePropagationRows()) {
     if (objProp_.isActive()) objProp_.propagate();

@@ -1,3 +1,4 @@
+#include <cstdlib>
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
@@ -389,7 +390,31 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
 
   HighsLpRelaxation::Playground playground = lp->playground();
 
+  // Lookahead rule of reliability branching (Achterberg, Koch & Martin 2005,
+  // "Branching rules revisited"; SCIP default lookahead 8): stop strong
+  // branching once kLookahead consecutive evaluated candidates failed to
+  // improve the best strong-branching score, and branch on that best one.
+  const HighsInt kLookahead = 8;
+  HighsInt prevCand = -1, bestEval = -1, noImprove = 0;
+  double bestEvalScore = -1.0;
   while (true) {
+    if (prevCand != -1 && upscore[prevCand] != kHighsInf &&
+        downscore[prevCand] != kHighsInf) {
+      double sc = pseudocost.getScore(fracints[prevCand].first,
+                                      upscore[prevCand], downscore[prevCand]);
+      if (sc > bestEvalScore + getFeasTol()) {
+        bestEvalScore = sc;
+        bestEval = prevCand;
+        noImprove = 0;
+      } else
+        ++noImprove;
+    }
+    prevCand = -1;
+    if (bestEval != -1 && noImprove >= kLookahead) {
+      downNodeLb = downbound[bestEval];
+      upNodeLb = upbound[bestEval];
+      return bestEval;
+    }
     bool mustStop =
         getStrongBranchingLpIterations() >= maxSbIters || checkLimits();
 
@@ -403,6 +428,7 @@ HighsInt HighsSearch::selectBranchingCandidate(int64_t maxSbIters,
     }
 
     lp->setObjectiveLimit(getUpperLimit());
+    prevCand = candidate;
 
     HighsInt col = fracints[candidate].first;
     double fracval = fracints[candidate].second;
@@ -1112,8 +1138,14 @@ HighsSearch::NodeResult HighsSearch::branch() {
     int64_t sbmaxiters = 0;
     if (minrel > 0) {
       int64_t sbiters = getStrongBranchingLpIterations();
+      // Strong-branching budget relative to the regular LP effort (dynamic
+      // reliability, Achterberg 2007 sec. 5.4). The fixed allowance was
+      // 100000 iterations, which on small models lets strong branching
+      // dominate the run; use a smaller constant allowance.
+      static const int64_t kSbBase =
+          30000;
       sbmaxiters =
-          100000 + ((getTotalLpIterations() - getHeuristicLpIterations() -
+          kSbBase + ((getTotalLpIterations() - getHeuristicLpIterations() -
                      getStrongBranchingLpIterations()) >>
                     1);
       if (sbiters > sbmaxiters) {

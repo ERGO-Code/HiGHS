@@ -2166,7 +2166,7 @@ restart:
   sepa.setLpRelaxation(&getLp());
 
   while (getLp().scaledOptimal(status) &&
-         !getLp().getFractionalIntegers().empty() && stall < 3) {
+         !getLp().getFractionalIntegers().empty() && stall < 2) {
     printDisplayLine();
 
     if (checkLimits()) {

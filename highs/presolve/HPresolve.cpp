@@ -1,3 +1,4 @@
+#include <cstdlib>
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
@@ -1658,6 +1659,10 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
         std::max(mipsolver->submip ? HighsInt{0} : HighsInt{100000},
                  10 * numNonzeros());
     HighsInt numFail = 0;
+    HighsInt numUnproductive10 = 0;
+    HighsInt numDelBefore10 = calcNumDel();
+    const HighsInt numDelStart10 = numDelBefore10;
+    const int64_t probeWorkStart10 = implications.probeWork10;
 
     // lambda to check if model has enough continuous variables to perform
     // lifting for probing
@@ -1796,6 +1801,19 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
       if (cliquetable.numNeighbourhoodQueries > splayContingent) break;
 
       if (probingContingent - numProbed < 0) break;
+      // Restart presolve: the model was already probed in the initial
+      // presolve; restart-time probing on the (newly binary) reduced-cost
+      // fixed columns is costly and rarely decisive. Cap its effort
+      // (SCIP likewise limits probing rounds/calls after restarts,
+      // Achterberg 2007, sec. 10.6; Gamrath et al. 2015 restart study).
+      {
+        static const HighsInt kRestartProbeCap =
+            50;
+        if (mipsolver && mipsolver->mipdata_ &&
+            mipsolver->mipdata_->numRestarts > 0 &&
+            numProbed - oldNumProbed >= kRestartProbeCap)
+          break;
+      }
 
       HighsInt numBoundChgs = 0;
       HighsInt numNewCliques = -cliquetable.numCliques();
@@ -1828,6 +1846,34 @@ HPresolve::Result HPresolve::runProbing(HighsPostsolveStack& postsolve_stack) {
 
       ++numProbed;
       numProbes[i] += 1;
+
+      // 10xb: yield-based early stop. Probing that has produced neither
+      // fixings/substitutions nor new cliques over a long run of
+      // consecutive probes is very unlikely to start paying off; stop.
+      {
+        static const HighsInt kStall = [] {
+          const char* e = std::getenv("HIGHS10_PSTALL");
+          return e ? HighsInt(std::atoi(e)) : HighsInt{0};
+        }();
+        if (newNumDel > numDelBefore10 || numNewCliques > 0)
+          numUnproductive10 = 0;
+        else
+          ++numUnproductive10;
+        numDelBefore10 = newNumDel;
+        if (kStall > 0 && numUnproductive10 >= kStall) break;
+        // propagation-work budget: probes on these models can cascade into
+        // thousands of integer bound changes each; cap total work relative
+        // to model size, with credit for each actual reduction found.
+        static const double kWork = [] {
+          const char* e = std::getenv("HIGHS10_PWORK");
+          return e ? std::atof(e) : 2.0;
+        }();
+        if (kWork > 0 &&
+            double(implications.probeWork10 - probeWorkStart10) >
+                kWork * (numNonzeros() + 5000.0) +
+                    5000.0 * double(newNumDel - numDelStart10))
+          break;
+      }
 
       // Stop collecting lifting opportunities if maximum is reached
       if (numLiftOpps >= maxNumLiftOpps)

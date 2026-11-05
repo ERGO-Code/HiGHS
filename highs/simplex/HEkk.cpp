@@ -1014,8 +1014,12 @@ HighsStatus HEkk::solve(const bool force_phase2) {
 
   initialiseForSolve();
 
+  // debugCheckData copies (and possibly rescales) the whole LP, so only
+  // run it when debugging
   const HighsDebugStatus simplex_nla_status =
-      simplex_nla_.debugCheckData("Before HEkk::solve()");
+      options_->highs_debug_level > kHighsDebugLevelNone
+          ? simplex_nla_.debugCheckData("Before HEkk::solve()")
+          : HighsDebugStatus::kOk;
   const bool simplex_nla_ok = simplex_nla_status == HighsDebugStatus::kOk;
   if (!simplex_nla_ok) {
     highsLogUser(options_->log_options, HighsLogType::kError,

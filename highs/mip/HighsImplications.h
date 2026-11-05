@@ -32,6 +32,11 @@ class HighsImplications {
   int64_t numVarBounds;
   int64_t maxVarBounds;
 
+ public:
+  int64_t probeWork10 = 0;  // 10xb: total propagated changes in probing
+
+ private:
+
   bool computeImplications(HighsInt col, bool val);
 
  public:

@@ -19,6 +19,8 @@
 #include "mip/HighsMipSolverData.h"
 #include "mip/HighsTransformedLp.h"
 
+extern thread_local bool g_separatingAtNode;
+
 struct FractionalInteger {
   double fractionality;
   double row_ep_norm2;
@@ -42,6 +44,7 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
                                                HighsCutPool& cutpool) {
   Highs& lpSolver = lpRelaxation.getLpSolver();
   if (!lpSolver.hasInvert()) return;
+  if (g_separatingAtNode) return;
 
   const HighsMipSolver& mip = lpRelaxation.getMipSolver();
   if (cutpool.getNumAvailableCuts() > mip.options_mip_->mip_pool_soft_limit)
