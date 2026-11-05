@@ -348,58 +348,6 @@ HighsStatus Highs::formStandardFormLp() {
   return HighsStatus::kOk;
 }
 
-HighsStatus Highs::assessUserSolution(const HighsInt num_entries,
-				      const HighsInt* index, const double* value) {
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsLp& lp = this->model_.lp_;
-  const bool packed = index != nullptr;
-  const HighsInt to_ix = packed ? num_entries : lp.num_col_;
-  HighsInt num_duplicates = 0;
-  std::vector<HighsBool> is_set;
-  is_set.assign(lp.num_col_, false);
-  HighsInt num_infeasible_value = 0;
-  const HighsInt max_warning = 10;
-  for (HighsInt iX = 0; iX < to_ix; iX++) {
-    HighsInt iCol = packed ? index[iX] : iX;
-    if (iCol < 0 || iCol >= lp.num_col_) {
-      assert(packed);
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: Entry %d of solution has index %d out of "
-                   "range [0, %d)\n",
-                   int(iX), int(iCol), int(lp.num_col_));
-      return HighsStatus::kError;
-    } else if (value[iX] < lp.col_lower_[iCol] - options_.primal_feasibility_tolerance ||
-               lp.col_upper_[iCol] + options_.primal_feasibility_tolerance < value[iX]) {
-      num_infeasible_value++;
-      if (num_infeasible_value <= max_warning)
-	highsLogUser(options_.log_options, HighsLogType::kWarning,
-		     "setSolution: Entry %d of solution has value %g: infeasible "
-		     "for bounds [%g, %g]\n",
-		     int(iX), value[iX], lp.col_lower_[iCol],
-		     lp.col_upper_[iCol]);
-      return_status = HighsStatus::kWarning;
-    }
-    if (is_set[iCol]) num_duplicates++;
-    is_set[iCol] = true;
-  }
-  if (num_duplicates > 0) {
-    assert(packed);
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "setSolution: Set of solution indices has %d duplicate%s: last "
-                 "value used\n",
-                 int(num_duplicates), num_duplicates == 1 ? "" : "s");
-    return_status = HighsStatus::kWarning;
-  }
-  if (num_infeasible_value > max_warning) {
-    assert(return_status == HighsStatus::kWarning);
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-		 "setSolution: %d entries of solution are infeasible\n",
-		 int(num_infeasible_value));
-    return_status = HighsStatus::kWarning;
-  }
-  return return_status;
-}
-
 HighsStatus Highs::basisForSolution() {
   HighsLp& lp = model_.lp_;
   assert(!lp.isMip() || options_.solve_relaxation);

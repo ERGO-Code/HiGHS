@@ -1776,8 +1776,6 @@ class Highs {
 
   // Interface methods
   HighsStatus formStandardFormLp();
-  HighsStatus assessUserSolution(const HighsInt num_entries,
-				 const HighsInt* index, const double* value);
   HighsStatus basisForSolution();
   HighsStatus addColsInterface(
       HighsInt ext_num_new_col, const double* ext_col_cost,

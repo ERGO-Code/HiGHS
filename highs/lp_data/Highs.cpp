@@ -2699,9 +2699,11 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   HighsLp& lp = this->model_.lp_;
   // Determine whether a new solution will be defined. If so,
   // the old solution and any basis are cleared
-  const bool new_primal_solution = lp.num_col_ > 0 &&
+  const bool new_primal_solution =
+      lp.num_col_ > 0 &&
       solution.col_value.size() >= static_cast<size_t>(lp.num_col_);
-  const bool new_dual_solution = lp.num_row_ > 0 &&
+  const bool new_dual_solution =
+      lp.num_row_ > 0 &&
       solution.row_dual.size() >= static_cast<size_t>(lp.num_row_);
   const bool new_solution = new_primal_solution || new_dual_solution;
 
@@ -2722,11 +2724,11 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
   HighsSolution modifiable_solution = solution;
   if (new_primal_solution) {
-    // There should be no error return from assessUserSolution, since
+    // There should be no error return from assessUserColValues, since
     // this corresponds to index illegalities, but use it to warn about
     // infeasibilities in value
-    return_status =
-      this->assessUserSolution(lp.num_col_, nullptr, solution.col_value.data());
+    return_status = assessUserColValues(lp, options_, lp.num_col_, nullptr,
+                                        solution.col_value.data());
     assert(return_status != HighsStatus::kError);
     if (lp.num_row_ > 0) {
       // Worth computing the row values
@@ -2814,20 +2816,20 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
   }
   HighsStatus return_status = HighsStatus::kOk;
   if (lp.num_col_ == 0) return return_status;
-  
-  // Check for illegalities, and warn about duplicates in index and
-  // infeasibilities in value
-  return_status = this->assessUserSolution(num_entries, index, value);
+
+  // Check for illegalities, and warn about duplicates in index, but
+  // don't check for feasibility of values, as this will be done when
+  // setSolution is called below.
+  const bool perform_feasibility_check = false;
+  return_status = assessUserColValues(lp, options_, num_entries, index, value,
+                                      perform_feasibility_check);
   if (return_status == HighsStatus::kError) return return_status;
 
   // Clear the solution, indicate the values not determined by the
   // user, and insert the values determined by the user
   HighsSolution new_solution;
-  new_solution.col_value.assign(lp.num_col_, kHighsUndefined);
-  for (HighsInt iX = 0; iX < to_ix; iX++) {
-    HighsInt iCol = packed ? index[iX] : iX;
-    new_solution.col_value[iCol] = value[iX];
-  }
+  assignUserColValues(lp.num_col_, new_solution.col_value, num_entries, index,
+                      value);
   return interpretCallStatus(options_.log_options, setSolution(new_solution),
                              return_status, "setSolution");
 }
@@ -2980,9 +2982,9 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       const bool already_profiling = this->profiling_;
       if (!already_profiling)
         this->initializeSingleThreadedProfiling(&profiling);
-      HighsLpSolverObject solver_object(lp, modifiable_basis, solution_,
-                                        info_, ekk_instance_, callback_,
-                                        options_, timer_);
+      HighsLpSolverObject solver_object(lp, modifiable_basis, solution_, info_,
+                                        ekk_instance_, callback_, options_,
+                                        timer_);
       solver_object.setProfiling(this->profiling_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (!already_profiling) this->clearProfiling();
@@ -4280,15 +4282,16 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
       const double lower = lp.col_lower_[iCol];
       const double upper = lp.col_upper_[iCol];
       const HighsVarType type = lp.integrality_[iCol];
-      double col_infeasibility = 0;
+      double bound_infeasibility = 0;
       double integer_infeasibility = 0;
       assessColPrimalSolution(assess_as_mip, options_, primal, lower, upper,
-                              type, col_infeasibility, integer_infeasibility);
-      if (integer_infeasibility > options_.mip_feasibility_tolerance) {
+                              type, bound_infeasibility, integer_infeasibility);
+      if (integer_infeasibility > options_.mip_feasibility_tolerance ||
+          bound_infeasibility > options_.mip_feasibility_tolerance) {
         num_unfixed_discrete_variable++;
       } else {
-        // Variable is integer feasible, so fix it at this value and
-        // remove its integrality
+        // Variable is integer and bound feasible, so fix it at this
+        // value and remove its integrality
         num_fixed_discrete_variable++;
         lp.col_lower_[iCol] = primal;
         lp.col_upper_[iCol] = primal;

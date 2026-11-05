@@ -2274,6 +2274,83 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
   return has_kkt_failures;
 }
 
+HighsStatus assessUserColValues(const HighsLp& lp, const HighsOptions& options,
+                                const HighsInt num_entries,
+                                const HighsInt* index, const double* value,
+                                const bool perform_feasibility_check) {
+  HighsStatus return_status = HighsStatus::kOk;
+  const bool packed = index != nullptr;
+  const HighsInt to_ix = packed ? num_entries : lp.num_col_;
+  HighsInt num_duplicates = 0;
+  std::vector<HighsBool> is_set;
+  is_set.assign(lp.num_col_, false);
+  HighsInt num_infeasible_value = 0;
+  const HighsInt max_warning = 10;
+  for (HighsInt iX = 0; iX < to_ix; iX++) {
+    HighsInt iCol = packed ? index[iX] : iX;
+    if (iCol < 0 || iCol >= lp.num_col_) {
+      assert(packed);
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "assessUserColValues: Entry %d of user solution has index %d out of "
+          "range [0, %d)\n",
+          int(iX), int(iCol), int(lp.num_col_));
+      return HighsStatus::kError;
+    }
+    // Count infeasibilities, and record that this value has been set,
+    // so future duplicates can be spotted
+    if (is_set[iCol]) num_duplicates++;
+    is_set[iCol] = true;
+    // Don't test undefined values for feasibility!
+    if (!perform_feasibility_check || value[iX] == kHighsUndefined) continue;
+    if (value[iX] <
+            lp.col_lower_[iCol] - options.primal_feasibility_tolerance ||
+        lp.col_upper_[iCol] + options.primal_feasibility_tolerance <
+            value[iX]) {
+      num_infeasible_value++;
+      if (num_infeasible_value <= max_warning)
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "assessUserColValues: Entry %d of user solution has value "
+                     "%g: infeasible "
+                     "for bounds [%g, %g]\n",
+                     int(iX), value[iX], lp.col_lower_[iCol],
+                     lp.col_upper_[iCol]);
+      return_status = HighsStatus::kWarning;
+    }
+  }
+  if (num_duplicates > 0) {
+    assert(packed);
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "assessUserColValues: Set of user solution indices has %d "
+                 "duplicate%s: last "
+                 "value used\n",
+                 int(num_duplicates), num_duplicates == 1 ? "" : "s");
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_infeasible_value > max_warning) {
+    assert(return_status == HighsStatus::kWarning);
+    highsLogUser(
+        options.log_options, HighsLogType::kWarning,
+        "assessUserColValues: %d entries of user solution are infeasible\n",
+        int(num_infeasible_value));
+    return_status = HighsStatus::kWarning;
+  }
+  return return_status;
+}
+
+void assignUserColValues(const HighsInt num_col, std::vector<double>& col_value,
+                         const HighsInt num_entries, const HighsInt* index,
+                         const double* value) {
+  assert(num_col >= 0);
+  const bool packed = index != nullptr;
+  const HighsInt to_ix = packed ? num_entries : num_col;
+  col_value.assign(num_col, kHighsUndefined);
+  for (HighsInt iX = 0; iX < to_ix; iX++) {
+    HighsInt iCol = packed ? index[iX] : iX;
+    col_value[iCol] = value[iX];
+  }
+}
+
 bool HighsSolution::hasUndefined() const {
   for (double value : this->col_value)
     if (value == kHighsUndefined) return true;

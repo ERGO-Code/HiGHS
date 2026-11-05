@@ -78,9 +78,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs highs;
   const HighsInfo& info = highs.getInfo();
-  if (dev_run)
-    printf(
-        "\n********************\nSolving from scratch\n********************\n");
+  if (dev_run) highsPrintStringAsHeading("Solving from scratch");
   highs.setOptionValue("output_flag", dev_run);
   highs.readModel(model_file);
   HighsLp lp = highs.getLp();
@@ -101,11 +99,7 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
   highs.setOptionValue("output_flag", dev_run);
 
   auto headerAndPassModel = [&](const std::string& title) {
-    if (dev_run)
-      printf(
-          "\n***************************\n%s"
-          "\n***************************\n",
-          title.c_str());
+    if (dev_run) highsPrintStringAsHeading(title);
     highs.passModel(lp);
   };
 
@@ -185,19 +179,48 @@ TEST_CASE("check-set-mip-solution", "[highs_check_solution]") {
     headerAndPassModel("Solving from partial integer solution");
     HighsSolution starting_solution = optimal_solution;
     HighsInt k = 0;
-    const HighsInt max_k = 1;
+    // Sets 2/3 of the integer variables to kHighsUndefined values
+    const HighsInt max_k = 2;
     // Set a proportion of the integer variables to a fractional value
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
       if (lp.integrality_[iCol] != HighsVarType::kInteger) continue;
-      if (k <= max_k) {
-        starting_solution.col_value[iCol] = 0.5;
+      if (k < max_k) {
+        starting_solution.col_value[iCol] = kHighsUndefined;
         k++;
       } else {
         k = 0;
       }
     }
+    // Partial start solutions can also be (were originally) flagged
+    // by setting values for integer variables to fractional
+    // values. However, this was a bad idea and, until now, a value
+    // that was integer feasible but bound infeasible led to the
+    // integer variable being fixed to that value when solving for the
+    // unspecified integer variables.
+    //
+    // Check that this bug has been fixed, and that a an integer
+    // infeasible but bound feasible value is handled correctly, by
+    // modifying a couple of the variables whose values are currently
+    // kHighsUndefined
+    //
+    // Set column 3 to an integer feasible but bound infeasible value
+    HighsInt iCol = 3;
+    REQUIRE(lp.integrality_[iCol] == HighsVarType::kInteger);
+    REQUIRE(lp.col_lower_[iCol] == 57);
+    REQUIRE(lp.col_upper_[iCol] == 75);
+    REQUIRE(starting_solution.col_value[iCol] == kHighsUndefined);
+    starting_solution.col_value[iCol] = 50;
+
+    // Set column 6 to an integer infeasible but bound feasible value
+    iCol = 6;
+    REQUIRE(lp.integrality_[iCol] == HighsVarType::kInteger);
+    REQUIRE(lp.col_lower_[iCol] == 57);
+    REQUIRE(lp.col_upper_[iCol] == 75);
+    REQUIRE(starting_solution.col_value[iCol] == kHighsUndefined);
+    starting_solution.col_value[iCol] = 65.5;
+
     return_status = highs.setSolution(starting_solution);
-    REQUIRE(return_status == HighsStatus::kOk);
+    REQUIRE(return_status == HighsStatus::kWarning);
     runTestSearchAndClear();
   }
 
@@ -747,23 +770,21 @@ TEST_CASE("issue-3317", "[highs_check_solution]") {
 }
 
 TEST_CASE("lp-set-solution", "[highs_check_solution]") {
-  std::string model = "shell";//"adlittle";//
+  std::string model = "shell";  //"adlittle";//
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
   // h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("log_dev_level", 1);
-   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
-   const HighsInfo& info = h.getInfo();
-   highsPrintStringAsHeading("No initial solution");
+  const HighsInfo& info = h.getInfo();
+  highsPrintStringAsHeading("No initial solution");
 
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  
-
   const HighsLp& lp = h.getLp();
-  
+
   HighsSolution solution;
   std::vector<double>& col_value = solution.col_value;
   std::vector<HighsInt> col_index;
@@ -771,39 +792,37 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
   col_value.assign(lp.num_col_, 0);
   REQUIRE(h.setSolution(solution) != HighsStatus::kError);
 
-   highsPrintStringAsHeading("Zero initial solution");
-   REQUIRE(h.run() == HighsStatus::kOk);
- 
+  highsPrintStringAsHeading("Zero initial solution");
+  REQUIRE(h.run() == HighsStatus::kOk);
+
   col_value.assign(lp.num_col_, 1);
   REQUIRE(h.setSolution(solution) != HighsStatus::kError);
 
-   highsPrintStringAsHeading("Unit initial solution");
-   REQUIRE(h.run() == HighsStatus::kOk);
- 
+  highsPrintStringAsHeading("Unit initial solution");
+  REQUIRE(h.run() == HighsStatus::kOk);
+
   HighsRandom random;
 
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     col_value[iCol] = random.fraction();
   REQUIRE(h.setSolution(solution) != HighsStatus::kError);
 
-   highsPrintStringAsHeading("Random initial solution");
-   REQUIRE(h.run() == HighsStatus::kOk);
+  highsPrintStringAsHeading("Random initial solution");
+  REQUIRE(h.run() == HighsStatus::kOk);
 
-   col_index.clear();
-   col_value.clear();
-   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-     if (random.fraction() < 0.5) continue;
-     col_index.push_back(iCol);
-     col_value.push_back(1);
-   }
-   HighsInt num_entries = col_value.size();
-   REQUIRE(h.setSolution(num_entries, col_index.data(), col_value.data()) != HighsStatus::kError);
+  col_index.clear();
+  col_value.clear();
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+    if (random.fraction() < 0.5) continue;
+    col_index.push_back(iCol);
+    col_value.push_back(1);
+  }
+  HighsInt num_entries = col_value.size();
+  REQUIRE(h.setSolution(num_entries, col_index.data(), col_value.data()) !=
+          HighsStatus::kError);
 
-   highsPrintStringAsHeading("Partial initial solution");
-   REQUIRE(h.run() == HighsStatus::kOk);
-
+  highsPrintStringAsHeading("Partial initial solution");
+  REQUIRE(h.run() == HighsStatus::kOk);
 
   h.resetThreadScheduler(true);
-
 }
-
