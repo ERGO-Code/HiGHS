@@ -774,12 +774,12 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
   Highs h;
-  // h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("log_dev_level", 1);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
   const HighsInfo& info = h.getInfo();
-  highsPrintStringAsHeading("No initial solution");
+  if (dev_run) highsPrintStringAsHeading("No initial solution");
 
   REQUIRE(h.run() == HighsStatus::kOk);
 
@@ -792,13 +792,13 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
   col_value.assign(lp.num_col_, 0);
   REQUIRE(h.setSolution(solution) != HighsStatus::kError);
 
-  highsPrintStringAsHeading("Zero initial solution");
+  if (dev_run) highsPrintStringAsHeading("Zero initial solution");
   REQUIRE(h.run() == HighsStatus::kOk);
 
   col_value.assign(lp.num_col_, 1);
   REQUIRE(h.setSolution(solution) != HighsStatus::kError);
 
-  highsPrintStringAsHeading("Unit initial solution");
+  if (dev_run) highsPrintStringAsHeading("Unit initial solution");
   REQUIRE(h.run() == HighsStatus::kOk);
 
   HighsRandom random;
@@ -807,7 +807,7 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
     col_value[iCol] = random.fraction();
   REQUIRE(h.setSolution(solution) != HighsStatus::kError);
 
-  highsPrintStringAsHeading("Random initial solution");
+  if (dev_run) highsPrintStringAsHeading("Random initial solution");
   REQUIRE(h.run() == HighsStatus::kOk);
 
   col_index.clear();
@@ -821,7 +821,7 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
   REQUIRE(h.setSolution(num_entries, col_index.data(), col_value.data()) !=
           HighsStatus::kError);
 
-  highsPrintStringAsHeading("Partial initial solution");
+  if (dev_run) highsPrintStringAsHeading("Partial initial solution");
   REQUIRE(h.run() == HighsStatus::kOk);
 
   h.resetThreadScheduler(true);
