@@ -2696,14 +2696,13 @@ HighsStatus Highs::getKappa(double& kappa, const bool exact,
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
+  HighsLp& lp = this->model_.lp_;
   // Determine whether a new solution will be defined. If so,
   // the old solution and any basis are cleared
-  const bool new_primal_solution =
-      model_.lp_.num_col_ > 0 &&
-      solution.col_value.size() >= static_cast<size_t>(model_.lp_.num_col_);
-  const bool new_dual_solution =
-      model_.lp_.num_row_ > 0 &&
-      solution.row_dual.size() >= static_cast<size_t>(model_.lp_.num_row_);
+  const bool new_primal_solution = lp.num_col_ > 0 &&
+      solution.col_value.size() >= static_cast<size_t>(lp.num_col_);
+  const bool new_dual_solution = lp.num_row_ > 0 &&
+      solution.row_dual.size() >= static_cast<size_t>(lp.num_row_);
   const bool new_solution = new_primal_solution || new_dual_solution;
 
   if (new_solution) {
@@ -2717,36 +2716,45 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
         "size of col_value and row_dual vectors (%d, %d) and number "
         "of columns and rows in the model (%d, %d)\n",
         int(solution.col_value.size()), int(solution.row_dual.size()),
-        int(model_.lp_.num_col_), int(model_.lp_.num_row_));
-    return_status = HighsStatus::kError;
+        int(lp.num_col_), int(lp.num_row_));
+    return HighsStatus::kError;
   }
 
+  HighsSolution modifiable_solution = solution;
   if (new_primal_solution) {
-    solution_.col_value = solution.col_value;
-    if (model_.lp_.num_row_ > 0) {
+    // There should be no error return from assessUserSolution, since
+    // this corresponds to index illegalities, but use it to warn about
+    // infeasibilities in value
+    return_status =
+      this->assessUserSolution(lp.num_col_, nullptr, solution.col_value.data());
+    assert(return_status != HighsStatus::kError);
+    if (lp.num_row_ > 0) {
       // Worth computing the row values
-      solution_.row_value.resize(model_.lp_.num_row_);
+      modifiable_solution.row_value.resize(lp.num_row_);
       // Matrix must be column-wise
-      model_.lp_.a_matrix_.ensureColwise();
+      lp.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateRowValuesQuad(model_.lp_, solution_),
+          options_.log_options, calculateRowValuesQuad(lp, modifiable_solution),
           return_status, "calculateRowValuesQuad");
       if (return_status == HighsStatus::kError) return return_status;
     }
+    solution_.col_value = modifiable_solution.col_value;
+    solution_.row_value = modifiable_solution.row_value;
     solution_.value_valid = true;
   }
   if (new_dual_solution) {
-    solution_.row_dual = solution.row_dual;
-    if (model_.lp_.num_col_ > 0) {
+    if (lp.num_col_ > 0) {
       // Worth computing the column duals
-      solution_.col_dual.resize(model_.lp_.num_col_);
+      modifiable_solution.col_dual.resize(lp.num_col_);
       // Matrix must be column-wise
-      model_.lp_.a_matrix_.ensureColwise();
+      lp.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateColDualsQuad(model_.lp_, solution_),
+          options_.log_options, calculateColDualsQuad(lp, modifiable_solution),
           return_status, "calculateColDuals");
       if (return_status == HighsStatus::kError) return return_status;
     }
+    solution_.col_dual = modifiable_solution.col_dual;
+    solution_.row_dual = modifiable_solution.row_dual;
     solution_.dual_valid = true;
   }
   return returnFromHighs(return_status);
