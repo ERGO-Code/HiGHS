@@ -364,17 +364,52 @@ bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
 
 void HPresolve::chooseRules() {
   const bool silent = silentLog();
-  // By default all presolve rules are allowed
-  this->allow_rule_.assign(kPresolveRuleCount, true);
+
+  auto setRulesForFullMode = [&]() {
+    // All rules on in full mode
+    this->allow_rule_.assign(kPresolveRuleCount, true);
+  };
+
+  auto setRulesForLightMode = [&]() {
+    // All rules on by default
+    setRulesForFullMode();
+    // Switch off the rules not used in presolve light
+    allow_rule_[kPresolveRuleDominatedCol] = false;
+    allow_rule_[kPresolveRuleDependentEquations] = false;
+    allow_rule_[kPresolveRuleDependentFreeCols] = false;
+    allow_rule_[kPresolveRuleAggregator] = false;
+    allow_rule_[kPresolveRuleParallelRowsAndCols] = false;
+    allow_rule_[kPresolveRuleSparsify] = false;
+    allow_rule_[kPresolveRuleProbing] = false;
+    allow_rule_[kPresolveRuleEnumeration] = false;
+    allow_rule_[kPresolveRuleDualFixing] = false;
+    allow_rule_[kPresolveRuleZeroCostSingleton] = false;
+    allow_rule_[kPresolveRuleColStuffing] = false;
+    allow_rule_[kPresolveRuleFourierMotzkin] = false;
+    allow_rule_[kPresolveRuleImplAwareConstrPropagation] = false;
+  };
+
+  auto setRulesForInitialSweepMode = [&]() {
+    // All rules off by default
+    allow_rule_.assign(kPresolveRuleCount, false);
+    // Switch on the rules used in initial sweep
+    allow_rule_[kPresolveRuleEmptyRow] = true;
+    allow_rule_[kPresolveRuleSingletonRow] = true;
+    allow_rule_[kPresolveRuleRedundantRow] = true;
+    allow_rule_[kPresolveRuleEmptyCol] = true;
+    allow_rule_[kPresolveRuleFixedCol] = true;
+    // Switch on initial sweep!
+    allow_rule_[kPresolveRuleInitialSweep] = true;
+  };
 
   // All rules can be switched off, although the most fundamental can
   // only be switched off in initial sweep
-  auto allowedOffInInitialSweep = [&](const HighsInt rule_type) {
-    if (rule_type == kPresolveRuleEmptyRow) return true;
-    if (rule_type == kPresolveRuleSingletonRow) return true;
-    if (rule_type == kPresolveRuleRedundantRow) return true;
-    if (rule_type == kPresolveRuleEmptyCol) return true;
-    if (rule_type == kPresolveRuleFixedCol) return true;
+  auto allowedOffInInitialSweep = [&](const HighsInt rule) {
+    if (rule == kPresolveRuleEmptyRow) return true;
+    if (rule == kPresolveRuleSingletonRow) return true;
+    if (rule == kPresolveRuleRedundantRow) return true;
+    if (rule == kPresolveRuleEmptyCol) return true;
+    if (rule == kPresolveRuleFixedCol) return true;
     return false;
   };
 
@@ -409,65 +444,59 @@ void HPresolve::chooseRules() {
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  "Permitted suppression of presolve rules via "
                  "presolve_rule_off option:\n");
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++)
-      logRule(rule_type);
+    for (HighsInt rule = kPresolveRuleMin; rule < kPresolveRuleCount; rule++)
+      logRule(rule);
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  " * Only in initial sweep\n");
   }
 
-  if (options->presolve_light == kHighsOnString) {
-    // Switch off the rules not used in presolve_light mode
-    allow_rule_[kPresolveRuleDominatedCol] = false;
-    allow_rule_[kPresolveRuleDependentEquations] = false;
-    allow_rule_[kPresolveRuleDependentFreeCols] = false;
-    allow_rule_[kPresolveRuleAggregator] = false;
-    allow_rule_[kPresolveRuleParallelRowsAndCols] = false;
-    allow_rule_[kPresolveRuleSparsify] = false;
-    allow_rule_[kPresolveRuleProbing] = false;
-    allow_rule_[kPresolveRuleEnumeration] = false;
-    allow_rule_[kPresolveRuleDualFixing] = false;
-    allow_rule_[kPresolveRuleZeroCostSingleton] = false;
-    allow_rule_[kPresolveRuleColStuffing] = false;
-    allow_rule_[kPresolveRuleFourierMotzkin] = false;
-    allow_rule_[kPresolveRuleImplAwareConstrPropagation] = false;
+  // Set the pre-defined rules on/off according to the mode
+  if (options->presolve_mode == kPresolveModeDefault) {
+    // By default all presolve rules are allowed, but subsets for
+    // specific solvers (esp PDLP) can be set
+    if (usePdlp(options->solver)) {
+      setRulesForLightMode();
+    } else {
+      setRulesForFullMode();
+    }
+  } else if (options->presolve_mode == kPresolveModeInitialSweep) {
+    setRulesForInitialSweepMode();
+  } else if (options->presolve_mode == kPresolveModeLight) {
+    setRulesForLightMode();
+  } else if (options->presolve_mode == kPresolveModeFull) {
+    setRulesForFullMode();
+  } else {
+    highsLogUser(options->log_options, HighsLogType::kError,
+                 "Unrecognised presolve mode %d\n",
+                 int(options->presolve_mode));
+    assert(1 == 0);
   }
-
+  // Possibly switch off specific rules defined by the user via
+  // presolve_rule_off
   if (options->presolve_rule_off) {
-    // Some presolve rules are off
-    //
-    // Transform options->presolve_rule_off into logical settings in
+    // Transform presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
     if (!silent)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "Presolve rules switched off:\n");
+    // Keep track of whether to add the qualifier "* Only in initial
+    // sweep" to the logging!
     bool off_in_initial_sweep = false;
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++) {
-      HighsInt bit = 1 << rule_type;
-      // Identify whether this rule is allowed
+    for (HighsInt rule = kPresolveRuleMin; rule < kPresolveRuleCount; rule++) {
+      HighsInt bit = 1 << rule;
       if (!(options->presolve_rule_off & bit)) continue;
-      if (rule_type != kPresolveRuleDominatedCol) {
-        off_in_initial_sweep =
-            allowedOffInInitialSweep(rule_type) || off_in_initial_sweep;
-        allow_rule_[rule_type] = false;
-        if (!silent) logRule(rule_type);
-      } else {
-        // This is a rule that cannot be switched off so, if an
-        // attempt is made, don't allow it to be off and possibly
-        // comment negatively
-        if (!silent)
-          highsLogUser(options->log_options, HighsLogType::kWarning,
-                       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
-                       int(rule_type), int(rule_type), int(bit),
-                       utilPresolveRuleTypeToString(rule_type).c_str());
-      }
+      off_in_initial_sweep =
+          allowedOffInInitialSweep(rule) || off_in_initial_sweep;
+      allow_rule_[rule] = false;
+      if (!silent) logRule(rule);
     }
     if (!silent && off_in_initial_sweep)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    " * Only in initial sweep\n");
   }
 
+  // Finally switch off rules that are incompatible with dual or basis
+  // postsolve
   may_require_basis_postsolve_ = false;
   may_require_dual_postsolve_ = false;
 

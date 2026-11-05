@@ -78,6 +78,14 @@ class HighsCliqueTable {
   std::vector<HighsHashTree<HighsInt, HighsInt>> invertedHashList;
   std::vector<HighsHashTree<HighsInt>> invertedHashListSizeTwo;
   HighsHashTable<std::pair<CliqueVar, CliqueVar>, HighsInt> sizeTwoCliques;
+  // the clique table may contain several size-two cliques on the same edge;
+  // sizeTwoCliques stores one of them, and all of them are kept in a doubly
+  // linked list (indexed by clique id, -1 marks the ends)
+  struct SizeTwoLinks {
+    HighsInt prev;
+    HighsInt next;
+  };
+  std::vector<SizeTwoLinks> sizeTwoLinks;
 
   std::set<std::pair<HighsInt, HighsInt>> freespaces;
   std::vector<HighsInt> freeslots;
@@ -162,6 +170,12 @@ class HighsCliqueTable {
   void processInfeasibleVertices(HighsDomain& domain);
 
   void propagateAndCleanup(HighsDomain& globaldom);
+
+  // add / remove a size-two clique to / from the cliques on its edge; do
+  // nothing for other cliques
+  void addSizeTwoClique(HighsInt cliqueid);
+
+  void removeSizeTwoClique(HighsInt cliqueid);
 
   void queryNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
                           int64_t& numNeighbourhoodqueries, CliqueVar v,

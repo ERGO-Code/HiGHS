@@ -1,0 +1,62 @@
+name: build-bazel-cuda
+
+# Compile-only CI for the Bazel CUDA build (--//:cupdlp_gpu).
+#
+# This job runs inside an official CUDA devel container and only *compiles and
+# links* the GPU build of cuPDLP / HiPDLP with Bazel. It does NOT execute any
+# GPU code: the GitHub-hosted runners have no NVIDIA GPU. Its purpose is to
+# catch Bazel GPU build regressions (missing deps / headers on the //:cupdlp
+# cuda_library) that are invisible to the CPU-only Bazel jobs.
+
+on:
+  push:
+    paths:
+      - 'highs/pdlp/**'
+      - 'BUILD.bazel'
+      - 'MODULE.bazel'
+      - '.bazelrc'
+      - '.github/workflows/build-bazel-cuda.yml'
+  pull_request:
+    paths:
+      - 'highs/pdlp/**'
+      - 'BUILD.bazel'
+      - 'MODULE.bazel'
+      - '.bazelrc'
+      - '.github/workflows/build-bazel-cuda.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bazel-cuda-compile:
+    runs-on: ubuntu-latest
+    container:
+      # The devel image bundles nvcc, cuBLAS and cuSPARSE under /usr/local/cuda
+      image: nvidia/cuda:13.0.2-devel-ubuntu24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential git curl ca-certificates python3 zlib1g-dev
+          curl -fsSL -o /usr/local/bin/bazel \
+            https://github.com/bazelbuild/bazelisk/releases/download/v1.30.0/bazelisk-linux-amd64
+          chmod +x /usr/local/bin/bazel
+          bazel version
+          nvcc --version
+
+      - name: Build (compile + link, no GPU execution)
+        shell: bash
+        run: |
+          export CUDA_PATH=/usr/local/cuda
+          # //:cupdlp is named explicitly so the job fails, rather than silently
+          # skipping the CUDA target, if rules_cuda does not find the toolkit.
+          bazel build \
+            --//:cupdlp_gpu \
+            --@rules_cuda//cuda:archs=sm_89 \
+            //:cupdlp //...

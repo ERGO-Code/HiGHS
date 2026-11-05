@@ -31,6 +31,46 @@ sortedEdge(HighsCliqueTable::CliqueVar v1, HighsCliqueTable::CliqueVar v2) {
   return std::make_pair(v1, v2);
 }
 
+void HighsCliqueTable::addSizeTwoClique(HighsInt cliqueid) {
+  HighsInt start = cliques[cliqueid].start;
+  if (cliques[cliqueid].end - start != 2) return;
+  auto edge = sortedEdge(cliqueentries[start], cliqueentries[start + 1]);
+  HighsInt* sizeTwoCliqueId = sizeTwoCliques.find(edge);
+  if (sizeTwoCliqueId == nullptr) {
+    // first clique on this edge
+    sizeTwoCliques.insert(edge, cliqueid);
+    sizeTwoLinks[cliqueid] = SizeTwoLinks{-1, -1};
+    return;
+  }
+  // insert the clique after the stored one
+  HighsInt prev = *sizeTwoCliqueId;
+  HighsInt next = sizeTwoLinks[prev].next;
+  sizeTwoLinks[cliqueid] = SizeTwoLinks{prev, next};
+  sizeTwoLinks[prev].next = cliqueid;
+  if (next != -1) sizeTwoLinks[next].prev = cliqueid;
+}
+
+void HighsCliqueTable::removeSizeTwoClique(HighsInt cliqueid) {
+  HighsInt start = cliques[cliqueid].start;
+  if (cliques[cliqueid].end - start != 2) return;
+  HighsInt prev = sizeTwoLinks[cliqueid].prev;
+  HighsInt next = sizeTwoLinks[cliqueid].next;
+  if (prev != -1) {
+    sizeTwoLinks[prev].next = next;
+  } else {
+    // the clique is the stored one, so store the next one if there is one
+    auto edge = sortedEdge(cliqueentries[start], cliqueentries[start + 1]);
+    HighsInt* sizeTwoCliqueId = sizeTwoCliques.find(edge);
+    assert(sizeTwoCliqueId != nullptr && *sizeTwoCliqueId == cliqueid);
+    if (next != -1)
+      *sizeTwoCliqueId = next;
+    else
+      sizeTwoCliques.erase(edge);
+  }
+  if (next != -1) sizeTwoLinks[next].prev = prev;
+  sizeTwoLinks[cliqueid] = SizeTwoLinks{-1, -1};
+}
+
 void HighsCliqueTable::unlink(HighsInt pos, HighsInt cliqueid) {
   assert(pos >= 0);
   --numcliquesvar[cliqueentries[pos].index()];
@@ -339,6 +379,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
   if (freeslots.empty()) {
     cliqueid = cliques.size();
     cliques.emplace_back();
+    sizeTwoLinks.push_back(SizeTwoLinks{-1, -1});
   } else {
     cliqueid = freeslots.back();
     freeslots.pop_back();
@@ -466,11 +507,7 @@ void HighsCliqueTable::doAddClique(const CliqueVar* cliquevars,
 
   HighsInt cliqueLen = cliques[cliqueid].end - cliques[cliqueid].start;
   numEntries += cliqueLen;
-  if (cliqueLen == 2)
-    sizeTwoCliques.insert(
-        sortedEdge(cliqueentries[cliques[cliqueid].start],
-                   cliqueentries[cliques[cliqueid].start + 1]),
-        cliqueid);
+  addSizeTwoClique(cliqueid);
 }
 struct ThreadNeighbourhoodQueryData {
   int64_t numQueries;
@@ -630,11 +667,9 @@ void HighsCliqueTable::replaceLiteral(const CliqueVar substitutedVar,
     if (cliqueentries[otherPos] == substitutedVar) std::swap(pos, otherPos);
 
     replaceListSizeTwo.insert(cliqueid);
+    removeSizeTwoClique(cliqueid);
     cliqueentries[pos] = replacementVar;
-
-    sizeTwoCliques.erase(sortedEdge(substitutedVar, cliqueentries[otherPos]));
-    sizeTwoCliques.insert(sortedEdge(replacementVar, cliqueentries[otherPos]),
-                          cliqueid);
+    addSizeTwoClique(cliqueid);
   });
 
   substListSizeTwo.clear();
@@ -824,10 +859,7 @@ void HighsCliqueTable::removeClique(HighsInt cliqueid, bool recordDeletedRow) {
   assert(start != -1);
   HighsInt end = cliques[cliqueid].end;
   HighsInt len = end - start;
-  if (len == 2) {
-    sizeTwoCliques.erase(
-        sortedEdge(cliqueentries[start], cliqueentries[start + 1]));
-  }
+  removeSizeTwoClique(cliqueid);
 
   for (HighsInt i = start; i != end; ++i) {
     unlink(i, cliqueid);
