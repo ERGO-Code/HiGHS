@@ -1732,6 +1732,7 @@ class Highs {
   bool optimizeModelPreChecks(Context& context);
   bool optimizeModelApplyMods(Context& context);
   void optimizeModelUndoMods(Context& context, HighsStatus& return_status);
+  bool optimizeModelCompleteSolution(Context& context);
   bool optimizeModelPrepare(Context& context);
   void optimizeModelQp(Context& context);
   void optimizeModelMip(Context& context);

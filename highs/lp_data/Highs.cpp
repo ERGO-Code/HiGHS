@@ -1334,25 +1334,9 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
   // returnFromOptimizeModel() is reached, by optimizeModelUndoMods()
   if (optimizeModelApplyMods(context)) return context.status;
 
-  if (model_.isMip() && solution_.value_valid) {
-    // Determine whether the current (partial) solution of a MIP is
-    // feasible and, if not, try to complete the assignment with
-    // integer values (if necessary) and continuous values (if
-    // necessary) to achieve a feasible solution. Valuable in the case
-    // where users make a heuristic (partial) assignment of discrete
-    // variables
-    //
-    // Since completeSolutionFromDiscreteAssignment() may require a
-    // call to optimizeModel(), optimize_model_running_ cannot yet be
-    // set. That call sees the model with mods already applied, so
-    // doesn't apply or undo any itself
-    HighsStatus call_status = completeSolutionFromDiscreteAssignment();
-    if (call_status != HighsStatus::kOk) {
-      context.status = HighsStatus::kError;
-      optimizeModelUndoMods(context, context.status);
-      return context.status;
-    }
-  }
+  // This may call optimizeModel(), so optimize_model_running_ cannot
+  // yet be set
+  if (optimizeModelCompleteSolution(context)) return context.status;
 
   // From here on, preliminary stuff has completed and optimizeModel is
   // considered to be running. Nested calls to optimizeModel (for example from
@@ -1476,6 +1460,25 @@ bool Highs::optimizeModelApplyMods(Context& context) {
   if (made_semi_variable_mods) recordMods();
 
   context.status = HighsStatus::kOk;
+  return false;
+}
+
+bool Highs::optimizeModelCompleteSolution(Context& context) {
+  if (!model_.isMip() || !solution_.value_valid) return false;
+  // Determine whether the current (partial) solution of a MIP is
+  // feasible and, if not, try to complete the assignment with
+  // integer values (if necessary) and continuous values (if
+  // necessary) to achieve a feasible solution. Valuable in the case
+  // where users make a heuristic (partial) assignment of discrete
+  // variables
+  //
+  // The nested call to optimizeModel() sees the model with mods
+  // already applied, so doesn't apply or undo any itself
+  if (completeSolutionFromDiscreteAssignment() != HighsStatus::kOk) {
+    context.status = HighsStatus::kError;
+    optimizeModelUndoMods(context, context.status);
+    return true;
+  }
   return false;
 }
 

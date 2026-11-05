@@ -24,6 +24,11 @@ change behaviour.
    - `optimizeModelPreChecks`, `optimizeModelPrepare`,
      `optimizeModelQp`, `optimizeModelMip`, `optimizeModelLp`,
      `lpICrash`, `lpReportTimes`.
+   - `optimizeModelCompleteSolution`, holding the call to
+     `completeSolutionFromDiscreteAssignment()` for a MIP with a user
+     solution, so that `calledOptimizeModel()` only calls phases. It
+     must stay before the point where the solve is marked as running,
+     since it may call `optimizeModel()`.
    - Convention: a `bool` return of `true` means stop, with
      `context.status` set.
    - Use the final names (`lp*`, `Context`, `LpState`) from the
@@ -72,7 +77,8 @@ change behaviour.
 7. **Reorder the mods.** This is the main change in behaviour.
    - `optimizeModelApplyMods()` and `optimizeModelUndoMods()` handle
      infinite costs and semi-variables before
-     `completeSolutionFromDiscreteAssignment()`.
+     `optimizeModelCompleteSolution()`, which undoes them itself if
+     completing the solution fails.
    - `model_mods_applied_` stops the nested `optimizeModel()` call
      from applying or undoing them.
    - The undo runs in `returnFromOptimizeModel()`, on the early exits
