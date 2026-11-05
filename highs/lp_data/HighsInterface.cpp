@@ -535,11 +535,6 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // addRows is fundamentally different from addCols, since the new
   // matrix data are held row-wise, so we have to insert data into the
   // column-wise matrix of the LP.
-  if (kExtendInvertWhenAddingRows) {
-    if (ekk_instance_.status_.has_nla)
-      ekk_instance_.debugNlaCheckInvert("Start of Highs::addRowsInterface",
-                                        kHighsDebugLevelExpensive + 1);
-  }
   HighsStatus return_status = HighsStatus::kOk;
   HighsOptions& options = options_;
   if (ext_num_new_row < 0) return HighsStatus::kError;

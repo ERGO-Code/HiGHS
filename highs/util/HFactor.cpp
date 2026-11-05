@@ -240,6 +240,12 @@ void HFactor::setupGeneral(
   use_original_HFactor_logic = use_original_HFactor_logic_;
   update_method = update_method_;
 
+  allocateWorkspace();
+}
+
+void HFactor::allocateWorkspace() {
+  workspace_num_row_ = num_row;
+  workspace_num_basic_ = num_basic;
   // Allocate for working buffer
   iwork.reserve(num_row * 2);
   dwork.assign(num_row, 0);
@@ -364,6 +370,10 @@ HighsInt HFactor::build(HighsTimerClock* factor_timer_clock_pointer) {
   const bool report_lu = false;
   // Ensure that the A matrix is valid for factorization
   assert(this->a_matrix_valid);
+  // Rows may have been added (HFactor::addRows) since the workspace
+  // was allocated, so ensure it's dimensioned for the current matrix
+  if (workspace_num_row_ != num_row || workspace_num_basic_ != num_basic)
+    allocateWorkspace();
   FactorTimer factor_timer;
   // Possibly use the refactorization information!
   if (refactor_info_.use) {

@@ -30,7 +30,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   assert(kExtendInvertWhenAddingRows);
   HighsInt num_new_row = ar_matrix->num_row_;
   HighsInt new_num_row = num_row + num_new_row;
-  printf("Adding %" HIGHSINT_FORMAT
+  if (0) printf("Adding %" HIGHSINT_FORMAT
          " new rows to HFactor instance: increasing dimension from "
          "%" HIGHSINT_FORMAT " to %" HIGHSINT_FORMAT " \n",
          num_new_row, num_row, new_num_row);
@@ -134,8 +134,12 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   for (HighsInt iCol = num_row - 1; iCol >= 0; iCol--) {
     const HighsInt from_el = l_start[iCol + 1];
     l_start[iCol + 1] = to_el;
-    for (HighsInt iEl = new_lr_cols.start_[iCol + 1] - 1;
-         iEl >= new_lr_cols.start_[iCol]; iEl--) {
+    // L is stored by pivot order: storage column iCol holds the
+    // multipliers for pivot row l_pivot_index[iCol], and v is
+    // indexed by row
+    const HighsInt pivot_row = l_pivot_index[iCol];
+    for (HighsInt iEl = new_lr_cols.start_[pivot_row + 1] - 1;
+         iEl >= new_lr_cols.start_[pivot_row]; iEl--) {
       to_el--;
       l_index[to_el] = num_row + new_lr_cols.index_[iEl];
       l_value[to_el] = new_lr_cols.value_[iEl];
@@ -185,7 +189,7 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
   // Need to refer to just the new UR vectors
   HighsInt ur_cur_num_vec = ur_start.size();
   HighsInt ur_new_num_vec = ur_cur_num_vec + num_new_row;
-  printf("\nUpdating UR vectors %d - %d\n", (int)ur_cur_num_vec,
+  if (0) printf("\nUpdating UR vectors %d - %d\n", (int)ur_cur_num_vec,
          (int)ur_new_num_vec - 1);
   // UR pointer
   //
@@ -213,10 +217,10 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     HighsInt gap = ur_temp[iRow - 1] + ur_stuff_size;
     ur_start[iRow] = iStart + gap;
     iStart += gap;
-    printf("ur_start[%d] = %d; gap = %d; iStart = %d\n", (int)iRow,
+    if (0) printf("ur_start[%d] = %d; gap = %d; iStart = %d\n", (int)iRow,
            (int)ur_start[iRow], (int)gap, (int)iStart);
   }
-  printf("ur_count_size = %d; iStart%d\n", (int)ur_count_size, (int)iStart);
+  if (0) printf("ur_count_size = %d; iStart%d\n", (int)ur_count_size, (int)iStart);
   // Lose the start for the fictitious ur_new_num_vec'th row
   ur_start.resize(ur_new_num_vec);
   // Resize ur_lastp and initialise its new entries to be the ur_start
@@ -226,6 +230,11 @@ void HFactor::addRows(const HighsSparseMatrix* ar_matrix) {
     ur_lastp[iRow] = ur_start[iRow];
   //
   // Increase the number of rows in HFactor
+  // For the simplex NLA all rows have a basic variable, so the
+  // number of basic variables grows with the rows. The (build)
+  // workspace is reallocated lazily at the next build()
+  if (num_basic == num_row) num_basic += num_new_row;
   num_row += num_new_row;
+  inv_num_row = 1.0 / num_row;
   //  reportLu(kReportLuBoth, true);
 }

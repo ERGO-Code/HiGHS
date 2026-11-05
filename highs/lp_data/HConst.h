@@ -12,6 +12,7 @@
 #define LP_DATA_HCONST_H_
 
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <string>
 
@@ -47,7 +48,9 @@ const double kExcessivelyLargeIntegerBoundValue = 1e5;
 
 const HighsInt kNoThreadInstance = -1;
 const bool kAllowDeveloperAssert = false;
-const bool kExtendInvertWhenAddingRows = false;
+// Experimental: env HIGHS_EXTEND_INVERT_OFF disables
+const bool kExtendInvertWhenAddingRows =
+    std::getenv("HIGHS_EXTEND_INVERT_OFF") == nullptr;
 
 enum class HighsLogType { kInfo = 1, kDetailed, kVerbose, kWarning, kError };
 

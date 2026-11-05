@@ -330,6 +330,9 @@ class HFactor {
   // Information required to perform refactorization of the current
   // basis
   RefactorInfo refactor_info_;
+  HighsInt workspace_num_row_ = -1;
+  HighsInt workspace_num_basic_ = -1;
+  void allocateWorkspace();
 
   // Properties of data held in HFactor.h
   HighsInt basis_matrix_num_el;

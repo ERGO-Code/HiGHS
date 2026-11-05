@@ -335,13 +335,10 @@ void HEkk::updateStatus(LpAction action) {
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kNewRows:
-      if (kExtendInvertWhenAddingRows) {
-        // Just clear Ekk data
-        this->clearEkkData();
-      } else {
-        // Clear everything
-        this->clear();
-      }
+      // Clear everything. (When rows are added and the INVERT is
+      // extended, HEkk::addRows clears just the Ekk data.) Note that
+      // changeCoeff also uses this action, and then INVERT is invalid
+      this->clear();
       //    this->invalidateBasisArtifacts();
       break;
     case LpAction::kDelCols:
@@ -1285,29 +1282,59 @@ void HEkk::addCols(const HighsLp& lp,
   this->updateStatus(LpAction::kNewCols);
 }
 
+
 void HEkk::addRows(const HighsLp& lp,
                    const HighsSparseMatrix& scaled_ar_matrix) {
-  // Should be extendSimplexLpRandomVectors
-  //  if (valid_simplex_basis)
-  //    appendBasicRowsToBasis(simplex_lp, simplex_basis, XnumNewRow);
-  //  ekk_instance_.updateStatus(LpAction::kNewRows);
-  //  if (valid_simplex_lp) {
-  //    simplex_lp.num_row_ += XnumNewRow;
-  //    ekk_instance_.initialiseSimplexLpRandomVectors();
-  //  }
-  //  if (valid_simplex_lp)
-  //    assert(ekk_instance_.lp_.dimensionsOk("addRows - simplex"));
-  if (kExtendInvertWhenAddingRows && this->status_.has_nla) {
-    this->simplex_nla_.addRows(&lp, basis_.basicIndex_.data(),
-                               &scaled_ar_matrix);
-    setNlaPointersForTrans(lp);
-    this->debugNlaCheckInvert("HEkk::addRows - on entry",
-                              kHighsDebugLevelExpensive + 1);
+  const HighsInt old_num_row = this->lp_.num_row_;
+  const bool extend_invert = kExtendInvertWhenAddingRows &&
+                             this->status_.has_nla &&
+                             this->status_.has_invert &&
+                             this->status_.initialised_for_new_lp;
+  if (!extend_invert) {
+    this->lp_.num_row_ = lp.num_row_;
+    this->updateStatus(LpAction::kNewRows);
+    return;
   }
+  // Extend the INVERT: the new rows have basic slacks, so
+  // [B 0; R I] = [L 0; R U^{-1} I][U 0; 0 I]
+  this->simplex_nla_.addRows(&lp, basis_.basicIndex_.data(),
+                             &scaled_ar_matrix);
+  setNlaPointersForTrans(lp);
   // Update the number of rows in the simplex LP so that it's
   // consistent with simplex basis information
   this->lp_.num_row_ = lp.num_row_;
-  this->updateStatus(LpAction::kNewRows);
+  //
+  // Clear the Ekk data and its status, but not the NLA, basis or
+  // the initialised_for_new_lp status, so that the extended INVERT
+  // is used. Previously only the data were cleared, leaving
+  // has_ar_matrix and has_fresh_rebuild true, so the next solve
+  // used an empty row-wise matrix and stale primal values
+  const bool had_dse = this->status_.has_dual_steepest_edge_weights &&
+                       (HighsInt)this->dual_edge_weight_.size() == old_num_row;
+  this->clearEkkData();
+  this->clearEkkDataStatus();
+  // clearEkkData() zeroes the simplex strategy settings (giving
+  // Dantzig pricing and column PRICE) and the random vectors, but
+  // initialiseEkk() won't restore them since initialised_for_new_lp
+  // is retained, so restore them here
+  assert(this->lp_.num_col_ == lp.num_col_);
+  this->setSimplexOptions();
+  this->initialiseControl();
+  this->initialiseSimplexLpRandomVectors();
+  if (had_dse) {
+    // New rows have basic slacks. Their exact DSE weights are
+    // 1+||B^{-T}r_B||^2, obtained by BTRAN with the extended INVERT
+    this->dual_edge_weight_.resize(lp.num_row_, 1.0);
+    HVector row_ep;
+    row_ep.setup(lp.num_row_);
+    for (HighsInt iRow = old_num_row; iRow < lp.num_row_; iRow++)
+      this->dual_edge_weight_[iRow] =
+          computeDualSteepestEdgeWeight(iRow, row_ep);
+    this->status_.has_dual_steepest_edge_weights = true;
+  } else {
+    this->dual_edge_weight_.clear();
+  }
+  this->scattered_dual_edge_weight_.resize(lp.num_col_ + lp.num_row_);
 }
 
 void HEkk::deleteCols(const HighsIndexCollection& index_collection) {
