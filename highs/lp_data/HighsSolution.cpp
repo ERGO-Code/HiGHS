@@ -2330,13 +2330,12 @@ HighsStatus assessUserColValues(const HighsLp& lp, const HighsOptions& options,
           int(iX), int(iCol), int(lp.num_col_));
       return HighsStatus::kError;
     }
-    // Count infeasibilities, and record that this value has been set,
-    // so future duplicates can be spotted
+    // Count duplicates, and record that this value has been set, so
+    // future duplicates can be spotted
     if (is_set[iCol]) num_duplicates++;
     is_set[iCol] = true;
     // Don't test undefined values for feasibility!
     if (!perform_feasibility_check || value[iX] == kHighsUndefined) continue;
-
     double col_infeasibility;
     double integer_infeasibility;
     HighsVarType type =
