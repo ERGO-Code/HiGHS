@@ -96,9 +96,36 @@ class HighsCliqueTable {
   std::vector<HighsInt> deletedrows;
   std::vector<std::pair<HighsInt, CliqueVar>> cliqueextensions;
   std::vector<HighsBool> iscandidate;
-  // position of each literal in the vector that is currently partitioned into
-  // cliques (-1 if absent)
-  std::vector<HighsInt> literalPosition;
+  // position of each clique variable (by index()) in the vector that is being
+  // partitioned into cliques, -1 for variables that are not being
+  // partitioned; scratch storage of the partition functions, not thread-safe
+  std::vector<HighsInt> clqVarPos;
+  // view of the clique variables that are being partitioned, together with
+  // their positions (pos[entries[i].index()] == i); sets the positions on
+  // construction and resets them on destruction
+  struct IndexedCliqueVars {
+    std::vector<CliqueVar>& entries;
+    std::vector<HighsInt>& pos;
+
+    IndexedCliqueVars(std::vector<CliqueVar>& entries,
+                      std::vector<HighsInt>& pos)
+        : entries(entries), pos(pos) {
+      setPositions(0, static_cast<HighsInt>(entries.size()));
+    }
+    ~IndexedCliqueVars() {
+      for (CliqueVar v : entries) pos[v.index()] = -1;
+    }
+    // set the positions of a range of entries, e.g. after sorting it
+    void setPositions(HighsInt start, HighsInt end) {
+      for (HighsInt i = start; i < end; ++i) pos[entries[i].index()] = i;
+    }
+    // swap two entries and update their positions
+    void swap(HighsInt i, HighsInt j) {
+      std::swap(entries[i], entries[j]);
+      pos[entries[i].index()] = i;
+      pos[entries[j].index()] = j;
+    }
+  };
   std::vector<HighsBool> colDeleted;
   std::vector<uint32_t> cliquehits;
   std::vector<HighsInt> cliquehitinds;
@@ -184,14 +211,13 @@ class HighsCliqueTable {
 
   bool findNeighbourhoodByCliques(std::vector<HighsInt>& neighbourhoodInds,
                                   int64_t& numNeighbourhoodqueries, CliqueVar v,
-                                  HighsInt N,
-                                  const std::vector<HighsInt>& literalPosition,
-                                  HighsInt offset) const;
+                                  const IndexedCliqueVars& vars, HighsInt start,
+                                  HighsInt end) const;
 
-  void setLiteralPositions(const std::vector<CliqueVar>& clqVars,
-                           HighsInt start, HighsInt end);
-
-  void clearLiteralPositions(const std::vector<CliqueVar>& clqVars);
+  HighsInt partitionNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
+                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
+                                  IndexedCliqueVars& vars, HighsInt start,
+                                  HighsInt end) const;
 
   void recordSubstitution(Substitution substitution);
 
@@ -199,12 +225,12 @@ class HighsCliqueTable {
 
   template <bool Sort = true, typename Comparator>
   HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
-                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        IndexedCliqueVars& vars, HighsInt seedPos,
                         HighsInt extensionEnd,
                         const Comparator& candidateOrder);
 
   HighsInt extendClique(std::vector<HighsInt>& neighbourhoodInds,
-                        std::vector<CliqueVar>& clqVars, HighsInt seedPos,
+                        IndexedCliqueVars& vars, HighsInt seedPos,
                         HighsInt extensionEnd);
 
  public:
@@ -225,7 +251,7 @@ class HighsCliqueTable {
     invertedHashList.resize(2 * ncols);
     invertedHashListSizeTwo.resize(2 * ncols);
     numcliquesvar.resize(2 * ncols, 0);
-    literalPosition.resize(2 * ncols, -1);
+    clqVarPos.resize(2 * ncols, -1);
     colsubstituted.resize(ncols);
     colDeleted.resize(ncols, false);
   }
@@ -240,11 +266,9 @@ class HighsCliqueTable {
 
   int64_t& getNumNeighbourhoodQueries() { return numNeighbourhoodQueries; }
 
-  HighsInt partitionNeighbourhood(
-      std::vector<HighsInt>& neighbourhoodInds,
-      int64_t& numNeighbourhoodqueries, CliqueVar v, CliqueVar* q, HighsInt N,
-      std::vector<HighsInt>* literalPosition = nullptr,
-      HighsInt offset = 0) const;
+  HighsInt partitionNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
+                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
+                                  CliqueVar* q, HighsInt N) const;
 
   HighsInt shrinkToNeighbourhood(std::vector<HighsInt>& neighbourhoodInds,
                                  int64_t& numNeighbourhoodqueries, CliqueVar v,
