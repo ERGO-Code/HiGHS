@@ -2347,29 +2347,32 @@ TEST_CASE("issue-3545", "[highs_test_presolve]") {
   lp.a_matrix_.value_ = {1, 1, 1, -1};
   HighsInt z = 2;
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.setOptionValue("presolve_rule_logging", true) == HighsStatus::kOk);
-  REQUIRE(h.setOptionValue("presolve_mode", kPresolveModeInitialSweep) == HighsStatus::kOk);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
-  
+
+  // Get the optimal objective value
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   double optimal_objective_value = h.getObjectiveValue();
   REQUIRE(h.clearSolver() == HighsStatus::kOk);
+
+  REQUIRE(h.setOptionValue("presolve_mode", kPresolveModeInitialSweep) ==
+          HighsStatus::kOk);
+
   REQUIRE(h.presolve() == HighsStatus::kOk);
   // Presolve with just initial sweep fixes the empty column (z) at
   // its lower bound, so the presolved LP should have an offset of 6 =
   // cost(z)*lower(z)
   HighsLp presolved_lp = h.getPresolvedLp();
-  REQUIRE(presolved_lp.offset_ == lp.col_cost_[z]*lp.col_lower_[z]);
+  REQUIRE(presolved_lp.offset_ == lp.col_cost_[z] * lp.col_lower_[z]);
   REQUIRE(h.passModel(presolved_lp) == HighsStatus::kOk);
   // The absence of the offset leads to an incorrect optimal objective
   // if the presolved LP is solved
-  REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) ==
+          HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(h.getObjectiveValue() == optimal_objective_value);
- 
-  h.resetThreadScheduler(true);
 
+  h.resetThreadScheduler(true);
 }
