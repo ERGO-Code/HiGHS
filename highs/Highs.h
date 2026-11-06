@@ -1670,6 +1670,15 @@ class Highs {
   // Highs::optimizeModel() and, assuming that this is always done, it checks
   // whether Highs::optimizeModel() is called recursively.
   bool called_return_from_optimize_model = true;
+
+  // Set while a user callback is running, so that methods that
+  // modify the model or the Highs object can refuse to be called
+  // from within it
+  bool in_user_callback_ = false;
+  // Returns true, after logging an error, if called from within a
+  // user callback
+  bool calledFromCallback(const char* method) const;
+
   HighsInt debug_optimize_call_num_ = 0;
 
   void reportModelStats() const;

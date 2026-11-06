@@ -1205,6 +1205,10 @@ HighsStatus Highs::presolve() {
 }
 
 HighsStatus Highs::run() {
+  // Prevent run() being called from within a user callback, before
+  // anything is changed or logged
+  if (calledFromCallback(__func__)) return HighsStatus::kError;
+
   this->logHeader();
   // Level 0 of Highs::run()
   // Action the file operations associated with running HiGHS, and
@@ -2813,9 +2817,27 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
 
 HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
                                void* user_callback_data) {
+  // Replacing the user callback while it is running is undefined
+  // behaviour
+  if (calledFromCallback(__func__)) return HighsStatus::kError;
+
   this->logHeader();
   this->callback_.clear();
-  this->callback_.user_callback = std::move(user_callback);
+
+  // Wrap a non-null user callback so that in_user_callback_ is set
+  // while it runs and reset on exit.
+  if (user_callback) {
+    this->callback_.user_callback =
+        [this, user_callback](int callback_type, const std::string& message,
+                              const HighsCallbackOutput* data_out,
+                              HighsCallbackInput* data_in,
+                              void* user_callback_data_) {
+          HighsUndoStack undo;
+          undo.set(in_user_callback_, true);
+          user_callback(callback_type, message, data_out, data_in,
+                        user_callback_data_);
+        };
+  }
   this->callback_.user_callback_data = user_callback_data;
 
   options_.log_options.user_callback = this->callback_.user_callback;
@@ -2826,24 +2848,29 @@ HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
 
 HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
                                void* user_callback_data) {
-  this->logHeader();
-  this->callback_.clear();
-  this->callback_.user_callback = [c_callback](
-                                      int a, const std::string& b,
-                                      const HighsCallbackOutput* cb_out,
-                                      HighsCallbackInput* cb_in, void* e) {
-    HighsCallbackDataOut cc_out = static_cast<HighsCallbackDataOut>(*cb_out);
-    HighsCallbackDataIn cc_in;
-    if (cb_in) cc_in = static_cast<HighsCallbackDataIn>(*cb_in);
-    c_callback(a, b.c_str(), &cc_out, &cc_in, e);
-    if (cb_in) *cb_in = cc_in;  // copy the data in
-  };
-  this->callback_.user_callback_data = user_callback_data;
+  // Convert the C callback to a HighsCallbackFunctionType, and use
+  // the overload above, so that it is wrapped in the same way. A null
+  // C callback gives a null HighsCallbackFunctionType, so that
+  // startCallback() refuses to start it
+  HighsCallbackFunctionType user_callback = nullptr;
+  if (c_callback)
+    user_callback = [c_callback](int a, const std::string& b,
+                                 const HighsCallbackOutput* cb_out,
+                                 HighsCallbackInput* cb_in, void* e) {
+      HighsCallbackDataOut cc_out = static_cast<HighsCallbackDataOut>(*cb_out);
+      HighsCallbackDataIn cc_in;
+      if (cb_in) cc_in = static_cast<HighsCallbackDataIn>(*cb_in);
+      c_callback(a, b.c_str(), &cc_out, &cc_in, e);
+      if (cb_in) *cb_in = cc_in;  // copy the data in
+    };
+  return this->setCallback(std::move(user_callback), user_callback_data);
+}
 
-  options_.log_options.user_callback = this->callback_.user_callback;
-  options_.log_options.user_callback_data = this->callback_.user_callback_data;
-  options_.log_options.user_callback_active = false;
-  return HighsStatus::kOk;
+bool Highs::calledFromCallback(const char* method) const {
+  if (!in_user_callback_) return false;
+  highsLogUser(options_.log_options, HighsLogType::kError,
+               "Highs::%s() cannot be called from a callback\n", method);
+  return true;
 }
 
 HighsStatus Highs::startCallback(const int callback_type) {
