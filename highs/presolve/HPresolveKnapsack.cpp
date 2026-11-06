@@ -416,9 +416,14 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     // larger than minWeight (either some single item larger than minWeight or
     // the two smallest items together), then its weight can be increased to
     // capacity - minWeight.
+    // (4) If a larger item (a_i > b /2) cannot fit in a knapsack with
+    // all smaller items (a_i <= b / 2), but can fit in a knapsack with every
+    // small item but the smallest,
+    // then its coefficient can be max(a_i, b - all_small_but_smallest)
     double minWeight = kHighsInf;
     double secondWeight = kHighsInf;
     double secondUniqueMinWeight = kHighsInf;
+    HighsCDouble smallWeightSum = 0;
     for (const auto& term : knapsack.terms) {
       if (term.weight == 0) continue;
       if (term.weight < minWeight) {
@@ -432,10 +437,24 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
         if (term.weight > minWeight)
           secondUniqueMinWeight = std::min(term.weight, secondUniqueMinWeight);
       }
+      if (2 * term.weight - knapsack.capacity <= primal_feastol) {
+        smallWeightSum += term.weight;
+      }
     }
-    HighsCDouble minWeightsCapacityDiff =
+    const HighsCDouble sumMinTwoWeightsCapacityDiff =
         static_cast<HighsCDouble>(minWeight) + secondWeight - knapsack.capacity;
-    if (minWeightsCapacityDiff > primal_feastol) {
+    const HighsCDouble maxProperSubsetSmallSum =
+        smallWeightSum > 0 ? smallWeightSum - minWeight : knapsack.capacity;
+    double newWeightProperSubset =
+        static_cast<double>(knapsack.capacity - maxProperSubsetSmallSum);
+    if (!allIntCoefficients &&
+        newWeightProperSubset + maxProperSubsetSmallSum - knapsack.capacity >
+            0) {
+      // Protect against large coefficient rounding
+      newWeightProperSubset = std::nextafter(newWeightProperSubset, 0.0);
+    }
+    if (sumMinTwoWeightsCapacityDiff > primal_feastol) {
+      // (1)
       if (knapsack.capacity != 1) {
         double newWeightSum = 0;
         for (auto& term : knapsack.terms) {
@@ -460,14 +479,25 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
             knapsack.capacity;
         if (term.weight < knapsack.capacity &&
             weightPlusMinWeightExcess > primal_feastol) {
+          // (2)
           knapsack.weightsum += knapsack.capacity - term.weight;
           term.weight = static_cast<double>(knapsack.capacity);
           changed = true;
         } else if (weightPlusMinWeightExcess < -primal_feastol &&
                    term.weight > knapsack.capacity / 2 &&
                    itemPlusSecondUniqueExcess > primal_feastol) {
+          // (3)
           knapsack.weightsum -= weightPlusMinWeightExcess;
           term.weight = static_cast<double>(knapsack.capacity - minWeight);
+          changed = true;
+        } else if (2 * term.weight - knapsack.capacity > primal_feastol &&
+                   newWeightProperSubset - term.weight > primal_feastol &&
+                   term.weight + smallWeightSum - knapsack.capacity >
+                       primal_feastol) {
+          // (4)
+          knapsack.weightsum +=
+              static_cast<HighsCDouble>(newWeightProperSubset) - term.weight;
+          term.weight = newWeightProperSubset;
           changed = true;
         }
       }
