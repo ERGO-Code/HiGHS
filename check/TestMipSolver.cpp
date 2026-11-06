@@ -2806,3 +2806,31 @@ TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3573", "[highs_test_mip_solver]") {
+  double epsilon = 5e-07; // MIP feasibility/2
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 1};
+  lp.col_lower_ = {2+epsilon , 0};
+  lp.col_upper_ = {5, 5};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {3};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  printf("issue-3573: epsilon = %g\n", epsilon);
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  lp.col_lower_ = {2 , 0};
+  lp.col_upper_ = {5-epsilon, 5};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+
+
+  h.resetThreadScheduler(true);
+}
