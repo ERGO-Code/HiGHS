@@ -58,7 +58,7 @@ jobs:
 
 
   build_macos_arm:
-    runs-on: macos-14  # macos-14 is arm64
+    runs-on: macos-15  # macos-15 is arm64
     steps:
       - uses: actions/checkout@v6
       - name: Build HiGHS

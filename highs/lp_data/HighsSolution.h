@@ -176,4 +176,11 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
                        const HighsInfo& highs_info,
                        const std::string& message = "");
 
+HighsStatus assessUserColValues(const HighsLp& lp, const HighsOptions& options,
+                                const HighsInt num_entries,
+                                const HighsInt* index, const double* value,
+                                const bool perform_feasibility_check = true);
+void assignUserColValues(const HighsInt num_col, std::vector<double>& col_value,
+                         const HighsInt num_entries, const HighsInt* index,
+                         const double* value);
 #endif  // LP_DATA_HIGHSSOLUTION_H_
