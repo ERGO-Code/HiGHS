@@ -403,6 +403,9 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       }
     }
 
+    // (0) If the capacity is less than the largest large item (a_i > b / 2)
+    // combined with the sum of all the small items (a_i < b / 2),
+    // then the capacity can be reduced
     // (1) If the two smallest items can't fit into the knapsack then
     // the row is a clique.
     // (2) If an item cannot fit in a knapsack along with the smallest item,
@@ -413,11 +416,22 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     // capacity - minWeight.
     // (4) If a larger item (a_i > b /2) cannot fit in a knapsack with
     // all smaller items (a_i <= b / 2), but can fit in a knapsack with every
-    // small item but the smallest,
-    // then its coefficient can be max(a_i, b - all_small_but_smallest)
+    // small item but the smallest,then its coefficient can be increased
+    // to max(a_i, b - all_small_but_smallest).
+    // (5) If a larger item (a_i > b / 2) cannot fit in a knapsack
+    // with all small items minus the largest small item (a_i <= b / 2),
+    // then selecting the large item
+    // means that at least two small items can't be selected.
+    // The coefficient is therefore max(a_i, b - all_small_but_two_smallest)
+    // (6) If a larger item can fit in a knapsack with all small items,
+    // then it's coefficient can be increased to
+    // b - all_small
     double minWeight = kHighsInf;
     double secondWeight = kHighsInf;
     double secondUniqueMinWeight = kHighsInf;
+    double maxSmallWeight = 0;
+    double maxLargeWeight = 0;
+    HighsInt numSmall = 0;
     HighsCDouble smallWeightSum = 0;
     for (const auto& term : knapsack.terms) {
       if (term.weight == 0) continue;
@@ -433,7 +447,23 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
           secondUniqueMinWeight = std::min(term.weight, secondUniqueMinWeight);
       }
       if (2 * term.weight - knapsack.capacity <= primal_feastol) {
+        ++numSmall;
+        maxSmallWeight = std::max(maxSmallWeight, term.weight);
         smallWeightSum += term.weight;
+      } else {
+        maxLargeWeight = std::max(maxLargeWeight, term.weight);
+      }
+    }
+    if (maxLargeWeight > 0) {
+      // (0)
+      const HighsCDouble newCapacity = maxLargeWeight + smallWeightSum;
+      double newCapacityDouble = static_cast<double>(newCapacity);
+      if (newCapacityDouble - newCapacity < 0) {
+        newCapacityDouble = std::nextafter(newCapacityDouble, kHighsInf);
+      }
+      if (knapsack.capacity - newCapacityDouble > primal_feastol) {
+        knapsack.capacity = newCapacityDouble;
+        changed = true;
       }
     }
     const HighsCDouble sumMinTwoWeightsCapacityDiff =
@@ -447,6 +477,25 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
             0) {
       // Protect against large coefficient rounding
       newWeightProperSubset = std::nextafter(newWeightProperSubset, 0.0);
+    }
+    const HighsCDouble maxTwoItemLessSubsetSmallSum =
+        numSmall >= 2 ? maxProperSubsetSmallSum - secondWeight
+                      : knapsack.capacity;
+    double newWeightTwoItemLessSubset =
+        static_cast<double>(knapsack.capacity - maxTwoItemLessSubsetSmallSum);
+    if (!allIntCoefficients && newWeightTwoItemLessSubset +
+                                       maxTwoItemLessSubsetSmallSum -
+                                       knapsack.capacity >
+                                   0) {
+      newWeightTwoItemLessSubset =
+          std::nextafter(newWeightTwoItemLessSubset, 0.0);
+    }
+    double newWeightAllSmallIncluded =
+        static_cast<double>(knapsack.capacity - smallWeightSum);
+    if (!allIntCoefficients &&
+        newWeightAllSmallIncluded + smallWeightSum - knapsack.capacity > 0) {
+      newWeightAllSmallIncluded =
+          std::nextafter(newWeightAllSmallIncluded, 0.0);
     }
     if (sumMinTwoWeightsCapacityDiff > primal_feastol) {
       // (1)
@@ -485,15 +534,36 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
           knapsack.weightsum -= weightPlusMinWeightExcess;
           term.weight = static_cast<double>(knapsack.capacity - minWeight);
           changed = true;
-        } else if (2 * term.weight - knapsack.capacity > primal_feastol &&
-                   newWeightProperSubset - term.weight > primal_feastol &&
-                   term.weight + smallWeightSum - knapsack.capacity >
-                       primal_feastol) {
-          // (4)
-          knapsack.weightsum +=
-              static_cast<HighsCDouble>(newWeightProperSubset) - term.weight;
-          term.weight = newWeightProperSubset;
-          changed = true;
+        } else if (2 * term.weight - knapsack.capacity > primal_feastol) {
+          // Term is "large"
+          if (newWeightProperSubset - term.weight > primal_feastol &&
+              term.weight + smallWeightSum - knapsack.capacity >
+                  primal_feastol) {
+            // (4)
+            knapsack.weightsum +=
+                static_cast<HighsCDouble>(newWeightProperSubset) - term.weight;
+            term.weight = newWeightProperSubset;
+            changed = true;
+          } else if (numSmall >= 2 &&
+                     newWeightTwoItemLessSubset - term.weight >
+                         primal_feastol &&
+                     term.weight + smallWeightSum - maxSmallWeight -
+                             knapsack.capacity >
+                         primal_feastol) {
+            // (5)
+            knapsack.weightsum +=
+                static_cast<HighsCDouble>(newWeightTwoItemLessSubset) -
+                term.weight;
+            term.weight = newWeightTwoItemLessSubset;
+            changed = true;
+          } else if (newWeightAllSmallIncluded - term.weight > primal_feastol) {
+            // (6)
+            knapsack.weightsum +=
+                static_cast<HighsCDouble>(newWeightAllSmallIncluded) -
+                term.weight;
+            term.weight = newWeightAllSmallIncluded;
+            changed = true;
+          }
         }
       }
     }
