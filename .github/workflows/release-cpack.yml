@@ -84,7 +84,8 @@ jobs:
       - name: Build
         run: |
           cmake -B build -G "Visual Studio 18 2026" -A ${{ matrix.arch }} `
-              -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_STATIC_EXE=ON
+              -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_STATIC_EXE=ON `
+              -DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON
           cmake --build build --config Release --parallel
           cd build
           cpack -C Release

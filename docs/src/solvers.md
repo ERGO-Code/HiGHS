@@ -27,9 +27,8 @@ dual simplex solver is unlikely to be worth using. The novel features
 of the dual simplex solver are described in
 
 _Parallelizing the dual revised simplex method_, Q. Huangfu and
-J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142,
-2018 [DOI:
-10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5).
+J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142, 2018
+[DOI: 10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5).
 
 * Setting the option [__solver__](@ref option-solver) to "simplex" forces the simplex solver to be used
 * The option [__simplex\_strategy__](@ref option-simplex-strategy)
@@ -43,17 +42,16 @@ HiGHS has two interior point (IPM) solvers:
 * IPX is based on the preconditioned conjugate gradient method, as discussed in
 
   _Implementation of an interior point method with basis
-  preconditioning_, Mathematical Programming Computation, 12, 603-635,
-  2020. [DOI:
-  10.1007/s12532-020-00181-8](https://link.springer.com/article/10.1007/s12532-020-00181-8).
+  preconditioning_, Mathematical Programming Computation, 12, 603-635, 2020.
+  [DOI: 10.1007/s12532-020-00181-8](https://link.springer.com/article/10.1007/s12532-020-00181-8).
 
   This solver is serial.
 
 * HiPO is based on a direct factorisation, as discussed in 
 
   _A factorisation-based regularised interior point method using the
-  augmented system_, F. Zanetti and J. Gondzio, 2025, [available on
-  arxiv](https://arxiv.org/abs/2508.04370)
+  augmented system_, F. Zanetti and J. Gondzio, 2025,
+  [available on arxiv](https://arxiv.org/abs/2508.04370)
 
   This solver is parallel.
 

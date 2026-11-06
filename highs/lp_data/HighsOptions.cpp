@@ -493,9 +493,6 @@ OptionStatus checkOptionValue(const HighsLogOptions& report_log_options,
   } else if (option.name == kHiPdlpScalingString) {
     if (!optionHiPdlpScalingOk(report_log_options, value))
       return OptionStatus::kIllegalValue;
-  } else if (option.name == kPresolveLightString) {
-    if (!optionOffChooseOnOk(report_log_options, option.name, value))
-      return OptionStatus::kIllegalValue;
   }
   return OptionStatus::kOk;
 }
@@ -1198,14 +1195,7 @@ bool usePdlp(const std::string& solver) {
   return solver == kPdlpString || solver == kHiPdlpString;
 }
 
-bool mayRequireBasisPostsolve(const HighsOptions* options) {
-  if (usePdlp(options->solver)) return false;
-  if (useIpm(options->solver) && options->run_crossover == kHighsOffString)
-    return false;
-  return true;
-}
-
-bool mayRequirePrimalDualPostsolve(const HighsOptions* options) {
+bool mayRequireDualPostsolve(const HighsOptions* options) {
   if (usePdlp(options->solver)) return true;
   if (useIpm(options->solver)) {
     if (options->run_crossover == kHighsOffString) return true;
@@ -1218,4 +1208,11 @@ bool mayRequirePrimalDualPostsolve(const HighsOptions* options) {
     //    if (options->run_crossover == kHighsOnString) return true;
   }
   return false;
+}
+
+bool mayRequireBasisPostsolve(const HighsOptions* options) {
+  if (usePdlp(options->solver)) return false;
+  if (useIpm(options->solver) && options->run_crossover == kHighsOffString)
+    return false;
+  return true;
 }

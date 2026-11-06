@@ -39,7 +39,7 @@ HiGHS does not have any external dependencies, however, the new interior point s
 
 ### External ordering heuristics
 
-HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is already part of the HiGHS library, so there is no need to link them. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD.
+HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is built with HiGHS, so there is no need to install them separately. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD.
 
 ### [BLAS](@id install-blas)
 
@@ -60,7 +60,18 @@ cmake -S. -B build -DHIPO=ON
 cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON
 ```
 
-On Windows ARM64, MSVC cannot assemble OpenBLAS's optimised kernels. When building natively on an ARM64 machine, HiGHS therefore builds OpenBLAS separately with `clang-cl` and Ninja (HiGHS itself is still compiled with MSVC). `clang-cl` is found in the Visual Studio "C++ Clang Compiler for Windows" component or an LLVM installation, or can be set explicitly with `-DHIGHS_OPENBLAS_C_COMPILER=<path to clang-cl>`. If `clang-cl` or Ninja is not available, OpenBLAS falls back to generic C kernels, which are several times slower; add `-DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON` to make this a configure error instead.
+##### [Windows: clang-cl](@id install-blas-clang-cl)
+
+MSVC can only compile OpenBLAS's generic C kernels, not the optimised ones, which makes HiPO several times slower. `clang-cl`, the MSVC-compatible driver of Clang, can compile them, and its libraries can be linked into an MSVC build. So, on Windows x64 and ARM64, HiGHS builds OpenBLAS separately with `clang-cl` and Ninja, while HiGHS itself is still compiled with MSVC. On x64, OpenBLAS then selects the best kernels for the CPU at runtime.
+
+`clang-cl` is included in the Visual Studio component "C++ Clang Compiler for Windows" and in [LLVM](https://github.com/llvm/llvm-project/releases) for Windows. Ninja is included in Visual Studio's "C++ CMake tools for Windows" component.
+
+Related CMake options:
+- `-DHIGHS_OPENBLAS_C_COMPILER=<path to clang-cl>` selects a specific `clang-cl`.
+- `-DBUILD_OPENBLAS_CLANG_CL=OFF` builds OpenBLAS with MSVC instead.
+- If `clang-cl` or Ninja cannot be found, HiGHS warns and builds OpenBLAS with MSVC. With `-DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON`, this is a configure error instead.
+
+If HiGHS itself is compiled with `clang-cl`, for example with `cmake -S. -B build -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DHIPO=ON -DBUILD_OPENBLAS=ON`, OpenBLAS is built with the same compiler as part of the HiGHS build.
 
 #### Linux and Windows: Link with BLAS installatied on your machine
 
@@ -89,11 +100,40 @@ On Windows, you also need to specify the path to OpenBLAS. If it was installed w
 cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 ```
 
+##### Windows: OpenBLAS from vcpkg, built with clang-cl
+
+vcpkg's standard Windows triplets, such as `x64-windows-static`, build OpenBLAS with MSVC. That gives only the generic kernels, which make HiPO several times slower (see [Windows: clang-cl](@ref install-blas-clang-cl)). HiGHS therefore provides the triplets `x64-windows-static-clang` and `arm64-windows-static-clang` in `cmake/vcpkg-triplets`. They are the same as `x64-windows-static` and `arm64-windows-static`, except that the ports are built with `clang-cl`, which is searched for on `PATH`, in the default LLVM install location, and in Visual Studio installs with the "C++ Clang Compiler for Windows" component. HiGHS itself can still be compiled with MSVC.
+
+On x64, the triplet builds OpenBLAS for the CPU of the build machine, so the resulting library may not run on a machine with an older CPU.
+
+When HiGHS is configured with `-DHIGHS_VCPKG=ON`, these triplets are used by default on Windows x64 and ARM64 if `clang-cl` is found. Add `-DHIGHS_VCPKG_CLANG_CL=OFF` to use `x64-windows-static` or `arm64-windows-static` instead.
+
+To use the triplets with your own vcpkg setup, e.g.
+```
+vcpkg install openblas[threads]:x64-windows-static-clang --overlay-triplets=<HiGHS>/cmake/vcpkg-triplets --host-triplet=x64-windows-static-clang
+cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-clang -DVCPKG_OVERLAY_TRIPLETS=<HiGHS>/cmake/vcpkg-triplets -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
+```
+OpenBLAS needs a copy of itself for the host as a build tool, so using the same triplet for the host means that copy is not also built with MSVC.
+
 ##### Path to BLAS
 
 To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` could be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
 
 When `BLAS_LIBRARIES` is used, HiGHS can only tell which vendor provides BLAS from the library name: if the name contains "openblas" (in any case), the library is treated as OpenBLAS. This matters for performance, because HiPO runs OpenBLAS in serial (see [BLAS threads](@ref parallel-blas-threads)). If OpenBLAS is provided under a different name, also set `-DBLA_VENDOR=OpenBLAS`.
+
+### Using HiPO in your own application
+
+By default, the dependencies of HiPO are built into a separate shared library, `highs_extras`, which HiGHS loads when it runs. This applies even if HiGHS itself is a static library, so linking `highs.lib` or `libhighs.a` is not enough to make HiPO available: your application must also be able to find the shared library. If it cannot, setting `solver=hipo` fails with an error that gives the reason, and the `solver` option is left unchanged.
+
+On Windows, `cmake --install` places `highs_extras.dll` in the `bin` folder of the install directory. Copy it next to your application's `.exe`, or add its folder to `PATH`, and distribute it with your application. Any DLL that `highs_extras.dll` depends on, such as `openblas.dll`, must also be found. If one is missing, the error says that the module could not be found, even when `highs_extras.dll` is present.
+
+On Linux, `libhighs_extras.so` must be next to `libhighs.so`, as it is after `cmake --install`, or on the runtime library search path, for example through `LD_LIBRARY_PATH`. On MacOS, `libhighs_extras.dylib` must be in the same folder as the binary that contains HiGHS.
+
+To link everything into your application instead, so that no shared library is needed, build with
+```
+cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_SHARED_EXTRAS_LIB=OFF -DBUILD_SHARED_LIBS=OFF
+```
+and link `highs`, `highs_extras` and `openblas`. If you did not use `-DBUILD_OPENBLAS=ON`, link your BLAS library instead of `openblas`.
 
 
 ## [Building HiGHS with NVidia GPU support](@id gpu-build)

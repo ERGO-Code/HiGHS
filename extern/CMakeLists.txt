@@ -26,6 +26,7 @@ set(highs_extras_headers
     HighsExtrasApi.h
     HighsExtrasApiBinding.h
     HighsExtrasExternalDeps.h
+    HighsMetis.h
     OrderingPrint.h)
 
 # add optional dependencies (source code)
@@ -116,4 +117,7 @@ install(TARGETS highs_extras
 if(DEFINED HIGHS_BINARY_DIR)
   export(TARGETS highs_extras
     APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+  if(HIPO)
+    highs_export_blas_dependency()
+  endif()
 endif()

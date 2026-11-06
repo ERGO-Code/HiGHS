@@ -14,9 +14,9 @@
 #include <tuple>
 
 #include "HighsExtrasApiBinding.h"
+#include "HighsMetis.h"
 #include "amd/amd.h"
 #include "blas/mycblas.h"
-#include "metis/metis.h"
 #include "rcm/rcm.h"
 
 //

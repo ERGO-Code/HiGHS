@@ -528,6 +528,9 @@ idx_t Match_2HopAll(ctrl_t *ctrl, graph_t *graph, idx_t *perm, idx_t *match,
   adjncy = graph->adjncy_orig ? graph->adjncy_orig : graph->adjncy;
   cmap   = graph->cmap;
 
+  // Avoid compiler warning in iset below
+  if (nvtxs < 0) return cnvtxs;
+
   nunmatched = *r_nunmatched;
   mask = IDX_MAX/maxdegree;
 

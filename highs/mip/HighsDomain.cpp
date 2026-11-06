@@ -60,17 +60,12 @@ static HighsCDouble computeDelta(double val, double oldbound, double newbound,
 
 static inline double boundRange(double upper_bound, double lower_bound,
                                 double tolerance, HighsVarType var_type) {
+  // the range is infinite if one of the bounds is infinite
+  if (lower_bound <= -kHighsInf || upper_bound >= kHighsInf) return kHighsInf;
   double range = upper_bound - lower_bound;
   return range - (var_type == HighsVarType::kContinuous
                       ? std::max(0.3 * range, 1000.0 * tolerance)
                       : tolerance);
-}
-
-bool HighsDomain::termIsZero(double val, double lb, double ub, double epsilon) {
-  const double absVal = std::abs(val);
-  if (absVal <= std::numeric_limits<double>::min()) return true;
-  return absVal <= epsilon &&
-         absVal * std::max(std::abs(lb), std::abs(ub)) <= epsilon;
 }
 
 HighsDomain::HighsDomain(HighsMipSolver& mipsolver) : mipsolver(&mipsolver) {

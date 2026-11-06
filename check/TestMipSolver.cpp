@@ -15,10 +15,19 @@ bool objectiveOk(const double optimal_objective,
                  const double require_optimal_objective,
                  const bool dev_run = false);
 
+bool solutionOk(const std::vector<double> optimal_solution,
+                const std::vector<double> require_optimal_solution,
+                const double feasibility_tolerance);
+
+void solve(Highs& highs, const HighsModelStatus require_model_status,
+           std::string presolve);
 void solve(Highs& highs, std::string presolve,
            const HighsModelStatus require_model_status,
            const double require_optimal_objective = 0,
            const double require_iteration_count = -1);
+void solve(Highs& highs, std::string presolve,
+           const HighsModelStatus require_model_status,
+           const std::vector<double> optimal_solution);
 void distillationMIP(Highs& highs);
 void rowlessMIP(Highs& highs);
 void rowlessMIP1(Highs& highs);
@@ -407,9 +416,9 @@ TEST_CASE("MIP-unbounded", "[highs_test_mip_solver]") {
 
   // Now as a MIP - infeasible
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger};
-  // With(out) presolve, Highs::infeasibleBoundsOk() performs inward
-  // integer rounding of [0.25, 0.75] to [1, 0] so identifes
-  // infeasiblility. Hence MIP solver returns
+  // With(out) presolve, Highs::processedBoundsFindsInfeasibility()
+  // performs inward integer rounding of [0.25, 0.75] to [1, 0] so
+  // identifes infeasiblility. Hence MIP solver returns
   // HighsModelStatus::kInfeasible
 
   return_status = highs.passModel(lp);
@@ -825,7 +834,7 @@ TEST_CASE("MIP-2084", "[highs_test_mip_solver]") {
 
   // Solve
   h.passModel(lp);
-  h.setOptionValue("presolve", "off");
+  h.setOptionValue("presolve", kHighsOffString);
   h.run();
   HighsModelStatus require_model_status = h.getModelStatus();
   if (dev_run)
@@ -857,14 +866,25 @@ bool objectiveOk(const double optimal_objective,
   return error_ok;
 }
 
-void solve(Highs& highs, std::string presolve,
-           const HighsModelStatus require_model_status,
-           const double require_optimal_objective,
-           const double require_iteration_count) {
-  const HighsInfo& info = highs.getInfo();
-  REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+bool solutionOk(const std::vector<double> optimal_solution,
+                const std::vector<double> require_optimal_solution,
+                const double feasibility_tolerance) {
+  if (optimal_solution.size() != require_optimal_solution.size()) return false;
+  HighsInt num_col = optimal_solution.size();
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    if (std::fabs(require_optimal_solution[iCol] - optimal_solution[iCol]) >
+        feasibility_tolerance)
+      return false;
+  return true;
+}
 
-  REQUIRE(highs.setBasis() == HighsStatus::kOk);
+void solve(Highs& highs, const HighsModelStatus require_model_status,
+           std::string presolve) {
+  REQUIRE(highs.setOptionValue(kPresolveString, presolve) == HighsStatus::kOk);
+
+  // start from scratch, so that a solution of a previous solve isn't used as a
+  // start solution, and the solver data remain available after the solve
+  REQUIRE(highs.clearSolver() == HighsStatus::kOk);
 
   REQUIRE(highs.run() == (require_model_status == HighsModelStatus::kSolveError
                               ? HighsStatus::kError
@@ -872,13 +892,31 @@ void solve(Highs& highs, std::string presolve,
 
   REQUIRE(highs.getModelStatus() == require_model_status);
 
-  if (require_model_status == HighsModelStatus::kOptimal) {
-    REQUIRE(objectiveOk(info.objective_function_value,
-                        require_optimal_objective, dev_run));
-  }
   REQUIRE(highs.resetOptions() == HighsStatus::kOk);
 
   highs.resetThreadScheduler(true);
+}
+
+void solve(Highs& highs, std::string presolve,
+           const HighsModelStatus require_model_status,
+           const double require_optimal_objective,
+           const double require_iteration_count) {
+  solve(highs, require_model_status, presolve);
+  if (require_model_status == HighsModelStatus::kOptimal)
+    REQUIRE(objectiveOk(highs.getInfo().objective_function_value,
+                        require_optimal_objective, dev_run));
+}
+
+void solve(Highs& highs, std::string presolve,
+           const HighsModelStatus require_model_status,
+           const std::vector<double> require_optimal_solution) {
+  // get the tolerance before solve() resets the options
+  const double mip_feasibility_tolerance =
+      highs.getOptions().mip_feasibility_tolerance;
+  solve(highs, require_model_status, presolve);
+  if (require_model_status == HighsModelStatus::kOptimal)
+    REQUIRE(solutionOk(highs.getSolution().col_value, require_optimal_solution,
+                       mip_feasibility_tolerance));
 }
 
 void distillationMIP(Highs& highs) {
@@ -1218,7 +1256,7 @@ TEST_CASE("get-fixed-lp", "[highs_test_mip_solver]") {
   HighsInt num_set_entries = col_set.size();
   h.changeColsBounds(num_set_entries, col_set.data(), fixed_value.data(),
                      fixed_value.data());
-  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue(kPresolveString, kHighsOffString);
   REQUIRE(h.run() == HighsStatus::kOk);
 
   REQUIRE(std::abs(h.getInfo().objective_function_value -
@@ -1346,7 +1384,7 @@ TEST_CASE("get-fixed-lp-semi", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = {1, 1, 1, 2, 1, 3, 1, 4, 5, 1};
   Highs h;
   h.setOptionValue("output_flag", dev_run);
-  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue(kPresolveString, kHighsOffString);
   // Code coverage of highsVarTypeToString for four main types
   for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
     highsLogUser(h.getOptions().log_options, HighsLogType::kInfo,
@@ -1381,7 +1419,7 @@ TEST_CASE("row-fixed-lp", "[highs_test_mip_solver]") {
   h.clearIntegrality();
   h.changeRowsBounds(0, lp.num_row_ - 1, solution.row_value.data(),
                      solution.row_value.data());
-  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue(kPresolveString, kHighsOffString);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getInfo().objective_function_value <=
           mip_optimal_objective + double_equal_tolerance);
@@ -1708,6 +1746,40 @@ TEST_CASE("MIP-equality-clique-fixing-to-zero", "[highs_test_mip_solver]") {
   highs.resetThreadScheduler(true);
 }
 
+TEST_CASE("MIP-clique-table-duplicate-size-two-cliques",
+          "[highs_test_mip_solver]") {
+  // the clique table may contain several size-two cliques on the same edge;
+  // removing one of them must not hide the edge of the others
+  HighsCliqueTable::CliqueVar edge[] = {{0, 1}, {1, 1}};
+  HighsCliqueTable::CliqueVar otherEdge[] = {{0, 1}, {2, 1}};
+
+  // remove the clique added last
+  {
+    HighsCliqueTable cliquetable(3);
+    cliquetable.doAddClique(edge, 2);
+    cliquetable.doAddClique(edge, 2);
+    REQUIRE(cliquetable.numCliques() == 2);
+    cliquetable.removeClique(1);
+    REQUIRE(cliquetable.haveCommonClique(edge[0], edge[1]));
+    cliquetable.removeClique(0);
+    REQUIRE(!cliquetable.haveCommonClique(edge[0], edge[1]));
+  }
+
+  // remove the clique added first
+  {
+    HighsCliqueTable cliquetable(3);
+    cliquetable.doAddClique(edge, 2);
+    cliquetable.doAddClique(otherEdge, 2);
+    cliquetable.doAddClique(edge, 2);
+    cliquetable.removeClique(0);
+    REQUIRE(cliquetable.haveCommonClique(edge[0], edge[1]));
+    REQUIRE(cliquetable.haveCommonClique(otherEdge[0], otherEdge[1]));
+    cliquetable.removeClique(2);
+    REQUIRE(!cliquetable.haveCommonClique(edge[0], edge[1]));
+    REQUIRE(cliquetable.haveCommonClique(otherEdge[0], otherEdge[1]));
+  }
+}
+
 TEST_CASE("issue-3170", "[highs_test_mip_solver]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/issue-3170.mps";
@@ -1754,7 +1826,7 @@ TEST_CASE("issue-3262", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = {-100., 1., -1., 1., -1.};
 
   highs.passModel(lp);
-  highs.setOptionValue("presolve", "off");
+  highs.setOptionValue(kPresolveString, kHighsOffString);
 
   REQUIRE_NOTHROW(highs.run());
 
@@ -2308,10 +2380,30 @@ TEST_CASE("issue-3273", "[highs_test_mip_solver]") {
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
-  const double optimal_objective = 12.0;
-  solve(highs, kHighsOffString, require_model_status, optimal_objective);
+  std::vector<double> optimal_solution = {1, 11, 1, 1};
+  solve(highs, kHighsOffString, require_model_status, optimal_solution);
   highs.setOptionValue("output_flag", dev_run);
-  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  solve(highs, kHighsOnString, require_model_status, optimal_solution);
+  highs.setOptionValue("output_flag", dev_run);
+
+  // "Ultimate" optimal solution is
+  //
+  // (1+2*epsilon, 11+epsilon, 1+epsilon, 1)
+  //
+  // which has objective 12 + 3*epsilon
+  //
+  // Have to use epsilon = mip_feasibility_tolerance/2 due to rounding
+  // in computing 1 + 2 * epsilon
+  double epsilon = 0.5 * highs.getOptions().mip_feasibility_tolerance;
+  HighsSolution solution;
+  solution.col_value = {1 + 2 * epsilon, 11 + epsilon, 1 + epsilon, 1};
+  highs.setSolution(solution);
+  highs.setOptionValue(kPresolveString, kHighsOffString);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+
+  REQUIRE(highs.getModelStatus() == require_model_status);
+
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("dominated-column-double-fixing", "[highs_test_mip_solver]") {
@@ -2452,7 +2544,8 @@ TEST_CASE("implied-equation-unbounded", "[highs_test_mip_solver]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
     highs.clearSolver();
-    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue(kPresolveString, presolve) ==
+            HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
     const HighsModelStatus model_status = highs.getModelStatus();
     REQUIRE((model_status == HighsModelStatus::kUnbounded ||
@@ -2489,7 +2582,8 @@ TEST_CASE("issue-3389", "[highs_test_mip_solver]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
     highs.clearSolver();
-    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue(kPresolveString, presolve) ==
+            HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
     const double objective = highs.getInfo().objective_function_value;
@@ -2529,7 +2623,8 @@ TEST_CASE("issue-3389-binding-row", "[highs_test_mip_solver]") {
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   for (const std::string& presolve : {kHighsOffString, kHighsOnString}) {
     highs.clearSolver();
-    REQUIRE(highs.setOptionValue("presolve", presolve) == HighsStatus::kOk);
+    REQUIRE(highs.setOptionValue(kPresolveString, presolve) ==
+            HighsStatus::kOk);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
     const double objective = highs.getInfo().objective_function_value;
@@ -2614,7 +2709,24 @@ TEST_CASE("issue-3461", "[highs_test_mip_solver]") {
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = 21166;
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3478", "[highs_test_mip_solver]") {
+  // model tolls.lp in issue 3478. HighsLpAggregator dropped coefficients with
+  // |val| <= small_matrix_value without accounting for their contribution
+  // |val| * bound to the aggregated row, which led to invalid cuts and the
+  // wrong optimal objective -6016.354106
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3478.lp";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_rel_gap", 0);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = -6254.734457;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
@@ -2636,4 +2748,61 @@ TEST_CASE("conflict-pool-sync-empty-conflict", "[highs_test_mip_solver]") {
   const auto& ranges = globalPool.getConflictRanges();
   REQUIRE(ranges[0].second - ranges[0].first == 1);
   REQUIRE(ranges[1].second - ranges[1].first == 0);
+}
+
+TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
+  HighsLp lp;
+  lp.num_col_ = 6;
+  lp.num_row_ = 5;
+  lp.col_cost_ = {0, 0, 0, 0, 0, 1e6};
+  lp.col_lower_ = {0, 0, 0, -0.003, -0.003, 0};
+  lp.col_upper_ = {1, 1, 1, 0, 0, inf};
+  lp.integrality_ = {HighsVarType::kInteger,    HighsVarType::kInteger,
+                     HighsVarType::kInteger,    HighsVarType::kContinuous,
+                     HighsVarType::kContinuous, HighsVarType::kContinuous};
+  lp.row_lower_ = {0, -inf, -inf, 0, 0.04};
+  lp.row_upper_ = {inf, 0.003, 0.0003, inf, inf};
+  lp.a_matrix_.start_ = {0, 4, 8, 9, 11, 15, 16};
+  lp.a_matrix_.index_ = {0, 1, 2, 4, 1, 2, 3, 4, 4, 1, 4, 0, 2, 3, 4, 4};
+  lp.a_matrix_.value_ = {0.000303,
+                         0.00265844244777602,
+                         0.0003,
+                         0.035,
+                         0.00265844244777602,
+                         0.0003,
+                         0.0003,
+                         0.007,
+                         0.08,
+                         1.0,
+                         2.0,
+                         1.0,
+                         1.0,
+                         1.0,
+                         -0.04,
+                         1.0};
+  lp.col_names_ = {"c0", "c1", "c2", "c3", "c4", "c5"};
+  lp.row_names_ = {"r0", "r1", "r2", "r3", "r4"};
+  std::vector<HighsInt> start_index = {0, 1, 2};
+  std::vector<double> start_value = {1, 1, 0};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  // Fourier-Motzkin off was necessaary to expose the bug
+  REQUIRE(
+      h.setOptionValue("presolve_rule_off", 1 << kPresolveRuleFourierMotzkin) ==
+      HighsStatus::kOk);
+  // First pass uses large coefficient for c5, yielding a large
+  // objective in the original space, thus stressing its irrelevance
+  // to the reduced problem
+  for (HighsInt k = 0; k < 2; k++) {
+    REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+    REQUIRE(h.setSolution(3, start_index.data(), start_value.data()) ==
+            HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(h.getObjectiveValue() == 0);
+    lp.col_cost_[5] = 1.0;
+  }
+
+  h.resetGlobalScheduler(true);
 }
