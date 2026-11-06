@@ -1,9 +1,4 @@
-# Refactoring of `Highs::calledOptimizeModel()`: reviewer notes
-
-This note goes with the `refactor-optimize-model` branch. It covers
-every change from the point where the branch leaves `latest`
-(`189b0a3a24`). It says what was only moved, what was changed to make
-the move possible, and what behaves differently afterwards.
+# Refactoring of `Highs::calledOptimizeModel()`
 
 ## Summary
 
