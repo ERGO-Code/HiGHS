@@ -404,6 +404,7 @@ set(highs_sources
     parallel/HighsTaskExecutor.cpp
     pdlp/CupdlpWrapper.cpp
     pdlp/HiPdlpWrapper.cpp
+    pdlp/hipdlp/solver.cc
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp

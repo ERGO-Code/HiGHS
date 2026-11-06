@@ -293,6 +293,7 @@ _srcs = [
     'parallel/HighsTaskExecutor.cpp',
     'pdlp/CupdlpWrapper.cpp',
     'pdlp/HiPdlpWrapper.cpp',
+    'pdlp/hipdlp/solver.cc',
     'presolve/HPresolve.cpp',
     'presolve/HPresolveAggregator.cpp',
     'presolve/HPresolveAnalysis.cpp',
