@@ -155,6 +155,21 @@ void HPresolve::aggregateVarBounds() {
     double lb = model->col_lower_[col];
     double ub = model->col_upper_[col];
 
+    // the minimum (maximum) of every VLB (VUB) is a valid lower (upper) bound,
+    // so tighten lb (ub) such that the standardized forms below imply the VLBs
+    // (VUBs) exactly; the column bounds in the model are not changed
+    implications.getVlbs(col).for_each(
+        [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
+          if (!colDeleted[binaryCol]) lb = std::max(lb, vlb.minValue());
+        });
+    implications.getVubs(col).for_each(
+        [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
+          if (!colDeleted[binaryCol]) ub = std::min(ub, vub.maxValue());
+        });
+
+    // nothing to aggregate if the column has no VLBs and VUBs
+    if (lb <= -kHighsInf && ub >= kHighsInf) continue;
+
     // compute range
     double range = kHighsInf;
     if (lb > -kHighsInf && ub < kHighsInf)
