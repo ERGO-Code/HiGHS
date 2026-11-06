@@ -58,6 +58,15 @@ and, in C, by calling
 HighsInt Highs_stopCallback(void* highs, const int callback_type);
 ```
 
+### Calling HiGHS from within a callback
+
+Within the user callback, methods of the HiGHS instance that is
+running it can be used to query data, but methods that run a solver,
+or change the model, solution, basis, options or callback, cannot be
+called. Such methods return an error without doing anything.
+Callbacks can still be activated and de-activated via `startCallback`
+and `stopCallback`.
+
 ### User interrupt
 
 For the non-logging callbacks below, if the `user_interrupt` member of the
