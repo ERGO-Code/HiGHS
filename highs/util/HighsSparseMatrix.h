@@ -94,10 +94,11 @@ class HighsSparseMatrix {
                      const bool keep_small_values = false,
                      const std::string* col_names = nullptr,
                      const std::string* row_names = nullptr);
+  HighsStatus assessExtremeValues(const std::string& name, HighsOptions& options) const;
   bool hasExtremeValues(const HighsLogOptions& log_options,
                         const double small_matrix_value,
                         const double large_matrix_value, double& min_abs_value,
-                        double& max_abs_value);
+                        double& max_abs_value) const;
   void considerColScaling(const HighsInt max_scale_factor_exponent,
                           double* col_scale);
   void considerRowScaling(const HighsInt max_scale_factor_exponent,

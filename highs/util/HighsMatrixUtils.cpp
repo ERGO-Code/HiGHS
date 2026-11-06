@@ -333,31 +333,28 @@ HighsStatus assessMatrix(
   }  // Loop 0; num_vec
   if (num_duplicate) {
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "%s %s matrix packed vector contains %" HIGHSINT_FORMAT
-                 " duplicate entr%s: summed\n",
+                 "%s %s matrix contains %" HIGHSINT_FORMAT " duplicate entr%s: summed\n",
                  class_name.c_str(), matrix_name.c_str(), num_duplicate,
-                 num_duplicate == 1 ? "y" : "ies");
+                 highsIntToPlural(num_duplicate, true).c_str());
   }
   if (num_large_value) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "%s %s matrix packed vector contains %" HIGHSINT_FORMAT
-                 " |value| in [%g, %g] greater than %g\n",
+                 "%s %s matrix contains %" HIGHSINT_FORMAT " |value| in [%.2g, %.2g] at/above tolerance of %g\n",
                  class_name.c_str(), matrix_name.c_str(), num_large_value,
                  min_large_value, max_large_value, large_matrix_value);
     error_found = true;
   }
   if (num_small_value) {
-    // If explicit zeros are ignored, then no model information is
-    // lost, so only report if small nonzeros are ignored, and then
-    // return a warning if small nonzeros are being ignored
-    if (max_small_value > 0 && !keep_small_values) {
-      highsLogUser(log_options, HighsLogType::kWarning,
-                   "%s %s matrix packed vector contains %" HIGHSINT_FORMAT
-                   " |value| in [%g, %g] "
-                   "less than or equal to %g%s\n",
-                   class_name.c_str(), matrix_name.c_str(), num_small_value,
-                   min_small_value, max_small_value, small_matrix_value,
-                   keep_small_values ? "" : ": ignored");
+    // If the small values are explicit zeros, then no model
+    // information is lost if they are ignored, so only report and
+    // return a warning if small nonzeros are ignored
+    if (max_small_value > 0) {
+      highsLogUser(log_options, keep_small_values ? HighsLogType::kInfo : HighsLogType::kWarning,
+		   "%s %s matrix contains %" HIGHSINT_FORMAT " |value| in [%.2g, %.2g] "
+		   "at/below tolerance of %g%s\n",
+		   class_name.c_str(), matrix_name.c_str(), num_small_value,
+		   min_small_value, max_small_value, small_matrix_value,
+		   keep_small_values ? "" : ": ignored");
       if (!keep_small_values) warning_found = true;
     }
   }

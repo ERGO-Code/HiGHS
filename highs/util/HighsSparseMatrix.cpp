@@ -739,11 +739,40 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                       keep_small_values, col_names, row_names);
 }
 
+HighsStatus HighsSparseMatrix::assessExtremeValues(const std::string& name, HighsOptions& options) const {
+  // Returns HighsStatus::kError if the matrix contains zeros or large
+  // values, and HighsStatus::kWarning if the matrix contains small
+  // nonzero values, otherwise returns HighsStatus::kOk
+  double min_abs_value;
+  double max_abs_value;
+  if (!this->hasExtremeValues(options.log_options, options.small_matrix_value,
+			      options.large_matrix_value, min_abs_value, max_abs_value)) return HighsStatus::kOk;
+  bool error_found = false;
+  bool warning_found = false;
+  if (min_abs_value <= options.small_matrix_value) {
+    warning_found = true;
+    error_found = min_abs_value == 0;
+    highsLogUser(options.log_options, error_found ? HighsLogType::kError : HighsLogType::kWarning,
+		 "Matrix %shas smallest |value| of %g at/below "
+		 "tolerance of %g\n",
+		 name.c_str(), min_abs_value, options.small_matrix_value);
+  }
+  if (max_abs_value >= options.large_matrix_value) {
+    error_found = true;
+    highsLogUser(options.log_options, HighsLogType::kError,
+		 "Matrix %shas largest |value| of %g at/above "
+		 "tolerance of %g\n",
+		 name.c_str(), max_abs_value, options.large_matrix_value);
+  }
+  assert(warning_found || error_found);
+  return error_found ? HighsStatus::kError : HighsStatus::kWarning;
+}
+
 bool HighsSparseMatrix::hasExtremeValues(const HighsLogOptions& log_options,
                                          const double small_matrix_value,
                                          const double large_matrix_value,
                                          double& min_abs_value,
-                                         double& max_abs_value) {
+                                         double& max_abs_value) const {
   min_abs_value = kHighsInf;
   max_abs_value = 0;
   const HighsInt num_values = this->numNz();

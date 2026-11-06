@@ -1786,38 +1786,21 @@ HighsStatus Highs::calledOptimizeModel() {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.origin_name_ = "Reduced LP";
         reduced_lp.setMatrixDimensions();
-        // Although presolve can yield small values in the matrix,
-        // they are only stripped out (by assessLp) in debug. This
-        // suggests that they are no real danger to the simplex
-        // solver. The only danger is pivoting on them, but that
-        // implies that values of roughly that size have been chosen
-        // in the ratio test. Even with the filter, values of 1e-9
-        // could be in the matrix, and these would be bad
-        // pivots. Hence, since the small values may play a
-        // meaningful role in postsolve, then it's better to keep
-        // them.
+        // Although presolve can yield small nonzero values in the
+        // matrix, they may play a meaningful role in postsolve so
+        // they are retained. However, they offer some risk to the
+        // simplex solver, so HighsSparseMatrix::assessExtremeValues
+        // logs a warning and returns HighsStatus::kWarning.
         //
-        // Also need to guard against large values
-        double min_abs_value;
-        double max_abs_value;
-        if (reduced_lp.a_matrix_.hasExtremeValues(
-                options_.log_options, options_.small_matrix_value,
-                options_.large_matrix_value, min_abs_value, max_abs_value)) {
-          if (min_abs_value <= options_.small_matrix_value)
-            highsLogUser(log_options, HighsLogType::kWarning,
-                         "Reduced LP has smallest |value| of %g at/below "
-                         "small_matrix_value = %g\n",
-                         min_abs_value, options_.small_matrix_value);
-          if (max_abs_value >= options_.large_matrix_value) {
-            highsLogUser(log_options, HighsLogType::kError,
-                         "Reduced LP has largest |value| of %g at/above "
-                         "large_matrix_value = %g\n",
-                         max_abs_value, options_.large_matrix_value);
-            setHighsModelStatusAndClearSolutionAndBasis(
-                HighsModelStatus::kSolveError);
-            return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-          }
-        }
+        // Presolve should never generate explicit zeros or large
+        // values in the matrix, and these cannot be permitted in the
+        // simplex solver, so HighsSparseMatrix::assessExtremeValues
+        // logs an error in either case, and returns
+        // HighsStatus::kError, triggering a presolve error
+	if (reduced_lp.a_matrix_.assessExtremeValues("of presolved LP ", options_) == HighsStatus::kError) {
+	  setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kPresolveError);
+	  return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+	}
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve

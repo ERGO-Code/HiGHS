@@ -2298,6 +2298,7 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   analysis_.simplexTimerStart(matrixSetupClock);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_,
                                       basis_.nonbasicFlag_.data());
+  ar_matrix_.name_ = "partitioned row-wise constraint";
   assert(ar_matrix_.legalDimensions(options_->log_options));
   assert(ar_matrix_.trimDimensions(options_->log_options) == HighsStatus::kOk);
   // Check that ar_matrix_ is generated as a valid matrix
@@ -2306,12 +2307,12 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   // internally, but may have small values (from presolve) that are
   // being respected
   //
-  // Shouldn't have large values
+  // Shouldn't have zeros or large values
   const bool sum_duplicates = false;
   const bool keep_small_values = true;
   assert(ar_matrix_.assess(options_->log_options, options_->small_matrix_value,
                            options_->large_matrix_value, sum_duplicates,
-                           keep_small_values) != HighsStatus::kError);
+                           keep_small_values) == HighsStatus::kOk);
   (void)sum_duplicates;
   (void)keep_small_values;
   assert(ar_matrix_.debugPartitionOk(basis_.nonbasicFlag_.data()));
