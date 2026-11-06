@@ -619,3 +619,27 @@ TEST_CASE("issue-2300", "[highs_lp_solver]") {
 
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3564", "[highs_lp_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s",
+          "min\n obj: +230.9345703125 x12 \nst\n r0: +0.34375 x1 +0.03125 x3 "
+          ">= -849.4453125\n r4: +0.015625 x0 +224 x6 = +76.37109375\n r9: "
+          "+2.75 x1 +84 x3 -0.0283203125 x6 +72 x12 = -1445.8564453125\n "
+          "r17lo: -0.0390625 x0 +452 x3 >= -6094.146484375\n r17up: -0.0390625 "
+          "x0 +452 x3 <= -6058.146484375\nbounds\n -2 <= x0\n -inf <= x1 <= "
+          "9\n x3 free\n x6 free\n -inf <= x12 <= 39\nend\n");
+  fclose(file);
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("log_dev_level", 1);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}

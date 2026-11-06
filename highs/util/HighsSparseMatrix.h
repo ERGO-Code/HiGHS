@@ -91,10 +91,13 @@ class HighsSparseMatrix {
   HighsStatus assess(const HighsLogOptions& log_options,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
+                     const bool keep_small_values = false,
                      const std::string* col_names = nullptr,
                      const std::string* row_names = nullptr);
-  void assessSmallValues(const HighsLogOptions& log_options,
-                         const double small_matrix_value);
+  bool hasExtremeValues(const HighsLogOptions& log_options,
+                        const double small_matrix_value,
+                        const double large_matrix_value, double& min_abs_value,
+                        double& max_abs_value);
   void considerColScaling(const HighsInt max_scale_factor_exponent,
                           double* col_scale);
   void considerRowScaling(const HighsInt max_scale_factor_exponent,

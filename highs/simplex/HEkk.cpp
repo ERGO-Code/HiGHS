@@ -2300,9 +2300,20 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
                                       basis_.nonbasicFlag_.data());
   assert(ar_matrix_.legalDimensions(options_->log_options));
   assert(ar_matrix_.trimDimensions(options_->log_options) == HighsStatus::kOk);
+  // Check that ar_matrix_ is generated as a valid matrix
+  //
+  // Should be no duplicates, since ar_matrix_ is generated
+  // internally, but may have small values (from presolve) that are
+  // being respected
+  //
+  // Shouldn't have large values
+  const bool sum_duplicates = false;
+  const bool keep_small_values = true;
   assert(ar_matrix_.assess(options_->log_options, options_->small_matrix_value,
-                           options_->large_matrix_value,
-                           false) == HighsStatus::kOk);
+                           options_->large_matrix_value, sum_duplicates,
+                           keep_small_values) != HighsStatus::kError);
+  (void)sum_duplicates;
+  (void)keep_small_values;
   assert(ar_matrix_.debugPartitionOk(basis_.nonbasicFlag_.data()));
   analysis_.simplexTimerStop(matrixSetupClock);
   status_.has_ar_matrix = true;

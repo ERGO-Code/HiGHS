@@ -727,6 +727,7 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                                       const double small_matrix_value,
                                       const double large_matrix_value,
                                       const bool sum_duplicates,
+                                      const bool keep_small_values,
                                       const std::string* col_names,
                                       const std::string* row_names) {
   assert(this->formatOk());
@@ -735,18 +736,26 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                       this->format_ == MatrixFormat::kRowwisePartitioned,
                       this->start_, this->p_end_, this->index_, this->value_,
                       small_matrix_value, large_matrix_value, sum_duplicates,
-                      col_names, row_names);
+                      keep_small_values, col_names, row_names);
 }
 
-void HighsSparseMatrix::assessSmallValues(const HighsLogOptions& log_options,
-                                          const double small_matrix_value) {
-  double min_value = kHighsInf;
+bool HighsSparseMatrix::hasExtremeValues(const HighsLogOptions& log_options,
+                                         const double small_matrix_value,
+                                         const double large_matrix_value,
+                                         double& min_abs_value,
+                                         double& max_abs_value) {
+  min_abs_value = kHighsInf;
+  max_abs_value = 0;
   const HighsInt num_values = this->numNz();
-  for (HighsInt iX = 0; iX < num_values; iX++)
-    min_value = std::min(std::abs(this->value_[iX]), min_value);
-  if (min_value > small_matrix_value) return;
-  analyseVectorValues(&log_options, "Small values in matrix", num_values,
+  for (HighsInt iX = 0; iX < num_values; iX++) {
+    min_abs_value = std::min(std::abs(this->value_[iX]), min_abs_value);
+    max_abs_value = std::max(std::abs(this->value_[iX]), max_abs_value);
+  }
+  if (min_abs_value > small_matrix_value && max_abs_value < large_matrix_value)
+    return false;
+  analyseVectorValues(&log_options, "Extreme values in matrix", num_values,
                       this->value_, false, "");
+  return true;
 }
 
 void HighsSparseMatrix::considerColScaling(

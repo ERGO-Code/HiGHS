@@ -1786,25 +1786,37 @@ HighsStatus Highs::calledOptimizeModel() {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.origin_name_ = "Reduced LP";
         reduced_lp.setMatrixDimensions();
-        if (kAllowDeveloperAssert) {
-          // Validate the reduced LP
-          //
-          // Although presolve can yield small values in the matrix,
-          // they are only stripped out (by assessLp) in debug. This
-          // suggests that they are no real danger to the simplex
-          // solver. The only danger is pivoting on them, but that
-          // implies that values of roughly that size have been chosen
-          // in the ratio test. Even with the filter, values of 1e-9
-          // could be in the matrix, and these would be bad
-          // pivots. Hence, since the small values may play a
-          // meaningful role in postsolve, then it's better to keep
-          // them.
-          //
-          // ToDo. Analyse the extent of small value creation. See #1187
-          assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
-        } else {
-          reduced_lp.a_matrix_.assessSmallValues(options_.log_options,
-                                                 options_.small_matrix_value);
+        // Although presolve can yield small values in the matrix,
+        // they are only stripped out (by assessLp) in debug. This
+        // suggests that they are no real danger to the simplex
+        // solver. The only danger is pivoting on them, but that
+        // implies that values of roughly that size have been chosen
+        // in the ratio test. Even with the filter, values of 1e-9
+        // could be in the matrix, and these would be bad
+        // pivots. Hence, since the small values may play a
+        // meaningful role in postsolve, then it's better to keep
+        // them.
+        //
+        // Also need to guard against large values
+        double min_abs_value;
+        double max_abs_value;
+        if (reduced_lp.a_matrix_.hasExtremeValues(
+                options_.log_options, options_.small_matrix_value,
+                options_.large_matrix_value, min_abs_value, max_abs_value)) {
+          if (min_abs_value <= options_.small_matrix_value)
+            highsLogUser(log_options, HighsLogType::kWarning,
+                         "Reduced LP has smallest |value| of %g at/below "
+                         "small_matrix_value = %g\n",
+                         min_abs_value, options_.small_matrix_value);
+          if (max_abs_value >= options_.large_matrix_value) {
+            highsLogUser(log_options, HighsLogType::kError,
+                         "Reduced LP has largest |value| of %g at/above "
+                         "large_matrix_value = %g\n",
+                         max_abs_value, options_.large_matrix_value);
+            setHighsModelStatusAndClearSolutionAndBasis(
+                HighsModelStatus::kSolveError);
+            return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+          }
         }
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP

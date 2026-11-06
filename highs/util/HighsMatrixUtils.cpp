@@ -23,14 +23,14 @@ HighsStatus assessMatrix(
     const HighsInt num_vec, vector<HighsInt>& matrix_start,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates, const std::string* col_names,
-    const std::string* row_names) {
+    const bool sum_duplicates, const bool keep_small_values,
+    const std::string* col_names, const std::string* row_names) {
   vector<HighsInt> matrix_p_end;
   const bool partitioned = false;
   return assessMatrix(log_options, class_name, matrix_name, vec_dim, num_vec,
                       partitioned, matrix_start, matrix_p_end, matrix_index,
                       matrix_value, small_matrix_value, large_matrix_value,
-                      sum_duplicates, col_names, row_names);
+                      sum_duplicates, keep_small_values, col_names, row_names);
 }
 
 HighsStatus assessMatrix(
@@ -40,12 +40,13 @@ HighsStatus assessMatrix(
     vector<HighsInt>& matrix_p_end, vector<HighsInt>& matrix_index,
     vector<double>& matrix_value, const double small_matrix_value,
     const double large_matrix_value, const bool sum_duplicates,
-    const std::string* col_names, const std::string* row_names) {
+    const bool keep_small_values, const std::string* col_names,
+    const std::string* row_names) {
   const bool partitioned = false;
   return assessMatrix(log_options, class_name, matrix_name, vec_dim, num_vec,
                       partitioned, matrix_start, matrix_p_end, matrix_index,
                       matrix_value, small_matrix_value, large_matrix_value,
-                      sum_duplicates, col_names, row_names);
+                      sum_duplicates, keep_small_values, col_names, row_names);
 }
 
 HighsStatus assessMatrix(
@@ -55,8 +56,15 @@ HighsStatus assessMatrix(
     vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates, const std::string* col_names,
-    const std::string* row_names) {
+    const bool sum_duplicates, const bool keep_small_values,
+    const std::string* col_names, const std::string* row_names) {
+  // Mechanism for summing duplicates and stripping out small values
+  // isn't coded for partitioned row-wise matrix, but it is generated
+  // internally from a constraint matrix, so shouldn't have duplicates
+  // (and they aren't summed in constraint matrices) and any small
+  // values it inherits (from presolve) are respected
+  assert(!(partitioned && !keep_small_values));
+  assert(!(partitioned && sum_duplicates));
   if (!legalMatrixDimensions(log_options, class_name, matrix_name, num_vec,
                              partitioned, matrix_start, matrix_p_end,
                              matrix_index, matrix_value))
@@ -264,8 +272,13 @@ HighsStatus assessMatrix(
       // This is done before checking for duplicates, so that an entry
       // that is ignored because its value is small is not identified as
       // a duplicate, and is not recorded, whatever the order of the
-      // entries
-      if (!sum_duplicates && !okMatrixValueMagnitude(el)) continue;
+      // entries.
+      //
+      // When keeping small values, large values won't be ignored when
+      // checking for duplicates, but this should be fine, as
+      // existence of large values leads to an error return
+      if (!sum_duplicates && !okMatrixValueMagnitude(el) && !keep_small_values)
+        continue;
       // Check whether the index has already occurred.
       HighsInt previous_el = illegal_el;
       if (findIndex(component, previous_el)) {
@@ -334,30 +347,38 @@ HighsStatus assessMatrix(
     error_found = true;
   }
   if (num_small_value) {
-    if (partitioned) {
-      // Shouldn't happen with a partitioned row-wise matrix since its
-      // values should be OK and the code above doesn't handle p_end
-      highsLogUser(
-          log_options, HighsLogType::kError,
-          "%s %s matrix packed partitioned vector contains %" HIGHSINT_FORMAT
-          " |value| in [%g, %g] less than or equal to %g: ignored\n",
-          class_name.c_str(), matrix_name.c_str(), num_small_value,
-          min_small_value, max_small_value, small_matrix_value);
-      error_found = true;
-      assert(num_small_value == 0);
-    }
     // If explicit zeros are ignored, then no model information is
-    // lost, so only report and return a warning if small nonzeros are
-    // ignored
-    if (max_small_value > 0) {
+    // lost, so only report if small nonzeros are ignored, and then
+    // return a warning if small nonzeros are being ignored
+    if (max_small_value > 0 && !keep_small_values) {
       highsLogUser(log_options, HighsLogType::kWarning,
                    "%s %s matrix packed vector contains %" HIGHSINT_FORMAT
                    " |value| in [%g, %g] "
-                   "less than or equal to %g: ignored\n",
+                   "less than or equal to %g%s\n",
                    class_name.c_str(), matrix_name.c_str(), num_small_value,
-                   min_small_value, max_small_value, small_matrix_value);
-      warning_found = true;
+                   min_small_value, max_small_value, small_matrix_value,
+                   keep_small_values ? "" : ": ignored");
+      if (!keep_small_values) warning_found = true;
     }
+  }
+  if (partitioned && num_nz > new_num_nz) {
+    const HighsInt loss = num_nz - new_num_nz;
+    assert(loss > 0);
+    // No entries must be lost from partitioned matrices
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Partitioned matrix with %d entries has lost %d entr%s\n",
+                 int(num_nz), int(loss), highsIntToPlural(loss, true).c_str());
+    error_found = true;
+  }
+
+  if (num_nz < new_num_nz) {
+    // No entries must be gained!
+    const HighsInt gain = new_num_nz - num_nz;
+    assert(gain > 0);
+    highsLogUser(log_options, HighsLogType::kError,
+                 "Matrix with %d entries has gained %d entr%s\n", int(num_nz),
+                 int(gain), highsIntToPlural(gain, true).c_str());
+    error_found = true;
   }
   matrix_start[num_vec] = new_num_nz;
 
