@@ -120,6 +120,9 @@ struct InputReport {
 };
 struct SolveResult {
   Status status = Status::kInvalidModel;
+  // Who ran the solve: "CPU" (SolveCpu), "CUDA" or "HIP" (Solve). times.gpu is only meaningful for
+  // the last two.
+  std::string backend;
   std::string message, termination_source = "GPU", fallback_reason;
   // Hybrid: reduced sessions rerun at a tighter tolerance after the original model rejected the
   // recovered solution (the original is solved instead only when that does not help).

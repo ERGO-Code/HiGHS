@@ -528,6 +528,8 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
   const std::chrono::steady_clock::time_point start =
       std::chrono::steady_clock::now();
   SolveResult result;
+  result.backend = "CPU";
+  result.termination_source = "CPU";
   result.rows = lp.rows;
   result.columns = lp.columns;
   result.nonzeros = lp.value.size();

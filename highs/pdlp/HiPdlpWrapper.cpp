@@ -119,12 +119,19 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
 
   highs_info.pdlp_iteration_count =
       static_cast<HighsInt>(std::min<int64_t>(result.iterations, kHighsIInf));
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "HiPDLP: %s after %lld iterations; GPU time %.2fs, total "
-               "%.2fs\n",
-               hipdlp::StatusName(result.status),
-               static_cast<long long>(result.iterations), result.times.gpu,
-               result.times.total);
+  // Name the backend, and report GPU time only when there was a GPU
+  const long long iterations = static_cast<long long>(result.iterations);
+  if (result.backend == "CPU")
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "HiPDLP (CPU): %s after %lld iterations; total %.2fs\n",
+                 hipdlp::StatusName(result.status), iterations,
+                 result.times.total);
+  else
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "HiPDLP (%s): %s after %lld iterations; GPU time %.2fs, "
+                 "total %.2fs\n",
+                 result.backend.c_str(), hipdlp::StatusName(result.status),
+                 iterations, result.times.gpu, result.times.total);
 
   switch (result.status) {
     case hipdlp::Status::kOptimal:

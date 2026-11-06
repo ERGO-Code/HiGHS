@@ -1233,6 +1233,11 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
   auto start = Clock::now();
   const HostLp& host = *source.lp;
   SolveResult result;
+#ifdef USE_HIP
+  result.backend = "HIP";
+#else
+  result.backend = "CUDA";
+#endif
   CheckSource(source, options, &result);
   if (!result.message.empty()) return result;
   bool session_started = false;
