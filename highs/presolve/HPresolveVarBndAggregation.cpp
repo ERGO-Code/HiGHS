@@ -167,6 +167,11 @@ void HPresolve::aggregateVarBounds() {
           if (!colDeleted[binaryCol]) ub = std::min(ub, vub.maxValue());
         });
 
+    if (model->integrality_[col] != HighsVarType::kContinuous) {
+      lb = std::ceil(lb - mipsolver->mipdata_->feastol);
+      ub = std::floor(ub + mipsolver->mipdata_->feastol);
+    }
+
     // nothing to aggregate if the column has no VLBs and VUBs
     if (lb <= -kHighsInf && ub >= kHighsInf) continue;
 
