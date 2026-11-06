@@ -227,23 +227,18 @@ void recogniseCardinality(KnapsackRow& knapsack, const double feastol,
 }  // namespace
 
 HPresolve::Result HPresolve::strengthenKnapsacks(
-    HighsPostsolveStack& postsolve_stack, bool& strengthenedKnapsacks) {
-  strengthenedKnapsacks = false;
-
+    HighsPostsolveStack& postsolve_stack) {
   const HighsInt maxRowSize =
       std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
   const HighsInt numRows = model->num_row_;
   const HighsInt numCols = model->num_col_;
   HighsInt numNormalized = 0;
   HighsInt numFixed = 0;
-  HighsInt numDisaggregated = 0;
-  HighsInt numLifted = 0;
 
   std::vector<KnapsackRow> knapsacks;
   std::vector<std::pair<HighsInt, double>> oldRow;
 
   auto changeRow = [&](const KnapsackRow& knapsack) {
-    strengthenedKnapsacks = true;
     oldRow.clear();
     for (const auto& nz : getRowVector(knapsack.row)) {
       oldRow.emplace_back(nz.index(), nz.value());
@@ -350,7 +345,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     if (allIntCoefficients) {
       // Round capacity to be integer if all coefficients are integer
       HighsCDouble roundedCapacity = floor(knapsack.capacity);
-      if (roundedCapacity < knapsack.capacity + primal_feastol) changed = true;
+      if (knapsack.capacity - roundedCapacity > primal_feastol) changed = true;
       knapsack.capacity = roundedCapacity;
     }
 
@@ -506,6 +501,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     // Recognise whether the knapsack can be upgraded to a "cardinality" row
     bool skipDisaggregation = false;
     recogniseCardinality(knapsack, primal_feastol, changed, skipDisaggregation);
+    skipDisaggregation = true;
 
     if (changed) {
       changeRow(knapsack);
@@ -587,15 +583,11 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   for (HighsInt row : disaggregatedRows) {
     postsolve_stack.redundantRow(row);
     removeRow(row);
-    ++numDisaggregated;
-    strengthenedKnapsacks = true;
   }
 
   highsLogDev(options->log_options, HighsLogType::kInfo,
-              "Knapsack presolve: %d normalized, %d fixed, %d disaggregated, "
-              "%d lifted\n",
-              static_cast<int>(numNormalized), static_cast<int>(numFixed),
-              static_cast<int>(numDisaggregated), static_cast<int>(numLifted));
+              "Knapsack presolve: %d rows changed, %d fixed\n",
+              static_cast<int>(numNormalized), static_cast<int>(numFixed));
   return Result::kOk;
 }
 

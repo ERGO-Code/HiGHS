@@ -4026,7 +4026,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
-    bool tryKnapsackDisaggreation = mipsolver != nullptr;
+    bool tryKnapsack = mipsolver != nullptr;
 
     // Start of main presolve loop
     //
@@ -4141,6 +4141,14 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         if (problemSizeReduction() > 0.05) continue;
       }
 
+      // Knapsack specific techniques
+      if (this->allow_rule_[kPresolveRuleKnapsack] && tryKnapsack) {
+        HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockKnapsack,
+                                     strengthenKnapsacks(postsolve_stack));
+        tryKnapsack = false;
+        HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
+      }
+
       // enumerate solutions
       if (mipsolver != nullptr && this->allow_rule_[kPresolveRuleEnumeration]) {
         storeCurrentProblemSize();
@@ -4196,17 +4204,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         if (problemSizeReduction() > 0.0)
           HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
-      }
-
-      // Knapsack disaggregation may increase problem size
-      if (this->allow_rule_[kPresolveRuleKnapsack] &&
-          tryKnapsackDisaggreation) {
-        bool strengthenedKnapsacks = false;
-        HPRESOLVE_TIMED_CHECKED_CALL(
-            kPresolveClockKnapsack,
-            strengthenKnapsacks(postsolve_stack, strengthenedKnapsacks));
-        tryKnapsackDisaggreation = false;
-        if (strengthenedKnapsacks) continue;
       }
 
       break;
