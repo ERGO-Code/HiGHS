@@ -188,6 +188,11 @@ See the
 [installation documentation](https://ergo-code.github.io/HiGHS/dev/installation/#gpu-build-amd)
 for details.
 
+`highs.pc` now lists the private dependencies of a static build, so
+`pkg-config --static` gives C++ applications the zlib and `highs_extras`
+libraries needed to link it, and OpenBLAS or Apple Accelerate if
+`highs_extras` uses one of them.
+
 OpenBLAS is built with `-mfma` for its AVX2 `DYNAMIC_ARCH` kernels on
 Linux ([PR #3399](https://github.com/ERGO-Code/HiGHS/pull/3399)), and on
 Apple users can choose the BLAS library used for the HiPO build
