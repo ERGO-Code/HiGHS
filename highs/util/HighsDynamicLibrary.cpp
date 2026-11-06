@@ -11,6 +11,8 @@
 
 #include "util/HighsDynamicLibrary.h"
 
+#include <algorithm>
+
 #include "util/stringutil.h"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -30,7 +32,21 @@ bool HighsDynamicLibrary::load(const std::string& filename,
 
 #if defined(_WIN32) || defined(_WIN64)
   std::string full_path = path + (path.empty() ? "" : "\\") + filename;
-  handle_ = static_cast<void*>(LoadLibraryA(full_path.c_str()));
+  // Python can give a mix of separators, and LoadLibraryExW needs backslashes
+  std::replace(full_path.begin(), full_path.end(), '/', '\\');
+  const int wide_length =
+      MultiByteToWideChar(CP_UTF8, 0, full_path.c_str(), -1, nullptr, 0);
+  std::wstring wide_path(wide_length, L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, full_path.c_str(), -1, &wide_path[0],
+                      wide_length);
+  // Never search the working directory or PATH, which an attacker may control.
+  // DLL_LOAD_DIR finds dependencies beside a DLL given by absolute path; it is
+  // rejected for a bare name or a relative path.
+  const DWORD search_flags =
+      LOAD_LIBRARY_SEARCH_DEFAULT_DIRS |
+      (path.empty() ? 0 : LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+  handle_ = static_cast<void*>(
+      LoadLibraryExW(wide_path.c_str(), nullptr, search_flags));
   if (!handle_) {
     DWORD error = GetLastError();
     char* message = nullptr;

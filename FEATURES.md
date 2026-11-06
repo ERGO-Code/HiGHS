@@ -194,3 +194,11 @@ Apple users can choose the BLAS library used for the HiPO build
 ([PR #3242](https://github.com/ERGO-Code/HiGHS/pull/3242)). CI now runs
 more sanitizer tests on PRs
 ([PR #3474](https://github.com/ERGO-Code/HiGHS/pull/3474)).
+
+On Windows, `highs_extras.dll` is no longer searched for in the working
+directory or on `PATH`, so it, and any DLL it depends on, must be next to
+the application's `.exe` or in a folder given to `AddDllDirectory`. In
+Python, on any platform, HiGHS only looks for the library in the
+`highspy-extras` package, and on Windows its dependencies must be next to it
+or in a folder given to `os.add_dll_directory`. Installation paths that
+contain non-ASCII characters are now handled on Windows.

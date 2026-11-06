@@ -164,6 +164,31 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   add_test(NAME capi_unit_tests COMMAND capi_unit_tests)
 
+  # check which folders the shared extras library can be loaded from
+  if (BUILD_SHARED_EXTRAS_LIB)
+    add_executable(extras_loading_test TestExtrasLoading.cpp)
+    if (FAST_BUILD)
+      target_link_libraries(extras_loading_test highs)
+    else()
+      target_link_libraries(extras_loading_test libhighs)
+    endif()
+
+    if (WIN32)
+      add_library(extras_planted MODULE TestExtrasPlanted.c)
+      # Copied away from the executable's folder, which is searched
+      set(planted_dir ${CMAKE_CURRENT_BINARY_DIR}/extras_planted)
+      add_custom_command(TARGET extras_planted POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${planted_dir}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:extras_planted> ${planted_dir}/planted_extras.dll)
+      add_dependencies(extras_loading_test extras_planted)
+      file(TO_NATIVE_PATH ${planted_dir} planted_dir_native)
+    endif()
+
+    add_test(NAME extras_loading_test
+             COMMAND extras_loading_test ${planted_dir_native})
+  endif()
+
   # Check whether test executable builds OK.
   if ((NOT HIGHS_COVERAGE) AND
         (NOT BUILD_OPENBLAS OR

@@ -996,7 +996,8 @@ std::string highs_locatePythonPackage(const std::string module_name) {
 }
 
 PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
-  HighsExternalApi::tryLoad(highs_locatePythonPackage("highspy_extras"));
+  // A missing package must not fall back to searching for the library by name
+  HighsExternalApi::tryLoad(highs_locatePythonPackage("highspy_extras"), false);
 
   // static function to get the load status of the extras library
   m.def("getExtrasLoadStatus", &HighsExternalApi::getLoadStatus);

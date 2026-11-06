@@ -130,7 +130,10 @@ struct HighsExternalApi {
   const HighsExtrasFeatureInfo* extras_feature_info_ = nullptr;
 
   static void unload();
-  static bool tryLoad(const std::string& path = "");
+  // Only the first call acts. path is an absolute UTF-8 folder. If it is empty,
+  // the default locations are searched only if search_default_locations is true
+  static bool tryLoad(const std::string& path = "",
+                      bool search_default_locations = true);
   static const std::string getLoadStatus() { return instance().status_; }
 
   // define <feature> functions, e.g. isAvailable<Feature1, Feature2, ...>()

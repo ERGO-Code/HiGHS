@@ -35,7 +35,8 @@ void HighsExternalApi::unload() {
 #define STRINGFY(s) STRINGFY0(s)
 #define STRINGFY0(s) #s
 
-bool HighsExternalApi::tryLoad(const std::string& path) {
+bool HighsExternalApi::tryLoad(const std::string& path,
+                               bool search_default_locations) {
   HighsExternalApi& inst = instance();
   static std::once_flag flag;
 
@@ -43,6 +44,11 @@ bool HighsExternalApi::tryLoad(const std::string& path) {
   // ensure thread safety (multiple threads may call tryLoad simultaneously)
   std::call_once(flag, [&]() {
     inst.available_ = false;
+
+    if (path.empty() && !search_default_locations) {
+      inst.status_ = "Extras: no extras package found";
+      return;
+    }
 
     // Load library
 #if defined(_WIN32) || defined(_WIN64)
@@ -91,8 +97,10 @@ bool HighsExternalApi::tryLoad(const std::string& path) {
   return inst.available_;
 }
 #else
-bool HighsExternalApi::tryLoad(const std::string& path) {
+bool HighsExternalApi::tryLoad(const std::string& path,
+                               bool search_default_locations) {
   (void)path;
+  (void)search_default_locations;
   static std::once_flag flag;
 
   std::call_once(flag, []() {

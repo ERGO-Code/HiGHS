@@ -81,6 +81,7 @@ If the OpenBLAS installation path is not in the default set, it could be provide
 ```
     --config-settings=cmake.define.BLAS_LIBRARIES=/path/to/openblas/library
 ```
+On Windows, if that OpenBLAS is a DLL, it is not found on `PATH`. Copy it next to `highs_extras.dll` in the `highspy_extras` package folder, or call `os.add_dll_directory` with its folder before importing `highspy`.
 
 
 ## Uninstall
