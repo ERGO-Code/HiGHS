@@ -8,7 +8,9 @@
 - The phases share their state through a `Context` struct, instead of
   through locals.
 - Option changes go through a new `HighsUndoStack`, which undoes them
-  on every return path, including exceptions.
+  on every return path, including exceptions. Each function that
+  changes options has its own local one, so changes don't outlive the
+  function that makes them.
 - All modifications ("mods") of the incumbent model are applied in one
   place and undone in one place.
 - `runPresolve()` and `runPostsolve()` take the `PresolveComponent`
@@ -95,9 +97,12 @@ flowchart TD
     lp --> returnFrom
 ```
 
-Any change to `options_` during the solve is made through
-`context.options_undo`. Anything still recorded there is undone when
-the `Context` is destroyed at the end of `optimizeModelTryCatch()`.
+Any change to `options_` during the solve is made through a
+`HighsUndoStack`: a local one in the function that makes the change,
+or `context.options_undo` for a change that must last until the end
+of the solve. Anything still recorded in `context.options_undo` is
+undone when the `Context` is destroyed at the end of
+`optimizeModelTryCatch()`.
 
 ## After: `optimizeModelLp()`
 
@@ -135,7 +140,8 @@ solve goes through `lpTimedSolve()`, which replaces the
 
 `Highs::Context` is created in `optimizeModelTryCatch()` and passed
 down by reference. It holds the status, the timings that used to be
-locals, `undo_mods`, `options_undo` and `lp_state`.
+locals, `undo_mods`, `options_undo` (only for option changes that last
+the whole solve) and `lp_state`.
 
 `Highs::LpState` holds the values shared by the `lp*` functions: the
 debug logging set-up, `solver_will_use_basis`,
@@ -160,16 +166,26 @@ saving and restoring values by hand, including copies of the whole
 `HighsOptions`:
 
 ```cpp
-const size_t mark = context.options_undo.mark();
-context.options_undo.set(options_.solver, kSimplexString);
+HighsUndoStack options_undo;
+options_undo.set(options_.solver, kSimplexString);
 ...
-context.options_undo.resetTo(mark);
+options_undo.reset();
 ```
 
 The destructor undoes anything still recorded, so a change is also
-undone on early returns and exceptions. Local stacks are used in
-`HighsInterface.cpp`, `HighsSolve.cpp`, `simplex/HApp.h` and
-`completeSolutionFromDiscreteAssignment()`.
+undone on early returns and exceptions.
+
+- **Local stacks** are used wherever options are changed and restored
+  in the same function: `lpTimedSolve()`, `lpSolveReduced()`,
+  `lpCleanupOriginal()` (one each for the debug check, the hot start
+  and the PDLP clean-up), `lpResolveUnboundedOrInfeasible()`,
+  `completeSolutionFromDiscreteAssignment()`, and in
+  `HighsInterface.cpp`, `HighsSolve.cpp` and `simplex/HApp.h`. The
+  explicit `reset()` is where the old code restored the values, so the
+  order of restores on the normal paths is unchanged.
+- **`context.options_undo`** is only for a change that must last until
+  the end of the solve. The only one is raising `highs_debug_level` in
+  `optimizeModelPreChecks()` (see B10).
 
 The old code sometimes restored a whole copy of `HighsOptions`
 (`options_ = save_options`). The new code restores only the fields it
