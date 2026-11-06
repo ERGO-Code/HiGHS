@@ -1313,10 +1313,11 @@ HighsStatus Highs::optimizeModelTryCatch() {
   // catch: they are caught by SOLVE_CATCH_CALL in HighsSolve.cpp.
   //
   // Any change to options_ during the optimization should be made via
-  // context.options_undo.set(options_.xxx, value). For a temporary change,
-  // take m = context.options_undo.mark() first and call
-  // context.options_undo.resetTo(m) when done. Changes still recorded are
-  // undone when context is destroyed, after returnFromOptimizeModel()
+  // a HighsUndoStack: a local one for a change that is undone within
+  // the same function, and context.options_undo for a change that
+  // must last until the end of the optimization. Changes recorded in
+  // context.options_undo are undone when context is destroyed, after
+  // returnFromOptimizeModel()
   Context context;
   HighsStatus status;
   auto handleCatch = [&]() {
@@ -1916,11 +1917,10 @@ bool Highs::lpHandlePresolveStatus(Context& context,
 }
 
 void Highs::lpResolveUnboundedOrInfeasible(Context& context, HighsLp& lp) {
-  HighsUndoStack& options_undo = context.options_undo;
   // Presolve has returned kUnboundedOrInfeasible, but HiGHS
   // can't return this. Use primal simplex solver on the original
   // LP
-  const size_t options_mark = options_undo.mark();
+  HighsUndoStack options_undo;
   options_undo.set(options_.solver, "simplex");
   options_undo.set(options_.simplex_strategy, kSimplexStrategyPrimal);
   lpTimedSolve(context, lp,
@@ -1928,7 +1928,7 @@ void Highs::lpResolveUnboundedOrInfeasible(Context& context, HighsLp& lp) {
                "to determine infeasible or unbounded",
                context.solve_original_lp_time);
   // Recover the options
-  options_undo.resetTo(options_mark);
+  options_undo.reset();
   // Primal simplex doesn't necessarily resolve the
   // kUnboundedOrInfeasible case, as it may time out or reach
   // the iteration count (#3383), or even fail
@@ -2007,8 +2007,6 @@ void Highs::lpSetReducedToEmptySolution() {
 bool Highs::lpSolveReduced(Context& context,
                            const HighsPresolveStatus presolve_status,
                            HighsLp& lp) {
-  HighsUndoStack& options_undo = context.options_undo;
-  size_t options_mark = 0;
   LpState& lp_state = context.lp_state;
   HighsStatus call_status;
   switch (presolve_status) {
@@ -2041,7 +2039,7 @@ bool Highs::lpSolveReduced(Context& context,
       ekk_instance_.lp_name_ = "Presolved LP";
       // Don't try dual cut-off when solving the presolved LP, as the
       // objective values aren't correct
-      options_mark = options_undo.mark();
+      HighsUndoStack options_undo;
       options_undo.set(options_.objective_bound, kHighsInf);
       call_status = lpTimedSolve(context, lp, "Solving the presolved LP",
                                  context.solve_presolved_lp_time);
@@ -2053,7 +2051,7 @@ bool Highs::lpSolveReduced(Context& context,
             ekk_instance_.info_.factor_pivot_threshold;
       }
       // Restore the dual objective cut-off
-      options_undo.resetTo(options_mark);
+      options_undo.reset();
       context.status = interpretCallStatus(options_.log_options, call_status,
                                            context.status, "callSolveLp");
       if (context.status == HighsStatus::kError) return true;
@@ -2085,10 +2083,9 @@ bool Highs::lpSolveReduced(Context& context,
 
 HighsStatus Highs::lpTimedSolve(Context& context, HighsLp& lp,
                                 const std::string& description, double& time) {
-  HighsUndoStack& options_undo = context.options_undo;
   const LpState& lp_state = context.lp_state;
   time = -timer_.read(timer_.solve_clock);
-  const size_t options_mark = options_undo.mark();
+  HighsUndoStack options_undo;
   if (lp_state.possibly_use_log_dev_level_2) {
     options_undo.set(options_.log_dev_level, lp_state.use_log_dev_level);
     options_undo.set(options_.output_flag, lp_state.use_output_flag);
@@ -2096,7 +2093,7 @@ HighsStatus Highs::lpTimedSolve(Context& context, HighsLp& lp,
   timer_.start(timer_.solve_clock);
   HighsStatus call_status = callSolveLp(lp, description);
   timer_.stop(timer_.solve_clock);
-  options_undo.resetTo(options_mark);
+  options_undo.reset();
   time += timer_.read(timer_.solve_clock);
   return call_status;
 }
@@ -2210,8 +2207,6 @@ bool Highs::lpPostsolve(Context& context, PresolveComponent& presolve,
 }
 
 bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
-  HighsUndoStack& options_undo = context.options_undo;
-  size_t options_mark = 0;
   LpState& lp_state = context.lp_state;
   HighsStatus call_status;
   HighsLogOptions& log_options = options_.log_options;
@@ -2226,7 +2221,7 @@ bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
       // Possibly force debug to perform KKT check on what's
       // returned from postsolve
       const bool force_debug = false;
-      options_mark = options_undo.mark();
+      HighsUndoStack options_undo;
       if (force_debug)
         options_undo.set(options_.highs_debug_level, kHighsDebugLevelCostly);
       if (debugHighsSolution("After returning from postsolve", options_, model_,
@@ -2235,11 +2230,11 @@ bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
         context.status = HighsStatus::kError;
         return true;
       }
-      options_undo.resetTo(options_mark);
+      options_undo.reset();
     }
     // Save the options to allow the best simplex strategy to
     // be used
-    options_mark = options_undo.mark();
+    HighsUndoStack options_undo;
     const bool full_logging = false;
     if (full_logging)
       options_undo.set(options_.log_dev_level, kHighsLogDevLevelVerbose);
@@ -2275,7 +2270,7 @@ bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
     context.status = interpretCallStatus(log_options, call_status,
                                          context.status, "callSolveLp");
     // Recover the options
-    options_undo.resetTo(options_mark);
+    options_undo.reset();
     if (context.status == HighsStatus::kError) return true;
     this->run_data_.num_simplex_iterations_after_postsolve =
         context.postsolve_iteration_count;
@@ -2303,7 +2298,7 @@ bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
       // both leading to model_status_ == HighsModelStatus::kUnknown,
       // so run PDLP on the original problem, starting from the
       // incumbent solution
-      options_mark = options_undo.mark();
+      HighsUndoStack options_undo;
       assert(useIpm(options_.solver) || options_.solver == kPdlpString);
       highsLogUser(
           log_options, HighsLogType::kInfo,
@@ -2321,7 +2316,7 @@ bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
           "postsolve",
           context.solve_original_lp_time);
       // Recover solver and time limit option values
-      options_undo.resetTo(options_mark);
+      options_undo.reset();
       context.status = HighsStatus::kOk;
       context.status = interpretCallStatus(log_options, call_status,
                                            context.status, "callSolveLp");
