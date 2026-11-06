@@ -114,9 +114,15 @@ supports minimize/maximize with a constant objective, and
 `PYBIND11_DETAILED_ERROR_MESSAGES` is no longer defined in the bindings
 ([PR #3346](https://github.com/ERGO-Code/HiGHS/pull/3346)).
 
-The C API methods `Highs_getBasis` and `Highs_getSolution` now return
-`kHighsStatusError` if there is no valid basis or primal solution ([PR
-#3291](https://github.com/ERGO-Code/HiGHS/pull/3291)).
+**Breaking change:** The C API methods `Highs_getBasis` and
+`Highs_getSolution` now return `kHighsStatusError`, rather than
+`kHighsStatusOk`, if there is no valid basis or primal solution ([PR
+#3291](https://github.com/ERGO-Code/HiGHS/pull/3291)). This includes
+an LP found to be infeasible, for which `Highs_run` still returns
+`kHighsStatusOk`. The output arrays are not written when an error is
+returned, so check the return value before reading them. The soname of
+the shared library remains `libhighs.so.1`, so existing binaries get
+this behaviour without being rebuilt.
 
 ### Other
 
