@@ -723,3 +723,83 @@ TEST_CASE("issue-3340", "[highs_callback]") {
 
   highs.resetThreadScheduler(true);
 }
+
+TEST_CASE("highs-callback-refuses-calls", "[highs_callback]") {
+  // Methods that are unsafe to call from within a callback must
+  // return an error without doing anything, leaving the outer call to
+  // run() unaffected
+  struct CallbackData {
+    Highs* highs;
+    std::string filename;
+    HighsInt num_call = 0;
+    std::vector<std::pair<std::string, HighsStatus>> call_status;
+  };
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/egout.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve", kHighsOffString);
+  CallbackData callback_data;
+  callback_data.highs = &highs;
+  callback_data.filename = filename;
+  highs.setCallback(
+      [](int, const std::string&, const HighsCallbackOutput*,
+         HighsCallbackInput* data_in, void* user_data) {
+        auto& data = *static_cast<CallbackData*>(user_data);
+        data.num_call++;
+        if (data.num_call == 1) {
+          Highs& h = *data.highs;
+          const HighsLp lp = h.getLp();
+          const HighsSolution solution = h.getSolution();
+          bool has_dual_ray;
+          data.call_status.push_back({"run", h.run()});
+          data.call_status.push_back({"presolve", h.presolve()});
+          data.call_status.push_back(
+              {"setCallback", h.setCallback(HighsCallbackFunctionType())});
+          data.call_status.push_back({"clearModel", h.clearModel()});
+          data.call_status.push_back({"clearSolver", h.clearSolver()});
+          data.call_status.push_back({"passModel", h.passModel(lp)});
+          data.call_status.push_back({"readModel", h.readModel(data.filename)});
+          data.call_status.push_back({"changeColCost", h.changeColCost(0, 1)});
+          data.call_status.push_back(
+              {"changeColBounds", h.changeColBounds(0, 0, 0)});
+          data.call_status.push_back(
+              {"changeObjectiveSense",
+               h.changeObjectiveSense(ObjSense::kMaximize)});
+          data.call_status.push_back(
+              {"addRow", h.addRow(0, 1, 0, nullptr, nullptr)});
+          data.call_status.push_back({"deleteCols", h.deleteCols(0, 0)});
+          data.call_status.push_back({"ensureRowwise", h.ensureRowwise()});
+          data.call_status.push_back({"setSolution", h.setSolution(solution)});
+          data.call_status.push_back(
+              {"setOptionValue", h.setOptionValue("time_limit", 1.0)});
+          data.call_status.push_back(
+              {"getDualRay", h.getDualRay(has_dual_ray)});
+          data.call_status.push_back({"writeModel", h.writeModel("")});
+        }
+        data_in->user_interrupt = true;
+      },
+      &callback_data);
+  highs.startCallback(kCallbackMipInterrupt);
+  highs.readModel(filename);
+  const HighsLp original_lp = highs.getLp();
+  HighsStatus status = highs.run();
+
+  REQUIRE(callback_data.num_call >= 1);
+  for (const auto& call_status : callback_data.call_status) {
+    if (dev_run)
+      printf("Callback call to %s returns %s\n", call_status.first.c_str(),
+             highs.highsStatusToString(call_status.second).c_str());
+    REQUIRE(call_status.second == HighsStatus::kError);
+  }
+  // The outer call to run() is unaffected
+  REQUIRE(status == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  // The incumbent model and options are unchanged
+  REQUIRE(highs.getLp().equalButForScalingAndNames(original_lp));
+  REQUIRE(highs.getOptions().time_limit == kHighsInf);
+  // Outside the callback, the methods can be called again
+  REQUIRE(highs.changeColCost(0, 1) == HighsStatus::kOk);
+  REQUIRE(highs.setOptionValue("time_limit", 1.0) == HighsStatus::kOk);
+
+  highs.resetThreadScheduler(true);
+}
