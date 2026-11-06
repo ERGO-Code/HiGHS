@@ -489,34 +489,10 @@
 - Range: {0, 2147483647}
 - Default: 2147483647
 
-## [pdlp\_scaling\_mode](@id option-pdlp-scaling-mode)
-- Scaling mode for PDLP solver (default = 5): 1 => Ruiz; 2 => L2; 4 => PC
-- Type: integer
-- Range: {0, 7}
-- Default: 5
-
-## [pdlp\_ruiz\_iterations](@id option-pdlp-ruiz-iterations)
-- Number of Ruiz scaling iteraitons for PDLP solver
-- Type: integer
-- Range: {0, 2147483647}
-- Default: 10
-
-## [pdlp\_restart\_strategy](@id option-pdlp-restart-strategy)
-- Restart strategy for PDLP solver: 0 => off; 1 => fixed; 2 => adaptive; 3 => Halpern
-- Type: integer
-- Range: {0, 3}
-- Default: 2
-
 ## [pdlp\_cupdlpc\_restart\_method](@id option-pdlp-cupdlpc-restart-method)
 - Restart mode for cuPDLP-C solver: 0 => none; 1 => GPU (default); 2 => CPU 
 - Type: integer
 - Range: {0, 2}
-- Default: 1
-
-## [pdlp\_step\_size\_strategy](@id option-pdlp-step-size-strategy)
-- Step size strategy for PDLP solver: 0 => fixed; 1 => adaptive; 2 => Malitsky-Pock; 3 => PID
-- Type: integer
-- Range: {0, 3}
 - Default: 1
 
 ## [pdlp\_optimality\_tolerance](@id option-pdlp-optimality-tolerance)
@@ -527,11 +503,6 @@
 
 ## [hipdlp\_backend](@id option-hipdlp-backend)
 - HiPDLP execution backend: "auto", "cpu", "cuda", "openmp" or "rocm"
-- Type: string
-- Default: "auto"
-
-## [hipdlp\_scaling](@id option-hipdlp-scaling)
-- HiPDLP scaling pipeline: "auto", "off", "curtis\_reid" or "legacy"
 - Type: string
 - Default: "auto"
 

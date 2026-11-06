@@ -1310,7 +1310,6 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("ipm_optimality_tolerance",
                      &HighsOptions::ipm_optimality_tolerance)
       .def_readwrite("ipm_iteration_limit", &HighsOptions::ipm_iteration_limit)
-      .def_readwrite("pdlp_scaling_mode", &HighsOptions::pdlp_scaling_mode)
       .def_readwrite("pdlp_iteration_limit",
                      &HighsOptions::pdlp_iteration_limit)
       .def_readwrite("pdlp_cupdlpc_restart_method",

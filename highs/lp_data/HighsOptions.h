@@ -347,11 +347,6 @@ const string kHiPdlpBackendCudaString = "cuda";
 const string kHiPdlpBackendOpenmpString = "openmp";
 const string kHiPdlpBackendRocmString = "rocm";
 
-// Strings for the HiPDLP scaling option
-const string kHiPdlpScalingString = "hipdlp_scaling";
-const string kHiPdlpScalingCurtisReidString = "curtis_reid";
-const string kHiPdlpScalingLegacyString = "legacy";
-
 const string kHiPdlpCurtisReidIterationsString =
     "hipdlp_curtis_reid_iterations";
 const HighsInt kHiPdlpDefaultCurtisReidIterations = 20;
@@ -430,16 +425,11 @@ struct HighsOptionsStruct {
   // Options for PDLP solver
   HighsInt pdlp_features_off;
   HighsInt pdlp_iteration_limit;
-  HighsInt pdlp_scaling_mode;
-  HighsInt pdlp_ruiz_iterations;
-  HighsInt pdlp_restart_strategy;
   HighsInt pdlp_cupdlpc_restart_method;
-  HighsInt pdlp_step_size_strategy;
   double pdlp_optimality_tolerance;
 
   // Options for the HiPDLP rewrite
   std::string hipdlp_backend;
-  std::string hipdlp_scaling;
   bool hipdlp_scaling_selector;
   HighsInt hipdlp_curtis_reid_iterations;
     bool hipdlp_early_kkt_check;
@@ -622,14 +612,9 @@ struct HighsOptionsStruct {
         hipo_serial_blas(true),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
-        pdlp_scaling_mode(0),
-        pdlp_ruiz_iterations(0),
-        pdlp_restart_strategy(0),
         pdlp_cupdlpc_restart_method(0),
-        pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
         hipdlp_backend(""),
-        hipdlp_scaling(""),
         hipdlp_scaling_selector(false),
         hipdlp_curtis_reid_iterations(0),
         hipdlp_early_kkt_check(false),
@@ -1417,40 +1402,10 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int =
-        new OptionRecordInt("pdlp_scaling_mode",
-                            "Scaling mode for PDLP solver (default = "
-                            "5): 1 => Ruiz; 2 => L2; 4 => PC",
-                            advanced, &pdlp_scaling_mode, kPdlpScalingMin,
-                            kPdlpScalingRuiz + kPdlpScalingPC, kPdlpScalingMax);
-    records.push_back(record_int);
-
-    record_int =
-        new OptionRecordInt("pdlp_ruiz_iterations",
-                            "Number of Ruiz scaling iteraitons for PDLP solver",
-                            advanced, &pdlp_ruiz_iterations, 0, 10, kHighsIInf);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "pdlp_restart_strategy",
-        "Restart strategy for PDLP solver: 0 => off; "
-        "1 => fixed; 2 => adaptive; 3 => Halpern",
-        advanced, &pdlp_restart_strategy, kPdlpRestartStrategyMin,
-        kPdlpRestartStrategyAdaptive, kPdlpRestartStrategyMax);
-    records.push_back(record_int);
-
-    record_int =
         new OptionRecordInt("pdlp_cupdlpc_restart_method",
                             "Restart mode for cuPDLP-C solver: 0 => none; "
                             "1 => GPU (default); 2 => CPU ",
                             advanced, &pdlp_cupdlpc_restart_method, 0, 1, 2);
-    records.push_back(record_int);
-
-    record_int = new OptionRecordInt(
-        "pdlp_step_size_strategy",
-        "Step size strategy for PDLP solver: 0 => fixed; "
-        "1 => adaptive; 2 => Malitsky-Pock; 3 => PID",
-        advanced, &pdlp_step_size_strategy, kPdlpStepSizeStrategyMin,
-        kPdlpStepSizeStrategyAdaptive, kPdlpStepSizeStrategyMax);
     records.push_back(record_int);
 
     record_double = new OptionRecordDouble(
@@ -1464,13 +1419,6 @@ class HighsOptions : public HighsOptionsStruct {
         "HiPDLP execution backend: \"auto\", \"cpu\", \"cuda\", \"openmp\" "
         "or \"rocm\"",
         advanced, &hipdlp_backend, kHiPdlpAutoString);
-    records.push_back(record_string);
-
-    record_string = new OptionRecordString(
-        kHiPdlpScalingString,
-        "HiPDLP scaling pipeline: \"auto\", \"off\", \"curtis_reid\" or "
-        "\"legacy\"",
-        advanced, &hipdlp_scaling, kHiPdlpAutoString);
     records.push_back(record_string);
 
     record_int =

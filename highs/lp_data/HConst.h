@@ -459,32 +459,6 @@ enum PdlpFeaturesOff {
       kPdlpScalingOff + kPdlpRestartOff + kPdlpAdaptiveStepSizeOff
 };
 
-enum PdlpScalingBit {
-  kPdlpScalingMin = 0,
-  kPdlpScalingRuiz = 1,
-  kPdlpScalingL2 = 2,
-  kPdlpScalingPC = 4,
-  kPdlpScalingMax = kPdlpScalingRuiz + kPdlpScalingL2 + kPdlpScalingPC
-};
-
-enum PdlpStepSizeStrategy {
-  kPdlpStepSizeStrategyFixed = 0,
-  kPdlpStepSizeStrategyMin = kPdlpStepSizeStrategyFixed,
-  kPdlpStepSizeStrategyAdaptive,
-  kPdlpStepSizeStrategyMalitskyPock,
-  kPdlpStepSizeStrategyPid,
-  kPdlpStepSizeStrategyMax = kPdlpStepSizeStrategyPid
-};
-
-enum PdlpRestartStrategy {
-  kPdlpRestartStrategyOff = 0,
-  kPdlpRestartStrategyMin = kPdlpRestartStrategyOff,
-  kPdlpRestartStrategyFixed,
-  kPdlpRestartStrategyAdaptive,
-  kPdlpRestartStrategyHalpern,
-  kPdlpRestartStrategyMax = kPdlpRestartStrategyHalpern
-};
-
 namespace hipo {
 enum class ParallelTechnique {
   kMin = 0,

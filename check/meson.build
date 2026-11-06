@@ -86,24 +86,6 @@ foreach test : test_array
       )
 endforeach
 
-executable('lp_solver_validation_adapter',
-           build_by_default: false,
-     sources: ['LpSolverValidationAdapter.cpp', highs_conf_file],
-     dependencies: _deps,
-     link_with: highslib,
-     cpp_args: _args,
-     include_directories: _incdirs,
-    )
-
-executable('external_lp_solution_verifier',
-           build_by_default: false,
-           sources: ['ExternalLpSolutionVerifier.cpp', highs_conf_file],
-           dependencies: _deps,
-           link_with: highslib,
-           cpp_args: _args,
-           include_directories: _incdirs,
-          )
-
 
 test('test_capi',
      executable('capi_unit_tests',

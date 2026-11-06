@@ -154,20 +154,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
 
-  add_executable(lp_solver_validation_adapter EXCLUDE_FROM_ALL LpSolverValidationAdapter.cpp)
-  if (FAST_BUILD)
-    target_link_libraries(lp_solver_validation_adapter highs)
-  else()
-    target_link_libraries(lp_solver_validation_adapter libhighs)
-  endif()
-
-  add_executable(external_lp_solution_verifier EXCLUDE_FROM_ALL ExternalLpSolutionVerifier.cpp)
-  if (FAST_BUILD)
-    target_link_libraries(external_lp_solution_verifier highs)
-  else()
-    target_link_libraries(external_lp_solution_verifier libhighs)
-  endif()
-
   # check the C API
   add_executable(capi_unit_tests TestCAPI.c)
   if (FAST_BUILD)
