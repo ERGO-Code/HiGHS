@@ -1013,6 +1013,7 @@ class Highs {
    * @brief Clear the integrality of all columns
    */
   HighsStatus clearIntegrality() {
+    if (calledFromCallback(__func__)) return HighsStatus::kError;
     this->model_.lp_.integrality_.clear();
     return HighsStatus::kOk;
   }
@@ -1104,6 +1105,7 @@ class Highs {
    * @brief Sets the constraint matrix format of the incumbent model
    */
   HighsStatus setMatrixFormat(const MatrixFormat desired_format) {
+    if (calledFromCallback(__func__)) return HighsStatus::kError;
     this->model_.lp_.setFormat(desired_format);
     return HighsStatus::kOk;
   }
@@ -1162,11 +1164,13 @@ class Highs {
                       const double* values);
 
   HighsStatus ensureColwise() {
+    if (calledFromCallback(__func__)) return HighsStatus::kError;
     this->model_.lp_.ensureColwise();
     return HighsStatus::kOk;
   }
 
   HighsStatus ensureRowwise() {
+    if (calledFromCallback(__func__)) return HighsStatus::kError;
     this->model_.lp_.ensureRowwise();
     return HighsStatus::kOk;
   }
@@ -1474,6 +1478,7 @@ class Highs {
   }
   void writeAllClocks() { this->timer_.writeAllClocks(); }
   HighsStatus clearModelNames() {
+    if (calledFromCallback(__func__)) return HighsStatus::kError;
     this->model_.lp_.col_names_.clear();
     this->model_.lp_.row_names_.clear();
     return HighsStatus::kOk;
