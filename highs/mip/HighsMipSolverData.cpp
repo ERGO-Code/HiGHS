@@ -1521,6 +1521,7 @@ void HighsMipSolverData::performRestart() {
     workers[0].upper_bound = upper_bound;
     workers[0].upper_limit = upper_limit;
     workers[0].optimality_limit = optimality_limit;
+    workers[0].getGlobalDomain().clearPropagationSpace();
   }
 
   // remove the pointer into the stack-space of this function

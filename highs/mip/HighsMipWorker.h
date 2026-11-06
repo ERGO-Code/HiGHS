@@ -10,6 +10,7 @@
 
 #include "mip/HighsConflictPool.h"
 #include "mip/HighsCutPool.h"
+#include "mip/HighsDomain.h"
 #include "mip/HighsImplications.h"
 #include "mip/HighsLpRelaxation.h"
 #include "mip/HighsMipSolver.h"
@@ -62,6 +63,8 @@ class HighsMipWorker {
   HighsCutPool* cutpool_;
   HighsConflictPool* conflictpool_;
   HighsPseudocost* pseudocost_;
+  std::shared_ptr<HighsDomain::PropagationSpace> propagationSpace_ =
+      std::make_shared<HighsDomain::PropagationSpace>();
 
   bool heuristics_allowed;
   HeurStatistics heur_stats;
@@ -97,7 +100,10 @@ class HighsMipWorker {
 
   HighsDomain& getGlobalDomain() const { return *globaldom_; }
 
-  void setGlobalDomain(HighsDomain* globaldom) { globaldom_ = globaldom; }
+  void setGlobalDomain(HighsDomain* globaldom) {
+    globaldom_ = globaldom;
+    globaldom_->propagationSpace_ = propagationSpace_;
+  }
 
   HighsPseudocost& getPseudocost() const { return *pseudocost_; }
 

@@ -431,8 +431,6 @@ class HighsDomain {
   std::vector<HighsBool> changedcolsflags_;
   std::vector<HighsInt> changedcols_;
 
-  std::vector<std::pair<HighsInt, HighsInt>> propRowNumChangedBounds_;
-
   std::vector<HighsDomainChange> domchgstack_;
   std::vector<Reason> domchgreason_;
   std::vector<std::pair<double, HighsInt>> prevboundval_;
@@ -457,8 +455,15 @@ class HighsDomain {
   Reason infeasible_reason;
   HighsInt infeasible_pos;
 
-  size_t changedBoundsSize_ = 0;
-  std::unique_ptr<HighsDomainChange[]> changedBounds_;
+  friend class HighsMipWorker;
+
+  struct PropagationSpace {
+    size_t changedBoundsSize = 0;
+    std::unique_ptr<HighsDomainChange[]> changedBounds;
+    std::vector<std::pair<HighsInt, HighsInt>> rowNumChangedBounds;
+  };
+  std::shared_ptr<PropagationSpace> propagationSpace_ =
+      std::make_shared<PropagationSpace>();
 
   void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
 
@@ -509,6 +514,7 @@ class HighsDomain {
         infeasible_(other.infeasible_),
         infeasible_reason(other.infeasible_reason),
         infeasible_pos(other.infeasible_pos),
+        propagationSpace_(other.propagationSpace_),
         colLowerPos_(other.colLowerPos_),
         colUpperPos_(other.colUpperPos_),
         branchPos_(other.branchPos_),
@@ -777,6 +783,10 @@ class HighsDomain {
 
   void setDomainChangeStack(const std::vector<HighsDomainChange>& domchgstack,
                             const std::vector<HighsInt>& branchingPositions);
+
+  void clearPropagationSpace() const {
+    *propagationSpace_ = PropagationSpace{};
+  }
 
   bool propagate();
 

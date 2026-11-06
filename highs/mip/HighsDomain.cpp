@@ -2659,13 +2659,14 @@ bool HighsDomain::propagate() {
     changedboundsize = std::max(
         changedboundsize, cutpoolprop.cutpool->getMatrix().nonzeroCapacity());
 
-  if (changedboundsize > changedBoundsSize_ ||
-      changedboundsize < changedBoundsSize_ / 2) {
-    changedBounds_.reset(new HighsDomainChange[changedboundsize]);
-    changedBoundsSize_ = changedboundsize;
+  auto& workspace = *propagationSpace_;
+  if (changedboundsize > workspace.changedBoundsSize) {
+    workspace.changedBounds.reset(new HighsDomainChange[changedboundsize]);
+    workspace.changedBoundsSize = changedboundsize;
   }
 
-  HighsDomainChange* changedbounds = changedBounds_.get();
+  HighsDomainChange* changedbounds = workspace.changedBounds.get();
+  auto& propRowNumChangedBounds_ = workspace.rowNumChangedBounds;
 
   while (havePropagationRows()) {
     if (objProp_.isActive()) objProp_.propagate();
