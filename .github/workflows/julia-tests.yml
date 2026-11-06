@@ -55,7 +55,7 @@ jobs:
             os: 'ubuntu-latest'
             arch: x64
           - triplet: 'aarch64-apple-darwin'
-            os: 'macos-14'
+            os: 'macos-15'
             arch: aarch64
           - triplet: 'x86_64-w64-mingw32-cxx11'
             os: 'windows-latest'
