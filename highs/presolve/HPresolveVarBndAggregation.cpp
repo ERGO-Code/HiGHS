@@ -175,6 +175,10 @@ void HPresolve::aggregateVarBounds() {
     // nothing to aggregate if the column has no VLBs and VUBs
     if (lb <= -kHighsInf && ub >= kHighsInf) continue;
 
+    // nothing to aggregate if the tightened bounds fix the column or cross; the
+    // latter indicates infeasibility, which is left to other reductions
+    if (lb >= ub) continue;
+
     // compute range
     double range = kHighsInf;
     if (lb > -kHighsInf && ub < kHighsInf)
