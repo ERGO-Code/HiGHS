@@ -42,15 +42,22 @@ bool gcdAllButOne(std::vector<int64_t>& weights, int64_t& b,
   }
   int64_t gcd = 0;
   HighsInt candidate = -1;
-  // TODO: Extend logic s.t. search can swap candidate once, see SCIP
+  HighsInt firstSeen = -1;
+  HighsInt numSeen = 0;
   for (HighsInt i = 0; i != numTerms; ++i) {
     if (weights[i] == b || weights[i] == 0) continue;
+    if (++numSeen == 1) firstSeen = i;
     const int64_t oldGcd = gcd;
     gcd = HighsIntegers::gcd(gcd, weights[i]);
     if (gcd != 1) continue;
     if (candidate == -1) {
       candidate = i;
       gcd = oldGcd;
+    } else if (numSeen == 3 && candidate != firstSeen) {
+      // Excluding the second term failed, so try and exclude the first term
+      gcd = HighsIntegers::gcd(weights[candidate], weights[i]);
+      if (gcd == 1) return false;
+      candidate = firstSeen;
     } else {
       return false;
     }
