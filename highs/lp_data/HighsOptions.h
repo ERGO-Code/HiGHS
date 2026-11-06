@@ -347,10 +347,6 @@ const string kHiPdlpBackendCudaString = "cuda";
 const string kHiPdlpBackendOpenmpString = "openmp";
 const string kHiPdlpBackendRocmString = "rocm";
 
-const string kHiPdlpCurtisReidIterationsString =
-    "hipdlp_curtis_reid_iterations";
-const HighsInt kHiPdlpDefaultCurtisReidIterations = 20;
-
 struct HighsOptionsStruct {
   // Run-time options read from the command line
   std::string presolve;
@@ -430,9 +426,6 @@ struct HighsOptionsStruct {
 
   // Options for the HiPDLP rewrite
   std::string hipdlp_backend;
-  bool hipdlp_scaling_selector;
-  HighsInt hipdlp_curtis_reid_iterations;
-    bool hipdlp_early_kkt_check;
 
   // Options for QP solver
   bool test_qp_oracle;
@@ -615,9 +608,6 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_optimality_tolerance(0.0),
         hipdlp_backend(""),
-        hipdlp_scaling_selector(false),
-        hipdlp_curtis_reid_iterations(0),
-        hipdlp_early_kkt_check(false),
         test_qp_oracle(false),
         qp_allow_hot_start(false),
         qp_iteration_limit(0),
@@ -1420,27 +1410,6 @@ class HighsOptions : public HighsOptionsStruct {
         "or \"rocm\"",
         advanced, &hipdlp_backend, kHiPdlpAutoString);
     records.push_back(record_string);
-
-    record_int =
-        new OptionRecordInt(kHiPdlpCurtisReidIterationsString,
-                            "Number of Curtis-Reid scaling sweeps for HiPDLP",
-                            advanced, &hipdlp_curtis_reid_iterations, 1,
-                            kHiPdlpDefaultCurtisReidIterations, kHighsIInf);
-    records.push_back(record_int);
-
-    record_bool = new OptionRecordBool(
-        "hipdlp_scaling_selector",
-        "Experimental auto scaling: compare two 200-iteration pilots by "
-        "geometric-mean Kw and continue the winner after the Curtis-Reid guard",
-        advanced, &hipdlp_scaling_selector, false);
-    records.push_back(record_bool);
-
-    record_bool = new OptionRecordBool(
-        "hipdlp_early_kkt_check",
-        "Request original-model KKT checks every 400 iterations near "
-        "convergence, without relaxing the KKT tolerance",
-        advanced, &hipdlp_early_kkt_check, false);
-    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool("test_qp_oracle",
                                        "Use an oracle for the QP Hessian",

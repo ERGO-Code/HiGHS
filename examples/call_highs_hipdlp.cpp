@@ -1,11 +1,11 @@
 // Example that also serves as a functional check for the HiPDLP solver,
 // including its GPU backends.
 //
-// HiPDLP is the native first-order primal-dual LP solver in HiGHS. The same
-// source is compiled either for the CPU, for NVIDIA GPUs (-DCUPDLP_GPU=ON) or
-// for AMD GPUs (-DHIPDLP_HIP=ON, ROCm / HIP). Selecting the solver is done at
-// run time with the "hipdlp" option; whether the arithmetic happens on the CPU
-// or on a GPU is fixed at build time.
+// HiPDLP is the native first-order primal-dual LP solver in HiGHS. It is built
+// either for the CPU only, for NVIDIA GPUs (-DHIGHS_HIPDLP_CUDA=ON) or for AMD
+// GPUs (-DHIPDLP_HIP=ON, ROCm / HIP). Selecting the solver is done at run time
+// with the "hipdlp" option; in a GPU build the "hipdlp_backend" option can
+// still force the CPU solver.
 //
 // This program:
 //   1. solves a small LP with the default solver to obtain a reference optimum,

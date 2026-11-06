@@ -506,12 +506,6 @@
 - Type: string
 - Default: "auto"
 
-## [hipdlp\_curtis\_reid\_iterations](@id option-hipdlp-curtis-reid-iterations)
-- Number of Curtis-Reid scaling sweeps for HiPDLP
-- Type: integer
-- Range: {1, 2147483647}
-- Default: 20
-
 ## [test\_qp\_oracle](@id option-test-qp-oracle)
 - Use an oracle for the QP Hessian
 - Type: boolean

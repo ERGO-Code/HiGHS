@@ -102,55 +102,32 @@ interior point or simplex solvers.
   * Setting the option [__solver__](@ref option-solver) to "pdlp" forces the cuPDLP-C solver to be used
   * Setting the option [__solver__](@ref option-solver) to "hipdlp" forces the HiPDLP solver to be used
 
-HiPDLP uses the modular FP64 implementation by default. Its
-[__hipdlp_backend__](@ref option-hipdlp-backend) option selects serial `cpu`,
-`cuda`, or `auto`; `auto` uses CUDA only when it was built and a compatible
-device is available. Explicit unavailable requests fail instead of silently
-falling back. `openmp` and `rocm` are reserved, unavailable backends. The CMake
-option `HIGHS_HIPDLP_CUDA` is independent of cuPDLP's `CUPDLP_GPU` option.
+HiPDLP is an FP64 implementation of the reflected Halpern PDHG method. It
+runs on an NVIDIA GPU (CMake option `HIGHS_HIPDLP_CUDA`), on an AMD GPU
+(`HIPDLP_HIP`), or on the CPU. The CMake option `HIGHS_HIPDLP_CUDA` is
+independent of cuPDLP's `CUPDLP_GPU` option. The CPU implementation follows the
+GPU algorithm step by step and is used when HiGHS is built without a GPU
+backend.
 
-Default HiPDLP scaling applies deterministic host Curtis-Reid scaling followed
-by the enabled legacy stages, unless Curtis-Reid would make the scaled costs,
-right-hand sides or bounds more than a factor 1000 larger (2-norm) than the
-legacy stages alone give; then it is dropped and only the legacy stages are
-applied, and the solve log says so. Fixed and PID step-size policies are supported;
-the public adaptive request maps to fixed, not PID. Benchmarks using explicit
-PID must be distinguished from that default path. The independent PDLP
-iteration tolerance and final KKT tolerance are separate options; changing
-one is not a substitute for setting the other.
+The option [__hipdlp_backend__](@ref option-hipdlp-backend) selects the
+backend. The value `cpu` forces the CPU solver, even in a GPU build. In a build
+without GPU support, `cuda` and `rocm` produce a warning and the CPU solver is
+used. `openmp` is accepted but has no separate implementation.
 
-An experimental, opt-in `hipdlp_scaling_selector=true` requires `auto` scaling
-with Ruiz and Pock-Chambolle enabled. After the Curtis-Reid guard, it runs
-200 iterations with each pipeline, scores both scalings from both pilot
-iterates using the geometric mean of their Kw estimates, and continues the
-winner's complete state. The discarded pilot counts toward the iteration
-limit, and both pilots share the time budget. Guard rejections skip the pilots.
-Iteration budgets of 400 or less use the guarded default. Kw uses the initial
-unscaled primal weight even for PID, so this experimental policy has no
-validated performance guarantee for PID or held-out problems.
+HiPDLP has a single optimality tolerance. It is
+[__kkt_tolerance__](@ref option-kkt-tolerance) if that has been changed from its
+default, and [__pdlp_optimality_tolerance__](@ref option-pdlp-optimality-tolerance)
+otherwise. A solve is optimal when the relative L2 primal and dual residuals and
+the relative primal-dual gap are within this tolerance. HiPDLP also detects
+infeasible and unbounded LPs by checking Farkas and ray certificates. The
+algorithm constants, such as the step size, restart and scaling, are fixed in
+the solver and are not options. The iteration and time limits are
+[__pdlp_iteration_limit__](@ref option-pdlp-iteration-limit) and
+[__time_limit__](@ref option-time-limit).
 
-The experimental `hipdlp_early_kkt_check` option is false by default. When
-enabled, it can request an additional original-model KKT check every 400
-iterations near convergence, without relaxing the final KKT tolerance. Extra
-checks are disabled when that tolerance is looser than a requested internal
-tolerance. This does not choose a scaling mode and can add verification cost;
-the evaluated scaling/check combination did not improve the held-out batch.
-See the [bounded algorithm study](../hipdlp-phase8-algorithm-study.md) before
-using it as a performance option.
-
-CUDA keeps routine check reductions on device and returns a small scalar
-packet. Optimality/certificate candidates and final solutions still undergo
-independent original-model verification. The final HiPDLP optimality check
-uses the original LP's primal feasibility, dual/stationarity, objective gap,
-and aggregate absolute complementarity. Gap and complementarity normalization
-exclude the additive objective constant. This relative KKT contract is not
-an absolute objective-error guarantee; known-reference benchmark checks remain
-separate. Internal scaled checks are triggers, not sufficient evidence for
-returning optimal. See the [original stopping contract](../hipdlp-original-stopping.md)
-for definitions and compatibility details. Performance and migration acceptance
-are documented in the developer report
-[`hipdlp-phase8-gpu-performance-report.md`](../hipdlp-phase8-gpu-performance-report.md);
-the existence of the CUDA backend is not a claim that every model runs faster.
+When [__presolve__](@ref option-presolve) is on, the default presolve mode for
+PDLP is light, which uses only low-cost rules. Set
+[__presolve_mode__](@ref option-presolve-mode) to 3 to use full presolve.
 
 ### Basic solution
 
