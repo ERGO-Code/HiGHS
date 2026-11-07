@@ -19,6 +19,7 @@
 #include "HighsExternalDeps.h"
 #include "HighsExtrasApi.h"
 #include "io/HighsIO.h"
+#include "lp_data/HighsStatus.h"
 #include "util/HighsDynamicLibrary.h"
 #include "util/HighsType.h"
 #include "util/stringutil.h"
