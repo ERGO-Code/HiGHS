@@ -33,6 +33,7 @@ struct KnapsackAggregateStats {
   double minSmall = kHighsInf;
   double secondSmall = kHighsInf;
   double maxSmall = 0;
+  double secondMaxSmall = 0;
   HighsCDouble outsideThirdSum = 0;
   double thirdMax1 = 0;
   double thirdMax2 = 0;
@@ -97,10 +98,10 @@ HighsCDouble boundSmallResidual(const KnapsackAggregateStats& stats,
   // Check that selecting one more item is impossible
   // This is just done due to numerics
   if (maxNumSmallSelected < stats.numSmall) {
-    const double lower =
-        max(stats.minSmall * (maxNumSmallSelected + 1),
-            stats.smallSum -
-                stats.maxSmall * (stats.numSmall - maxNumSmallSelected - 1));
+    const double lower = std::max(
+        stats.minSmall * (maxNumSmallSelected + 1),
+        static_cast<double>(stats.smallSum) -
+            stats.maxSmall * (stats.numSmall - maxNumSmallSelected - 1));
     if (lower - residual <= feastol) {
       maxNumSmallSelected = stats.numSmall;
     }
@@ -109,11 +110,25 @@ HighsCDouble boundSmallResidual(const KnapsackAggregateStats& stats,
   // Calculate an upper bound on the remaining residual that can be used
   // by the small items.
   HighsCDouble upper = min(residual, stats.smallSum);
-  upper = min(upper,
-              static_cast<HighsCDouble>(stats.maxSmall) * maxNumSmallSelected);
+  if (maxNumSmallSelected >= 2) {
+    upper = min(upper, static_cast<HighsCDouble>(stats.maxSmall) +
+                           static_cast<HighsCDouble>(stats.secondMaxSmall) *
+                               (maxNumSmallSelected - 1));
+  } else {
+    upper = min(
+        upper, static_cast<HighsCDouble>(stats.maxSmall) * maxNumSmallSelected);
+  }
   upper =
       min(upper, stats.smallSum - static_cast<HighsCDouble>(stats.minSmall) *
                                       (stats.numSmall - maxNumSmallSelected));
+  // Check if the two largest items fit in the residual
+  if (stats.maxSmall - residual > feastol) {
+    HighsCDouble smallSmallSum = stats.smallSum - stats.maxSmall;
+    if (stats.numSmall >= 2 && stats.secondMaxSmall - residual > feastol) {
+      smallSmallSum -= stats.secondMaxSmall;
+    }
+    upper = min(upper, smallSmallSum);
+  }
 
   // If all small items together exceed residual, then at least one
   // small item can't be selected with the large item
@@ -144,7 +159,12 @@ bool computeKnapsackAggregateStats(KnapsackRow& knapsack, double feastol,
       } else {
         stats.secondSmall = std::min(stats.secondSmall, weight);
       }
-      stats.maxSmall = std::max(stats.maxSmall, weight);
+      if (weight > stats.maxSmall) {
+        stats.secondMaxSmall = stats.maxSmall;
+        stats.maxSmall = weight;
+      } else {
+        stats.secondMaxSmall = std::max(stats.secondMaxSmall, weight);
+      }
     }
     if (3 * static_cast<HighsCDouble>(weight) - capacity > feastol) {
       // These are the two largest entries
