@@ -717,10 +717,12 @@ HighsStatus HighsSparseMatrix::assessIndexBounds(
   return HighsStatus::kOk;
 }
 
-HighsStatus HighsSparseMatrix::assess(const HighsOptions& options) {
+HighsStatus HighsSparseMatrix::assess(const HighsOptions& options, const bool structure_only) {
   const bool sum_duplicates = false;
-  return this->assess(options.log_options, options.small_matrix_value,
-                      options.large_matrix_value, sum_duplicates);
+  const double small_matrix_value = structure_only ? 0 : options.small_matrix_value;
+  const double large_matrix_value = structure_only ? kHighsInf : options.large_matrix_value;
+  return this->assess(options.log_options, small_matrix_value,
+                      large_matrix_value, sum_duplicates);
 }
 
 HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,

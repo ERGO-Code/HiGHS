@@ -87,7 +87,7 @@ class HighsSparseMatrix {
   HighsInt vecDim() const {
     return this->isColwise() ? this->num_row_ : this->num_col_;
   }
-  HighsStatus assess(const HighsOptions& options);
+  HighsStatus assess(const HighsOptions& options, const bool structure_only = false);
   HighsStatus assess(const HighsLogOptions& log_options,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
