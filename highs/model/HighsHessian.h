@@ -60,7 +60,8 @@ class HighsHessian {
   void print(const std::string& message = "") const;
   bool legalDimensions(const HighsLogOptions& log_options) const;
   HighsStatus trimDimensions(const HighsLogOptions& log_options);
-  HighsStatus assess(const HighsOptions& options);
+  HighsStatus assess(const HighsOptions& options,
+                     const std::string* col_names = nullptr);
 };
 
 #endif

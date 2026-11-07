@@ -633,7 +633,7 @@ TEST_CASE("issue-3564", "[highs_lp_solver]") {
           "9\n x3 free\n x6 free\n -inf <= x12 <= 39\nend\n");
   fclose(file);
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("log_dev_level", 1);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);

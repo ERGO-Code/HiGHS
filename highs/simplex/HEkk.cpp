@@ -2307,9 +2307,7 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   // In particular, only its structure should be assessed, as its
   // values are inherited from the constraint matrix, and may contain
   // small values from presolve
-  const bool structure_only = true;
-  assert(ar_matrix_.assess(*options_, structure_only) == HighsStatus::kOk);
-  (void)structure_only;
+  assert(ar_matrix_.assessStructure(*options_) == HighsStatus::kOk);
   assert(ar_matrix_.debugPartitionOk(basis_.nonbasicFlag_.data()));
   analysis_.simplexTimerStop(matrixSetupClock);
   status_.has_ar_matrix = true;

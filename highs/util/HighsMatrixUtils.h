@@ -26,8 +26,7 @@ HighsStatus assessMatrix(
     const HighsInt num_vec, vector<HighsInt>& matrix_start,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates,
-    const std::string* col_names = nullptr,
+    const bool sum_duplicates, const std::string* col_names = nullptr,
     const std::string* row_names = nullptr);
 
 // Entry point for HighsSparseMatrix
@@ -38,8 +37,7 @@ HighsStatus assessMatrix(
     vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates,
-    const std::string* col_names = nullptr,
+    const bool sum_duplicates, const std::string* col_names = nullptr,
     const std::string* row_names = nullptr);
 
 bool legalMatrixDimensions(const HighsLogOptions& log_options,

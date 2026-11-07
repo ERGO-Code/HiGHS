@@ -1188,9 +1188,15 @@ HighsStatus Highs::presolve() {
     }
     default: {
       assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory ||
-             model_presolve_status_ == HighsPresolveStatus::kException);
-      setHighsModelStatusAndClearSolutionAndBasis(
-          HighsModelStatus::kPresolveError);
+             model_presolve_status_ == HighsPresolveStatus::kException ||
+             model_presolve_status_ == HighsPresolveStatus::kMatrixValueError);
+      HighsModelStatus model_status;
+      if (model_presolve_status_ == HighsPresolveStatus::kOutOfMemory) {
+        model_status = HighsModelStatus::kMemoryLimit;
+      } else {
+        model_status = HighsModelStatus::kPresolveError;
+      }
+      setHighsModelStatusAndClearSolutionAndBasis(model_status);
       return_status = HighsStatus::kError;
     }
   }
@@ -1797,10 +1803,18 @@ HighsStatus Highs::calledOptimizeModel() {
         // simplex solver, so HighsSparseMatrix::assessExtremeValues
         // logs an error in either case, and returns
         // HighsStatus::kError, triggering a presolve error
-	if (reduced_lp.a_matrix_.assessExtremeValues("of presolved LP ", options_) == HighsStatus::kError) {
-	  setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kPresolveError);
-	  return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-	}
+        if (reduced_lp.a_matrix_.assessExtremeValues(
+                "of presolved LP ", options_) == HighsStatus::kError) {
+          setHighsModelStatusAndClearSolutionAndBasis(
+              HighsModelStatus::kPresolveError);
+          return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+        }
+        // The reduced LP constraint matrix is set up in presolve, so
+        // should be valid structurally, so assert this now - AFTER
+        // assessing extreme values, since explicit zeros are removed
+        // silently in HighsSparseMatrix::assessStructure
+        assert(reduced_lp.a_matrix_.assessStructure(options_) ==
+               HighsStatus::kOk);
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve
@@ -1940,13 +1954,18 @@ HighsStatus Highs::calledOptimizeModel() {
             HighsModelStatus::kSolveError);
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
+      case HighsPresolveStatus::kMatrixValueError: {
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kPresolveError);
+        return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+      }
       default: {
         assert(model_presolve_status_ == HighsPresolveStatus::kNullError);
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kPresolveError);
         highsLogDev(log_options, HighsLogType::kError,
-                    "Presolve returned status %d\n",
-                    (int)model_presolve_status_);
+                    "Presolve returned status %s\n",
+                    presolveStatusToString(model_presolve_status_).c_str());
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
     }
@@ -3919,6 +3938,8 @@ std::string Highs::presolveStatusToString(
       return "Memory allocation error";
     case HighsPresolveStatus::kException:
       return "Exception error";
+    case HighsPresolveStatus::kMatrixValueError:
+      return "Matrix value error";
     default:
       assert(1 == 0);
       return "Unrecognised presolve status";

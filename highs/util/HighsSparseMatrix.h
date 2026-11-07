@@ -87,15 +87,19 @@ class HighsSparseMatrix {
   HighsInt vecDim() const {
     return this->isColwise() ? this->num_row_ : this->num_col_;
   }
-  HighsStatus assess(const HighsOptions& options, const bool structure_only = false);
+  HighsStatus assess(const HighsOptions& options,
+                     const bool structure_only = false);
   HighsStatus assess(const HighsLogOptions& log_options,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
                      const std::string* col_names = nullptr,
                      const std::string* row_names = nullptr);
-  HighsStatus assessExtremeValues(const std::string& name, HighsOptions& options) const;
-  bool hasExtremeValues(const HighsLogOptions& log_options,
-                        const double small_matrix_value,
+  HighsStatus assessStructure(const HighsOptions& options) {
+    return this->assess(options, true);
+  }
+  HighsStatus assessExtremeValues(const std::string& name,
+                                  const HighsOptions& options) const;
+  bool hasExtremeValues(const double small_matrix_value,
                         const double large_matrix_value, double& min_abs_value,
                         double& max_abs_value) const;
   void considerColScaling(const HighsInt max_scale_factor_exponent,

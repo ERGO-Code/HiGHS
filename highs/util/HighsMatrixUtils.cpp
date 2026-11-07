@@ -23,8 +23,8 @@ HighsStatus assessMatrix(
     const HighsInt num_vec, vector<HighsInt>& matrix_start,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates, 
-    const std::string* col_names, const std::string* row_names) {
+    const bool sum_duplicates, const std::string* col_names,
+    const std::string* row_names) {
   vector<HighsInt> matrix_p_end;
   const bool partitioned = false;
   return assessMatrix(log_options, class_name, matrix_name, vec_dim, num_vec,
@@ -40,8 +40,8 @@ HighsStatus assessMatrix(
     vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates, 
-    const std::string* col_names, const std::string* row_names) {
+    const bool sum_duplicates, const std::string* col_names,
+    const std::string* row_names) {
   // Mechanism for summing duplicates and stripping out small values
   // isn't coded for partitioned row-wise matrix, but it is generated
   // internally from a constraint matrix, so shouldn't have duplicates
@@ -262,8 +262,7 @@ HighsStatus assessMatrix(
       // that is ignored because its value is small is not identified as
       // a duplicate, and is not recorded, whatever the order of the
       // entries.
-      if (!sum_duplicates && !okMatrixValueMagnitude(el))
-        continue;
+      if (!sum_duplicates && !okMatrixValueMagnitude(el)) continue;
       // Check whether the index has already occurred.
       HighsInt previous_el = illegal_el;
       if (findIndex(component, previous_el)) {
@@ -318,13 +317,15 @@ HighsStatus assessMatrix(
   }  // Loop 0; num_vec
   if (num_duplicate) {
     highsLogUser(log_options, HighsLogType::kInfo,
-                 "%s %s matrix contains %" HIGHSINT_FORMAT " duplicate entr%s: summed\n",
+                 "%s %s matrix contains %" HIGHSINT_FORMAT
+                 " duplicate entr%s: summed\n",
                  class_name.c_str(), matrix_name.c_str(), num_duplicate,
                  highsIntToPlural(num_duplicate, true).c_str());
   }
   if (num_large_value) {
     highsLogUser(log_options, HighsLogType::kError,
-                 "%s %s matrix contains %" HIGHSINT_FORMAT " |value| in [%.2g, %.2g] at/above tolerance of %g\n",
+                 "%s %s matrix contains %" HIGHSINT_FORMAT
+                 " |value| in [%.2g, %.2g] at/above tolerance of %g\n",
                  class_name.c_str(), matrix_name.c_str(), num_large_value,
                  min_large_value, max_large_value, large_matrix_value);
     error_found = true;
@@ -335,10 +336,11 @@ HighsStatus assessMatrix(
     // return a warning if small nonzeros are ignored
     assert(num_small_value > 0);
     highsLogUser(log_options, HighsLogType::kWarning,
-		 "%s %s matrix contains %" HIGHSINT_FORMAT " |value| in [%.2g, %.2g] "
-		 "at/below tolerance of %g: ignored\n",
-		 class_name.c_str(), matrix_name.c_str(), num_small_value,
-		 min_small_value, max_small_value, small_matrix_value);
+                 "%s %s matrix contains %" HIGHSINT_FORMAT
+                 " |value| in [%.2g, %.2g] "
+                 "at/below tolerance of %g: ignored\n",
+                 class_name.c_str(), matrix_name.c_str(), num_small_value,
+                 min_small_value, max_small_value, small_matrix_value);
     warning_found = true;
   }
   if (partitioned && num_nz > new_num_nz) {
