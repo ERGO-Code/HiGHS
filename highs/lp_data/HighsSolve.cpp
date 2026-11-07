@@ -67,6 +67,9 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
     return HighsStatus::kError;
   }
 
+  // With IPX to fall back on, HiPO shouldn't try what won't fit in memory
+  const bool hipo_stop_if_no_memory = options.hipo_stop_if_no_memory;
+  options.hipo_stop_if_no_memory = true;
   auto solveWith = [&](const std::string& solver) {
     options.solver = solver;
     return solveLp(solver_object, message);
@@ -93,14 +96,18 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   // can also end without a basis, as when crossover isn't run. If one is
   // required, simplex must find it and confirm any claim of infeasibility:
   // in the MIP solver, the next LP would otherwise select IPM again, and a
-  // node could be pruned with no proof
+  // node could be pruned with no proof. Presolve assumed that crossover would
+  // yield a basis if it's on, so duals from IPM alone can't be trusted either
   const HighsModelStatus model_status = solver_object.model_status_;
   const bool solved_without_basis =
-      options.solver_select_require_basis && !solver_object.basis_.valid &&
-      (model_status == HighsModelStatus::kOptimal ||
-       model_status == HighsModelStatus::kInfeasible ||
-       model_status == HighsModelStatus::kUnbounded ||
-       model_status == HighsModelStatus::kUnboundedOrInfeasible);
+      !solver_object.basis_.valid &&
+      (options.solver_select_require_basis
+           ? model_status == HighsModelStatus::kOptimal ||
+                 model_status == HighsModelStatus::kInfeasible ||
+                 model_status == HighsModelStatus::kUnbounded ||
+                 model_status == HighsModelStatus::kUnboundedOrInfeasible
+           : options.run_crossover == kHighsOnString &&
+                 model_status == HighsModelStatus::kOptimal);
   if (selected_ipm && (status == HighsStatus::kError || solved_without_basis)) {
     highsLogUser(
         options.log_options, HighsLogType::kWarning,
@@ -108,6 +115,7 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
     status = solveWith(kSimplexString);
   }
   options.solver = kHighsChooseString;
+  options.hipo_stop_if_no_memory = hipo_stop_if_no_memory;
   return status;
 }
 

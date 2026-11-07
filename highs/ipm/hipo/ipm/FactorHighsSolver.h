@@ -17,6 +17,7 @@ namespace hipo {
 
 class FactorHighsSolver : public LinearSolver {
   FHsolver FH_;
+  bool parallel_tree_ = false;
   KktMatrix& kkt_;
   const Regularisation& regul_;
   Info& info_;

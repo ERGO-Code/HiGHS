@@ -48,12 +48,14 @@ so it counts. On the 1.15.1 data every solved instance has a basis, so one model
 per strategy is enough.
 
 If a selected IPM fails, `solveLp` runs simplex. It also does so if a basis is
-required and IPM claims optimality, infeasibility or unboundedness without one.
+required and IPM claims optimality, infeasibility or unboundedness without one, or
+if IPM ends optimal without a basis although crossover was on, because presolve
+assumed a basis when choosing its rules.
 
-HiPO stops with `Memory limit reached` if its predicted memory exceeds what is
-available, including any container limit. If HiPO was selected, `solveLp` then runs
-IPX, which needs far less memory. An explicit `solver = hipo` still ends with the
-memory error. This check applies to HiPO with any strategy, unlike selection.
+A selected HiPO stops with `Memory limit reached` if its predicted memory exceeds
+what is available, including any container limit, and `solveLp` then runs IPX, which
+needs far less memory. An explicit `solver = hipo` only warns, unless the option
+`hipo_stop_if_no_memory` is set.
 
 If the incumbent has a basis, dual simplex is used without evaluating a
 strategy. `Highs::run` has skipped presolve by then, on the assumption that the

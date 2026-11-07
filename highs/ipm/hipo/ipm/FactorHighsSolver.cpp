@@ -209,15 +209,18 @@ Int FactorHighsSolver::setup() {
 }
 
 void FactorHighsSolver::checkMemory() const {
+  // storage() is the serial factorisation only. Measured peaks are up to 1.15
+  // times this in serial, and 2.3 times with a parallel tree
+  const double margin = parallel_tree_ ? 2.5 : 1.2;
+  const double required = margin * kkt_.S.storage();
+  const double available = availableMemoryBytes();
+  if (available < 0 || required <= available) return;
+  const double bytes_per_GB = 1024.0 * 1024.0 * 1024.0;
+  logger_.printw("HiPO requires %.1f GB but %.1f GB is available\n",
+                 required / bytes_per_GB, available / bytes_per_GB);
   // Allocation can succeed and the process still be killed when the memory is
   // used, so stop now. The caller handles this like any failed allocation
-  const double available = availableMemoryBytes();
-  if (available >= 0 && kkt_.S.storage() > available) {
-    const double bytes_per_GB = 1024.0 * 1024.0 * 1024.0;
-    logger_.printw("HiPO requires %.1f GB but %.1f GB is available\n",
-                   kkt_.S.storage() / bytes_per_GB, available / bytes_per_GB);
-    throw std::bad_alloc();
-  }
+  if (options_.stop_if_no_memory) throw std::bad_alloc();
 }
 
 Int FactorHighsSolver::chooseNla() {
@@ -656,6 +659,7 @@ void FactorHighsSolver::setParallelAfterSymbolic() {
   // switch off tree parallelism if depth of recursion is too large
   if (kkt_.S.depth() > kParallelMaxTreeDepth) parallel_tree = false;
 
+  parallel_tree_ = parallel_tree;
   options_.chooseParallel(ParallelTechnique::kTree, parallel_tree);
   options_.chooseParallel(ParallelTechnique::kNode, parallel_node);
 

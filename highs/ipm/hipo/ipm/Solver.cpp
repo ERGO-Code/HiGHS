@@ -94,6 +94,7 @@ void Solver::setOptions(const HighsOptions& highs_options) {
 
   options_.max_iter = highs_options.ipm_iteration_limit;
   options_.crossover = highs_options.run_crossover;
+  options_.stop_if_no_memory = highs_options.hipo_stop_if_no_memory;
   options_.nla = highs_options.hipo_system;
   options_.ordering = highs_options.hipo_ordering;
   options_.factor = highs_options.hipo_factor;

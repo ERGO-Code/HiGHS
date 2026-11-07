@@ -411,6 +411,7 @@ struct HighsOptionsStruct {
   HighsInt hipo_parallel_force;
   HighsInt hipo_parallel_forbid;
   bool hipo_serial_blas;
+  bool hipo_stop_if_no_memory;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -600,6 +601,7 @@ struct HighsOptionsStruct {
         hipo_parallel_force(0),
         hipo_parallel_forbid(0),
         hipo_serial_blas(true),
+        hipo_stop_if_no_memory(false),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -1392,6 +1394,12 @@ class HighsOptions : public HighsOptionsStruct {
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "hipo_stop_if_no_memory",
+        "Stop HiPO if its predicted memory use exceeds what is available",
+        advanced, &hipo_stop_if_no_memory, false);
+    records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "hipo_serial_blas",
