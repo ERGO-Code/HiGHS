@@ -27,6 +27,243 @@ struct KnapsackRow {
   std::vector<KnapsackTerm> terms;
 };
 
+struct KnapsackAggregateStats {
+  HighsInt numSmall = 0;
+  HighsCDouble smallSum = 0;
+  double minSmall = kHighsInf;
+  double secondSmall = kHighsInf;
+  double maxSmall = 0;
+  HighsCDouble outsideThirdSum = 0;
+  double thirdMax1 = 0;
+  double thirdMax2 = 0;
+};
+
+double convertWeightToDoubleSafely(const HighsCDouble& weight) {
+  double rounded = static_cast<double>(weight);
+  const HighsCDouble error = HighsCDouble(rounded) - weight;
+  if (error > 0) {
+    rounded = std::nextafter(rounded, -kHighsInf);
+  }
+  return rounded;
+}
+
+void tightenKnapsackCapacity(KnapsackRow& knapsack,
+                             const HighsCDouble& newCapacity,
+                             const double feastol, bool& changed) {
+  if (knapsack.capacity - newCapacity <= feastol) return;
+  knapsack.capacity = newCapacity;
+  changed = true;
+}
+
+void increaseKnapsackWeight(KnapsackRow& knapsack, KnapsackTerm& term,
+                            const HighsCDouble& newWeight, double feastol,
+                            bool& changed) {
+  const double weight = convertWeightToDoubleSafely(newWeight);
+  if (weight - term.weight <= feastol) return;
+  knapsack.weightsum += static_cast<HighsCDouble>(weight) - term.weight;
+  term.weight = weight;
+  changed = true;
+}
+
+bool isLargeKnapsackTerm(const double weight, const HighsCDouble& capacity,
+                         const double feastol) {
+  return 2 * weight - capacity > feastol;
+}
+
+HighsCDouble boundSmallResidual(const KnapsackAggregateStats& stats,
+                                const HighsCDouble& residual,
+                                const double feastol) {
+  if (stats.numSmall == 0 || residual <= feastol) return 0;
+
+  auto boundDoubleCount = [&](const double count) -> HighsInt {
+    if (count >= stats.numSmall) return stats.numSmall;
+    if (count <= 0) return 0;
+    return static_cast<HighsInt>(count);
+  };
+
+  // Get an upper bound on number of small items that can also be selected
+  HighsInt maxNumSmallSelected = boundDoubleCount(
+      std::floor(static_cast<double>(residual) / stats.minSmall));
+  // If sum of small items larger than residual, then we can't select
+  // them all. How many would we have to exclude (assuming worst-case)
+  // so that we can potentially fit in the residual
+  if (stats.smallSum - residual > 0) {
+    const HighsInt minNumSmallExcluded = boundDoubleCount(std::ceil(
+        static_cast<double>((stats.smallSum - residual) / stats.maxSmall)));
+    maxNumSmallSelected =
+        std::min(maxNumSmallSelected, stats.numSmall - minNumSmallExcluded);
+  }
+
+  // Check that selecting one more item is impossible
+  // This is just done due to numerics
+  if (maxNumSmallSelected < stats.numSmall) {
+    const double lower =
+        max(stats.minSmall * (maxNumSmallSelected + 1),
+            stats.smallSum -
+                stats.maxSmall * (stats.numSmall - maxNumSmallSelected - 1));
+    if (lower - residual <= feastol) {
+      maxNumSmallSelected = stats.numSmall;
+    }
+  }
+
+  // Calculate an upper bound on the remaining residual that can be used
+  // by the small items.
+  HighsCDouble upper = min(residual, stats.smallSum);
+  upper = min(upper,
+              static_cast<HighsCDouble>(stats.maxSmall) * maxNumSmallSelected);
+  upper =
+      min(upper, stats.smallSum - static_cast<HighsCDouble>(stats.minSmall) *
+                                      (stats.numSmall - maxNumSmallSelected));
+
+  // If all small items together exceed residual, then at least one
+  // small item can't be selected with the large item
+  if (stats.smallSum - residual > feastol)
+    upper = min(upper, stats.smallSum - stats.minSmall);
+  // If all small items but the largest can't fit in the residual,
+  // then at least two small items must be missing to make them fit.
+  if (stats.numSmall >= 2 &&
+      stats.smallSum - stats.maxSmall - residual > feastol)
+    upper = min(upper, stats.smallSum - stats.minSmall - stats.secondSmall);
+  return max(0, upper);
+}
+
+bool computeKnapsackAggregateStats(KnapsackRow& knapsack, double feastol,
+                                   const HighsCDouble& capacity,
+                                   KnapsackAggregateStats& stats) {
+  for (const auto& term : knapsack.terms) {
+    const double weight = term.weight;
+    if (weight == 0) continue;
+    // Any weight near capacity means tightening the capacity isn't possible
+    if (weight - capacity >= feastol) return false;
+    if (!isLargeKnapsackTerm(weight, capacity, feastol)) {
+      ++stats.numSmall;
+      stats.smallSum += weight;
+      if (weight < stats.minSmall) {
+        stats.secondSmall = stats.minSmall;
+        stats.minSmall = weight;
+      } else {
+        stats.secondSmall = std::min(stats.secondSmall, weight);
+      }
+      stats.maxSmall = std::max(stats.maxSmall, weight);
+    }
+    if (3 * static_cast<HighsCDouble>(weight) - capacity > feastol) {
+      // These are the two largest entries
+      if (weight > stats.thirdMax1) {
+        stats.thirdMax2 = stats.thirdMax1;
+        stats.thirdMax1 = weight;
+      } else {
+        stats.thirdMax2 = std::max(stats.thirdMax2, weight);
+      }
+    } else {
+      stats.outsideThirdSum += weight;
+    }
+  }
+  return true;
+}
+
+void strengthenKnapsackResiduals(KnapsackRow& knapsack, double feastol,
+                                 bool& changed) {
+  // Store original capacity. Tightening it changes partition of
+  // small and large items
+  const HighsCDouble originalCapacity = knapsack.capacity;
+  KnapsackAggregateStats stats;
+  if (!computeKnapsackAggregateStats(knapsack, feastol, originalCapacity,
+                                     stats)) {
+    return;
+  }
+
+  // Tighten the knapsack capacity if possible
+  HighsCDouble capacity = min(originalCapacity, stats.smallSum);
+  // At most one large item can be selected. Find worst-case of this
+  // happening, where we bound small-item contribution for each large item
+  for (const KnapsackTerm& term : knapsack.terms) {
+    if (!isLargeKnapsackTerm(term.weight, originalCapacity, feastol)) continue;
+    const HighsCDouble boundedResidual =
+        boundSmallResidual(stats, originalCapacity - term.weight, feastol);
+    capacity = max(capacity, term.weight + boundedResidual);
+  }
+
+  // At most two items with weight greater than one third of capacity fit.
+  capacity =
+      min(capacity, stats.outsideThirdSum + stats.thirdMax1 + stats.thirdMax2);
+  // Apply the tightened capacity
+  tightenKnapsackCapacity(knapsack, capacity, feastol, changed);
+
+  // Try and tighten large terms using arguments on residual capacity
+  if (originalCapacity - capacity > feastol) {
+    KnapsackAggregateStats updatedStats;
+    if (!computeKnapsackAggregateStats(knapsack, feastol, knapsack.capacity,
+                                       updatedStats)) {
+      return;
+    }
+    std::swap(stats, updatedStats);
+  }
+
+  for (auto& term : knapsack.terms) {
+    if (!isLargeKnapsackTerm(term.weight, capacity, feastol)) continue;
+    const HighsCDouble smallUpper =
+        boundSmallResidual(stats, knapsack.capacity - term.weight, feastol);
+    increaseKnapsackWeight(knapsack, term, knapsack.capacity - smallUpper,
+                           feastol, changed);
+  }
+}
+
+bool liftKnapsackWeights(KnapsackRow& knapsack, double feastol, bool& changed) {
+  double minWeight = kHighsInf;
+  double secondWeight = kHighsInf;
+  double secondUniqueMinWeight = kHighsInf;
+  for (const auto& term : knapsack.terms) {
+    if (term.weight == 0) continue;
+    if (term.weight < minWeight) {
+      secondWeight = minWeight;
+      secondUniqueMinWeight = minWeight;
+      minWeight = term.weight;
+    } else {
+      secondWeight = std::min(secondWeight, term.weight);
+      if (term.weight > minWeight)
+        secondUniqueMinWeight = std::min(secondUniqueMinWeight, term.weight);
+    }
+  }
+  if (secondWeight == kHighsInf) return false;
+
+  if (HighsCDouble(minWeight) + secondWeight - knapsack.capacity > feastol) {
+    // The row is a clique as no two items can be selected
+    double newWeightsum = 0;
+    for (auto& term : knapsack.terms) {
+      if (term.weight == 0) continue;
+      if (term.weight != 1) changed = true;
+      term.weight = 1;
+      newWeightsum += 1;
+    }
+    if (knapsack.capacity != 1) changed = true;
+    knapsack.capacity = 1;
+    knapsack.weightsum = newWeightsum;
+    return true;
+  }
+
+  const HighsCDouble nextSmallSum = min(HighsCDouble(secondUniqueMinWeight),
+                                        HighsCDouble(minWeight) + secondWeight);
+  for (auto& term : knapsack.terms) {
+    if (term.weight == 0) continue;
+    const HighsCDouble excess =
+        HighsCDouble(term.weight) + minWeight - knapsack.capacity;
+    if (excess > feastol) {
+      // Large item can't co-exist with the smallest item.
+      // Its weight can there be raised to capacity
+      increaseKnapsackWeight(knapsack, term, knapsack.capacity, feastol,
+                             changed);
+    } else if (excess < -feastol &&
+               isLargeKnapsackTerm(term.weight, knapsack.capacity, feastol) &&
+               term.weight + nextSmallSum - knapsack.capacity > feastol) {
+      // Large item can't co-exist with the second unique smallest weight,
+      // so can only exist with the smallest item and weight can be increased
+      increaseKnapsackWeight(knapsack, term, knapsack.capacity - minWeight,
+                             feastol, changed);
+    }
+  }
+  return false;
+}
+
 bool gcdAllButOne(std::vector<int64_t>& weights, int64_t& b,
                   bool& hasZeroWeight, const HighsInt numTerms) {
   HighsInt numOnes = 0;
@@ -127,21 +364,21 @@ void gcdSimplify(KnapsackRow& knapsack, bool& changed, bool& hasZeroWeight) {
   }
 }
 
-void recogniseCardinality(KnapsackRow& knapsack, const double feastol,
-                          bool& changed, bool& skipDisaggregation) {
+void recogniseUnitAndMaxWeightKnapsack(KnapsackRow& knapsack,
+                                       const double feastol, bool& changed) {
+  // Determine if the knapsack's LP can be tightened and retain its solution
+  // set by being represented by a knapsack with only
+  // items of weight {1, b}
   HighsInt numTerms = static_cast<HighsInt>(knapsack.terms.size());
   HighsInt numZeros = 0;
-  if (numTerms <= 2) {
-    skipDisaggregation = true;
-    return;
-  }
+  if (numTerms <= 2) return;
   std::vector<HighsInt> order;
   order.reserve(numTerms);
   for (HighsInt i = 0; i != numTerms; ++i) {
     order.push_back(i);
     if (knapsack.terms[i].weight == 0) numZeros++;
   }
-  HighsInt numNonZeroTerms = numTerms - numZeros;
+  const HighsInt numNonZeroTerms = numTerms - numZeros;
   pdqsort(order.begin(), order.end(), [&](const HighsInt i, const HighsInt j) {
     return knapsack.terms[i].weight > knapsack.terms[j].weight;
   });
@@ -153,19 +390,10 @@ void recogniseCardinality(KnapsackRow& knapsack, const double feastol,
     ++v;
   }
   const HighsInt numBig = v;
-  if (numBig == numNonZeroTerms) {
-    skipDisaggregation = true;
-    return;
-  }
-  if (weight(numBig) == 1 && weight(numNonZeroTerms - 1) == 1) {
-    if (numNonZeroTerms - numBig - knapsack.capacity > 0) {
-      skipDisaggregation = true;
-      ;
-    }
-    return;
-  }
+  if (numBig == numNonZeroTerms) return;
+  if (weight(numBig) == 1 && weight(numNonZeroTerms - 1) == 1) return;
 
-  auto setCardinality = [&](const double newWeight) {
+  auto upgradeRow = [&](const double newWeight) {
     changed = true;
     for (HighsInt i = 0; i != numBig; ++i) {
       knapsack.weightsum -= weight(i) - newWeight;
@@ -193,8 +421,7 @@ void recogniseCardinality(KnapsackRow& knapsack, const double feastol,
     // There is some subset of small items that together exceed capacity
     if (v == numNonZeroTerms) {
       // All small items needed to exceed capacity
-      setCardinality(static_cast<double>(numNonZeroTerms - numBig - 1));
-      skipDisaggregation = true;
+      upgradeRow(static_cast<double>(numNonZeroTerms - numBig - 1));
       return;
     }
     HighsCDouble exceedSumBack = 0;
@@ -205,8 +432,7 @@ void recogniseCardinality(KnapsackRow& knapsack, const double feastol,
     if (exceedSumBack - knapsack.capacity > feastol) {
       // If the largest n small weights AND the smallest n small weights
       // both exceed capacity, then the row holds for all n combinations
-      setCardinality(static_cast<double>(numExceed - 1));
-      skipDisaggregation = true;
+      upgradeRow(static_cast<double>(numExceed - 1));
       return;
     }
   } else {
@@ -217,11 +443,10 @@ void recogniseCardinality(KnapsackRow& knapsack, const double feastol,
             knapsack.capacity <=
         feastol) {
       // If the largest small term can fit m times into the knapsack
-      // then the cardinality upgrade has a stronger LP relaxation
-      setCardinality(numNonZeroTerms - numBig);
+      // then the row upgrade has a strictly stronger LP relaxation
+      upgradeRow(numNonZeroTerms - numBig);
     }
   }
-  skipDisaggregation = weight(numBig) != 1 || weight(numNonZeroTerms - 1) != 1;
 }
 
 }  // namespace
@@ -231,11 +456,9 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   const HighsInt maxRowSize =
       std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
   const HighsInt numRows = model->num_row_;
-  const HighsInt numCols = model->num_col_;
   HighsInt numNormalized = 0;
   HighsInt numFixed = 0;
 
-  std::vector<KnapsackRow> knapsacks;
   std::vector<std::pair<HighsInt, double>> oldRow;
 
   auto changeRow = [&](const KnapsackRow& knapsack) {
@@ -403,175 +626,15 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       }
     }
 
-    // (0) If the capacity is less than the largest large item (a_i > b / 2)
-    // combined with the sum of all the small items (a_i < b / 2),
-    // then the capacity can be reduced
-    // (1) If the two smallest items can't fit into the knapsack then
-    // the row is a clique.
-    // (2) If an item cannot fit in a knapsack along with the smallest item,
-    // then its weight can be raised to knapsack capacity.
-    // (3) If an item cannot fit in a knapsack with the smallest value
-    // larger than minWeight (either some single item larger than minWeight or
-    // the two smallest items together), then its weight can be increased to
-    // capacity - minWeight.
-    // (4) If a larger item (a_i > b /2) cannot fit in a knapsack with
-    // all smaller items (a_i <= b / 2), but can fit in a knapsack with every
-    // small item but the smallest,then its coefficient can be increased
-    // to max(a_i, b - all_small_but_smallest).
-    // (5) If a larger item (a_i > b / 2) cannot fit in a knapsack
-    // with all small items minus the largest small item (a_i <= b / 2),
-    // then selecting the large item
-    // means that at least two small items can't be selected.
-    // The coefficient is therefore max(a_i, b - all_small_but_two_smallest)
-    // (6) If a larger item can fit in a knapsack with all small items,
-    // then it's coefficient can be increased to
-    // b - all_small
-    double minWeight = kHighsInf;
-    double secondWeight = kHighsInf;
-    double secondUniqueMinWeight = kHighsInf;
-    double maxSmallWeight = 0;
-    double maxLargeWeight = 0;
-    HighsInt numSmall = 0;
-    HighsCDouble smallWeightSum = 0;
-    for (const auto& term : knapsack.terms) {
-      if (term.weight == 0) continue;
-      if (term.weight < minWeight) {
-        secondWeight = minWeight;
-        secondUniqueMinWeight = minWeight;
-        minWeight = term.weight;
-      } else {
-        if (term.weight < secondWeight) {
-          secondWeight = term.weight;
-        }
-        if (term.weight > minWeight)
-          secondUniqueMinWeight = std::min(term.weight, secondUniqueMinWeight);
-      }
-      if (2 * term.weight - knapsack.capacity <= primal_feastol) {
-        ++numSmall;
-        maxSmallWeight = std::max(maxSmallWeight, term.weight);
-        smallWeightSum += term.weight;
-      } else {
-        maxLargeWeight = std::max(maxLargeWeight, term.weight);
-      }
+    // Try and tighten RHS and large item weights
+    strengthenKnapsackResiduals(knapsack, primal_feastol, changed);
+    // Check if knapsack is a clique or some weights can be increased
+    const bool cliqueUpgraded =
+        liftKnapsackWeights(knapsack, primal_feastol, changed);
+    // Recognise whether the knapsack can be upgraded
+    if (!cliqueUpgraded) {
+      recogniseUnitAndMaxWeightKnapsack(knapsack, primal_feastol, changed);
     }
-    if (maxLargeWeight > 0) {
-      // (0)
-      const HighsCDouble newCapacity = maxLargeWeight + smallWeightSum;
-      double newCapacityDouble = static_cast<double>(newCapacity);
-      if (newCapacityDouble - newCapacity < 0) {
-        newCapacityDouble = std::nextafter(newCapacityDouble, kHighsInf);
-      }
-      if (knapsack.capacity - newCapacityDouble > primal_feastol) {
-        knapsack.capacity = newCapacityDouble;
-        changed = true;
-      }
-    }
-    const HighsCDouble sumMinTwoWeightsCapacityDiff =
-        static_cast<HighsCDouble>(minWeight) + secondWeight - knapsack.capacity;
-    const HighsCDouble maxProperSubsetSmallSum =
-        smallWeightSum > 0 ? smallWeightSum - minWeight : knapsack.capacity;
-    double newWeightProperSubset =
-        static_cast<double>(knapsack.capacity - maxProperSubsetSmallSum);
-    if (!allIntCoefficients &&
-        newWeightProperSubset + maxProperSubsetSmallSum - knapsack.capacity >
-            0) {
-      // Protect against large coefficient rounding
-      newWeightProperSubset = std::nextafter(newWeightProperSubset, 0.0);
-    }
-    const HighsCDouble maxTwoItemLessSubsetSmallSum =
-        numSmall >= 2 ? maxProperSubsetSmallSum - secondWeight
-                      : knapsack.capacity;
-    double newWeightTwoItemLessSubset =
-        static_cast<double>(knapsack.capacity - maxTwoItemLessSubsetSmallSum);
-    if (!allIntCoefficients && newWeightTwoItemLessSubset +
-                                       maxTwoItemLessSubsetSmallSum -
-                                       knapsack.capacity >
-                                   0) {
-      newWeightTwoItemLessSubset =
-          std::nextafter(newWeightTwoItemLessSubset, 0.0);
-    }
-    double newWeightAllSmallIncluded =
-        static_cast<double>(knapsack.capacity - smallWeightSum);
-    if (!allIntCoefficients &&
-        newWeightAllSmallIncluded + smallWeightSum - knapsack.capacity > 0) {
-      newWeightAllSmallIncluded =
-          std::nextafter(newWeightAllSmallIncluded, 0.0);
-    }
-    if (sumMinTwoWeightsCapacityDiff > primal_feastol) {
-      // (1)
-      if (knapsack.capacity != 1) {
-        double newWeightSum = 0;
-        for (auto& term : knapsack.terms) {
-          if (term.weight != 0) {
-            term.weight = 1;
-            newWeightSum += 1;
-          }
-        }
-        knapsack.capacity = 1;
-        knapsack.weightsum = newWeightSum;
-        changed = true;
-      }
-    } else {
-      secondUniqueMinWeight =
-          std::min(secondUniqueMinWeight, minWeight + secondWeight);
-      for (auto& term : knapsack.terms) {
-        const HighsCDouble weightPlusMinWeightExcess =
-            static_cast<HighsCDouble>(term.weight) + minWeight -
-            knapsack.capacity;
-        const HighsCDouble itemPlusSecondUniqueExcess =
-            static_cast<HighsCDouble>(secondUniqueMinWeight) + term.weight -
-            knapsack.capacity;
-        if (term.weight < knapsack.capacity &&
-            weightPlusMinWeightExcess > primal_feastol) {
-          // (2)
-          knapsack.weightsum += knapsack.capacity - term.weight;
-          term.weight = static_cast<double>(knapsack.capacity);
-          changed = true;
-        } else if (weightPlusMinWeightExcess < -primal_feastol &&
-                   term.weight > knapsack.capacity / 2 &&
-                   itemPlusSecondUniqueExcess > primal_feastol) {
-          // (3)
-          knapsack.weightsum -= weightPlusMinWeightExcess;
-          term.weight = static_cast<double>(knapsack.capacity - minWeight);
-          changed = true;
-        } else if (2 * term.weight - knapsack.capacity > primal_feastol) {
-          // Term is "large"
-          if (newWeightProperSubset - term.weight > primal_feastol &&
-              term.weight + smallWeightSum - knapsack.capacity >
-                  primal_feastol) {
-            // (4)
-            knapsack.weightsum +=
-                static_cast<HighsCDouble>(newWeightProperSubset) - term.weight;
-            term.weight = newWeightProperSubset;
-            changed = true;
-          } else if (numSmall >= 2 &&
-                     newWeightTwoItemLessSubset - term.weight >
-                         primal_feastol &&
-                     term.weight + smallWeightSum - maxSmallWeight -
-                             knapsack.capacity >
-                         primal_feastol) {
-            // (5)
-            knapsack.weightsum +=
-                static_cast<HighsCDouble>(newWeightTwoItemLessSubset) -
-                term.weight;
-            term.weight = newWeightTwoItemLessSubset;
-            changed = true;
-          } else if (newWeightAllSmallIncluded - term.weight > primal_feastol) {
-            // (6)
-            knapsack.weightsum +=
-                static_cast<HighsCDouble>(newWeightAllSmallIncluded) -
-                term.weight;
-            term.weight = newWeightAllSmallIncluded;
-            changed = true;
-          }
-        }
-      }
-    }
-
-    // Recognise whether the knapsack can be upgraded to a "cardinality" row
-    bool skipDisaggregation = false;
-    recogniseCardinality(knapsack, primal_feastol, changed, skipDisaggregation);
-    skipDisaggregation = true;
 
     if (changed) {
       changeRow(knapsack);
@@ -584,75 +647,6 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
             knapsack.terms.end());
       }
     }
-    if (!skipDisaggregation && knapsack.capacity <= 100 * minWeight) {
-      knapsacks.push_back(std::move(knapsack));
-    }
-  }
-
-  // Check if knapsack can be disaggregated.
-  // Given \sum a_i x_i + \sum b x_j <= b, \sum a_i < b
-  // The set of rows
-  // x_i + \sum x_j <= 1 \forall i
-  // has a stronger LP relaxation
-  HighsInt maxNewNonZeros = numNonzeros() / 4;
-  HighsInt numNewNonZeros = 0;
-  HighsInt maxNewRows = numRows / 2;
-  HighsInt numNewRows = 0;
-  std::vector<std::vector<HighsInt>> newIndices;
-  std::vector<std::vector<double>> newValues;
-  std::vector<double> newUpper;
-  std::vector<HighsInt> disaggregatedRows;
-  for (KnapsackRow& knapsack : knapsacks) {
-    if (numNewNonZeros >= maxNewNonZeros || numNewRows >= maxNewRows) break;
-    std::vector<KnapsackTerm> maxWeightItems;
-    std::vector<KnapsackTerm> smallItems;
-    HighsCDouble smallItemSum = 0;
-    for (const KnapsackTerm& term : knapsack.terms) {
-      if (term.weight == knapsack.capacity)
-        maxWeightItems.push_back({term.literal, 1});
-      else {
-        smallItems.push_back({term.literal, 1});
-        smallItemSum += term.weight;
-      }
-    }
-    if (maxWeightItems.empty() || smallItems.size() <= 1 ||
-        smallItems.size() * (maxWeightItems.size() + 1) >=
-            10 * (maxWeightItems.size() + smallItems.size()) ||
-        smallItems.size() > 100 || smallItemSum - knapsack.capacity > 0) {
-      continue;
-    }
-    numNewNonZeros +=
-        static_cast<HighsInt>(smallItems.size() * (maxWeightItems.size() + 1) -
-                              maxWeightItems.size() - smallItems.size());
-    numNewRows += static_cast<HighsInt>(smallItems.size()) - 1;
-    for (const KnapsackTerm& term : smallItems) {
-      std::vector<KnapsackTerm> clique = maxWeightItems;
-      clique.push_back(term);
-      std::vector<HighsInt> indices;
-      std::vector<double> values;
-      double rhs = 1;
-      for (const auto& literal : clique) {
-        indices.push_back(literal.literal / 2);
-        const bool positive = literal.literal % 2 == 1;
-        values.push_back(positive ? 1.0 : -1.0);
-        if (!positive) rhs -= 1;
-      }
-      newIndices.push_back(std::move(indices));
-      newValues.push_back(std::move(values));
-      newUpper.push_back(rhs);
-    }
-    // TODO: Can we add a clique to the table here or does that cause issues
-    // with fixings when no domain is present?
-    disaggregatedRows.push_back(knapsack.row);
-  }
-
-  if (!addToMatrix(postsolve_stack,
-                   std::vector<double>(newUpper.size(), -kHighsInf), newUpper,
-                   newIndices, newValues))
-    return Result::kOutOfMemory;
-  for (HighsInt row : disaggregatedRows) {
-    postsolve_stack.redundantRow(row);
-    removeRow(row);
   }
 
   highsLogDev(options->log_options, HighsLogType::kInfo,
