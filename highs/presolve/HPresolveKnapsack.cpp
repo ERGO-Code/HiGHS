@@ -75,6 +75,7 @@ HighsCDouble boundSmallResidual(const KnapsackAggregateStats& stats,
                                 const HighsCDouble& residual,
                                 const double feastol) {
   if (stats.numSmall == 0 || residual <= feastol) return 0;
+  if (stats.smallSum - residual <= 0) return stats.smallSum;
 
   auto boundDoubleCount = [&](const double count) -> HighsInt {
     if (count >= stats.numSmall) return stats.numSmall;
@@ -90,7 +91,7 @@ HighsCDouble boundSmallResidual(const KnapsackAggregateStats& stats,
   // so that we can potentially fit in the residual
   if (stats.smallSum - residual > 0) {
     const HighsInt minNumSmallExcluded = boundDoubleCount(std::ceil(
-        static_cast<double>((stats.smallSum - residual) / stats.maxSmall)));
+        static_cast<double>(stats.smallSum - residual) / stats.maxSmall));
     maxNumSmallSelected =
         std::min(maxNumSmallSelected, stats.numSmall - minNumSmallExcluded);
   }
@@ -194,12 +195,15 @@ void strengthenKnapsackResiduals(KnapsackRow& knapsack, double feastol,
 
   // Tighten the knapsack capacity if possible
   HighsCDouble capacity = min(originalCapacity, stats.smallSum);
+  std::vector<HighsCDouble> strengthenedResiduals;
+  strengthenedResiduals.reserve(knapsack.terms.size());
   // At most one large item can be selected. Find worst-case of this
   // happening, where we bound small-item contribution for each large item
   for (const KnapsackTerm& term : knapsack.terms) {
     if (!isLargeKnapsackTerm(term.weight, originalCapacity, feastol)) continue;
     const HighsCDouble boundedResidual =
         boundSmallResidual(stats, originalCapacity - term.weight, feastol);
+    strengthenedResiduals.push_back(boundedResidual);
     capacity = max(capacity, term.weight + boundedResidual);
   }
 
@@ -210,7 +214,8 @@ void strengthenKnapsackResiduals(KnapsackRow& knapsack, double feastol,
   tightenKnapsackCapacity(knapsack, capacity, feastol, changed);
 
   // Try and tighten large terms using arguments on residual capacity
-  if (originalCapacity - capacity > feastol) {
+  const bool capacityTightened = originalCapacity - knapsack.capacity > feastol;
+  if (capacityTightened) {
     KnapsackAggregateStats updatedStats;
     if (!computeKnapsackAggregateStats(knapsack, feastol, knapsack.capacity,
                                        updatedStats)) {
@@ -219,10 +224,13 @@ void strengthenKnapsackResiduals(KnapsackRow& knapsack, double feastol,
     std::swap(stats, updatedStats);
   }
 
+  HighsInt nextResidual = 0;
   for (auto& term : knapsack.terms) {
-    if (!isLargeKnapsackTerm(term.weight, capacity, feastol)) continue;
+    if (!isLargeKnapsackTerm(term.weight, knapsack.capacity, feastol)) continue;
     const HighsCDouble smallUpper =
-        boundSmallResidual(stats, knapsack.capacity - term.weight, feastol);
+        capacityTightened ? boundSmallResidual(
+                                stats, knapsack.capacity - term.weight, feastol)
+                          : strengthenedResiduals[nextResidual++];
     increaseKnapsackWeight(knapsack, term, knapsack.capacity - smallUpper,
                            feastol, changed);
   }
