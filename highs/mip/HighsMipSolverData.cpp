@@ -826,9 +826,7 @@ void HighsMipSolverData::runMipPresolve(
   presolve_status = presolve.getPresolveStatus();
   mipsolver.timer_.stop(mipsolver.timer_.presolve_clock);
 
-  if (presolve_status == HighsPresolveStatus::kOutOfMemory ||
-      presolve_status == HighsPresolveStatus::kException)
-    return;
+  if (presolve.failed()) return;
   // Report the final presolve reductions unless this is a restart
   if (mipsolver.options_mip_->presolve != kHighsOffString && numRestarts == 0)
     reportPresolveReductions(mipsolver.options_mip_->log_options,

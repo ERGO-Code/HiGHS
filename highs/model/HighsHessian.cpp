@@ -418,8 +418,9 @@ HighsStatus HighsHessian::trimDimensions(const HighsLogOptions& log_options) {
                               hessian_p_end, this->index_, this->value_);
 }
 
-HighsStatus HighsHessian::assess(const HighsOptions& options) {
-  return assessHessian(*this, options);
+HighsStatus HighsHessian::assess(const HighsOptions& options,
+                                 const std::string* col_names) {
+  return assessHessian(*this, options, col_names);
 }
 
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
