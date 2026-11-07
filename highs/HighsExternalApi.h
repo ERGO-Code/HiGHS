@@ -141,7 +141,7 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
-    tryLoad("", false);
+    tryLoad();
     return traits::all_available();
   }
 
@@ -155,7 +155,7 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
-    tryLoad("", false);
+    tryLoad();
     HighsTextTable<4>::Row headers{{"key", "name", "version", "license"}};
     HighsTextTable<4> table(headers);
     traits::append_notice_rows(table);
@@ -169,7 +169,7 @@ struct HighsExternalApi {
     using traits =
         HighsExtras::trait_pack_ops<HighsExtras::feature_traits<Feature>,
                                     HighsExtras::feature_traits<Features>...>;
-    tryLoad("", false);
+    tryLoad();
     std::set<std::string> names;
     traits::append_missing_names(names);
 
@@ -208,10 +208,8 @@ struct HighsExternalApi {
 
 namespace HighsExtras {
 
-inline bool initialize() { return HighsExternalApi::tryLoad("", true); }
-
 inline bool initialize(const std::string& path,
-                       bool search_default_dirs = false) {
+                       bool search_default_dirs = true) {
   return HighsExternalApi::tryLoad(path, search_default_dirs);
 }
 

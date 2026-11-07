@@ -1374,10 +1374,7 @@ class Highs {
    * Subsequent calls return the cached result without retrying.
    */
   static HighsStatus initializeExtras(const std::string& directory,
-                                      bool search_if_empty);
-
-  /** @brief Initialize extras using the default library search directories. */
-  static HighsStatus initializeExtras() { return initializeExtras("", true); }
+                                      bool search_if_empty = true);
 
   /**
    * @brief If profiling is not nullptr, sets up profiling and copies
