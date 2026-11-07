@@ -10,6 +10,7 @@
  */
 #ifndef HIGHS_EXTERNAL_API_H_
 #define HIGHS_EXTERNAL_API_H_
+#include <memory>
 #include <mutex>
 #include <set>
 #include <string>
@@ -206,8 +207,7 @@ struct HighsExternalApi {
 
 #ifdef HIGHS_SHARED_EXTRAS_LIBRARY
   HighsDynamicLibrary library_;
-  std::unique_ptr<std::once_flag> initialized_ =
-      std::make_unique<std::once_flag>();
+  std::unique_ptr<std::once_flag> initialized_{new std::once_flag};
   bool available_ = false;
 #endif
 };

@@ -33,7 +33,7 @@ void HighsExternalApi::unload() {
 void HighsExternalApi::reset() {
 #ifdef HIGHS_SHARED_EXTRAS_LIBRARY
   HighsExternalApi& inst = instance();
-  inst.initialized_ = std::make_unique<std::once_flag>();
+  inst.initialized_.reset(new std::once_flag);
 #endif
 }
 
