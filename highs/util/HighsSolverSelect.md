@@ -15,11 +15,10 @@ The fitting tools are in the sibling `tests` repo, under `select/`.
 4. Collect: `collect_results.py --version <version>` writes `select.csv`,
    checking from the logs that the requested solver ran and how crossover ended.
    Each solve is flagged by whether it is solved and whether it yields a basis.
-5. Fit: `visualize.py --cpp-out .../HighsSolverSelectModels.h` standardises the
-   log-scaled features, projects them onto principal components, and fits a
-   shallow regret tree on the scores. Each leaf picks the solver with the
-   smallest mean log-slowdown relative to the fastest. Components and depth are
-   chosen by cross validation, and the reported score comes from nested cross
+5. Fit: `visualize.py --cpp-out .../HighsSolverSelectModels.h` fits gradient
+   boosted trees: for each solver, 100 small trees that predict how much slower
+   it is than the fastest. The solver with the smallest prediction is selected.
+   The settings are fixed rather than tuned, and scores come from repeated cross
    validation.
 
 ## Strategies: `solver_select_strategy`
@@ -29,7 +28,7 @@ Applies when `solver = choose`, or in the MIP solver when
 
 | Value | `SolverSelectStrategy` | Behaviour |
 |:-----:|------------------------|-----------|
-| 0 | `kSimplexOnly` | Dual simplex. The code path is the same as without this feature. |
+| 0 | `kSimplexOnly` | Dual simplex, with no selection. |
 | 1 | `kColsRowsNnz` | Fitted model on `num_col`, `num_row` and `num_nz`. |
 | 2 | `kRankedFeatures` | Fitted model on the 12 ranked features below. |
 | 3 | `kHeuristic` | The provisional heuristic below. |
@@ -43,12 +42,18 @@ substituting another solver.
 
 IPM does not always yield a basis, even with `run_crossover = on`. A solve with
 `Crossover not run` in its log, `Optimal` status and no simplex iterations has no
-basis, so it does not count when fitting, and if a basis is required, `solveLp`
-then runs simplex. With `Crossover not run` and simplex iterations, IPM did not
+basis, so it does not count when fitting. With simplex iterations, IPM did not
 finish and simplex found the basis. Selecting that solver costs the recorded time,
 so it counts. On the 1.15.1 data every solved instance has a basis, so one model
-per strategy is enough. If the no-basis case appears in later runs, `visualize.py`
-still fits only on solves that yield a basis.
+per strategy is enough.
+
+If a selected IPM fails, `solveLp` runs simplex. It also does so if a basis is
+required and IPM claims optimality, infeasibility or unboundedness without one.
+
+HiPO stops with `Memory limit reached` if its predicted memory exceeds what is
+available, including any container limit. If HiPO was selected, `solveLp` then runs
+IPX, which needs far less memory. An explicit `solver = hipo` still ends with the
+memory error. This check applies to HiPO with any strategy, unlike selection.
 
 If the incumbent has a basis, dual simplex is used without evaluating a
 strategy. `Highs::run` has skipped presolve by then, on the assumption that the

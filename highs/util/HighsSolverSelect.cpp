@@ -357,43 +357,35 @@ HighsSolverSelect selectSolverByHeuristic(const HighsLpFeatures& f) {
   return HighsSolverSelect::kIpx;
 }
 
-static double transformFeature(const double value, const HighsInt transform) {
-  switch (transform) {
-    case 1:
-      return std::log10(1.0 + std::max(value, 0.0));
-    case 2:
-      return std::log10(std::max(value, 1e-10));
-    default:
-      return value;
-  }
-}
-
-// Transform and standardise the model's features, project them onto
-// its principal components, and walk its decision tree on the scores
+// Each solver's trees predict its regret, and the smallest is selected
 static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
                                        const HighsLpFeatures& f) {
   if (f.num_nz < model.min_num_nz) return HighsSolverSelect::kDualSimplex;
   const std::vector<std::pair<std::string, double>> feature =
       highsLpFeatureVector(f);
-  std::vector<double> z(model.num_feature);
-  for (HighsInt j = 0; j < model.num_feature; j++)
-    z[j] = (transformFeature(feature[model.feature_index[j]].second,
-                             model.transform[j]) -
-            model.mean[j]) /
-           model.scale[j];
-  std::vector<double> score(model.num_pc, 0.0);
-  for (HighsInt k = 0; k < model.num_pc; k++)
-    for (HighsInt j = 0; j < model.num_feature; j++)
-      score[k] += model.loading[k * model.num_feature + j] * z[j];
-  HighsInt node = 0;
-  while (model.left[node] >= 0) {
-    // The tree was fitted by scikit-learn, which compares in single
-    // precision
-    const float value = static_cast<float>(score[model.split_pc[node]]);
-    node =
-        value <= model.threshold[node] ? model.left[node] : model.right[node];
+  HighsSolverSelect best_solver = HighsSolverSelect::kDualSimplex;
+  double best_regret = kHighsInf;
+  for (HighsInt s = 0; s < model.num_solver; s++) {
+    double sum = 0;
+    for (HighsInt t = 0; t < model.num_tree; t++) {
+      HighsInt node = model.root[s * model.num_tree + t];
+      while (model.left[node] >= 0) {
+        // The trees were fitted by scikit-learn, which compares in single
+        // precision
+        const float value =
+            static_cast<float>(feature[model.feature[node]].second);
+        node = value <= model.threshold[node] ? model.left[node]
+                                              : model.right[node];
+      }
+      sum += model.value[node];
+    }
+    const double regret = model.initial[s] + model.learning_rate * sum;
+    if (regret < best_regret) {
+      best_regret = regret;
+      best_solver = model.solver[s];
+    }
   }
-  return model.leaf_solver[node];
+  return best_solver;
 }
 
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,

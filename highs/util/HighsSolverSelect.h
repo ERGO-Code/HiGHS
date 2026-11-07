@@ -86,15 +86,15 @@ std::vector<std::string> highsLpFeatureNames();
 // Number of integer, semi-continuous or semi-integer columns
 HighsInt countIntegerCols(const std::vector<HighsVarType>& integrality);
 
-// kSimplexOnly => dual simplex; kColsRowsNnz => PCA model
-// on num_col, num_row and num_nz; kRankedFeatures => PCA model
+// kSimplexOnly => dual simplex; kColsRowsNnz => boosted trees
+// on num_col, num_row and num_nz; kRankedFeatures => boosted trees
 // on the features in S2_FEATURES of tests/select/visualize.py;
 // kHeuristic => provisional hand-written heuristic
 HighsSolverSelect selectSolver(const HighsLp& lp,
                                const SolverSelectStrategy strategy);
 
-// kColsRowsNnz and kRankedFeatures: evaluate the PCA +
-// decision-tree model fitted offline by tests/select/visualize.py (see
+// kColsRowsNnz and kRankedFeatures: evaluate the gradient boosted
+// trees fitted offline by tests/select/visualize.py (see
 // HighsSolverSelectModels.h)
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
                                       const SolverSelectStrategy strategy);

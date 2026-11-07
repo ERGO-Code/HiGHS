@@ -74,6 +74,8 @@ class LinearSolver {
   // These may be overridden by derived classes, if needed.
   // =================================================================
   virtual Int setup() { return 0; }
+  // Throws std::bad_alloc if this solver is predicted not to fit in memory
+  virtual void checkMemory() const {}
   virtual double flops() const { return 0; }
   virtual double spops() const { return 0; }
   virtual double nz() const { return 0; }

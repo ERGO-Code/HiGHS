@@ -38,6 +38,79 @@
     }                                                                         \
   } while (0)
 
+// Automatic solver selection. When called from Highs::run,
+// solver_object.lp_ is the presolved LP (if presolve has reduced it).
+// Solve by recursion, so that the IPM fallback and clean-up logic in
+// solveLp is shared with explicit solver choices. HiPO falls back to
+// IPX if it's not available.
+static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
+                                        const std::string& message) {
+  HighsOptions& options = solver_object.options_;
+  // Highs::run skips presolve if there is a basis, on the basis that
+  // solver = "choose" will use it, so simplex must be used
+  const HighsSolverSelect selected_solver =
+      solver_object.basis_.useful
+          ? HighsSolverSelect::kDualSimplex
+          : selectSolver(solver_object.lp_,
+                         static_cast<SolverSelectStrategy>(
+                             options.solver_select_strategy));
+  const bool selected_ipm = selected_solver != HighsSolverSelect::kDualSimplex;
+
+  // If a basis is required, IPM only yields one via crossover
+  if (options.solver_select_require_basis && selected_ipm &&
+      options.run_crossover == kHighsOffString) {
+    highsLogUser(options.log_options, HighsLogType::kError,
+                 "Solver selection (strategy %d) chose IPM but a basis is "
+                 "required and run_crossover is off\n",
+                 int(options.solver_select_strategy));
+    solver_object.model_status_ = HighsModelStatus::kSolveError;
+    return HighsStatus::kError;
+  }
+
+  auto solveWith = [&](const std::string& solver) {
+    options.solver = solver;
+    return solveLp(solver_object, message);
+  };
+  const std::string& selected_solver_string =
+      selected_solver == HighsSolverSelect::kIpx    ? kIpxString
+      : selected_solver == HighsSolverSelect::kHipo ? kHipoString
+                                                    : kSimplexString;
+  highsLogUser(options.log_options, HighsLogType::kInfo,
+               "Solver selection (strategy %d) chose \"%s\"\n",
+               int(options.solver_select_strategy),
+               selected_solver_string.c_str());
+  HighsStatus status = solveWith(selected_solver_string);
+
+  // IPX needs far less memory than HiPO, whose factorisation can fill in
+  if (selected_solver == HighsSolverSelect::kHipo &&
+      solver_object.model_status_ == HighsModelStatus::kMemoryLimit) {
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Selected HiPO ran out of memory, so use IPX\n");
+    status = solveWith(kIpxString);
+  }
+
+  // The user didn't ask for IPM, so its failure must not end the solve. It
+  // can also end without a basis, as when crossover isn't run. If one is
+  // required, simplex must find it and confirm any claim of infeasibility:
+  // in the MIP solver, the next LP would otherwise select IPM again, and a
+  // node could be pruned with no proof
+  const HighsModelStatus model_status = solver_object.model_status_;
+  const bool solved_without_basis =
+      options.solver_select_require_basis && !solver_object.basis_.valid &&
+      (model_status == HighsModelStatus::kOptimal ||
+       model_status == HighsModelStatus::kInfeasible ||
+       model_status == HighsModelStatus::kUnbounded ||
+       model_status == HighsModelStatus::kUnboundedOrInfeasible);
+  if (selected_ipm && (status == HighsStatus::kError || solved_without_basis)) {
+    highsLogUser(
+        options.log_options, HighsLogType::kWarning,
+        "Selected IPM yielded no result with a basis, so use simplex\n");
+    status = solveWith(kSimplexString);
+  }
+  options.solver = kHighsChooseString;
+  return status;
+}
+
 // The method below runs the simplex, IPX, HiPO or PDLP solver on the LP
 HighsStatus solveLp(HighsLpSolverObject& solver_object,
                     const std::string& message) {
@@ -48,61 +121,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
 
   // The analytic centre calculation always uses IPX
   if (options.solver == kHighsChooseString &&
-      options.solver_select_strategy > 0 && !options.run_centring) {
-    // Automatic solver selection. When called from Highs::run,
-    // solver_object.lp_ is the presolved LP (if presolve has reduced
-    // it). Solve by recursion, so that the IPM fallback and clean-up
-    // logic below is shared with explicit solver choices. HiPO falls
-    // back to IPX if it's not available.
-    //
-    // Highs::run skips presolve if there is a basis, on the basis that
-    // solver = "choose" will use it, so simplex must be used
-    const HighsSolverSelect selected_solver =
-        solver_object.basis_.useful
-            ? HighsSolverSelect::kDualSimplex
-            : selectSolver(solver_object.lp_,
-                           static_cast<SolverSelectStrategy>(
-                               options.solver_select_strategy));
+      options.solver_select_strategy > 0 && !options.run_centring)
+    return solveLpWithSelection(solver_object, message);
 
-    // If a basis is required, the selected solver must yield one
-    // (IPM only does so via crossover)
-    if (options.solver_select_require_basis &&
-        selected_solver != HighsSolverSelect::kDualSimplex &&
-        options.run_crossover == kHighsOffString) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "Solver selection (strategy %d) chose IPM but a basis is "
-                   "required and run_crossover is off\n",
-                   int(options.solver_select_strategy));
-      solver_object.model_status_ = HighsModelStatus::kSolveError;
-      return HighsStatus::kError;
-    }
-
-    const std::string& selected_solver_string =
-        selected_solver == HighsSolverSelect::kIpx    ? kIpxString
-        : selected_solver == HighsSolverSelect::kHipo ? kHipoString
-                                                      : kSimplexString;
-    highsLogUser(options.log_options, HighsLogType::kInfo,
-                 "Solver selection (strategy %d) chose \"%s\"\n",
-                 int(options.solver_select_strategy),
-                 selected_solver_string.c_str());
-    options.solver = selected_solver_string;
-    return_status = solveLp(solver_object, message);
-    // IPM can end optimal without crossover having run (the log says
-    // "Crossover not run" or nothing, with no simplex iterations), which
-    // leaves no basis. In the MIP solver the next LP would then select
-    // IPM again
-    if (options.solver_select_require_basis &&
-        return_status != HighsStatus::kError &&
-        solver_object.model_status_ == HighsModelStatus::kOptimal &&
-        !solver_object.basis_.valid) {
-      highsLogUser(options.log_options, HighsLogType::kWarning,
-                   "Selected IPM yielded no basis, so use simplex\n");
-      options.solver = kSimplexString;
-      return_status = solveLp(solver_object, message);
-    }
-    options.solver = kHighsChooseString;
-    return return_status;
-  }
   // Reset unscaled model status and solution params - except for
   // iteration counts
   resetModelStatusAndHighsInfo(solver_object);

@@ -1,6 +1,9 @@
 #ifndef FACTOR_HIGHS_H
 #define FACTOR_HIGHS_H
 
+#include <functional>
+#include <utility>
+
 #include "CliqueStack.h"
 #include "DataCollector.h"
 #include "FactorHighsOptions.h"
@@ -131,6 +134,8 @@ class FHsolver {
 
   // Set block size for dense linear algebra
   void setBlockSize(Int nb);
+  // Factorisation returns failure as soon as this returns true
+  void setStopCheck(std::function<bool()> should_stop);
 
   // Set pivoting optins, on by default.
   // It uses a static variation of Bunch-Kaufman pivoting, with potential

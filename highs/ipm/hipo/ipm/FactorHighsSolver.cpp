@@ -1,10 +1,12 @@
 #include "FactorHighsSolver.h"
 
 #include <limits>
+#include <new>
 
 #include "HighsExternalApi.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
+#include "ipm/hipo/auxiliary/AvailableMemory.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 #include "parallel/HighsParallel.h"
 #include "util/stringutil.h"
@@ -14,7 +16,8 @@ namespace hipo {
 FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
                                      const Regularisation& regul, Info& info,
-                                     IpmData& record, const Logger& logger)
+                                     IpmData& record, const Logger& logger,
+                                     const Control& control)
     : FH_{},
       kkt_{kkt},
       regul_{regul},
@@ -25,6 +28,7 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
       options_{options} {
   FH_.setBlockSize(options.block_size);
   FH_.setLogger(&logger);
+  FH_.setStopCheck([&control]() { return control.timeLimitReached(); });
 }
 
 void FactorHighsSolver::clear() {
@@ -202,6 +206,18 @@ Int FactorHighsSolver::setup() {
   }
 
   return kOk;
+}
+
+void FactorHighsSolver::checkMemory() const {
+  // Allocation can succeed and the process still be killed when the memory is
+  // used, so stop now. The caller handles this like any failed allocation
+  const double available = availableMemoryBytes();
+  if (available >= 0 && kkt_.S.storage() > available) {
+    const double bytes_per_GB = 1024.0 * 1024.0 * 1024.0;
+    logger_.printw("HiPO requires %.1f GB but %.1f GB is available\n",
+                   kkt_.S.storage() / bytes_per_GB, available / bytes_per_GB);
+    throw std::bad_alloc();
+  }
 }
 
 Int FactorHighsSolver::chooseNla() {

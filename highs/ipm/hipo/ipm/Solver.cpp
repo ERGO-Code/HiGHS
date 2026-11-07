@@ -167,6 +167,11 @@ void Solver::doSolve() {
   printInfo();
 
   runIpm();
+  // Factorisation stops at the time limit by reporting failure
+  if (info_.error == kErrorFactorise && control_.timeLimitReached()) {
+    info_.error = kOk;
+    setStatus(kStatusTimeLimit);
+  }
   if (errorOrInterrupt()) return;
 
   runIpx();
@@ -1265,7 +1270,7 @@ void Solver::resetToBestIter(Int iter, bool print) {
 
 isFailure Solver::initialiseLinearSolver() {
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                  it_->data, logger_));
+                                  it_->data, logger_, control_));
   if (!LS_) {
     info_.error = kErrorFailedAllocation;
     return true;
@@ -1302,6 +1307,8 @@ isFailure Solver::initialiseLinearSolver() {
     }
     LS_->setup();
     LS_->clear();
+  } else {
+    LS_->checkMemory();
   }
 
   return false;
@@ -1312,7 +1319,7 @@ isSuccess Solver::switchToMultifrontal() {
 
   if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
     LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                    it_->data, logger_));
+                                    it_->data, logger_, control_));
     if (!LS_) {
       info_.error = kErrorFailedAllocation;
     } else {

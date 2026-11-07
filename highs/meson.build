@@ -222,6 +222,7 @@ _hipo_srcs = [
     'ipm/hipo/factorhighs/Swaps.cpp',
     'ipm/hipo/factorhighs/Symbolic.cpp',
     'ipm/hipo/auxiliary/Auxiliary.cpp',
+    'ipm/hipo/auxiliary/AvailableMemory.cpp',
     'ipm/hipo/auxiliary/KrylovMethods.cpp',
     'ipm/hipo/auxiliary/Logger.cpp',
     'ipm/hipo/auxiliary/VectorOperations.cpp',

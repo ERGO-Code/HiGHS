@@ -48,6 +48,10 @@ Int FHsolver::backwardSolve(double* x, Int k) const {
 
 void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
 
+void FHsolver::setStopCheck(std::function<bool()> should_stop) {
+  options_.should_stop = std::move(should_stop);
+}
+
 void FHsolver::setBlockSize(Int nb) {
   if (nb > 0) options_.nb = nb;
 }

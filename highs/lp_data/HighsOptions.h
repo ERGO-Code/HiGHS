@@ -292,8 +292,6 @@ const string kReadBasisFileString = "read_basis_file";
 const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
 const string kSolverString = "solver";
-const string kSolverSelectStrategyString = "solver_select_strategy";
-const string kSolverSelectRequireBasisString = "solver_select_require_basis";
 const string kParallelString = "parallel";
 const string kThreadsString = "threads";
 const string kRunCrossoverString = "run_crossover";
@@ -916,7 +914,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt(
-        kSolverSelectStrategyString,
+        "solver_select_strategy",
         "Strategy for automatic solver selection 0 => Simplex only; 1 => "
         "Columns, rows and nonzeros; 2 => 12 ranked features; "
         "3 => Heuristic",
@@ -924,7 +922,7 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
-        kSolverSelectRequireBasisString,
+        "solver_select_require_basis",
         "Require a basis from automatic solver selection",
         advanced, &solver_select_require_basis, false);
     records.push_back(record_bool);

@@ -60,6 +60,8 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
   // LOOP OVER BLOCKS
   // ===========================================================================
   for (Int j = 0; j < n_blocks; ++j) {
+    if (options.should_stop && options.should_stop()) return kRetGeneric;
+
     // j is the index of the block column
 
     HIPO_CLOCK_START(2);

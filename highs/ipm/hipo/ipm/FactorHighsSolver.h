@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <atomic>
 
+#include "Control.h"
 #include "Info.h"
 #include "IpmData.h"
 #include "KktMatrix.h"
@@ -43,7 +44,7 @@ class FactorHighsSolver : public LinearSolver {
  public:
   FactorHighsSolver(KktMatrix& kkt, Options& options, const Model& model,
                     const Regularisation& regul, Info& info, IpmData& record,
-                    const Logger& logger);
+                    const Logger& logger, const Control& control);
 
   Int factorAS(const std::vector<double>& scaling) override;
   Int factorNE(const std::vector<double>& scaling) override;
@@ -53,6 +54,7 @@ class FactorHighsSolver : public LinearSolver {
               const std::vector<double>& rhs_y, std::vector<double>& lhs_x,
               std::vector<double>& lhs_y) override;
   Int setup() override;
+  void checkMemory() const override;
   void clear() override;
   double flops() const override;
   double spops() const override;
