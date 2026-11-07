@@ -1803,18 +1803,41 @@ HighsStatus Highs::calledOptimizeModel() {
         // simplex solver, so HighsSparseMatrix::assessExtremeValues
         // logs an error in either case, and returns
         // HighsStatus::kError, triggering a presolve error
-        if (reduced_lp.a_matrix_.assessExtremeValues(
-                "of presolved LP ", options_) == HighsStatus::kError) {
-          setHighsModelStatusAndClearSolutionAndBasis(
-              HighsModelStatus::kPresolveError);
-          return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+        const bool kCheckReducedMatrix = false;
+        if (kCheckReducedMatrix) {
+          if (reduced_lp.a_matrix_.assessExtremeValues(
+                  "of presolved LP ", options_) == HighsStatus::kError) {
+            setHighsModelStatusAndClearSolutionAndBasis(
+                HighsModelStatus::kPresolveError);
+            return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+          }
+          // The reduced LP constraint matrix is set up in presolve, so
+          // should be valid structurally, so assert this now - AFTER
+          // assessing extreme values, since explicit zeros are removed
+          // silently in HighsSparseMatrix::assessStructure
+          assert(reduced_lp.a_matrix_.assessStructure(options_) ==
+                 HighsStatus::kOk);
+        } else if (kAllowDeveloperAssert) {
+          // Validate the reduced LP
+          //
+          // Although presolve can yield small values in the matrix,
+          // they are only stripped out (by assessLp) in debug. This
+          // suggests that they are no real danger to the simplex
+          // solver. The only danger is pivoting on them, but that
+          // implies that values of roughly that size have been chosen
+          // in the ratio test. Even with the filter, values of 1e-9
+          // could be in the matrix, and these would be bad
+          // pivots. Hence, since the small values may play a
+          // meaningful role in postsolve, then it's better to keep
+          // them.
+          //
+          // ToDo. Analyse the extent of small value creation. See #1187
+          assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
+        } else {
+          // Just analyse extreme values: none is changed
+          reduced_lp.a_matrix_.assessExtremeValues("of presolved problem ",
+                                                   options_);
         }
-        // The reduced LP constraint matrix is set up in presolve, so
-        // should be valid structurally, so assert this now - AFTER
-        // assessing extreme values, since explicit zeros are removed
-        // silently in HighsSparseMatrix::assessStructure
-        assert(reduced_lp.a_matrix_.assessStructure(options_) ==
-               HighsStatus::kOk);
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
         // is still solved after presolve

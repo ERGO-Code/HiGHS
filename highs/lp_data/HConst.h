@@ -221,7 +221,7 @@ enum class HighsModelStatus {
   kNotset = 0,
   kLoadError,  // V2.0: Delete since it's not used!
   kModelError,
-  kPresolveError,  // V2.0: Delete since it's not used!
+  kPresolveError,
   kSolveError,
   kPostsolveError,  // V2.0: Delete if not used! Add to documentation if used
   kModelEmpty,

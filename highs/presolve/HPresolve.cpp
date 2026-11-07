@@ -4671,8 +4671,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
-    const bool check_reduced_matrix = false;
-    if (check_reduced_matrix) {
+    const bool kCheckReducedMatrix = false;
+    if (kCheckReducedMatrix) {
       // Although presolve can yield small nonzero values in the matrix,
       // they may play a meaningful role in postsolve so they are
       // retained. However, they offer some risk to the simplex solver,
