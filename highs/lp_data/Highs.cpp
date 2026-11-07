@@ -1792,32 +1792,7 @@ HighsStatus Highs::calledOptimizeModel() {
         HighsLp& reduced_lp = presolve_.getReducedProblem();
         reduced_lp.origin_name_ = "Reduced LP";
         reduced_lp.setMatrixDimensions();
-        // Although presolve can yield small nonzero values in the
-        // matrix, they may play a meaningful role in postsolve so
-        // they are retained. However, they offer some risk to the
-        // simplex solver, so HighsSparseMatrix::assessExtremeValues
-        // logs a warning and returns HighsStatus::kWarning.
-        //
-        // Presolve should never generate explicit zeros or large
-        // values in the matrix, and these cannot be permitted in the
-        // simplex solver, so HighsSparseMatrix::assessExtremeValues
-        // logs an error in either case, and returns
-        // HighsStatus::kError, triggering a presolve error
-        const bool kCheckReducedMatrix = false;
-        if (kCheckReducedMatrix) {
-          if (reduced_lp.a_matrix_.assessExtremeValues(
-                  "of presolved LP ", options_) == HighsStatus::kError) {
-            setHighsModelStatusAndClearSolutionAndBasis(
-                HighsModelStatus::kPresolveError);
-            return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
-          }
-          // The reduced LP constraint matrix is set up in presolve, so
-          // should be valid structurally, so assert this now - AFTER
-          // assessing extreme values, since explicit zeros are removed
-          // silently in HighsSparseMatrix::assessStructure
-          assert(reduced_lp.a_matrix_.assessStructure(options_) ==
-                 HighsStatus::kOk);
-        } else if (kAllowDeveloperAssert) {
+        if (kAllowDeveloperAssert) {
           // Validate the reduced LP
           //
           // Although presolve can yield small values in the matrix,
