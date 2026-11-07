@@ -13,7 +13,6 @@
 
 #include "util/stringutil.h"
 
-
 #if defined(_WIN32) || defined(_WIN64)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
