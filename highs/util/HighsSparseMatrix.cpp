@@ -729,7 +729,6 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                                       const double small_matrix_value,
                                       const double large_matrix_value,
                                       const bool sum_duplicates,
-                                      const bool keep_small_values,
                                       const std::string* col_names,
                                       const std::string* row_names) {
   assert(this->formatOk());
@@ -738,7 +737,7 @@ HighsStatus HighsSparseMatrix::assess(const HighsLogOptions& log_options,
                       this->format_ == MatrixFormat::kRowwisePartitioned,
                       this->start_, this->p_end_, this->index_, this->value_,
                       small_matrix_value, large_matrix_value, sum_duplicates,
-                      keep_small_values, col_names, row_names);
+                      col_names, row_names);
 }
 
 HighsStatus HighsSparseMatrix::assessExtremeValues(const std::string& name, HighsOptions& options) const {
@@ -755,14 +754,14 @@ HighsStatus HighsSparseMatrix::assessExtremeValues(const std::string& name, High
     warning_found = true;
     error_found = min_abs_value == 0;
     highsLogUser(options.log_options, error_found ? HighsLogType::kError : HighsLogType::kWarning,
-		 "Matrix %shas smallest |value| of %g at/below "
+		 "Matrix %shas smallest |value| of %.2g at/below "
 		 "tolerance of %g\n",
 		 name.c_str(), min_abs_value, options.small_matrix_value);
   }
   if (max_abs_value >= options.large_matrix_value) {
     error_found = true;
     highsLogUser(options.log_options, HighsLogType::kError,
-		 "Matrix %shas largest |value| of %g at/above "
+		 "Matrix %shas largest |value| of %.2g at/above "
 		 "tolerance of %g\n",
 		 name.c_str(), max_abs_value, options.large_matrix_value);
   }

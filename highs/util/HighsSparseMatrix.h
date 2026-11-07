@@ -91,7 +91,6 @@ class HighsSparseMatrix {
   HighsStatus assess(const HighsLogOptions& log_options,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
-                     const bool keep_small_values = false,
                      const std::string* col_names = nullptr,
                      const std::string* row_names = nullptr);
   HighsStatus assessExtremeValues(const std::string& name, HighsOptions& options) const;

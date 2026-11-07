@@ -23,14 +23,14 @@ HighsStatus assessMatrix(
     const HighsInt num_vec, vector<HighsInt>& matrix_start,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates, const bool keep_small_values,
+    const bool sum_duplicates, 
     const std::string* col_names, const std::string* row_names) {
   vector<HighsInt> matrix_p_end;
   const bool partitioned = false;
   return assessMatrix(log_options, class_name, matrix_name, vec_dim, num_vec,
                       partitioned, matrix_start, matrix_p_end, matrix_index,
                       matrix_value, small_matrix_value, large_matrix_value,
-                      sum_duplicates, keep_small_values, col_names, row_names);
+                      sum_duplicates, col_names, row_names);
 }
 
 HighsStatus assessMatrix(
@@ -40,15 +40,20 @@ HighsStatus assessMatrix(
     vector<HighsInt>& matrix_start, vector<HighsInt>& matrix_p_end,
     vector<HighsInt>& matrix_index, vector<double>& matrix_value,
     const double small_matrix_value, const double large_matrix_value,
-    const bool sum_duplicates, const bool keep_small_values,
+    const bool sum_duplicates, 
     const std::string* col_names, const std::string* row_names) {
   // Mechanism for summing duplicates and stripping out small values
   // isn't coded for partitioned row-wise matrix, but it is generated
   // internally from a constraint matrix, so shouldn't have duplicates
   // (and they aren't summed in constraint matrices) and any small
   // values it inherits (from presolve) are respected
-  assert(!(partitioned && !keep_small_values));
-  assert(!(partitioned && sum_duplicates));
+  if (partitioned) {
+    // Only checking structure for a partitioned (row-wise) matrix, as
+    // its values are inherited and duplicates are never summed
+    assert(small_matrix_value == 0);
+    assert(large_matrix_value == kHighsInf);
+    assert(sum_duplicates == false);
+  }
   if (!legalMatrixDimensions(log_options, class_name, matrix_name, num_vec,
                              partitioned, matrix_start, matrix_p_end,
                              matrix_index, matrix_value))
@@ -72,12 +77,14 @@ HighsStatus assessMatrix(
     return HighsStatus::kError;
   }
 
+  // Lambda for quoting column name (if possible) when logging anomalies
   auto possible_col_name = [&](const HighsInt ix) {
     std::string name = "";
     if (col_names) name = " (col " + col_names[ix] + ")";
     return name;
   };
 
+  // Lambda for quoting row name (if possible) when logging anomalies
   auto possible_row_name = [&](const HighsInt component) {
     std::string name = "";
     if (row_names) name = " (row " + row_names[component] + ")";
@@ -180,23 +187,21 @@ HighsStatus assessMatrix(
 
   // Lambda to handle matrix entry magnitude
   auto okMatrixValueMagnitude = [&](const HighsInt el) {
-    HighsInt component = matrix_index[el];
-    // Check the value
     double abs_value = fabs(matrix_value[el]);
     // Check that the value is not too large
-    bool large_value = abs_value >= large_matrix_value;
-    if (large_value) {
+    if (abs_value >= large_matrix_value) {
       if (max_large_value < abs_value) max_large_value = abs_value;
       if (min_large_value > abs_value) min_large_value = abs_value;
       num_large_value++;
+      return false;
     }
-    bool ok_value = abs_value > small_matrix_value;
-    if (!ok_value) {
+    if (abs_value <= small_matrix_value) {
       if (max_small_value < abs_value) max_small_value = abs_value;
       if (min_small_value > abs_value) min_small_value = abs_value;
       num_small_value++;
+      return false;
     }
-    return ok_value;
+    return true;
   };
 
   // Lambda to identify whether an index has already occurred: when
@@ -257,11 +262,7 @@ HighsStatus assessMatrix(
       // that is ignored because its value is small is not identified as
       // a duplicate, and is not recorded, whatever the order of the
       // entries.
-      //
-      // When keeping small values, large values won't be ignored when
-      // checking for duplicates, but this should be fine, as
-      // existence of large values leads to an error return
-      if (!sum_duplicates && !okMatrixValueMagnitude(el) && !keep_small_values)
+      if (!sum_duplicates && !okMatrixValueMagnitude(el))
         continue;
       // Check whether the index has already occurred.
       HighsInt previous_el = illegal_el;
@@ -328,24 +329,22 @@ HighsStatus assessMatrix(
                  min_large_value, max_large_value, large_matrix_value);
     error_found = true;
   }
-  if (num_small_value) {
+  if (max_small_value > 0) {
     // If the small values are explicit zeros, then no model
     // information is lost if they are ignored, so only report and
     // return a warning if small nonzeros are ignored
-    if (max_small_value > 0) {
-      highsLogUser(log_options, keep_small_values ? HighsLogType::kInfo : HighsLogType::kWarning,
-		   "%s %s matrix contains %" HIGHSINT_FORMAT " |value| in [%.2g, %.2g] "
-		   "at/below tolerance of %g%s\n",
-		   class_name.c_str(), matrix_name.c_str(), num_small_value,
-		   min_small_value, max_small_value, small_matrix_value,
-		   keep_small_values ? "" : ": ignored");
-      if (!keep_small_values) warning_found = true;
-    }
+    assert(num_small_value > 0);
+    highsLogUser(log_options, HighsLogType::kWarning,
+		 "%s %s matrix contains %" HIGHSINT_FORMAT " |value| in [%.2g, %.2g] "
+		 "at/below tolerance of %g: ignored\n",
+		 class_name.c_str(), matrix_name.c_str(), num_small_value,
+		 min_small_value, max_small_value, small_matrix_value);
+    warning_found = true;
   }
   if (partitioned && num_nz > new_num_nz) {
+    // No entries must be lost from partitioned matrices
     const HighsInt loss = num_nz - new_num_nz;
     assert(loss > 0);
-    // No entries must be lost from partitioned matrices
     highsLogUser(log_options, HighsLogType::kError,
                  "Partitioned matrix with %d entries has lost %d entr%s\n",
                  int(num_nz), int(loss), highsIntToPlural(loss, true).c_str());

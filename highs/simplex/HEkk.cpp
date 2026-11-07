@@ -2299,22 +2299,17 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_,
                                       basis_.nonbasicFlag_.data());
   ar_matrix_.name_ = "partitioned row-wise constraint";
+  // The partitioned row-wise matrix is generated from an accepted
+  // constraint matrix, so it is OK so long as it's been constructed
+  // correctly.
   assert(ar_matrix_.legalDimensions(options_->log_options));
   assert(ar_matrix_.trimDimensions(options_->log_options) == HighsStatus::kOk);
-  // Check that ar_matrix_ is generated as a valid matrix
-  //
-  // Should be no duplicates, since ar_matrix_ is generated
-  // internally, but may have small values (from presolve) that are
-  // being respected
-  //
-  // Shouldn't have zeros or large values
-  const bool sum_duplicates = false;
-  const bool keep_small_values = true;
-  assert(ar_matrix_.assess(options_->log_options, options_->small_matrix_value,
-                           options_->large_matrix_value, sum_duplicates,
-                           keep_small_values) == HighsStatus::kOk);
-  (void)sum_duplicates;
-  (void)keep_small_values;
+  // In particular, only its structure should be assessed, as its
+  // values are inherited from the constraint matrix, and may contain
+  // small values from presolve
+  const bool structure_only = true;
+  assert(ar_matrix_.assess(*options_, structure_only) == HighsStatus::kOk);
+  (void)structure_only;
   assert(ar_matrix_.debugPartitionOk(basis_.nonbasicFlag_.data()));
   analysis_.simplexTimerStop(matrixSetupClock);
   status_.has_ar_matrix = true;

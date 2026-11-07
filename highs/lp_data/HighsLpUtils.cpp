@@ -84,10 +84,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options) {
 
   // Assess the LP matrix - even if there are no rows!
   const bool sum_duplicates = false;
-  const bool keep_small_values = false;
   call_status = lp.a_matrix_.assess(log_options, options.small_matrix_value,
                                     options.large_matrix_value, sum_duplicates,
-                                    keep_small_values, lp.col_names_.data(),
+				    lp.col_names_.data(),
                                     lp.row_names_.data());
   return_status = interpretCallStatus(log_options, call_status, return_status,
                                       "assessMatrix");
