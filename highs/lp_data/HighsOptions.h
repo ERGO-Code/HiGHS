@@ -292,6 +292,8 @@ const string kReadBasisFileString = "read_basis_file";
 const string kWriteBasisFileString = "write_basis_file";
 const string kPresolveString = "presolve";
 const string kSolverString = "solver";
+const string kSolverSelectStrategyString = "solver_select_strategy";
+const string kSolverSelectRequireBasisString = "solver_select_require_basis";
 const string kParallelString = "parallel";
 const string kThreadsString = "threads";
 const string kRunCrossoverString = "run_crossover";
@@ -372,6 +374,8 @@ struct HighsOptionsStruct {
   HighsInt user_bound_scale;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
+  HighsInt solver_select_strategy;
+  bool solver_select_require_basis;
   HighsInt simplex_strategy;
   HighsInt simplex_scale_strategy;
   HighsInt simplex_crash_strategy;
@@ -566,6 +570,8 @@ struct HighsOptionsStruct {
         user_bound_scale(0),
         highs_debug_level(0),
         highs_analysis_level(0),
+        solver_select_strategy(0),
+        solver_select_require_basis(false),
         simplex_strategy(0),
         simplex_scale_strategy(0),
         simplex_crash_strategy(0),
@@ -908,6 +914,20 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsAnalysisLevelMin,  // kHighsAnalysisLevelMipTime,  //
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
+
+    record_int = new OptionRecordInt(
+        kSolverSelectStrategyString,
+        "Strategy for automatic solver selection 0 => Simplex only; 1 => "
+        "Columns, rows and nonzeros; 2 => 12 ranked features; "
+        "3 => Heuristic",
+        advanced, &solver_select_strategy, 0, 0, 3);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        kSolverSelectRequireBasisString,
+        "Restrict automatic solver selection to solvers that yield a basis",
+        advanced, &solver_select_require_basis, false);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "simplex_strategy",

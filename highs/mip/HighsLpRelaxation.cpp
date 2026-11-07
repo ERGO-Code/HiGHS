@@ -1160,6 +1160,27 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // Later still, pass mip_lp_solver and take action on failure in
       // solveLp
       use_solver = use_hipo ? kHipoString : kIpxString;
+    } else if (mip_lp_solver == kHighsChooseString &&
+               mipsolver.options_mip_->solver_select_strategy > 0 &&
+               lpsolver.getOptions().simplex_strategy !=
+                   kSimplexStrategyPrimal) {
+      // Defer the choice of simplex, IPX or HiPO to solveLp, so that it
+      // is made using the LP after any presolve by lpsolver. The MIP
+      // solver requires a basis. Primal simplex is only set when the
+      // MIP solver must have it
+      use_solver = kHighsChooseString;
+      lpsolver.setOptionValue("solver_select_strategy",
+                              mipsolver.options_mip_->solver_select_strategy);
+      lpsolver.setOptionValue("solver_select_require_basis", true);
+      // LPs with a simplex iteration limit, such as those in heuristics,
+      // have a budget that selected IPM must also respect. Of 1309 IPM
+      // solves on the benchmark sets, 3 needed more than this
+      const HighsInt kSelectedIpmIterationLimit = 200;
+      lpsolver.setOptionValue(
+          "ipm_iteration_limit",
+          lpsolver.getOptions().simplex_iteration_limit < kHighsIInf
+              ? kSelectedIpmIterationLimit
+              : kHighsIInf);
     } else {
       use_solver = kSimplexString;
     }
@@ -1167,7 +1188,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   HighsStatus callstatus;
   // Now allowing the use of IPM at the root node
   lpsolver.setOptionValue("solver", use_solver);
-  bool use_ipm = useIpm(use_solver);
+  const bool use_choose = use_solver == kHighsChooseString;
+  // Selection may choose IPM, so needs the fallback to simplex
+  bool use_ipm = useIpm(use_solver) || use_choose;
   bool use_simplex = !use_ipm;
   if (use_ipm) {
     assert(!valid_basis);
@@ -1219,6 +1242,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     mipsolver.profiling_->solveCall("LP2", mipsolver.submip);
     callstatus = lpsolver.optimizeLp();
   }
+  if (use_choose)
+    highsLogDev(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                "HighsLpRelaxation::run Solver selection: %d IPM and %d "
+                "simplex iterations\n",
+                int(info.ipm_iteration_count),
+                int(info.simplex_iteration_count));
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
   if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
@@ -1229,8 +1258,13 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
   this->solved_first_lp = true;
   HighsInt itercount = -1;
-  if (use_simplex) {
+  if (use_simplex || use_choose) {
     itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
+    // Iteration limits are multiples of the root LP's count, so must not
+    // be left at zero if selection chose IPM
+    if (use_choose)
+      itercount += std::max(HighsInt{0}, info.ipm_iteration_count) +
+                   std::max(HighsInt{0}, info.crossover_iteration_count);
     numlpiters += itercount;
   }
 
@@ -1361,7 +1395,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
       return Status::kError;
     case HighsModelStatus::kIterationLimit: {
-      if (!mipsolver.submip && resolve_on_error) {
+      // Selected IPM has already used its budget, so don't repeat it
+      const bool selected_ipm = use_choose && info.ipm_iteration_count > 0;
+      if (!mipsolver.submip && resolve_on_error && !selected_ipm) {
         // Highs instantiation
         Highs ipm;
         ipm.setProfiling(mipsolver.profiling_);

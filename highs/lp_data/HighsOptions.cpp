@@ -1159,7 +1159,10 @@ bool usePdlp(const std::string& solver) {
 
 bool mayRequireDualPostsolve(const HighsOptions* options) {
   if (usePdlp(options->solver)) return true;
-  if (useIpm(options->solver)) {
+  // Presolve runs before solver selection, which may choose IPM
+  const bool may_select_ipm = options->solver == kHighsChooseString &&
+                              options->solver_select_strategy > 0;
+  if (useIpm(options->solver) || may_select_ipm) {
     if (options->run_crossover == kHighsOffString) return true;
     if (options->run_crossover == kHighsChooseString) return true;
     // Currently if run_crossover is on, and crossover fails, then

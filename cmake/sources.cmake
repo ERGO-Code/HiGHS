@@ -470,6 +470,7 @@ set(highs_sources
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
     util/HighsMatrixUtils.cpp
+    util/HighsSolverSelect.cpp
     util/HighsSort.cpp
     util/HighsSparseMatrix.cpp
     util/HighsUtils.cpp
@@ -642,6 +643,8 @@ set(highs_headers
     util/HighsMemoryAllocation.h
     util/HighsRandom.h
     util/HighsRbTree.h
+    util/HighsSolverSelect.h
+    util/HighsSolverSelectModels.h
     util/HighsSort.h
     util/HighsSparseMatrix.h
     util/HighsSparseVectorSum.h

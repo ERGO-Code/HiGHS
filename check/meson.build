@@ -64,6 +64,7 @@ test_array = [
   ['test_TestRunData', 'TestRunData.cpp'],
   ['test_TestSemiVariables', 'TestSemiVariables.cpp'],
   ['test_TestSetup', 'TestSetup.cpp'],
+  ['test_TestSolverSelect', 'TestSolverSelect.cpp'],
   ['test_TestSort', 'TestSort.cpp'],
   ['test_TestSpecialLps', 'TestSpecialLps.cpp'],
   ['test_TestThrow', 'TestThrow.cpp'],
