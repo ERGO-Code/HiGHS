@@ -189,10 +189,12 @@ struct HighsExternalApi {
         vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
     va_end(argptr);
 
+    const std::string load_failure = tryLoad() ? "" : ". " + getLoadStatus();
     highsLogUser(log_options, type,
-                 "%s%sThe following features are unavailable: %s\n",
+                 "%s%sThe following features are unavailable: %s%s\n",
                  msgbuffer.data(), (len > 0) ? " " : "",
-                 getMissingFeatures<Feature, Features...>().c_str());
+                 getMissingFeatures<Feature, Features...>().c_str(),
+                 load_failure.c_str());
   }
 
  private:
