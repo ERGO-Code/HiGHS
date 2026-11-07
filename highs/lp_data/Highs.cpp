@@ -35,6 +35,13 @@
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
 
+// Refuse a call to a Highs method made from within a user callback,
+// returning an error without doing anything
+#define HIGHS_RETURN_IF_CALLED_FROM_CALLBACK()                    \
+  do {                                                            \
+    if (calledFromCallback(__func__)) return HighsStatus::kError; \
+  } while (0)
+
 #define STRINGFY(s) STRINGFY0(s)
 #define STRINGFY0(s) #s
 const char* highsVersion() {
@@ -54,13 +61,13 @@ std::string Highs::getThirdPartyNotice() const {
 }
 
 HighsStatus Highs::clear() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   resetOptions();
   return clearModel();
 }
 
 HighsStatus Highs::clearModel() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   model_.clear();
   multi_linear_objective_.clear();
   saved_objective_and_solution_.clear();
@@ -68,7 +75,7 @@ HighsStatus Highs::clearModel() {
 }
 
 HighsStatus Highs::clearSolver() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   clearDerivedModelProperties();
   invalidateSolverData();
   ekk_instance_.clear();
@@ -76,14 +83,14 @@ HighsStatus Highs::clearSolver() {
 }
 
 HighsStatus Highs::clearSolverDualData() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   clearDerivedModelProperties();
   invalidateSolverDualData();
   return returnFromHighs(HighsStatus::kOk);
 }
 
 HighsStatus Highs::releaseMemory() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   // 1. Clear all model and solver state (same as clear()).
   clearModel();
 
@@ -138,7 +145,7 @@ HighsStatus Highs::releaseMemory() {
 }
 
 HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return optionChangeAction();
@@ -147,7 +154,7 @@ HighsStatus Highs::setOptionValue(const std::string& option, const bool value) {
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const HighsInt value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return optionChangeAction();
@@ -156,7 +163,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const double value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   if (setLocalOptionValue(options_.log_options, option, options_.records,
                           value) == OptionStatus::kOk)
     return optionChangeAction();
@@ -165,7 +172,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const std::string& value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
@@ -175,7 +182,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 
 HighsStatus Highs::setOptionValue(const std::string& option,
                                   const char* value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   HighsLogOptions report_log_options = options_.log_options;
   if (setLocalOptionValue(report_log_options, option, options_.log_options,
                           options_.records, value) == OptionStatus::kOk)
@@ -184,7 +191,7 @@ HighsStatus Highs::setOptionValue(const std::string& option,
 }
 
 HighsStatus Highs::readOptions(const std::string& filename) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   if (filename.size() <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
                  "Empty file name so not reading options\n");
@@ -202,7 +209,7 @@ HighsStatus Highs::readOptions(const std::string& filename) {
 }
 
 HighsStatus Highs::passOptions(const HighsOptions& options) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   if (passLocalOptions(options_.log_options, options, options_) ==
       OptionStatus::kOk)
     return optionChangeAction();
@@ -210,7 +217,7 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
 }
 
 HighsStatus Highs::resetOptions() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   resetLocalOptions(options_.records);
   return optionChangeAction();
@@ -466,7 +473,7 @@ HighsStatus Highs::writeInfo(const std::string& filename) const {
 // associated with it. Hence returnFromHighs is called at the end of
 // each
 HighsStatus Highs::passModel(HighsModel model) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   // This is the "master" Highs::passModel, in that all the others
   // (and readModel) eventually call it
@@ -563,7 +570,7 @@ HighsStatus Highs::passModel(HighsModel model) {
 }
 
 HighsStatus Highs::passModel(HighsLp lp) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsModel model;
   model.lp_ = std::move(lp);
@@ -578,7 +585,7 @@ HighsStatus Highs::passModel(
     const double* row_upper, const HighsInt* a_start, const HighsInt* a_index,
     const double* a_value, const HighsInt* q_start, const HighsInt* q_index,
     const double* q_value, const HighsInt* integrality) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsModel model;
   HighsLp& lp = model.lp_;
@@ -688,7 +695,7 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
                              const double* row_upper, const HighsInt* a_start,
                              const HighsInt* a_index, const double* a_value,
                              const HighsInt* integrality) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   return passModel(num_col, num_row, num_nz, 0, a_format, 0, sense, offset,
                    costs, col_lower, col_upper, row_lower, row_upper, a_start,
@@ -696,7 +703,7 @@ HighsStatus Highs::passModel(const HighsInt num_col, const HighsInt num_row,
 }
 
 HighsStatus Highs::passHessian(HighsHessian hessian_) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   HighsHessian& hessian = this->model_.hessian_;
@@ -740,7 +747,7 @@ HighsStatus Highs::passHessian(HighsHessian hessian_) {
 HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
                                const HighsInt format, const HighsInt* start,
                                const HighsInt* index, const double* value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsHessian hessian;
   if (!qFormatOk(num_nz, format)) {
@@ -771,7 +778,7 @@ HighsStatus Highs::passHessian(const HighsInt dim,
                                HighsHessianFunctionType oracleCall,
                                void* oracle_data,
                                HighsCHessianFunctionType c_oracleCall) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (dim <= 0) {
     highsLogUser(options_.log_options, HighsLogType::kWarning,
@@ -817,7 +824,7 @@ HighsStatus Highs::checkHessianOracle(const bool exit_on_first_error) const {
 HighsStatus Highs::passLinearObjectives(
     const HighsInt num_linear_objective,
     const HighsLinearObjective* linear_objective) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (num_linear_objective < 0) return HighsStatus::kOk;
   this->multi_linear_objective_.clear();
@@ -830,7 +837,7 @@ HighsStatus Highs::passLinearObjectives(
 
 HighsStatus Highs::addLinearObjective(
     const HighsLinearObjective& linear_objective, const HighsInt iObj) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (model_.isQp()) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -844,14 +851,14 @@ HighsStatus Highs::addLinearObjective(
 }
 
 HighsStatus Highs::clearLinearObjectives() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   this->multi_linear_objective_.clear();
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsLp& lp = this->model_.lp_;
   const HighsInt num_col = lp.num_col_;
@@ -882,7 +889,7 @@ HighsStatus Highs::passColName(const HighsInt col, const std::string& name) {
 }
 
 HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsLp& lp = this->model_.lp_;
   const HighsInt num_row = lp.num_row_;
@@ -912,14 +919,14 @@ HighsStatus Highs::passRowName(const HighsInt row, const std::string& name) {
 }
 
 HighsStatus Highs::passModelName(const std::string& name) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   this->model_.lp_.model_name_ = name;
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::readModel(const std::string& filename) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   Filereader* reader =
@@ -977,7 +984,7 @@ HighsStatus Highs::matrixImage(
 }
 
 HighsStatus Highs::readBasis(const std::string& filename) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   // Try to read basis file into read_basis
@@ -1004,19 +1011,19 @@ HighsStatus Highs::readBasis(const std::string& filename) {
 }
 
 HighsStatus Highs::writeModel(const std::string& filename) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   return writeLocalModel(model_, filename);
 }
 
 HighsStatus Highs::writePresolvedModel(const std::string& filename) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   return writeLocalModel(presolved_model_, filename);
 }
 
 HighsStatus Highs::writeIisModel(const std::string& filename) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = this->getIisInterface();
   if (return_status == HighsStatus::kError) return return_status;
@@ -1025,7 +1032,7 @@ HighsStatus Highs::writeIisModel(const std::string& filename) {
 
 HighsStatus Highs::writeLocalModel(HighsModel& model,
                                    const std::string& filename) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
@@ -1105,7 +1112,7 @@ HighsStatus Highs::writeLocalModel(HighsModel& model,
 }
 
 HighsStatus Highs::writeBasis(const std::string& filename) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
@@ -1138,7 +1145,7 @@ HighsStatus Highs::writeBasis(const std::string& filename) {
 }
 
 HighsStatus Highs::presolve() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   const HighsLogOptions& log_options = options_.log_options;
   if (model_.needsMods(options_.infinite_cost)) {
@@ -1241,7 +1248,7 @@ HighsStatus Highs::presolve() {
 HighsStatus Highs::run() {
   // Prevent run() being called from within a user callback, before
   // anything is changed or logged
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
 
   this->logHeader();
   // Level 0 of Highs::run()
@@ -2292,7 +2299,7 @@ HighsStatus Highs::getStandardFormLp(HighsInt& num_col, HighsInt& num_row,
                                      HighsInt& num_nz, double& offset,
                                      double* cost, double* rhs, HighsInt* start,
                                      HighsInt* index, double* value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (!this->standard_form_valid_) {
     HighsStatus status = formStandardFormLp();
@@ -2369,7 +2376,7 @@ HighsStatus Highs::getFixedLp(HighsLp& lp) const {
 }
 
 HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   has_dual_ray = false;
   return getDualRayInterface(has_dual_ray, dual_ray_value);
@@ -2377,7 +2384,7 @@ HighsStatus Highs::getDualRay(bool& has_dual_ray, double* dual_ray_value) {
 
 HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
                                     HVector& row_ep_buffer) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
   if (has_dual_ray) {
@@ -2398,7 +2405,7 @@ HighsStatus Highs::getDualRaySparse(bool& has_dual_ray,
 HighsStatus Highs::getDualUnboundednessDirection(
     bool& has_dual_unboundedness_direction,
     double* dual_unboundedness_direction_value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (dual_unboundedness_direction_value) {
     std::vector<double> dual_ray_value(this->model_.lp_.num_row_);
@@ -2420,14 +2427,14 @@ HighsStatus Highs::getDualUnboundednessDirection(
 
 HighsStatus Highs::getPrimalRay(bool& has_primal_ray,
                                 double* primal_ray_value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   has_primal_ray = false;
   return getPrimalRayInterface(has_primal_ray, primal_ray_value);
 }
 
 HighsStatus Highs::getRanging(HighsRanging& ranging) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsProfiling profiling;
   const bool already_profiling = this->profiling_;
@@ -2444,7 +2451,7 @@ HighsStatus Highs::feasibilityRelaxation(const double global_lower_penalty,
                                          const double* local_lower_penalty,
                                          const double* local_upper_penalty,
                                          const double* local_rhs_penalty) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   std::vector<HighsInt> infeasible_row_subset;
   return elasticityFilter(global_lower_penalty, global_upper_penalty,
@@ -2456,7 +2463,7 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
                                       const bool constraint,
                                       const HighsInt method,
                                       const double ill_conditioning_bound) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   // Cannot be const, as calculations ensure that the incumbent LP is
   // column-wise
   this->logHeader();
@@ -2471,7 +2478,7 @@ HighsStatus Highs::getIllConditioning(HighsIllConditioning& ill_conditioning,
 
 HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
                                             HighsInt& suggested_bound_scale) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsUserScaleData data;
   initialiseUserScaleData(this->options_, data);
@@ -2483,7 +2490,7 @@ HighsStatus Highs::getObjectiveBoundScaling(HighsInt& suggested_objective_scale,
 }
 
 HighsStatus Highs::getIis(HighsIis& iis) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = this->getIisInterface();
   iis = this->iis_;
@@ -2499,7 +2506,7 @@ HighsStatus Highs::getDualObjectiveValue(
 }
 
 HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (basic_variables == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2516,7 +2523,7 @@ HighsStatus Highs::getBasicVariables(HighsInt* basic_variables) {
 
 HighsStatus Highs::getBasisInverseRowSparse(const HighsInt row,
                                             HVector& row_ep_buffer) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   ekk_instance_.setNlaPointersForLpAndScale(model_.lp_);
   row_ep_buffer.clear();
@@ -2533,7 +2540,7 @@ HighsStatus Highs::getBasisInverseRowSparse(const HighsInt row,
 HighsStatus Highs::getBasisInverseRow(const HighsInt row, double* row_vector,
                                       HighsInt* row_num_nz,
                                       HighsInt* row_indices) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (row_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2564,7 +2571,7 @@ HighsStatus Highs::getBasisInverseRow(const HighsInt row, double* row_vector,
 HighsStatus Highs::getBasisInverseCol(const HighsInt col, double* col_vector,
                                       HighsInt* col_num_nz,
                                       HighsInt* col_indices) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (col_vector == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2595,7 +2602,7 @@ HighsStatus Highs::getBasisInverseCol(const HighsInt col, double* col_vector,
 HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution_vector,
                                  HighsInt* solution_num_nz,
                                  HighsInt* solution_indices) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (Xrhs == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2624,7 +2631,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
                                           double* solution_vector,
                                           HighsInt* solution_num_nz,
                                           HighsInt* solution_indices) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (Xrhs == NULL) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -2652,7 +2659,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
 HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
                                  HighsInt* row_num_nz, HighsInt* row_indices,
                                  const double* pass_basis_inverse_row_vector) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
@@ -2708,7 +2715,7 @@ HighsStatus Highs::getReducedRow(const HighsInt row, double* row_vector,
 HighsStatus Highs::getReducedColumn(const HighsInt col, double* col_vector,
                                     HighsInt* col_num_nz,
                                     HighsInt* col_indices) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
@@ -2750,7 +2757,7 @@ HighsStatus Highs::getKappa(double& kappa, const bool exact,
 }
 
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   HighsLp& lp = this->model_.lp_;
@@ -2848,7 +2855,7 @@ HighsStatus Highs::getColOrRowName(const HighsLp& lp, const bool is_col,
 
 HighsStatus Highs::setSolution(const HighsInt num_entries,
                                const HighsInt* index, const double* value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsLp& lp = this->model_.lp_;
   if (lp.num_col_ == 0) return HighsStatus::kOk;
@@ -2873,7 +2880,7 @@ HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
                                void* user_callback_data) {
   // Replacing the user callback while it is running is undefined
   // behaviour
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
 
   this->logHeader();
   this->callback_.clear();
@@ -3005,7 +3012,7 @@ HighsStatus Highs::stopCallback(const HighsCallbackType callback_type) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis,
                             const std::string& origin) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsLp& lp = this->model_.lp_;
   if (basis.alien) {
@@ -3082,7 +3089,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
 }
 
 HighsStatus Highs::setBasis() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   // Invalidate the basis for HiGHS
   //
@@ -3096,7 +3103,7 @@ HighsStatus Highs::setBasis() {
 }
 
 HighsStatus Highs::putIterate() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   // Check that there is a simplex iterate to put
   if (!ekk_instance_.status_.has_invert) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -3108,7 +3115,7 @@ HighsStatus Highs::putIterate() {
 }
 
 HighsStatus Highs::getIterate() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   // Check that there is a simplex iterate to get
   if (!ekk_instance_.status_.initialised_for_new_lp) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -3138,7 +3145,7 @@ HighsStatus Highs::addCols(const HighsInt num_new_col, const double* costs,
                            const double* upper_bounds,
                            const HighsInt num_new_nz, const HighsInt* starts,
                            const HighsInt* indices, const double* values) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   clearDerivedModelProperties();
@@ -3177,7 +3184,7 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
                            const double* upper_bounds,
                            const HighsInt num_new_nz, const HighsInt* starts,
                            const HighsInt* indices, const double* values) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   clearDerivedModelProperties();
@@ -3191,7 +3198,7 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
 }
 
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if ((sense == ObjSense::kMinimize) !=
       (model_.lp_.sense_ == ObjSense::kMinimize)) {
@@ -3204,7 +3211,7 @@ HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
 }
 
 HighsStatus Highs::changeObjectiveOffset(const double offset) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   // Update the objective value
   info_.objective_function_value += (offset - model_.lp_.offset_);
@@ -3222,7 +3229,7 @@ HighsStatus Highs::changeColIntegrality(const HighsInt col,
 HighsStatus Highs::changeColsIntegrality(const HighsInt from_col,
                                          const HighsInt to_col,
                                          const HighsVarType* integrality) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearPresolve();
   HighsIndexCollection index_collection;
@@ -3285,7 +3292,7 @@ static HighsStatus analyseSetCreateError(const HighsLogOptions& log_options,
 HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
                                          const HighsInt* set,
                                          const HighsVarType* integrality) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (num_set_entries == 0) return HighsStatus::kOk;
   clearPresolve();
@@ -3310,7 +3317,7 @@ HighsStatus Highs::changeColsIntegrality(const HighsInt num_set_entries,
 
 HighsStatus Highs::changeColsIntegrality(const HighsInt* mask,
                                          const HighsVarType* integrality) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearPresolve();
   HighsIndexCollection index_collection;
@@ -3329,7 +3336,7 @@ HighsStatus Highs::changeColCost(const HighsInt col, const double cost) {
 
 HighsStatus Highs::changeColsCost(const HighsInt from_col,
                                   const HighsInt to_col, const double* cost) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   HighsIndexCollection index_collection;
@@ -3349,7 +3356,7 @@ HighsStatus Highs::changeColsCost(const HighsInt from_col,
 
 HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
                                   const HighsInt* set, const double* cost) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (num_set_entries == 0) return HighsStatus::kOk;
   // Check for NULL data in "set" version of changeColsCost since
@@ -3376,7 +3383,7 @@ HighsStatus Highs::changeColsCost(const HighsInt num_set_entries,
 }
 
 HighsStatus Highs::changeColsCost(const HighsInt* mask, const double* cost) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   HighsIndexCollection index_collection;
@@ -3397,7 +3404,7 @@ HighsStatus Highs::changeColBounds(const HighsInt col, const double lower,
 HighsStatus Highs::changeColsBounds(const HighsInt from_col,
                                     const HighsInt to_col, const double* lower,
                                     const double* upper) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   HighsIndexCollection index_collection;
@@ -3419,7 +3426,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt from_col,
 HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
                                     const HighsInt* set, const double* lower,
                                     const double* upper) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (num_set_entries == 0) return HighsStatus::kOk;
   // Check for NULL data in "set" version of changeColsBounds since
@@ -3454,7 +3461,7 @@ HighsStatus Highs::changeColsBounds(const HighsInt num_set_entries,
 
 HighsStatus Highs::changeColsBounds(const HighsInt* mask, const double* lower,
                                     const double* upper) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   HighsIndexCollection index_collection;
@@ -3476,7 +3483,7 @@ HighsStatus Highs::changeRowBounds(const HighsInt row, const double lower,
 HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
                                     const HighsInt to_row, const double* lower,
                                     const double* upper) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   HighsIndexCollection index_collection;
@@ -3498,7 +3505,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt from_row,
 HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
                                     const HighsInt* set, const double* lower,
                                     const double* upper) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (num_set_entries == 0) return HighsStatus::kOk;
   // Check for NULL data in "set" version of changeRowsBounds since
@@ -3533,7 +3540,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt num_set_entries,
 
 HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
                                     const double* upper) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   HighsIndexCollection index_collection;
@@ -3548,7 +3555,7 @@ HighsStatus Highs::changeRowsBounds(const HighsInt* mask, const double* lower,
 
 HighsStatus Highs::changeCoeff(const HighsInt row, const HighsInt col,
                                const double value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (row < 0 || row >= model_.lp_.num_row_) {
     highsLogUser(options_.log_options, HighsLogType::kError,
@@ -3656,7 +3663,7 @@ HighsStatus Highs::getColName(const HighsInt col, std::string& name) const {
 }
 
 HighsStatus Highs::getColByName(const std::string& name, HighsInt& col) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsLp& lp = model_.lp_;
   if (!lp.col_names_.size()) return HighsStatus::kError;
@@ -3751,7 +3758,7 @@ HighsStatus Highs::getRowName(const HighsInt row, std::string& name) const {
 }
 
 HighsStatus Highs::getRowByName(const std::string& name, HighsInt& row) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsLp& lp = model_.lp_;
   if (!lp.row_names_.size()) return HighsStatus::kError;
@@ -3788,7 +3795,7 @@ HighsStatus Highs::getCoeff(const HighsInt row, const HighsInt col,
 }
 
 HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   HighsIndexCollection index_collection;
@@ -3807,7 +3814,7 @@ HighsStatus Highs::deleteCols(const HighsInt from_col, const HighsInt to_col) {
 
 HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
                               const HighsInt* set) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (num_set_entries == 0) return HighsStatus::kOk;
   clearDerivedModelProperties();
@@ -3823,7 +3830,7 @@ HighsStatus Highs::deleteCols(const HighsInt num_set_entries,
 }
 
 HighsStatus Highs::deleteCols(HighsInt* mask) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   const HighsInt original_num_col = model_.lp_.num_col_;
@@ -3838,7 +3845,7 @@ HighsStatus Highs::deleteCols(HighsInt* mask) {
 }
 
 HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   HighsIndexCollection index_collection;
@@ -3857,7 +3864,7 @@ HighsStatus Highs::deleteRows(const HighsInt from_row, const HighsInt to_row) {
 
 HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
                               const HighsInt* set) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   if (num_set_entries == 0) return HighsStatus::kOk;
   clearDerivedModelProperties();
@@ -3873,7 +3880,7 @@ HighsStatus Highs::deleteRows(const HighsInt num_set_entries,
 }
 
 HighsStatus Highs::deleteRows(HighsInt* mask) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   clearDerivedModelProperties();
   const HighsInt original_num_row = model_.lp_.num_row_;
@@ -3888,7 +3895,7 @@ HighsStatus Highs::deleteRows(HighsInt* mask) {
 }
 
 HighsStatus Highs::scaleCol(const HighsInt col, const double scale_value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   clearDerivedModelProperties();
@@ -3900,7 +3907,7 @@ HighsStatus Highs::scaleCol(const HighsInt col, const double scale_value) {
 }
 
 HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   clearDerivedModelProperties();
@@ -3912,7 +3919,7 @@ HighsStatus Highs::scaleRow(const HighsInt row, const double scale_value) {
 }
 
 HighsStatus Highs::postsolve(const HighsSolution& solution) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsBasis basis;
   return this->postsolve(solution, basis);
@@ -3920,7 +3927,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution) {
 
 HighsStatus Highs::postsolve(const HighsSolution& solution,
                              const HighsBasis& basis) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   const bool can_run_postsolve =
       model_presolve_status_ == HighsPresolveStatus::kNotPresolved ||
@@ -3944,7 +3951,7 @@ HighsStatus Highs::postsolve(const HighsSolution& solution,
 
 HighsStatus Highs::writeSolution(const std::string& filename,
                                  const HighsInt style) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
   HighsStatus call_status;
@@ -3992,7 +3999,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
 
 HighsStatus Highs::readSolution(const std::string& filename,
                                 const HighsInt style) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   this->logHeader();
   return readSolutionFile(filename, options_, model_.lp_, basis_, solution_,
                           style);
@@ -5177,7 +5184,7 @@ void Highs::reportSolvedLpQpStats() {
 }
 
 HighsStatus Highs::crossover(const HighsSolution& user_solution) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   HighsStatus return_status = HighsStatus::kOk;
   HighsLogOptions& log_options = options_.log_options;
   HighsLp& lp = model_.lp_;
@@ -5205,13 +5212,13 @@ HighsStatus Highs::crossover(const HighsSolution& user_solution) {
 }
 
 HighsStatus Highs::openLogFile(const std::string& log_file) {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   highsOpenLogFile(options_.log_options, options_.records, log_file);
   return HighsStatus::kOk;
 }
 
 HighsStatus Highs::closeLogFile() {
-  if (calledFromCallback(__func__)) return HighsStatus::kError;
+  HIGHS_RETURN_IF_CALLED_FROM_CALLBACK();
   // Work with a copy of the pointer for brevity
   FILE* log_stream = this->options_.log_options.log_stream;
   if (log_stream != nullptr) {
