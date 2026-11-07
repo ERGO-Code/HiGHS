@@ -31,9 +31,13 @@ bool HighsDynamicLibrary::load(const std::string& filename,
 #if defined(_WIN32) || defined(_WIN64)
   std::string absolute_filename = path + (path.empty() ? "" : "\\") + filename;
 
-  handle_ = static_cast<void*>(LoadLibraryExA(
-      absolute_filename.c_str(), nullptr,
-      LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32));
+  // allow application directory if no path is specified, otherwise use DLL load
+  // directory and absolute path
+  DWORD flags = (path.empty() ? LOAD_LIBRARY_SEARCH_APPLICATION_DIR
+                              : LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+  handle_ =
+      static_cast<void*>(LoadLibraryExA(absolute_filename.c_str(), nullptr,
+                                        LOAD_LIBRARY_SEARCH_SYSTEM32 | flags));
 
   if (!handle_) {
     DWORD error = GetLastError();
