@@ -925,7 +925,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         kSolverSelectRequireBasisString,
-        "Restrict automatic solver selection to solvers that yield a basis",
+        "Require a basis from automatic solver selection",
         advanced, &solver_select_require_basis, false);
     records.push_back(record_bool);
 

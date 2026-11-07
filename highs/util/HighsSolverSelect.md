@@ -14,7 +14,7 @@ The fitting tools are in the sibling `tests` repo, under `select/`.
    writes `computeLpFeatures` to a CSV, so that fitting sees what `solveLp` sees.
 4. Collect: `collect_results.py --version <version>` writes `select.csv`,
    checking from the logs that the requested solver ran and how crossover ended.
-   Each solve is flagged as valid with and without a basis being required.
+   Each solve is flagged by whether it is solved and whether it yields a basis.
 5. Fit: `visualize.py --cpp-out .../HighsSolverSelectModels.h` standardises the
    log-scaled features, projects them onto principal components, and fits a
    shallow regret tree on the scores. Each leaf picks the solver with the
@@ -37,14 +37,18 @@ Applies when `solver = choose`, or in the MIP solver when
 Strategies 1 and 2 send LPs smaller than the smallest training instance to dual
 simplex. Selected HiPO becomes IPX when HiPO is not available, in `solveLp`.
 
-`solver_select_require_basis` (default `false`) selects the models fitted on
-solves that yield a basis. If it is set, IPM is selected and `run_crossover` is
-off, `solveLp` returns an error rather than substituting another solver.
+`solver_select_require_basis` (default `false`) makes `solveLp` end with a basis.
+If IPM is selected and `run_crossover` is off, it returns an error rather than
+substituting another solver.
 
 IPM does not always yield a basis, even with `run_crossover = on`. A solve with
 `Crossover not run` in its log, `Optimal` status and no simplex iterations has no
-basis. If a basis is required, `solveLp` then runs simplex. With `Crossover not
-run` and simplex iterations, IPM did not finish and simplex found the basis.
+basis, so it does not count when fitting, and if a basis is required, `solveLp`
+then runs simplex. With `Crossover not run` and simplex iterations, IPM did not
+finish and simplex found the basis. Selecting that solver costs the recorded time,
+so it counts. On the 1.15.1 data every solved instance has a basis, so one model
+per strategy is enough. If the no-basis case appears in later runs, `visualize.py`
+still fits only on solves that yield a basis.
 
 If the incumbent has a basis, dual simplex is used without evaluating a
 strategy. `Highs::run` has skipped presolve by then, on the assumption that the

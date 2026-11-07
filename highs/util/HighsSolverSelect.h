@@ -89,18 +89,15 @@ HighsInt countIntegerCols(const std::vector<HighsVarType>& integrality);
 // kSimplexOnly => dual simplex; kColsRowsNnz => PCA model
 // on num_col, num_row and num_nz; kRankedFeatures => PCA model
 // on the features in S2_FEATURES of tests/select/visualize.py;
-// kHeuristic => provisional hand-written heuristic. `require_basis`
-// selects the models fitted on solves that yield a basis
+// kHeuristic => provisional hand-written heuristic
 HighsSolverSelect selectSolver(const HighsLp& lp,
-                               const SolverSelectStrategy strategy,
-                               const bool require_basis);
+                               const SolverSelectStrategy strategy);
 
 // kColsRowsNnz and kRankedFeatures: evaluate the PCA +
 // decision-tree model fitted offline by tests/select/visualize.py (see
 // HighsSolverSelectModels.h)
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
-                                      const SolverSelectStrategy strategy,
-                                      const bool require_basis);
+                                      const SolverSelectStrategy strategy);
 
 // kHeuristic: the provisional hand-written heuristic
 HighsSolverSelect selectSolverByHeuristic(const HighsLpFeatures& features);

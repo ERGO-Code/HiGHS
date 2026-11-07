@@ -62,8 +62,7 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
             ? HighsSolverSelect::kDualSimplex
             : selectSolver(solver_object.lp_,
                            static_cast<SolverSelectStrategy>(
-                               options.solver_select_strategy),
-                           options.solver_select_require_basis);
+                               options.solver_select_strategy));
 
     // If a basis is required, the selected solver must yield one
     // (IPM only does so via crossover)

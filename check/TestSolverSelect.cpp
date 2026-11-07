@@ -190,13 +190,11 @@ TEST_CASE("solver-select-small-model-uses-dual-simplex", "[solver_select]") {
   f.num_row = 10;
   f.num_col = 10;
   f.num_nz = 20;
-  for (const bool require_basis : {false, true}) {
-    for (const SolverSelectStrategy strategy :
-         {SolverSelectStrategy::kColsRowsNnz,
-          SolverSelectStrategy::kRankedFeatures})
-      REQUIRE(selectSolverByModel(f, strategy, require_basis) ==
-              HighsSolverSelect::kDualSimplex);
-  }
+  for (const SolverSelectStrategy strategy :
+       {SolverSelectStrategy::kColsRowsNnz,
+        SolverSelectStrategy::kRankedFeatures})
+    REQUIRE(selectSolverByModel(f, strategy) ==
+            HighsSolverSelect::kDualSimplex);
 }
 
 TEST_CASE("solver-select-heuristic", "[solver_select]") {

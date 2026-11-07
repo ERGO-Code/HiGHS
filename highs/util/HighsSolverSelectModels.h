@@ -40,69 +40,37 @@ struct HighsSolverSelectModel {
   double min_num_nz;
 };
 
-// strategy 1, solver_select_require_basis = false: num_col, num_row, num_nz
-static const HighsInt kS1NoBasisFeatureIndex[] = {1, 0, 2};
-static const HighsInt kS1NoBasisTransform[] = {1, 1, 1};
-static const double kS1NoBasisMean[] = {4.8557397006933529, 4.6845568506639843, 5.7207708470594909};
-static const double kS1NoBasisScale[] = {0.65214246469893677, 0.72925214018308571, 0.6344794953852767};
-static const double kS1NoBasisLoading[] = {0.61648620254069075, 0.53102717181347814, 0.58133888986781013, -0.18190604064958285, 0.81441753735674105, -0.55103018721388919, 0.76606458895588636, -0.23395345186929928, -0.59867422518953395};
-static const HighsInt kS1NoBasisLeft[] = {1, 2, 3, -1, 5, -1, -1, 8, -1, 10, -1, -1, 13, 14, 15, -1, -1, 18, -1, -1, 21, -1, 23, -1, -1};
-static const HighsInt kS1NoBasisRight[] = {12, 7, 4, -1, 6, -1, -1, 9, -1, 11, -1, -1, 20, 17, 16, -1, -1, 19, -1, -1, 22, -1, 24, -1, -1};
-static const HighsInt kS1NoBasisSplitPc[] = {0, 1, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 2, 2, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0};
-static const double kS1NoBasisThreshold[] = {-0.68919381499290466, 0.00020298734307289124, -1.766592800617218, -2, -1.0247992873191833, -2, -2, 0.12339174747467041, -2, -0.1783517599105835, -2, -2, 0.34372392296791077, -0.42616888880729675, -0.93272009491920471, -2, -2, 0.49343428015708923, -2, -2, -0.33288653194904327, -2, 0.50877809524536133, -2, -2};
-static const HighsSolverSelect kS1NoBasisLeafSolver[] = {HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex};
-static const HighsSolverSelectModel kS1NoBasisModel = {
-    3, kS1NoBasisFeatureIndex, kS1NoBasisTransform, kS1NoBasisMean, kS1NoBasisScale,
-    3, kS1NoBasisLoading, kS1NoBasisLeft, kS1NoBasisRight, kS1NoBasisSplitPc,
-    kS1NoBasisThreshold, kS1NoBasisLeafSolver, 27224};
+// strategy 1: num_col, num_row, num_nz
+static const HighsInt kS1FeatureIndex[] = {1, 0, 2};
+static const HighsInt kS1Transform[] = {1, 1, 1};
+static const double kS1Mean[] = {4.8557397006933529, 4.6845568506639843, 5.7207708470594909};
+static const double kS1Scale[] = {0.65214246469893677, 0.72925214018308571, 0.6344794953852767};
+static const double kS1Loading[] = {0.61648620254069075, 0.53102717181347814, 0.58133888986781013, -0.18190604064958285, 0.81441753735674105, -0.55103018721388919, 0.76606458895588636, -0.23395345186929928, -0.59867422518953395};
+static const HighsInt kS1Left[] = {1, 2, 3, -1, 5, -1, -1, 8, -1, 10, -1, -1, 13, 14, 15, -1, -1, 18, -1, -1, 21, -1, 23, -1, -1};
+static const HighsInt kS1Right[] = {12, 7, 4, -1, 6, -1, -1, 9, -1, 11, -1, -1, 20, 17, 16, -1, -1, 19, -1, -1, 22, -1, 24, -1, -1};
+static const HighsInt kS1SplitPc[] = {0, 1, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 2, 2, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0};
+static const double kS1Threshold[] = {-0.68919381499290466, 0.00020298734307289124, -1.766592800617218, -2, -1.0247992873191833, -2, -2, 0.12339174747467041, -2, -0.1783517599105835, -2, -2, 0.34372392296791077, -0.42616888880729675, -0.93272009491920471, -2, -2, 0.49343428015708923, -2, -2, -0.33288653194904327, -2, 0.50877809524536133, -2, -2};
+static const HighsSolverSelect kS1LeafSolver[] = {HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex};
+static const HighsSolverSelectModel kS1Model = {
+    3, kS1FeatureIndex, kS1Transform, kS1Mean, kS1Scale,
+    3, kS1Loading, kS1Left, kS1Right, kS1SplitPc,
+    kS1Threshold, kS1LeafSolver, 27224};
 
-// strategy 1, solver_select_require_basis = true: num_col, num_row, num_nz
-static const HighsInt kS1BasisFeatureIndex[] = {1, 0, 2};
-static const HighsInt kS1BasisTransform[] = {1, 1, 1};
-static const double kS1BasisMean[] = {4.8557397006933529, 4.6845568506639843, 5.7207708470594909};
-static const double kS1BasisScale[] = {0.65214246469893677, 0.72925214018308571, 0.6344794953852767};
-static const double kS1BasisLoading[] = {0.61648620254069075, 0.53102717181347814, 0.58133888986781013};
-static const HighsInt kS1BasisLeft[] = {1, 2, 3, -1, -1, 6, -1, -1, 9, 10, -1, -1, 13, -1, -1};
-static const HighsInt kS1BasisRight[] = {8, 5, 4, -1, -1, 7, -1, -1, 12, 11, -1, -1, 14, -1, -1};
-static const HighsInt kS1BasisSplitPc[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static const double kS1BasisThreshold[] = {-0.68919381499290466, -1.766592800617218, -1.9730623364448547, -2, -2, -1.2627525329589844, -2, -2, 0.54355895519256592, -0.47960200905799866, -2, -2, 0.74670121073722839, -2, -2};
-static const HighsSolverSelect kS1BasisLeafSolver[] = {HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo};
-static const HighsSolverSelectModel kS1BasisModel = {
-    3, kS1BasisFeatureIndex, kS1BasisTransform, kS1BasisMean, kS1BasisScale,
-    1, kS1BasisLoading, kS1BasisLeft, kS1BasisRight, kS1BasisSplitPc,
-    kS1BasisThreshold, kS1BasisLeafSolver, 27224};
-
-// strategy 2, solver_select_require_basis = false: relative_num_equalities, relative_num_almost_identical_nonzeros, relative_max_matrix_coefficient, relative_max_obj_coefficient, matrix_nonzero_density, relative_max_rhs_value, avg_nonzeros_per_col, relative_num_dense_rows, avg_nonzeros_per_row, relative_num_identical_obj_values, relative_num_identical_rhs_values, relative_num_cols_without_upper
-static const HighsInt kS2NoBasisFeatureIndex[] = {4, 14, 17, 18, 26, 19, 27, 29, 28, 15, 16, 8};
-static const HighsInt kS2NoBasisTransform[] = {0, 0, 1, 1, 2, 1, 1, 0, 1, 0, 0, 0};
-static const double kS2NoBasisMean[] = {0.31833102420898313, 0.98683468344912662, 4.1950316342688758, 4.9975497187440769, -3.8194575794021701, 4.5192126645559387, 0.943831885917913, 0.0028920136331446011, 1.1060087736238746, 0.96707210015978484, 0.95146629364597124, 0.38694987381452123};
-static const double kS2NoBasisScale[] = {0.32095238694534195, 0.034676051604343124, 3.0944368778078832, 3.6172561843196798, 0.96854880331755944, 4.8468725814219553, 0.49689787442387484, 0.0057123104807117126, 0.70143674476877882, 0.13656219613010692, 0.089369723691170661, 0.40446570868674148};
-static const double kS2NoBasisLoading[] = {0.065086984864555789, 0.19309120589332357, -0.30669705756253696, -0.44449945058177459, 0.44862445375100868, -0.26273072949698678, 0.36345973158781797, 0.12362605945545656, 0.40651305696679457, -0.045492194339135365, 0.18368367723876131, -0.21930984843565995, 0.10513475718769186, 0.15170441027022635, -0.41592023186219701, -0.11216648110933017, -0.34462950167608758, -0.33947401119022935, -0.36728850519940925, 0.27845933150979851, -0.30525803066729751, 0.1518768161739345, 0.46623432236183243, 0.01689606454467471, 0.76662066483889379, -0.16604762437667975, -0.20041525495820936, 0.014316466889135765, 0.054081853885190934, 0.029657489953054884, -0.28379290970633247, 0.073445544937030052, 0.29419947631248156, -0.012150529506823621, -0.31304841596729349, 0.26440943963209507, -0.087780083190853953, -0.43791849206341554, 0.11227965524224395, -0.2532218845515497, 0.009076281430480844, -0.15768608901868719, 0.1256668297230738, 0.13274066667987147, -0.033941894521542365, 0.7944164376560815, -0.17021680654662935, 0.064893754830896822, 0.11815417042961295, 0.48855172586007717, 0.24134652706982251, -0.0075418172367512498, -0.019048244452529714, 0.51689908177919153, 0.10834082368869291, 0.5731281090000917, 0.052130802992928577, 0.24743335409183329, 0.083032038144606968, 0.10225220571020961, 0.01908555856262335, 0.3778421659491335, -0.040099426485302958, -0.046995525323494346, 0.098694040156432516, -0.065315717950158336, 0.15517692370799188, -0.50982764862157282, -0.062788034871986032, 0.21821532777498698, 0.14041071407701036, 0.69553453899103412};
-static const HighsInt kS2NoBasisLeft[] = {1, 2, -1, 4, -1, -1, 7, 8, -1, -1, 11, -1, -1};
-static const HighsInt kS2NoBasisRight[] = {6, 3, -1, 5, -1, -1, 10, 9, -1, -1, 12, -1, -1};
-static const HighsInt kS2NoBasisSplitPc[] = {1, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0};
-static const double kS2NoBasisThreshold[] = {-1.2278388738632202, -1.0403341054916382, -2, 0.584736168384552, -2, -2, -1.6177539229393005, 0.40558066964149475, -2, -2, 0.53427866101264954, -2, -2};
-static const HighsSolverSelect kS2NoBasisLeafSolver[] = {HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx};
-static const HighsSolverSelectModel kS2NoBasisModel = {
-    12, kS2NoBasisFeatureIndex, kS2NoBasisTransform, kS2NoBasisMean, kS2NoBasisScale,
-    6, kS2NoBasisLoading, kS2NoBasisLeft, kS2NoBasisRight, kS2NoBasisSplitPc,
-    kS2NoBasisThreshold, kS2NoBasisLeafSolver, 27224};
-
-// strategy 2, solver_select_require_basis = true: relative_num_equalities, relative_num_almost_identical_nonzeros, relative_max_matrix_coefficient, relative_max_obj_coefficient, matrix_nonzero_density, relative_max_rhs_value, avg_nonzeros_per_col, relative_num_dense_rows, avg_nonzeros_per_row, relative_num_identical_obj_values, relative_num_identical_rhs_values, relative_num_cols_without_upper
-static const HighsInt kS2BasisFeatureIndex[] = {4, 14, 17, 18, 26, 19, 27, 29, 28, 15, 16, 8};
-static const HighsInt kS2BasisTransform[] = {0, 0, 1, 1, 2, 1, 1, 0, 1, 0, 0, 0};
-static const double kS2BasisMean[] = {0.31833102420898313, 0.98683468344912662, 4.1950316342688758, 4.9975497187440769, -3.8194575794021701, 4.5192126645559387, 0.943831885917913, 0.0028920136331446011, 1.1060087736238746, 0.96707210015978484, 0.95146629364597124, 0.38694987381452123};
-static const double kS2BasisScale[] = {0.32095238694534195, 0.034676051604343124, 3.0944368778078832, 3.6172561843196798, 0.96854880331755944, 4.8468725814219553, 0.49689787442387484, 0.0057123104807117126, 0.70143674476877882, 0.13656219613010692, 0.089369723691170661, 0.40446570868674148};
-static const double kS2BasisLoading[] = {0.065086984864555789, 0.19309120589332357, -0.30669705756253696, -0.44449945058177459, 0.44862445375100868, -0.26273072949698678, 0.36345973158781797, 0.12362605945545656, 0.40651305696679457, -0.045492194339135365, 0.18368367723876131, -0.21930984843565995, 0.10513475718769186, 0.15170441027022635, -0.41592023186219701, -0.11216648110933017, -0.34462950167608758, -0.33947401119022935, -0.36728850519940925, 0.27845933150979851, -0.30525803066729751, 0.1518768161739345, 0.46623432236183243, 0.01689606454467471, 0.76662066483889379, -0.16604762437667975, -0.20041525495820936, 0.014316466889135765, 0.054081853885190934, 0.029657489953054884, -0.28379290970633247, 0.073445544937030052, 0.29419947631248156, -0.012150529506823621, -0.31304841596729349, 0.26440943963209507, -0.087780083190853953, -0.43791849206341554, 0.11227965524224395, -0.2532218845515497, 0.009076281430480844, -0.15768608901868719, 0.1256668297230738, 0.13274066667987147, -0.033941894521542365, 0.7944164376560815, -0.17021680654662935, 0.064893754830896822};
-static const HighsInt kS2BasisLeft[] = {1, 2, -1, 4, -1, -1, 7, 8, 9, -1, -1, 12, -1, -1, 15, 16, -1, -1, 19, -1, -1};
-static const HighsInt kS2BasisRight[] = {6, 3, -1, 5, -1, -1, 14, 11, 10, -1, -1, 13, -1, -1, 18, 17, -1, -1, 20, -1, -1};
-static const HighsInt kS2BasisSplitPc[] = {1, 0, 0, 3, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 0, 0};
-static const double kS2BasisThreshold[] = {-1.2278388738632202, -2.3402129411697388, -2, 0.584736168384552, -2, -2, -1.6716840863227844, -0.12217444553971291, -0.36144636571407318, -2, -2, 0.40558066964149475, -2, -2, 0.57062771916389465, -0.18651654571294785, -2, -2, 2.1336454153060913, -2, -2};
-static const HighsSolverSelect kS2BasisLeafSolver[] = {HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx};
-static const HighsSolverSelectModel kS2BasisModel = {
-    12, kS2BasisFeatureIndex, kS2BasisTransform, kS2BasisMean, kS2BasisScale,
-    4, kS2BasisLoading, kS2BasisLeft, kS2BasisRight, kS2BasisSplitPc,
-    kS2BasisThreshold, kS2BasisLeafSolver, 27224};
+// strategy 2: relative_num_equalities, relative_num_almost_identical_nonzeros, relative_max_matrix_coefficient, relative_max_obj_coefficient, matrix_nonzero_density, relative_max_rhs_value, avg_nonzeros_per_col, relative_num_dense_rows, avg_nonzeros_per_row, relative_num_identical_obj_values, relative_num_identical_rhs_values, relative_num_cols_without_upper
+static const HighsInt kS2FeatureIndex[] = {4, 14, 17, 18, 26, 19, 27, 29, 28, 15, 16, 8};
+static const HighsInt kS2Transform[] = {0, 0, 1, 1, 2, 1, 1, 0, 1, 0, 0, 0};
+static const double kS2Mean[] = {0.31833102420898313, 0.98683468344912662, 4.1950316342688758, 4.9975497187440769, -3.8194575794021701, 4.5192126645559387, 0.943831885917913, 0.0028920136331446011, 1.1060087736238746, 0.96707210015978484, 0.95146629364597124, 0.38694987381452123};
+static const double kS2Scale[] = {0.32095238694534195, 0.034676051604343124, 3.0944368778078832, 3.6172561843196798, 0.96854880331755944, 4.8468725814219553, 0.49689787442387484, 0.0057123104807117126, 0.70143674476877882, 0.13656219613010692, 0.089369723691170661, 0.40446570868674148};
+static const double kS2Loading[] = {0.065086984864555789, 0.19309120589332357, -0.30669705756253696, -0.44449945058177459, 0.44862445375100868, -0.26273072949698678, 0.36345973158781797, 0.12362605945545656, 0.40651305696679457, -0.045492194339135365, 0.18368367723876131, -0.21930984843565995, 0.10513475718769186, 0.15170441027022635, -0.41592023186219701, -0.11216648110933017, -0.34462950167608758, -0.33947401119022935, -0.36728850519940925, 0.27845933150979851, -0.30525803066729751, 0.1518768161739345, 0.46623432236183243, 0.01689606454467471, 0.76662066483889379, -0.16604762437667975, -0.20041525495820936, 0.014316466889135765, 0.054081853885190934, 0.029657489953054884, -0.28379290970633247, 0.073445544937030052, 0.29419947631248156, -0.012150529506823621, -0.31304841596729349, 0.26440943963209507, -0.087780083190853953, -0.43791849206341554, 0.11227965524224395, -0.2532218845515497, 0.009076281430480844, -0.15768608901868719, 0.1256668297230738, 0.13274066667987147, -0.033941894521542365, 0.7944164376560815, -0.17021680654662935, 0.064893754830896822, 0.11815417042961295, 0.48855172586007717, 0.24134652706982251, -0.0075418172367512498, -0.019048244452529714, 0.51689908177919153, 0.10834082368869291, 0.5731281090000917, 0.052130802992928577, 0.24743335409183329, 0.083032038144606968, 0.10225220571020961, 0.01908555856262335, 0.3778421659491335, -0.040099426485302958, -0.046995525323494346, 0.098694040156432516, -0.065315717950158336, 0.15517692370799188, -0.50982764862157282, -0.062788034871986032, 0.21821532777498698, 0.14041071407701036, 0.69553453899103412};
+static const HighsInt kS2Left[] = {1, 2, -1, 4, -1, -1, 7, 8, -1, -1, 11, -1, -1};
+static const HighsInt kS2Right[] = {6, 3, -1, 5, -1, -1, 10, 9, -1, -1, 12, -1, -1};
+static const HighsInt kS2SplitPc[] = {1, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0};
+static const double kS2Threshold[] = {-1.2278388738632202, -1.0403341054916382, -2, 0.584736168384552, -2, -2, -1.6177539229393005, 0.40558066964149475, -2, -2, 0.53427866101264954, -2, -2};
+static const HighsSolverSelect kS2LeafSolver[] = {HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kDualSimplex, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kHipo, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx, HighsSolverSelect::kIpx};
+static const HighsSolverSelectModel kS2Model = {
+    12, kS2FeatureIndex, kS2Transform, kS2Mean, kS2Scale,
+    6, kS2Loading, kS2Left, kS2Right, kS2SplitPc,
+    kS2Threshold, kS2LeafSolver, 27224};
 
 // clang-format on
 

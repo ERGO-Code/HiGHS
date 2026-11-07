@@ -397,20 +397,16 @@ static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
 }
 
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
-                                      const SolverSelectStrategy strategy,
-                                      const bool require_basis) {
+                                      const SolverSelectStrategy strategy) {
   assert(strategy == SolverSelectStrategy::kColsRowsNnz ||
          strategy == SolverSelectStrategy::kRankedFeatures);
-  const HighsSolverSelectModel& model =
-      strategy == SolverSelectStrategy::kColsRowsNnz
-          ? (require_basis ? kS1BasisModel : kS1NoBasisModel)
-          : (require_basis ? kS2BasisModel : kS2NoBasisModel);
-  return evaluateModel(model, features);
+  return evaluateModel(
+      strategy == SolverSelectStrategy::kColsRowsNnz ? kS1Model : kS2Model,
+      features);
 }
 
 HighsSolverSelect selectSolver(const HighsLp& lp,
-                               const SolverSelectStrategy strategy,
-                               const bool require_basis) {
+                               const SolverSelectStrategy strategy) {
   switch (strategy) {
     case SolverSelectStrategy::kSimplexOnly:
       return HighsSolverSelect::kDualSimplex;
@@ -420,11 +416,10 @@ HighsSolverSelect selectSolver(const HighsLp& lp,
       f.num_row = lp.num_row_;
       f.num_col = lp.num_col_;
       f.num_nz = lp.a_matrix_.numNz();
-      return selectSolverByModel(f, strategy, require_basis);
+      return selectSolverByModel(f, strategy);
     }
     case SolverSelectStrategy::kRankedFeatures:
-      return selectSolverByModel(computeLpFeatures(lp), strategy,
-                                 require_basis);
+      return selectSolverByModel(computeLpFeatures(lp), strategy);
     case SolverSelectStrategy::kHeuristic:
       return selectSolverByHeuristic(computeLpFeatures(lp));
   }
