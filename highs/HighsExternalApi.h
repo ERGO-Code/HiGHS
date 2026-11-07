@@ -10,6 +10,7 @@
  */
 #ifndef HIGHS_EXTERNAL_API_H_
 #define HIGHS_EXTERNAL_API_H_
+#include <mutex>
 #include <set>
 #include <string>
 #include <tuple>
@@ -130,7 +131,9 @@ struct HighsExternalApi {
   HighsExtras::HighsExtrasApi api_;
   const HighsExtrasFeatureInfo* extras_feature_info_ = nullptr;
 
-  static void unload();
+  static void unload();  // unloads but does not allow reloading without reset()
+  static void reset();   // resets the cached initialization attempt for
+                         // dynamically loaded extras
   static bool tryLoad(const std::string& directory = "",
                       bool search_if_empty = true);
 
@@ -203,6 +206,8 @@ struct HighsExternalApi {
 
 #ifdef HIGHS_SHARED_EXTRAS_LIBRARY
   HighsDynamicLibrary library_;
+  std::unique_ptr<std::once_flag> initialized_ =
+      std::make_unique<std::once_flag>();
   bool available_ = false;
 #endif
 };

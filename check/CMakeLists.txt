@@ -112,6 +112,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
 
+  if (BUILD_SHARED_EXTRAS_LIB)
+    # get output directory of highs_extras (regardless of platform)
+    target_compile_definitions(unit_tests PRIVATE HIGHS_TEST_EXTRAS_DIR="$<TARGET_FILE_DIR:highs_extras>")
+  endif()
 
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")

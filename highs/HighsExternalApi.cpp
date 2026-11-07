@@ -11,7 +11,6 @@
 
 #include "HighsExternalApi.h"
 
-#include <mutex>
 using namespace HighsExtras;
 
 HighsExternalApi& HighsExternalApi::instance() {
@@ -27,6 +26,14 @@ void HighsExternalApi::unload() {
   inst.api_ = HighsExtrasApi{};
   inst.extras_feature_info_ = nullptr;
   inst.available_ = false;
+  inst.status_.clear();
+#endif
+}
+
+void HighsExternalApi::reset() {
+#ifdef HIGHS_SHARED_EXTRAS_LIBRARY
+  HighsExternalApi& inst = instance();
+  inst.initialized_ = std::make_unique<std::once_flag>();
 #endif
 }
 
@@ -38,11 +45,9 @@ void HighsExternalApi::unload() {
 bool HighsExternalApi::tryLoad(const std::string& directory,
                                bool search_if_empty) {
   HighsExternalApi& inst = instance();
-  static std::once_flag flag;
-
   // prevents multiple attempts to load the library
   // ensure thread safety (multiple threads may call tryLoad simultaneously)
-  std::call_once(flag, [&]() {
+  std::call_once(*inst.initialized_, [&]() {
     inst.available_ = false;
 
     // Load library

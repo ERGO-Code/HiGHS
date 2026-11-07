@@ -2680,7 +2680,7 @@ HighsInt Highs_setCallbackSparseSolution(HighsCallbackDataIn* data_in,
 HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 
 /**
- * @brief Initialize optional extras once for the lifetime of the process.
+ * @brief Initialize optional extras and cache the result.
  *
  * @param directory Directory containing the extras library. NULL means empty.
  * @param search_if_empty If nonzero, search default library directories when
@@ -2688,8 +2688,8 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
  * @return kHighsStatusOk on success, kHighsStatusError on failure.
  *
  * Only the first call attempts initialization; subsequent calls return the
- * cached result, regardless of arguments. Not needed for statically linked
- * extras.
+ * cached result, regardless of arguments, unless extras are explicitly
+ * unloaded. Not needed for statically linked extras.
  */
 HighsInt Highs_initializeExtras(const char* directory,
                                 HighsInt search_if_empty);

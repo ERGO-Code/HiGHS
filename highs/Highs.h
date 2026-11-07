@@ -1365,13 +1365,14 @@ class Highs {
   static void resetThreadScheduler(bool blocking = false);
 
   /**
-   * @brief Initialize optional extras once for the lifetime of the process.
+   * @brief Initialize optional extras and cache the result.
    *
    * An empty directory searches default library directories only when
    * search_if_empty is true. Statically linked extras ignore both arguments.
    *
    * @return HighsStatus::kOk on success, HighsStatus::kError on failure.
-   * Subsequent calls return the cached result without retrying.
+   * Subsequent calls return the cached result without retrying, unless
+   * extras are explicitly unloaded.
    */
   static HighsStatus initializeExtras(const std::string& directory,
                                       bool search_if_empty = true);
