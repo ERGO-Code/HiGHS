@@ -35,8 +35,6 @@ void HighsExternalApi::unload() {
 #define STRINGFY(s) STRINGFY0(s)
 #define STRINGFY0(s) #s
 
-// Nonempty directory: no search fallback
-// Empty directory: only when search_if_empty is true (default search paths)
 bool HighsExternalApi::tryLoad(const std::string& directory,
                                bool search_if_empty) {
   HighsExternalApi& inst = instance();

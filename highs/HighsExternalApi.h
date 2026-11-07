@@ -130,8 +130,8 @@ struct HighsExternalApi {
   const HighsExtrasFeatureInfo* extras_feature_info_ = nullptr;
 
   static void unload();
-  static bool tryLoad(const std::string& directory,
-                      bool search_if_empty = false);
+  static bool tryLoad(const std::string& directory = "",
+                      bool search_if_empty = true);
 
   static const std::string getLoadStatus() { return instance().status_; }
 
@@ -208,9 +208,11 @@ struct HighsExternalApi {
 
 namespace HighsExtras {
 
-inline bool initialize(const std::string& path,
-                       bool search_default_dirs = true) {
-  return HighsExternalApi::tryLoad(path, search_default_dirs);
+inline HighsStatus initialize(const std::string& path,
+                              bool search_default_dirs = true) {
+  return HighsExternalApi::tryLoad(path, search_default_dirs)
+             ? HighsStatus::kOk
+             : HighsStatus::kError;
 }
 
 // allows static access to feature APIs via
