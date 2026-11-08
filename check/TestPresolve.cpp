@@ -2420,17 +2420,15 @@ TEST_CASE("issue-3565", "[highs_test_presolve]") {
   std::string lp_file = test_name + ".lp";
   FILE* file = fopen(lp_file.c_str(), "w");
   fprintf(file, "%s",
-          "min\n obj: -1.75 x5 -1 x40 -0.0068359375 x43 \nst\n r13: +0.0625 x5 "
-          "+1 x40 +0.000244140625 x43 = +1\nbounds\n -inf <= x5 <= 1\n -1 <= "
-          "x40\n 1 <= x43\nend\n");
+          "min\n obj: -28 x - y - 2.8 z \nst\n r0:     x + y + 0.1 z = 1\nbounds\n -inf <= x <= 1\n -1 <= y\n 1 <= z\nend\n");
   fclose(file);
   Highs h;
-  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
- std::remove(lp_file.c_str());
+  // std::remove(lp_file.c_str());
 
   h.resetThreadScheduler(true);
 }
