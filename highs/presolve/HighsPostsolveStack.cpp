@@ -748,11 +748,10 @@ void HighsPostsolveStack::DuplicateColumn::undo(const HighsOptions& options,
         basis.col_status[col] = HighsBasisStatus::kZero;
         if (colUpper < kHighsInf) {
           // Nonbasic at zero with bounds (-inf, colUpper)
-          printf(
+          highsLogUser(options.log_options, HighsLogType::kWarning,
               "HighsPostsolveStack::DuplicateColumn::undo Col is nonbasic at "
               "zero with upper bound of %g\n",
               colUpper);
-          assert(111 == 679);
         }
       }
       assert(basis.col_status[duplicateCol] == HighsBasisStatus::kBasic);
