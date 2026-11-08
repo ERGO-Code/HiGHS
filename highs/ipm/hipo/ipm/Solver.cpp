@@ -1309,7 +1309,8 @@ isFailure Solver::initialiseLinearSolver() {
     LS_->setup();
     LS_->clear();
   } else {
-    LS_->checkMemory();
+    // TEMPORARY (ss-investigate): memory guard disabled
+    // LS_->checkMemory();
   }
 
   return false;

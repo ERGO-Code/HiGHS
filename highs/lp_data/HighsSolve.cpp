@@ -20,6 +20,8 @@
 #include "simplex/HApp.h"
 #include "util/HighsSolverSelect.h"
 
+#include <cstdlib>
+
 #define SOLVE_CATCH_CALL(Solve, SolveString)                                  \
   do {                                                                        \
     try {                                                                     \
@@ -48,12 +50,19 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   HighsOptions& options = solver_object.options_;
   // Highs::run skips presolve if there is a basis, on the basis that
   // solver = "choose" will use it, so simplex must be used
-  const HighsSolverSelect selected_solver =
+  HighsSolverSelect selected_solver =
       solver_object.basis_.useful
           ? HighsSolverSelect::kDualSimplex
           : selectSolver(solver_object.lp_,
                          static_cast<SolverSelectStrategy>(
                              options.solver_select_strategy));
+  // TEMPORARY (ss-investigate): HIGHS_FORCE_HIPO=1 makes every selection
+  // without a useful basis choose HiPO
+  {
+    const char* force_hipo = std::getenv("HIGHS_FORCE_HIPO");
+    if (force_hipo && force_hipo[0] == '1' && !solver_object.basis_.useful)
+      selected_solver = HighsSolverSelect::kHipo;
+  }
   const bool selected_ipm = selected_solver != HighsSolverSelect::kDualSimplex;
 
   // If a basis is required, IPM only yields one via crossover
@@ -82,13 +91,26 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
                "Solver selection (strategy %d) chose \"%s\"\n",
                int(options.solver_select_strategy),
                selected_solver_string.c_str());
+  // TEMPORARY (ss-investigate): MIP LP logs are silent, so print selections
+  printf("SS-DEBUG select %s rows %d cols %d nnz %d\n",
+         selected_solver_string.c_str(), int(solver_object.lp_.num_row_),
+         int(solver_object.lp_.num_col_),
+         int(solver_object.lp_.a_matrix_.numNz()));
+  fflush(stdout);
+  const double ss_debug_t0 = solver_object.timer_.read();
   HighsStatus status = solveWith(selected_solver_string);
+  printf("SS-DEBUG done %s %.2fs at %.2fs status %s\n",
+         selected_solver_string.c_str(),
+         solver_object.timer_.read() - ss_debug_t0, solver_object.timer_.read(),
+         utilModelStatusToString(solver_object.model_status_).c_str());
+  fflush(stdout);
 
   // IPX needs far less memory than HiPO, whose factorisation can fill in
   if (selected_solver == HighsSolverSelect::kHipo &&
       solver_object.model_status_ == HighsModelStatus::kMemoryLimit) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Selected HiPO ran out of memory, so use IPX\n");
+    printf("SS-DEBUG hipo memory fallback to ipx\n");
     status = solveWith(kIpxString);
   }
 
