@@ -2370,6 +2370,7 @@ TEST_CASE("presolve-mode", "[highs_test_presolve]") {
   }
   h.resetThreadScheduler(true);
 }
+
 TEST_CASE("issue-3545", "[highs_test_presolve]") {
   HighsLp lp;
   lp.num_col_ = 3;
@@ -2413,18 +2414,23 @@ TEST_CASE("issue-3545", "[highs_test_presolve]") {
 
   h.resetThreadScheduler(true);
 }
+
 TEST_CASE("issue-3565", "[highs_test_presolve]") {
-   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string lp_file = test_name + ".lp";
   FILE* file = fopen(lp_file.c_str(), "w");
-  fprintf(file, "%s","min\n obj: -1.75 x5 -1 x40 -0.0068359375 x43 \nst\n r13: +0.0625 x5 +1 x40 +0.000244140625 x43 = +1\nbounds\n -inf <= x5 <= 1\n -1 <= x40\n 1 <= x43\nend\n");
+  fprintf(file, "%s",
+          "min\n obj: -1.75 x5 -1 x40 -0.0068359375 x43 \nst\n r13: +0.0625 x5 "
+          "+1 x40 +0.000244140625 x43 = +1\nbounds\n -inf <= x5 <= 1\n -1 <= "
+          "x40\n 1 <= x43\nend\n");
   fclose(file);
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  h.resetThreadScheduler(true);
+ std::remove(lp_file.c_str());
 
+  h.resetThreadScheduler(true);
 }
