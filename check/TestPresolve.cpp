@@ -2423,13 +2423,45 @@ TEST_CASE("issue-3565", "[highs_test_presolve]") {
           "min\n obj: -28 x - y - 2.8 z \nst\n r0:     x + y + 0.1 z = "
           "1\nbounds\n -inf <= x <= 1\n -1 <= y\n 1 <= z\nend\n");
   fclose(file);
+  // Problem is
+  //
+  // min -28x - y + 2.8 z; x + y + 0.1 z = 1; x <= 1, y >= -1, z >= 1
+  //
+  // Presolve reductions
+  //
+  // 0. x and z are parallel columns: z is deleted and x becomes free
+  //
+  // min -28x - y; x + y = 1; x <= 1, y >= -1
+  //
+  // 1. x + y = 1 is a doubleton equation. Substitute y = 1 - x
+  //
+  // min -27 x; x <= 2
+  //
+  // 2. Fix x at upper bound of 2
+  //
+  // LP is reduced to empty
+  //
+  // Postsolve
+  //
+  // 2. Restore x = 2 @UB with dual -27
+  //
+  // 1. Fix y = -1 @LB with dual 27 => x = 2 @BS; row = 1 @NB with dual -28
+  //
+  // 0. Restore z = 20 @BS => x = 0 @ZE with dual 0 (still y = -1 @LB
+  // with dual 27 ; row = 1 @NB with dual -28)
+  //
+  // Hence x = 0 @ZE with upper bound of 1
+  //
+  // Why not the following?
+  //
+  // 0. Restore z = 10 @BS => x = 1 @ZE with dual 0
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  // std::remove(lp_file.c_str());
+  std::remove(lp_file.c_str());
 
   h.resetThreadScheduler(true);
 }
