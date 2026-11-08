@@ -2420,7 +2420,8 @@ TEST_CASE("issue-3565", "[highs_test_presolve]") {
   std::string lp_file = test_name + ".lp";
   FILE* file = fopen(lp_file.c_str(), "w");
   fprintf(file, "%s",
-          "min\n obj: -28 x - y - 2.8 z \nst\n r0:     x + y + 0.1 z = 1\nbounds\n -inf <= x <= 1\n -1 <= y\n 1 <= z\nend\n");
+          "min\n obj: -28 x - y - 2.8 z \nst\n r0:     x + y + 0.1 z = "
+          "1\nbounds\n -inf <= x <= 1\n -1 <= y\n 1 <= z\nend\n");
   fclose(file);
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
