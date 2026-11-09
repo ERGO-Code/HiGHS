@@ -493,6 +493,35 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       endforeach(setting)
   endforeach(instance)
 
+  # Each solver_select_strategy, so LPs in the MIP solver go through solver
+  # selection: 4, 5 and 6 force dual simplex, IPX and HiPO
+  foreach(strategy RANGE 6)
+      set(select_options ${CMAKE_BINARY_DIR}/testoptions_select_${strategy}.txt)
+      FILE(WRITE ${select_options}
+      "mip_rel_gap=0.0
+      mip_abs_gap=0.0
+      solver_select_strategy=${strategy}")
+      foreach(instance ${mipInstances})
+          list(GET instance 0 name)
+          list(GET instance 1 optval)
+          set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
+          set(test_name ${name}--solver_select_strategy=${strategy})
+          if (FAST_BUILD)
+            add_test(NAME ${test_name} COMMAND $<TARGET_FILE:highs-bin>
+                --options_file ${select_options} ${inst})
+          else()
+            add_test(NAME ${test_name} COMMAND $<TARGET_FILE:highs>
+                --options_file ${select_options} ${inst})
+          endif()
+          set_tests_properties (${test_name} PROPERTIES
+                  DEPENDS unit_tests_all
+                  PASS_REGULAR_EXPRESSION
+                  "Status            Optimal\n  Primal bound      ${optval}.*\n  Dual bound        ${optval}.*\n  Solution status   feasible\n                    ${optval}.* \\(objective\\)"
+                  FAIL_REGULAR_EXPRESSION
+                  "Solution status   infeasible")
+      endforeach(instance)
+  endforeach(strategy)
+
   if(FAST_BUILD)
     foreach(instance_pdlp ${pdlpInstances})
         # add default tests
