@@ -3725,11 +3725,13 @@ void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
   ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
 }
 
-// ToDo: this method shouldn't change the incumbent model irrevocably,
-// since this loses user data
-bool Highs::processedBoundsFindsInfeasibility() {
+// Any bounds made consistent are recorded in lp.mods_, so that
+// optimizeModelUndoMods() can restore the user's bounds
+bool Highs::processedBoundsFindsInfeasibility(bool& made_bound_mods) {
   const HighsLogOptions& log_options = this->options_.log_options;
   HighsLp& lp = this->model_.lp_;
+  HighsLpMods& mods = lp.mods_;
+  made_bound_mods = false;
 
   HighsInt num_true_infeasible_bound = 0;
   HighsInt num_ok_infeasible_bound = 0;
@@ -3819,7 +3821,11 @@ bool Highs::processedBoundsFindsInfeasibility() {
     if (lower > upper) {
       if (infeasibleBoundOk("Column", iCol, lower, upper)) {
         // Bound infeasibility is OK (less than the tolerance), so can
-        // change the model data
+        // change the model data, recording the original bounds
+        mods.save_inconsistent_col_bound_index.push_back(iCol);
+        mods.save_inconsistent_col_bound_lower.push_back(lp.col_lower_[iCol]);
+        mods.save_inconsistent_col_bound_upper.push_back(lp.col_upper_[iCol]);
+        made_bound_mods = true;
         lp.col_lower_[iCol] = lower;
         lp.col_upper_[iCol] = upper;
       }
@@ -3836,8 +3842,20 @@ bool Highs::processedBoundsFindsInfeasibility() {
   // integer variable
   performed_inward_integer_rounding = false;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
-    if (lp.row_lower_[iRow] > lp.row_upper_[iRow])
-      infeasibleBoundOk("Row", iRow, lp.row_lower_[iRow], lp.row_upper_[iRow]);
+    double lower = lp.row_lower_[iRow];
+    double upper = lp.row_upper_[iRow];
+    if (lower > upper) {
+      if (infeasibleBoundOk("Row", iRow, lower, upper)) {
+        // Bound infeasibility is OK (less than the tolerance), so can
+        // change the model data, recording the original bounds
+        mods.save_inconsistent_row_bound_index.push_back(iRow);
+        mods.save_inconsistent_row_bound_lower.push_back(lp.row_lower_[iRow]);
+        mods.save_inconsistent_row_bound_upper.push_back(lp.row_upper_[iRow]);
+        made_bound_mods = true;
+        lp.row_lower_[iRow] = lower;
+        lp.row_upper_[iRow] = upper;
+      }
+    }
   }
   if (num_ok_infeasible_bound > 0)
     highsLogUser(log_options, HighsLogType::kInfo,

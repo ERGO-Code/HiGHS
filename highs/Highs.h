@@ -1723,6 +1723,7 @@ class Highs {
     HighsInt min_highs_debug_level = kHighsDebugLevelMin;
 
     bool undo_mods = false;
+    bool bounds_infeasible = false;
     HighsStatus status = HighsStatus::kOk;
     HighsUndoStack options_undo;
 
@@ -1991,7 +1992,7 @@ class Highs {
                               std::vector<HighsInt>& basic_var,
                               const bool constraint,
                               const double ill_conditioning_bound);
-  bool processedBoundsFindsInfeasibility();
+  bool processedBoundsFindsInfeasibility(bool& made_bound_mods);
   bool validLinearObjective(const HighsLinearObjective& linear_objective,
                             const HighsInt iObj) const;
   bool hasRepeatedLinearObjectivePriorities(

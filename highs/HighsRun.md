@@ -76,6 +76,10 @@ The `HighsLp` class contains data values and structures that cannot be handled e
   semi-variable is set to zero in `relaxSemiVariables` (in
   `HighsLpUtils.cpp`)
 
+- Any column or row bounds with inconsistencies less than the primal
+  feasibility tolerance are made consistent in
+  `Highs::processedBoundsFindsInfeasibility()`
+
 All these modifications are applied in
 `Highs::optimizeModelApplyMods()`, and recorded in `HighsLp::mods_`.
 They are undone by `Highs::optimizeModelUndoMods()`, which is called
@@ -138,10 +142,6 @@ undoes them before returning
 ## ToDo
 
 - Move the code to write out the presolved model from `app/RunHighs.cpp` to `Highs::run()`
-
-- Make the bound changes in
-  `Highs::processedBoundsFindsInfeasibility()` a "mod" that is undone,
-  rather than a permanent change to the incumbent model
 
 - For problems with multiple objectives
 

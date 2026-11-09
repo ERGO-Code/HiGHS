@@ -120,6 +120,15 @@ struct HighsLpMods {
   std::vector<double> save_inf_cost_variable_lower;
   std::vector<double> save_inf_cost_variable_upper;
 
+  // Columns and rows with bounds whose inconsistency is less than the
+  // primal feasibility tolerance, so are set to be consistent
+  std::vector<HighsInt> save_inconsistent_col_bound_index;
+  std::vector<double> save_inconsistent_col_bound_lower;
+  std::vector<double> save_inconsistent_col_bound_upper;
+  std::vector<HighsInt> save_inconsistent_row_bound_index;
+  std::vector<double> save_inconsistent_row_bound_lower;
+  std::vector<double> save_inconsistent_row_bound_upper;
+
   void clear();
   bool isClear();
 };

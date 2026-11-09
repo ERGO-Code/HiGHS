@@ -1361,8 +1361,9 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
   if (optimizeModelPreChecks(context)) return context.status;
 
   // Apply all "mods" to the incumbent model, so that what follows
-  // solves a model with no infinite costs, and semi-variables that
-  // have either been relaxed or assessed. The mods are undone by
+  // solves a model with no infinite costs, semi-variables that have
+  // either been relaxed or assessed, and no bounds with small
+  // inconsistencies. The mods are undone by
   // returnFromOptimizeModel() or, if returning before
   // returnFromOptimizeModel() is reached, by optimizeModelUndoMods()
   if (optimizeModelApplyMods(context)) return context.status;
@@ -1431,11 +1432,11 @@ bool Highs::optimizeModelPreChecks(Context& context) {
 }
 
 bool Highs::optimizeModelApplyMods(Context& context) {
-  // HiGHS solvers require models with no infinite costs, and
-  // semi-variables that have either been relaxed or assessed. All
-  // such modifications of the incumbent model are made here, and
-  // recorded in model_.lp_.mods_ so that optimizeModelUndoMods() can
-  // undo them
+  // HiGHS solvers require models with no infinite costs,
+  // semi-variables that have either been relaxed or assessed, and
+  // consistent bounds. All such modifications of the incumbent model
+  // are made here, and recorded in model_.lp_.mods_ so that
+  // optimizeModelUndoMods() can undo them
   //
   // Set undo_mods = false so that returnFromOptimizeModel() doesn't
   // undo any mods unless they are applied by this call
@@ -1449,6 +1450,7 @@ bool Highs::optimizeModelApplyMods(Context& context) {
     return false;
   }
   HighsLp& lp = model_.lp_;
+  lp.mods_.clear();
   // Lambda to record that the mods have been applied, so must be
   // undone
   auto recordMods = [&]() {
@@ -1494,11 +1496,26 @@ bool Highs::optimizeModelApplyMods(Context& context) {
   }
   if (made_semi_variable_mods) recordMods();
 
+  // Process the bounds, performing inward rounding of bounds on any
+  // integer variables and modifying any bounds with inconsistencies
+  // less than the primal feasibility tolerance. Infeasibility due to
+  // any bounds with larger inconsistencies is recorded, and acted on
+  // in optimizeModelPrepare(), so that the model status is
+  // kInfeasible rather than an error
+  bool made_bound_mods = false;
+  context.bounds_infeasible =
+      processedBoundsFindsInfeasibility(made_bound_mods);
+  if (made_bound_mods) recordMods();
+
   context.status = HighsStatus::kOk;
   return false;
 }
 
 bool Highs::optimizeModelCompleteSolution(Context& context) {
+  // If the bounds are infeasible, then there is no point trying to
+  // complete the solution. The nested call to optimizeModel() would
+  // also not detect the infeasibility, since it doesn't apply mods
+  if (context.bounds_infeasible) return false;
   if (!model_.isMip() || !solution_.value_valid) return false;
   // Determine whether the current (partial) solution of a MIP is
   // feasible and, if not, try to complete the assignment with
@@ -1570,12 +1587,9 @@ bool Highs::optimizeModelPrepare(Context& context) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kModelEmpty);
     return returnAndStop(HighsStatus::kOk);
   }
-  // Process the bounds, performing inward rounding of bounds on any
-  // integer variables and modifying any bounds with inconsistencies
-  // less than the primal feasibility tolerance, but returning
-  // infeasibility if the model is has any bounds with larger
-  // inconsistencies
-  if (processedBoundsFindsInfeasibility()) {
+  // Return infeasibility if optimizeModelApplyMods() found any bounds
+  // with inconsistencies larger than the primal feasibility tolerance
+  if (context.bounds_infeasible) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
     return returnAndStop(HighsStatus::kOk);
   }
