@@ -3,6 +3,49 @@
 #include "catch.hpp"
 #include "util/stringutil.h"
 
+#if defined(HIGHS_SHARED_EXTRAS_LIBRARY) && defined(HIGHS_TEST_EXTRAS_DIR)
+TEST_CASE("HighsExternalDeps-reload", "[highs_external_deps]") {
+  HighsExternalApi::unload();
+  HighsExternalApi::reset();
+
+  // check fail (no empty search)
+  REQUIRE(!HighsExternalApi::tryLoad("", false));
+  const std::string failure = HighsExternalApi::getLoadStatus();
+
+  // check fail (already initialized)
+  REQUIRE(!HighsExternalApi::tryLoad(HIGHS_TEST_EXTRAS_DIR, false));
+  REQUIRE(HighsExternalApi::getLoadStatus() == failure);
+
+  // check unload
+  HighsExternalApi::unload();
+  REQUIRE(HighsExternalApi::instance().extras_feature_info_ == nullptr);
+  REQUIRE(HighsExternalApi::getLoadStatus().empty());
+
+  // check fail (still initialized)
+  REQUIRE(!HighsExternalApi::tryLoad(HIGHS_TEST_EXTRAS_DIR, false));
+  REQUIRE(HighsExternalApi::getLoadStatus().empty());
+
+  // check success (correct path, initialization reset)
+  HighsExternalApi::reset();
+  REQUIRE(HighsExternalApi::tryLoad(HIGHS_TEST_EXTRAS_DIR, false));
+  REQUIRE(HighsExternalApi::instance().extras_feature_info_ != nullptr);
+  const std::string success = HighsExternalApi::getLoadStatus();
+
+  // check success (no-op from previous)
+  REQUIRE(HighsExternalApi::tryLoad("", false));
+  REQUIRE(HighsExternalApi::getLoadStatus() == success);
+
+  // try once more (unload and reload)
+  HighsExternalApi::unload();
+  REQUIRE(HighsExternalApi::instance().extras_feature_info_ == nullptr);
+  REQUIRE(!HighsExternalApi::tryLoad(HIGHS_TEST_EXTRAS_DIR, false));
+  REQUIRE(HighsExternalApi::instance().extras_feature_info_ == nullptr);
+  HighsExternalApi::reset();
+  REQUIRE(HighsExternalApi::tryLoad(HIGHS_TEST_EXTRAS_DIR, false));
+  REQUIRE(HighsExternalApi::instance().extras_feature_info_ != nullptr);
+}
+#endif
+
 // Verifies whether all features are available. If so, checks provider metadata
 // for BLAS, otherwise checks for a non-empty missing-features summary
 TEST_CASE("HighsExternalDeps", "[highs_external_deps]") {

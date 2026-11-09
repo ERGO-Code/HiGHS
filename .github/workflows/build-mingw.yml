@@ -1,6 +1,6 @@
 name: build-mingw
 
-on: [pull_request]
+on: [pull_request, push]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -31,6 +31,9 @@ jobs:
             target-prefix: mingw-w64-ucrt-x86_64
           - msystem: CLANG64
             target-prefix: mingw-w64-clang-x86_64
+          - fast-build: On
+            build-type: Debug
+            all-tests: On
         exclude:
           - fast-build: On
             int64: On
@@ -50,7 +53,7 @@ jobs:
       - name: Configure CMake
         run: |
           mkdir build && cd build
-          cmake .. -DFAST_BUILD=${{ matrix.fast-build }} -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DHIGHSINT64=${{ matrix.int64 }} -DHIGHS_NO_DEFAULT_THREADS=ON
+          cmake .. -DFAST_BUILD=${{ matrix.fast-build }} -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DHIGHSINT64=${{ matrix.int64 }} -DHIGHS_NO_DEFAULT_THREADS=ON -DALL_TESTS=${{ matrix.all-tests || 'Off' }}
 
       - name: Build
         # Execute the build.  You can specify a specific target with "--target <NAME>"

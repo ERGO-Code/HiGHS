@@ -11,7 +11,6 @@
 
 #include "HighsExternalApi.h"
 
-#include <mutex>
 using namespace HighsExtras;
 
 HighsExternalApi& HighsExternalApi::instance() {
@@ -27,6 +26,14 @@ void HighsExternalApi::unload() {
   inst.api_ = HighsExtrasApi{};
   inst.extras_feature_info_ = nullptr;
   inst.available_ = false;
+  inst.status_.clear();
+#endif
+}
+
+void HighsExternalApi::reset() {
+#ifdef HIGHS_SHARED_EXTRAS_LIBRARY
+  HighsExternalApi& inst = instance();
+  inst.initialized_.reset(new std::once_flag);
 #endif
 }
 
@@ -35,13 +42,12 @@ void HighsExternalApi::unload() {
 #define STRINGFY(s) STRINGFY0(s)
 #define STRINGFY0(s) #s
 
-bool HighsExternalApi::tryLoad(const std::string& path) {
+bool HighsExternalApi::tryLoad(const std::string& directory,
+                               bool search_if_empty) {
   HighsExternalApi& inst = instance();
-  static std::once_flag flag;
-
   // prevents multiple attempts to load the library
   // ensure thread safety (multiple threads may call tryLoad simultaneously)
-  std::call_once(flag, [&]() {
+  std::call_once(*inst.initialized_, [&]() {
     inst.available_ = false;
 
     // Load library
@@ -53,7 +59,9 @@ bool HighsExternalApi::tryLoad(const std::string& path) {
     const char* library_filename = "libhighs_extras.so";
 #endif
 
-    bool ok = inst.library_.load(library_filename, path);
+    bool ok = (search_if_empty || directory.empty() == false) &&
+              inst.library_.load(library_filename, directory);
+
     inst.status_ = "Extras: " + inst.library_.status();
 
     if (ok) {
@@ -91,8 +99,9 @@ bool HighsExternalApi::tryLoad(const std::string& path) {
   return inst.available_;
 }
 #else
-bool HighsExternalApi::tryLoad(const std::string& path) {
-  (void)path;
+bool HighsExternalApi::tryLoad(const std::string& directory,
+                               bool search_if_empty) {
+  (void)directory;
   static std::once_flag flag;
 
   std::call_once(flag, []() {
