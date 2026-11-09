@@ -31,7 +31,7 @@ fixes and changes in behaviour.
 | `highs/Highs.h` | `Context`, `LpState`, declarations of the new private methods, flags `optimize_model_running_` and `model_mods_applied_`, overloads |
 | `highs/util/HighsUndoStack.h` | New |
 | `cmake/sources.cmake` | Lists `util/HighsUndoStack.h` |
-| `highs/lp_data/HighsSolve.cpp` | The `SOLVE_CATCH_CALL` macros replaced by the function templates `solveCatchCall()` and `solveCatchCallLpQp()`, which also replace the inline `try`/`catch` around the MIP solver; `HighsUndoStack` for option changes |
+| `highs/lp_data/HighsSolve.cpp` | The `SOLVE_CATCH_CALL` macros replaced by the function templates `solveCatchCall()`, `solveCatchCallLpQp()` and `solveCatchCallMip()`, the last replacing the inline `try`/`catch` around the MIP solver. They don't log: a caught exception is stored in a `SolveExceptionRecord` and the caller logs it with `reportSolveException()`. `HighsUndoStack` for option changes |
 | `highs/lp_data/HighsInterface.cpp` | `HighsUndoStack` for option changes, `has_infinite_cost_` kept up to date in multi-objective solves |
 | `highs/simplex/HApp.h` | `HighsUndoStack` for option changes |
 | `highs/HighsRun.md` | Describes where the mods are now applied |
