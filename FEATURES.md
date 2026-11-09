@@ -114,9 +114,15 @@ supports minimize/maximize with a constant objective, and
 `PYBIND11_DETAILED_ERROR_MESSAGES` is no longer defined in the bindings
 ([PR #3346](https://github.com/ERGO-Code/HiGHS/pull/3346)).
 
-The C API methods `Highs_getBasis` and `Highs_getSolution` now return
-`kHighsStatusError` if there is no valid basis or primal solution ([PR
-#3291](https://github.com/ERGO-Code/HiGHS/pull/3291)).
+**Breaking change:** The C API methods `Highs_getBasis` and
+`Highs_getSolution` now return `kHighsStatusError`, rather than
+`kHighsStatusOk`, if there is no valid basis or primal solution ([PR
+#3291](https://github.com/ERGO-Code/HiGHS/pull/3291)). This includes
+an LP found to be infeasible, for which `Highs_run` still returns
+`kHighsStatusOk`. The output arrays are not written when an error is
+returned, so check the return value before reading them. The soname of
+the shared library remains `libhighs.so.1`, so existing binaries get
+this behaviour without being rebuilt.
 
 ### Other
 
@@ -187,6 +193,11 @@ gracefully ([PR #3388](https://github.com/ERGO-Code/HiGHS/pull/3388)).
 See the
 [installation documentation](https://ergo-code.github.io/HiGHS/dev/installation/#gpu-build-amd)
 for details.
+
+`highs.pc` now lists the private dependencies of a static build, so
+`pkg-config --static` gives C++ applications the zlib and `highs_extras`
+libraries needed to link it, and OpenBLAS or Apple Accelerate if
+`highs_extras` uses one of them.
 
 OpenBLAS is built with `-mfma` for its AVX2 `DYNAMIC_ARCH` kernels on
 Linux ([PR #3399](https://github.com/ERGO-Code/HiGHS/pull/3399)), and on

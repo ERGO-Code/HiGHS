@@ -102,10 +102,8 @@ void HighsDomain::ConflictPoolPropagation::linkWatchedLiteral(
 
   watchedLiterals_[linkPos].prev = -1;
   watchedLiterals_[linkPos].next = head;
-  if (head != -1) {
-    watchedLiterals_[head].prev = linkPos;
-    head = linkPos;
-  }
+  if (head != -1) watchedLiterals_[head].prev = linkPos;
+  head = linkPos;
 }
 
 void HighsDomain::ConflictPoolPropagation::unlinkWatchedLiteral(
@@ -176,6 +174,7 @@ HighsDomain::ConflictPoolPropagation::~ConflictPoolPropagation() {
 }
 
 void HighsDomain::ConflictPoolPropagation::conflictDeleted(HighsInt conflict) {
+  assert(conflict < static_cast<HighsInt>(conflictFlag_.size()));
   conflictFlag_[conflict] |= 8;
   unlinkWatchedLiteral(2 * conflict);
   unlinkWatchedLiteral(2 * conflict + 1);
@@ -240,6 +239,9 @@ void HighsDomain::ConflictPoolPropagation::conflictAdded(HighsInt conflict) {
       HighsInt latestPos = -1;
 
       for (HighsInt i = start; i != end; ++i) {
+        // the inactive literal is already watched, so only consider the active
+        // ones
+        if (!domain->isActive(conflictEntries[i])) continue;
         HighsInt pos = conflictEntries[i].boundtype == HighsBoundType::kLower
                            ? domain->colLowerPos_[conflictEntries[i].column]
                            : domain->colUpperPos_[conflictEntries[i].column];

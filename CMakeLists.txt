@@ -676,6 +676,24 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
+# Private dependencies of a static highs for highs.pc. Shared builds list none
+# because a missing Requires.private module makes every pkg-config query fail.
+# For the same reason macOS uses -lz: its SDK has zlib but may have no zlib.pc
+set(HIGHS_PC_LIBS_PRIVATE "")
+set(HIGHS_PC_REQUIRES_PRIVATE "")
+if(NOT BUILD_SHARED_LIBS)
+  if(FAST_BUILD AND NOT BUILD_SHARED_EXTRAS_LIB)
+    set(HIGHS_PC_LIBS_PRIVATE "-lhighs_extras")
+  endif()
+  if(ZLIB AND ZLIB_FOUND)
+    if(APPLE)
+      string(APPEND HIGHS_PC_LIBS_PRIVATE " -lz")
+    else()
+      set(HIGHS_PC_REQUIRES_PRIVATE "zlib")
+    endif()
+  endif()
+endif()
+
 if (NOT CMAKE_INSTALL_DOCDIR STREQUAL "" AND BUILD_CXX)
   install(FILES
       README.md
@@ -1030,6 +1048,14 @@ if (HIPO_PYTHON)
   add_subdirectory(highspy)
 else()
   add_subdirectory(extern)
+  if(FAST_BUILD AND BUILD_CXX)
+    # After extern, which adds the private dependencies of a static highs_extras
+    configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
+      "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+  endif()
 endif()
 
 # Prevent nested directory structure in the archive

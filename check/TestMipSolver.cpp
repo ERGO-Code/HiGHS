@@ -2806,3 +2806,40 @@ TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+
+TEST_CASE("issue-3573", "[highs_test_mip_solver]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue(kPresolveString, kHighsOffString);
+  double epsilon = 0.5 * h.getOptions().mip_feasibility_tolerance;
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 1};
+  lp.col_lower_ = {2 + epsilon, 0};
+  lp.col_upper_ = {3, 3};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {3};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  lp.col_lower_[0] = {2};
+  lp.col_upper_[0] = {3 - epsilon};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  lp.col_lower_[0] = {2 + 3 * epsilon};
+  lp.col_upper_[0] = {3 - 3 * epsilon};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  h.resetThreadScheduler(true);
+}
