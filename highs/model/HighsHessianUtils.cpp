@@ -19,7 +19,8 @@
 
 using std::fabs;
 
-HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
+                          const std::string* col_names) {
   if (hessian.isOracle()) return HighsStatus::kOk;
   const HighsLogOptions& log_options = options.log_options;
   if (!hessian.legalDimensions(log_options)) return HighsStatus::kError;
@@ -46,7 +47,7 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   HighsStatus call_status =
       assessMatrix(log_options, "HighsHessian", hessian.name_, hessian.dim_,
                    hessian.dim_, hessian.start_, hessian.index_, hessian.value_,
-                   0, kHighsInf, sum_duplicates);
+                   0, kHighsInf, sum_duplicates, col_names, col_names);
   return_status = interpretCallStatus(log_options, call_status, return_status,
                                       "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
@@ -57,10 +58,11 @@ HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options) {
   if (return_status == HighsStatus::kError) return return_status;
   // Assess values in Q
   sum_duplicates = false;
-  call_status = assessMatrix(
-      log_options, "HighsHessian", hessian.name_, hessian.dim_, hessian.dim_,
-      hessian.start_, hessian.index_, hessian.value_,
-      options.small_matrix_value, options.large_matrix_value, sum_duplicates);
+  call_status =
+      assessMatrix(log_options, "HighsHessian", hessian.name_, hessian.dim_,
+                   hessian.dim_, hessian.start_, hessian.index_, hessian.value_,
+                   options.small_matrix_value, options.large_matrix_value,
+                   sum_duplicates, col_names, col_names);
   return_status = interpretCallStatus(log_options, call_status, return_status,
                                       "assessMatrix");
   if (return_status == HighsStatus::kError) return return_status;
