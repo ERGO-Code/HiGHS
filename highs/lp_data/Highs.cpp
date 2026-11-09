@@ -2893,8 +2893,15 @@ HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
                               const HighsCallbackOutput* data_out,
                               HighsCallbackInput* data_in,
                               void* user_callback_data_) {
-          HighsUndoStack undo;
-          undo.set(in_user_callback_, true);
+          // RAII helper to reset the flag in_user_callback_ to its previous
+          // value in every exit path
+          struct FlagUndo {
+            bool& flag;
+            const bool value;
+            explicit FlagUndo(bool& f) : flag{f}, value{flag} { flag = true; }
+            ~FlagUndo() { flag = value; }
+          } flag_undo(in_user_callback_);
+
           user_callback(callback_type, message, data_out, data_in,
                         user_callback_data_);
         };
