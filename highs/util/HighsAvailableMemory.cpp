@@ -1,4 +1,14 @@
-#include "AvailableMemory.h"
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file util/HighsAvailableMemory.cpp
+ * @brief Memory available to the process
+ */
+#include "util/HighsAvailableMemory.h"
 
 #include <algorithm>
 #include <fstream>
@@ -16,8 +26,6 @@
 #elif defined(__APPLE__)
 #include <mach/mach.h>
 #endif
-
-namespace hipo {
 
 #if defined(__linux__)
 // First number in a file, or negative if there is none, as for "max"
@@ -118,5 +126,3 @@ double availableMemoryBytes() {
   return -1;
 #endif
 }
-
-}  // namespace hipo

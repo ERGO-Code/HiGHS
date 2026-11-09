@@ -330,14 +330,12 @@ set(factor_highs_headers
 
 set(hipo_util_sources
     ipm/hipo/auxiliary/Auxiliary.cpp
-    ipm/hipo/auxiliary/AvailableMemory.cpp
     ipm/hipo/auxiliary/KrylovMethods.cpp
     ipm/hipo/auxiliary/Logger.cpp
     ipm/hipo/auxiliary/VectorOperations.cpp)
 
 set(hipo_util_headers
     ipm/hipo/auxiliary/Auxiliary.h
-    ipm/hipo/auxiliary/AvailableMemory.h
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
     ipm/hipo/auxiliary/Logger.h
@@ -467,6 +465,7 @@ set(highs_sources
     util/HFactorExtend.cpp
     util/HFactorRefactor.cpp
     util/HFactorUtils.cpp
+    util/HighsAvailableMemory.cpp
     util/HighsDynamicLibrary.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
@@ -637,6 +636,7 @@ set(highs_headers
     util/HighsHashTree.h
     util/HighsInt.h
     util/HighsType.h
+    util/HighsAvailableMemory.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h

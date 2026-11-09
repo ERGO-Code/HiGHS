@@ -6,9 +6,9 @@
 #include "HighsExternalApi.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
-#include "ipm/hipo/auxiliary/AvailableMemory.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 #include "parallel/HighsParallel.h"
+#include "util/HighsAvailableMemory.h"
 #include "util/stringutil.h"
 
 namespace hipo {
@@ -209,9 +209,10 @@ Int FactorHighsSolver::setup() {
 }
 
 void FactorHighsSolver::checkMemory() const {
-  // storage() is the serial factorisation only. Measured peaks are up to 1.15
-  // times this in serial, and 2.3 times with a parallel tree
-  const double margin = parallel_tree_ ? 2.5 : 1.2;
+  // storage() is the serial factorisation only, so allow a margin over it
+  const double margin = options_.getParallel(ParallelTechnique::kTree)
+                            ? kMemoryMarginParallelTree
+                            : kMemoryMarginSerial;
   const double required = margin * kkt_.S.storage();
   const double available = availableMemoryBytes();
   if (available < 0 || required <= available) return;
@@ -659,7 +660,6 @@ void FactorHighsSolver::setParallelAfterSymbolic() {
   // switch off tree parallelism if depth of recursion is too large
   if (kkt_.S.depth() > kParallelMaxTreeDepth) parallel_tree = false;
 
-  parallel_tree_ = parallel_tree;
   options_.chooseParallel(ParallelTechnique::kTree, parallel_tree);
   options_.chooseParallel(ParallelTechnique::kNode, parallel_node);
 
