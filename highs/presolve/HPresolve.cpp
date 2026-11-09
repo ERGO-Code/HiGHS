@@ -4907,11 +4907,11 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
     assert(eq->first == rowsize[eqrow]);
     assert(isEquation(eqrow));
     if (rowsize[eqrow] > 2) return Result::kOk;
+    // rowPresolve may erase or re-key the entry of eqrow (e.g. removeFixedCol
+    // calls reinsertEquation), so continue from a copy of its key
+    const auto key = *eq;
     HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, eqrow));
-    if (rowDeleted[eqrow])
-      eq = equations.begin();
-    else
-      ++eq;
+    eq = rowDeleted[eqrow] ? equations.begin() : equations.upper_bound(key);
   }
 
   return Result::kOk;

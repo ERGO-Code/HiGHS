@@ -2034,6 +2034,43 @@ TEST_CASE("dominated-cols-container-overflow", "[highs_test_presolve]") {
   h.resetThreadScheduler(true);
 }
 
+TEST_CASE("doubleton-equations-reinserted-row", "[highs_test_presolve]") {
+  // model in issue 3557. with the rules for forcing rows and doubleton
+  // equations switched off, removeDoubletonEquations calls rowPresolve on the
+  // equation, which fixes a column and re-keys the equation in the set of
+  // equations, so the iterator was incremented after its entry was erased
+  //
+  // min -8 x1 + 10 x2
+  // s.t. 2 x0 - 5 x1 + 5 x2 = -16
+  //      -1 <= x0 <= 2, 0 <= x1 <= 3, -1 <= x2 <= 0, x0, x1, x2 integer
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {0, -8, 10};
+  lp.col_lower_ = {-1, 0, -1};
+  lp.col_upper_ = {2, 3, 0};
+  lp.row_lower_ = {-16};
+  lp.row_upper_ = {-16};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {2, -5, 5};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue(
+      "presolve_rule_off",
+      (1 << kPresolveRuleForcingRow) | (1 << kPresolveRuleDoubletonEquation));
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == -34);
+
+  h.resetThreadScheduler(true);
+}
+
 #ifdef HIPO
 TEST_CASE("hipo-ipx-pdlp-no-crossover", "[highs_test_presolve]") {
   auto setPresolveRuleOff = [&]() {
@@ -2331,5 +2368,48 @@ TEST_CASE("presolve-mode", "[highs_test_presolve]") {
       REQUIRE(initial_sweep_num_nz > presolved_lp.numNz());
     }
   }
+  h.resetThreadScheduler(true);
+}
+TEST_CASE("issue-3545", "[highs_test_presolve]") {
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {1, 1, 3};
+  lp.col_lower_ = {0, 0, 2};
+  lp.col_upper_ = {kHighsInf, kHighsInf, 5};
+  lp.row_lower_ = {1, -kHighsInf};
+  lp.row_upper_ = {kHighsInf, 0.5};
+  lp.a_matrix_.start_ = {0, 2, 4, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1, 1, 1, -1};
+  HighsInt z = 2;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  // Get the optimal objective value
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  double optimal_objective_value = h.getObjectiveValue();
+  REQUIRE(h.clearSolver() == HighsStatus::kOk);
+
+  REQUIRE(h.setOptionValue("presolve_mode", kPresolveModeInitialSweep) ==
+          HighsStatus::kOk);
+
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  // Presolve with just initial sweep fixes the empty column (z) at
+  // its lower bound, so the presolved LP should have an offset of 6 =
+  // cost(z)*lower(z)
+  HighsLp presolved_lp = h.getPresolvedLp();
+  REQUIRE(presolved_lp.offset_ == lp.col_cost_[z] * lp.col_lower_[z]);
+  REQUIRE(h.passModel(presolved_lp) == HighsStatus::kOk);
+  // The absence of the offset leads to an incorrect optimal objective
+  // if the presolved LP is solved
+  REQUIRE(h.setOptionValue(kPresolveString, kHighsOffString) ==
+          HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getObjectiveValue() == optimal_objective_value);
+
   h.resetThreadScheduler(true);
 }

@@ -11,6 +11,8 @@
 
 #include "util/HighsDynamicLibrary.h"
 
+#include "util/stringutil.h"
+
 #if defined(_WIN32) || defined(_WIN64)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -38,6 +40,7 @@ bool HighsDynamicLibrary::load(const std::string& filename,
                    nullptr);
     status_ = "Failed to load " + filename + ": " +
               (message ? message : "Unknown error");
+    rtrim(status_);  // FormatMessage ends its text with a line break
     if (message) LocalFree(message);
     return false;
   }
