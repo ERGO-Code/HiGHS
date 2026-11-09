@@ -129,7 +129,9 @@ TEST_CASE("solver-select-forced-strategies", "[solver_select]") {
       {4, HighsSolverSelect::kDualSimplex},
       {5, HighsSolverSelect::kIpx},
       {6, HighsSolverSelect::kHipo}};
-  for (const auto& [strategy, solver] : forced) {
+  for (const auto& strategy_solver : forced) {
+    const HighsInt strategy = strategy_solver.first;
+    const HighsSolverSelect solver = strategy_solver.second;
     INFO("strategy " << strategy);
     REQUIRE(selectSolver(exampleLp(), static_cast<SolverSelectStrategy>(
                                           strategy)) == solver);

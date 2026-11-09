@@ -923,10 +923,10 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &solver_select_strategy, 0, 0, 6);
     records.push_back(record_int);
 
-    record_bool = new OptionRecordBool(
-        "solver_select_require_basis",
-        "Require a basis from automatic solver selection",
-        advanced, &solver_select_require_basis, false);
+    record_bool =
+        new OptionRecordBool("solver_select_require_basis",
+                             "Require a basis from automatic solver selection",
+                             advanced, &solver_select_require_basis, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
