@@ -767,7 +767,7 @@ TEST_CASE("highs-callback-refuses-calls", "[highs_callback]") {
                h.changeObjectiveSense(ObjSense::kMaximize)});
           data.call_status.push_back(
               {"addRow", h.addRow(0, 1, 0, nullptr, nullptr)});
-          data.call_status.push_back({"deleteCols", h.deleteCols(0, 0)});
+          data.call_status.push_back({"deleteCols", h.deleteCols(HighsInt{0}, HighsInt{0})});
           data.call_status.push_back({"ensureRowwise", h.ensureRowwise()});
           data.call_status.push_back({"setSolution", h.setSolution(solution)});
           data.call_status.push_back(
