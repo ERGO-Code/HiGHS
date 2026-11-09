@@ -1310,7 +1310,7 @@ HighsStatus Highs::optimizeModelTryCatch() {
   // block
   //
   // Exceptions thrown by the LP, QP and MIP solvers don't reach this
-  // catch: they are caught by SOLVE_CATCH_CALL in HighsSolve.cpp.
+  // catch: they are caught by solveCatchCall() in HighsSolve.cpp.
   //
   // Any change to options_ during the optimization should be made via
   // a HighsUndoStack: a local one for a change that is undone within

@@ -31,7 +31,7 @@ fixes and changes in behaviour.
 | `highs/Highs.h` | `Context`, `LpState`, declarations of the new private methods, flags `optimize_model_running_` and `model_mods_applied_`, overloads |
 | `highs/util/HighsUndoStack.h` | New |
 | `cmake/sources.cmake` | Lists `util/HighsUndoStack.h` |
-| `highs/lp_data/HighsSolve.cpp` | New `SOLVE_CATCH_CALL_MIP`, like `SOLVE_CATCH_CALL`, replacing the inline `try`/`catch` around the MIP solver; `HighsUndoStack` for option changes |
+| `highs/lp_data/HighsSolve.cpp` | The `SOLVE_CATCH_CALL` macros replaced by the function templates `solveCatchCall()` and `solveCatchCallLpQp()`, which also replace the inline `try`/`catch` around the MIP solver; `HighsUndoStack` for option changes |
 | `highs/lp_data/HighsInterface.cpp` | `HighsUndoStack` for option changes, `has_infinite_cost_` kept up to date in multi-objective solves |
 | `highs/simplex/HApp.h` | `HighsUndoStack` for option changes |
 | `highs/HighsRun.md` | Describes where the mods are now applied |
@@ -272,7 +272,7 @@ before.
 | B2 | **Order of checks.** Semi-variable assessment now runs before the empty-model, bound-infeasibility and `assessLp` checks. | A model with both an invalid semi-variable and one of those problems now gets the semi-variable error (`kSolveError`). `processedBoundsFindsInfeasibility()` now sees assessed bounds. I found no case where its result changes. |
 | B3 | **Invalid semi-variable error** returns before the solve runs (follows from B2). | It goes through `returnFromOptimizeModelBeforeRunning()`, not `returnFromOptimizeModel()`, so there are no debug checks, no `reportSolvedLpQpStats()` and no `returnFromHighs()`. The status is still `kError` with `kSolveError`. |
 | B4 | **Failure to complete a MIP solution** now invalidates the solution (F9). | The user's partial solution is dropped on this error. The model status left by the nested call is kept. |
-| B5 | **QP exceptions** are handled by the single catch in `optimizeModelTryCatch()`, not by a catch around `callSolveQp()`. | `clearSolver()` instead of `returnFromOptimizeModel()`: no debug checks, no stats report, no `returnFromHighs()`. The status is the same (`kMemoryLimit` or `kSolveError`). Exceptions thrown inside the solvers themselves are still caught by `SOLVE_CATCH_CALL` in `HighsSolve.cpp`. |
+| B5 | **QP exceptions** are handled by the single catch in `optimizeModelTryCatch()`, not by a catch around `callSolveQp()`. | `clearSolver()` instead of `returnFromOptimizeModel()`: no debug checks, no stats report, no `returnFromHighs()`. The status is the same (`kMemoryLimit` or `kSolveError`). Exceptions thrown inside the solvers themselves are still caught by `solveCatchCall()` in `HighsSolve.cpp`. |
 | B6 | **`callRunPostsolve()` errors** (F10). | No `reportSolvedLpQpStats()` output. Info, solution and basis are always invalidated. Before, that only happened if the model status was an error status. |
 | B7 | **Re-entry refusal** logs a user error instead of a developer error and an assert. | Visible in the log. |
 | B8 | **`run_data_.valid`** in `Highs::run()` is set after unscaling. | Stays `false` if `userUnscale()` returns an error. Before, it was `true`. |
