@@ -273,7 +273,17 @@ enum class HighsBasisStatus : uint8_t {
              // and postsolve
 };
 
-// Types of LP presolve rules
+// Types of presolve modes
+enum PresolveMode : uint8_t {
+  kPresolveModeMin = 0,
+  kPresolveModeDefault = kPresolveModeMin,
+  kPresolveModeInitialSweep,
+  kPresolveModeLight,
+  kPresolveModeFull,
+  kPresolveModeMax = kPresolveModeFull
+};
+
+// Types of presolve rules
 enum PresolveRuleType : int {
   kPresolveRuleIllegal = -1,
   kPresolveRuleMin = 0,

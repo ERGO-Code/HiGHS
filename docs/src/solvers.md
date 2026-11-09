@@ -27,9 +27,8 @@ dual simplex solver is unlikely to be worth using. The novel features
 of the dual simplex solver are described in
 
 _Parallelizing the dual revised simplex method_, Q. Huangfu and
-J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142,
-2018 [DOI:
-10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5).
+J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142, 2018
+[DOI: 10.1007/s12532-017-0130-5](https://link.springer.com/article/10.1007/s12532-017-0130-5).
 
 * Setting the option [__solver__](@ref option-solver) to "simplex" forces the simplex solver to be used
 * The option [__simplex\_strategy__](@ref option-simplex-strategy)
@@ -43,17 +42,16 @@ HiGHS has two interior point (IPM) solvers:
 * IPX is based on the preconditioned conjugate gradient method, as discussed in
 
   _Implementation of an interior point method with basis
-  preconditioning_, Mathematical Programming Computation, 12, 603-635,
-  2020. [DOI:
-  10.1007/s12532-020-00181-8](https://link.springer.com/article/10.1007/s12532-020-00181-8).
+  preconditioning_, Mathematical Programming Computation, 12, 603-635, 2020.
+  [DOI: 10.1007/s12532-020-00181-8](https://link.springer.com/article/10.1007/s12532-020-00181-8).
 
   This solver is serial.
 
 * HiPO is based on a direct factorisation, as discussed in 
 
   _A factorisation-based regularised interior point method using the
-  augmented system_, F. Zanetti and J. Gondzio, 2025, [available on
-  arxiv](https://arxiv.org/abs/2508.04370)
+  augmented system_, F. Zanetti and J. Gondzio, 2025,
+  [available on arxiv](https://arxiv.org/abs/2508.04370)
 
   This solver is parallel.
 
@@ -83,6 +81,9 @@ HiGHS has two interior point (IPM) solvers:
 
   * Reverse Cuthill-McKee, obtained setting the option
     [__hipo\_ordering__](@ref option-hipo-ordering) to "rcm".
+
+  [__hipo\_serial\_blas__](@ref option-hipo-serial-blas) option. See
+  [BLAS threads](@ref parallel-blas-threads) for details.
 
 For small LPs, IPX is often faster than HiPO. However, as problem size
 grows, HiPO becomes more efficient, and its advantage can be more
@@ -155,10 +156,9 @@ add a test of Hessian convexity.
 
 ## MIP
 
-MIPs are solved using a sophisticated branch-and-cut solver. This is
-largely single-threaded, although a prototype multithreaded solver was
-completed in February 2026, and is expected to be released by
-June. Users can choose the solver for LP sub-problems as follows
+MIPs are solved using a sophisticated branch-and-cut solver that exploits 
+multi-threading (see [here](@ref parallel-mip)).
+Users can choose the solver for LP sub-problems as follows
 
 * LPs where an advanced basis is not known. This is generally the case
   at the root node of the branch-and-bound tree, but can occur at

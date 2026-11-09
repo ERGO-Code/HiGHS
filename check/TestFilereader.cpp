@@ -139,7 +139,7 @@ TEST_CASE("filereader-edge-cases", "[highs_filereader]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(highs.getInfo().objective_function_value == 9);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void freeFixedModelTest(const std::string model_name) {
@@ -238,7 +238,7 @@ TEST_CASE("filereader-read-mps-lp", "[highs_filereader]") {
 
   std::remove(filename_lp.c_str());
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
@@ -308,7 +308,7 @@ TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("filereader-dD2e", "[highs_filereader]") {
@@ -326,7 +326,7 @@ TEST_CASE("filereader-dD2e", "[highs_filereader]") {
   objective_value = highs.getInfo().objective_function_value;
   REQUIRE(objective_value == optimal_objective_value);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 // TEST_CASE("filereader-comment", "[highs_filereader]") {
@@ -425,7 +425,7 @@ TEST_CASE("write-MI-bound-model", "[highs_filereader]") {
   REQUIRE(required_objective_value == h.getInfo().objective_function_value);
   std::remove(write_model_file.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("mps-warnings", "[highs_filereader]") {
@@ -491,7 +491,7 @@ TEST_CASE("handle-blank-space-names", "[highs_filereader]") {
   REQUIRE(h.writeSolution("", 1) == HighsStatus::kWarning);
   REQUIRE(h.writeModel("") == HighsStatus::kOk);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("read-highs-lp-file0", "[highs_filereader]") {
@@ -526,7 +526,7 @@ TEST_CASE("read-highs-lp-file0", "[highs_filereader]") {
   std::remove(model_file_name0.c_str());
   std::remove(model_file_name1.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("read-highs-lp-file1", "[highs_filereader]") {
@@ -542,7 +542,7 @@ TEST_CASE("read-highs-lp-file1", "[highs_filereader]") {
 
   std::remove(model_file_name.c_str());
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("lp-duplicate-variable", "[highs_filereader]") {

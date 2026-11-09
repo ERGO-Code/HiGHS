@@ -39,10 +39,12 @@ cuda_library(
     ]),
     hdrs = glob([
         "highs/pdlp/cupdlp/cuda/*.cuh",
+        "highs/pdlp/hipdlp/*.hpp",
     ]),
     defines = ["CUPDLP_GPU"],
     target_compatible_with = requires_cuda(),
     deps = [
+        ":config",
         "@local_cuda//:cublas",
         "@local_cuda//:cusparse",
     ],
@@ -212,6 +214,7 @@ TEST_NAMES = [
     "TestHighsModel",
     "TestHighsParallel",
     "TestHighsRbTree",
+    "TestHiPdlp",
     "TestHSet",
     "TestICrash",
     "TestInfo",

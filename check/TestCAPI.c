@@ -1593,7 +1593,10 @@ void passPresolveGetLp() {
     free(col_value);
     free(col_dual);
     free(row_dual);
+
+    Highs_destroy(local_highs);
   }
+  Highs_destroy(highs);
 }
 
 void options() {
@@ -2035,6 +2038,15 @@ void testGetModel() {
   assert(highsIntArraysEqual(num_col, ck_a_start, a_start));
   assert(highsIntArraysEqual(num_nz, ck_a_index, a_index));
   assert(doubleArraysEqual(num_nz, ck_a_value, a_value));
+
+  free(ck_col_cost);
+  free(ck_col_lower);
+  free(ck_col_upper);
+  free(ck_row_lower);
+  free(ck_row_upper);
+  free(ck_a_start);
+  free(ck_a_index);
+  free(ck_a_value);
 
   Highs_destroy(highs);
 }

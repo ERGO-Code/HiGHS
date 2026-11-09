@@ -30,13 +30,7 @@
  GCC does provides these definitions in stdint.h, but it may require some
  modifications on other architectures.
 --------------------------------------------------------------------------*/
-#include "HConfig.h"
-
-#ifdef HIGHSINT64
-  #define IDXTYPEWIDTH 64
-#else
-  #define IDXTYPEWIDTH 32
-#endif
+#include "HighsMetis.h"
 
 /*--------------------------------------------------------------------------
  Specifies the data type that will hold floating-point style information.
@@ -80,8 +74,6 @@
 * Setup the basic datatypes
 *-------------------------------------------------------------------------*/
 #if IDXTYPEWIDTH == 32
-  typedef int32_t idx_t;
-
   #define IDX_MAX   INT32_MAX
   #define IDX_MIN   INT32_MIN
 
@@ -91,8 +83,6 @@
   #define strtoidx      strtol
   #define iabs          abs
 #elif IDXTYPEWIDTH == 64
-  typedef int64_t idx_t;
-
   #define IDX_MAX   INT64_MAX
   #define IDX_MIN   INT64_MIN
 
@@ -153,50 +143,10 @@
 #define METIS_VER_MINOR         2
 #define METIS_VER_SUBMINOR      1
 
-/* The maximum length of the options[] array */
-#define METIS_NOPTIONS          13
-
-
-
-/*------------------------------------------------------------------------
-* Function prototypes 
-*-------------------------------------------------------------------------*/
-
-#ifdef _WINDLL
-#define METIS_API(type) __declspec(dllexport) type __cdecl
-#elif defined(__cdecl)
-#define METIS_API(type) type __cdecl
-#else
-#define METIS_API(type) type
-#endif
-
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-METIS_API(int) Highs_METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx_t *vwgt,
-                  idx_t *options, idx_t *perm, idx_t *iperm);
-
-METIS_API(int) Highs_METIS_SetDefaultOptions(idx_t *options);
-
-#ifdef __cplusplus
-}
-#endif
-
-
 
 /*------------------------------------------------------------------------
 * Enum type definitions 
 *-------------------------------------------------------------------------*/
-/*! Return codes */
-typedef enum {
-  METIS_OK              = 1,    /*!< Returned normally */
-  METIS_ERROR_INPUT     = -2,   /*!< Returned due to erroneous inputs and/or options */
-  METIS_ERROR_MEMORY    = -3,   /*!< Returned due to insufficient memory */
-  METIS_ERROR           = -4    /*!< Some other errors */
-} rstatus_et; 
 
 
 /*! Operation type codes */
@@ -204,23 +154,6 @@ typedef enum {
   METIS_OP_OMETIS
 } moptype_et;
 
-
-/*! Options codes (i.e., options[]) */
-typedef enum {
-  METIS_OPTION_CTYPE,
-  METIS_OPTION_IPTYPE,
-  METIS_OPTION_RTYPE,
-  METIS_OPTION_DBGLVL,
-  METIS_OPTION_NITER,
-  METIS_OPTION_SEED,
-  METIS_OPTION_COMPRESS,
-  METIS_OPTION_CCORDER,
-  METIS_OPTION_PFACTOR,
-  METIS_OPTION_NSEPS,
-  METIS_OPTION_UFACTOR,
-  METIS_OPTION_DROPEDGES,
-  METIS_OPTION_NO2HOP,
-} moptions_et;
 
 /*! Coarsening Schemes */
 typedef enum {

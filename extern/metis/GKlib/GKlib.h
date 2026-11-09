@@ -48,7 +48,6 @@
 #include "gk_defs.h"
 #include "gk_macros.h"
 
-#include "gk_mksort.h"
 #include "gk_mkblas.h"
 #include "gk_mkmemory.h"
 #include "gk_mkpqueue.h"

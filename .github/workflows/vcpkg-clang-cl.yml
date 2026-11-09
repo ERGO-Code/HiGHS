@@ -1,0 +1,129 @@
+name: vcpkg-clang-cl
+
+# Tests that HIGHS_VCPKG=ON on Windows picks the *-windows-static-clang
+# triplet in cmake/vcpkg-triplets, that it builds the ports with clang-cl, and
+# that HiPO works with the OpenBLAS it builds. Building these ports is slow, so
+# this only runs when the triplets or their use change.
+
+on:
+  push:
+    paths:
+      - ".github/workflows/vcpkg-clang-cl.yml"
+      - "cmake/vcpkg-triplets/**"
+      - "cmake/vcpkg.cmake"
+      - "cmake/FindHipoDeps.cmake"
+      - "extern/vcpkg.json"
+  pull_request:
+    paths:
+      - ".github/workflows/vcpkg-clang-cl.yml"
+      - "cmake/vcpkg-triplets/**"
+      - "cmake/vcpkg.cmake"
+      - "cmake/FindHipoDeps.cmake"
+      - "extern/vcpkg.json"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+            kernels: "TARGET: <native> (OpenBLAS getarch/getarch_2nd)"
+          - os: windows-11-arm
+            arch: ARM64
+            kernels: "TARGET: ARMV8 (user-defined)"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up vcpkg
+        shell: pwsh
+        run: |
+          $vcpkg = "$env:RUNNER_TEMP/vcpkg"
+          "VCPKG_ROOT=$vcpkg" >> $env:GITHUB_ENV
+          git clone --depth 1 https://github.com/microsoft/vcpkg $vcpkg
+          & "$vcpkg/bootstrap-vcpkg.bat" -disableMetrics
+
+      - name: Configure HiGHS
+        shell: pwsh
+        run: |
+          $triplet = "${{ matrix.arch }}".ToLower() + "-windows-static-clang"
+          "TRIPLET=$triplet" >> $env:GITHUB_ENV
+          # Hide LLVM, so that this tests finding clang-cl in Visual Studio
+          cmake -S . -B build -A ${{ matrix.arch }} `
+            "-DCMAKE_IGNORE_PATH=C:/Program Files/LLVM/bin" `
+            -DHIPO=ON -DALL_TESTS=OFF -DHIGHS_VCPKG=ON | Tee-Object -Variable output
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $errors = @()
+          if (-not ($output -match "Using vcpkg triplet: $triplet$")) {
+            $errors += "HIGHS_VCPKG did not pick the $triplet triplet"
+          }
+          # FindHipoDeps reports where it found OpenBLAS
+          if (-not ($output -match "OpenBLAS CMake config path: .*installed/$triplet/")) {
+            $errors += "HiGHS did not use OpenBLAS from the $triplet triplet"
+          }
+          foreach ($e in $errors) { Write-Host "::error::$e" }
+          exit $errors.Count
+
+      - name: Check which compiler built each port
+        shell: pwsh
+        run: |
+          # vcpkg keeps each port's CMake configure output, which names the compiler,
+          # e.g. "Clang 23.1.2 with MSVC-like command-line" or "MSVC 19.50.35717.0"
+          $errors = @()
+          foreach ($port in 'openblas', 'zlib') {
+            $log = "$env:VCPKG_ROOT/buildtrees/$port/config-$env:TRIPLET-out.log"
+            $line = Select-String -Path $log -Pattern 'The C compiler identification is (.*)$' | Select-Object -First 1
+            $compiler = $line.Matches[0].Groups[1].Value
+            Write-Host "${port}: $compiler"
+            if ($compiler -notmatch '^Clang') {
+              $errors += "$port was not built with clang-cl"
+            }
+          }
+          $openblasLog = Get-Content "$env:VCPKG_ROOT/buildtrees/openblas/config-$env:TRIPLET-out.log" -Raw
+          if (-not $openblasLog.Contains('${{ matrix.kernels }}')) {
+            $errors += "OpenBLAS was not configured with '${{ matrix.kernels }}'"
+          }
+          foreach ($e in $errors) { Write-Host "::error::$e" }
+          exit $errors.Count
+
+      - name: Build Release
+        run: cmake --build build --parallel --config Release
+
+      - name: Solve with HiPO (Release)
+        shell: pwsh
+        run: |
+          .\build\Release\bin\highs.exe --solver=hipo check/instances/afiro.mps | Tee-Object -Variable output
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # If OpenBLAS is not thread safe, HiPO gets wrong results and hands over to IPX
+          if (-not ($output -match 'HiPO iterations') -or -not ($output -match 'IPX iterations:\s+0$')) {
+            Write-Host "::error::HiPO did not solve the problem by itself"
+            exit 1
+          }
+
+      - name: Ctest (Release)
+        run: ctest --test-dir build --parallel --timeout 300 --output-on-failure -C Release
+
+      - name: Build Debug
+        run: cmake --build build --parallel --config Debug
+
+      - name: Solve with HiPO (Debug)
+        run: .\build\Debug\bin\highs.exe --solver=hipo check/instances/afiro.mps
+
+      - name: Upload vcpkg logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vcpkg-logs-${{ matrix.arch }}
+          path: ${{ runner.temp }}/vcpkg/buildtrees/*/*.log
+          if-no-files-found: ignore

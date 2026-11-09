@@ -29,10 +29,11 @@ const HighsInt kDebugReportAll = -1;
 class HighsSparseMatrix {
  public:
   HighsSparseMatrix() { clear(); }
-
+  std::string name_;
   // Explicitly default the special member functions so that the move
-  // operations (relied on by getRowwise/getColwise) can't silently vanish
-  // if a copy operation or the destructor is ever customized in the future.
+  // operations (relied on by getRowwise, getColwise, ensureRowwise,
+  // ensureColwise) can't silently vanish if a copy operation or the destructor
+  // is ever customized in the future.
   HighsSparseMatrix(const HighsSparseMatrix&) = default;
   HighsSparseMatrix& operator=(const HighsSparseMatrix&) = default;
   HighsSparseMatrix(HighsSparseMatrix&&) = default;
@@ -59,7 +60,10 @@ class HighsSparseMatrix {
   void setFormat(const MatrixFormat desired_format);
   void ensureColwise();
   void ensureRowwise();
-
+  void setEmptyColwise(const HighsInt num_col);
+  HighsSparseMatrix getRowwise() const;
+  HighsSparseMatrix getColwise() const;
+  HighsSparseMatrix oppositeFormat() const;
   void addVec(const HighsInt num_nz, const HighsInt* index, const double* value,
               const double multiple = 1);
   void addCols(const HighsSparseMatrix& new_cols,
@@ -72,20 +76,25 @@ class HighsSparseMatrix {
               double* value) const;
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
-  HighsStatus assessDimensions(const HighsLogOptions& log_options,
-                               const std::string matrix_name);
+  // Used only in Highs::writeLocalModel but (ToDo) why can't this
+  // used assess?
   HighsStatus assessStart(const HighsLogOptions& log_options);
   HighsStatus assessIndexBounds(const HighsLogOptions& log_options);
 
+  HighsInt numVec() const {
+    return this->isColwise() ? this->num_col_ : this->num_row_;
+  }
+  HighsInt vecDim() const {
+    return this->isColwise() ? this->num_row_ : this->num_col_;
+  }
+  HighsStatus assess(const HighsOptions& options);
   HighsStatus assess(const HighsLogOptions& log_options,
-                     const std::string& matrix_name,
                      const double small_matrix_value,
                      const double large_matrix_value, const bool sum_duplicates,
                      const std::string* col_names = nullptr,
                      const std::string* row_names = nullptr);
   void assessSmallValues(const HighsLogOptions& log_options,
                          const double small_matrix_value);
-  bool hasLargeValue(const double large_matrix_value);
   void considerColScaling(const HighsInt max_scale_factor_exponent,
                           double* col_scale);
   void considerRowScaling(const HighsInt max_scale_factor_exponent,
@@ -139,10 +148,8 @@ class HighsSparseMatrix {
                     const HighsInt use_col) const;
   void collectAj(HVector& column, const HighsInt use_col,
                  const double multiplier) const;
-
-  HighsSparseMatrix oppositeFormat() const;
-  HighsSparseMatrix getRowwise() const;
-  HighsSparseMatrix getColwise() const;
+  bool legalDimensions(const HighsLogOptions& log_options) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options);
 
  private:
   void priceByRowDenseResult(

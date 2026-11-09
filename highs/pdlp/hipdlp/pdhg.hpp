@@ -44,7 +44,7 @@ struct StepSizeConfig;
 class PDLPSolver {
  public:
   // --- setup & Main Interface ---
-  void setup(const HighsOptions& options, HighsTimer& timer);
+  HighsStatus setup(const HighsOptions& options, HighsTimer& timer);
   void passLp(const HighsLp* lp) { original_lp_ = lp; }
   void preprocessLp();
   void scaleProblem();

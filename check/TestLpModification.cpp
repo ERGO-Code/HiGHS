@@ -54,7 +54,7 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
                          const HighsInt num_nz, const HighsInt* start,
                          const HighsInt* index, const double* value);
 
-TEST_CASE("LP-717-od", "[highs_data]") {
+TEST_CASE("LP-717-od", "[highs_test_lp_modification]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   REQUIRE(highs.addCol(0.0, -inf, inf, 0, nullptr, nullptr) ==
@@ -67,10 +67,10 @@ TEST_CASE("LP-717-od", "[highs_data]") {
           HighsStatus::kOk);
   REQUIRE(highs.run() == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-717-full0", "[highs_data]") {
+TEST_CASE("LP-717-full0", "[highs_test_lp_modification]") {
   // Add columns to an LP with a small matrix held row-wise so that
   // the orientation is flipped
   HighsInt row_block_num_col = 2;
@@ -178,10 +178,10 @@ TEST_CASE("LP-717-full0", "[highs_data]") {
     printf("After run() LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-717-full1", "[highs_data]") {
+TEST_CASE("LP-717-full1", "[highs_test_lp_modification]") {
   // Add columns to an LP with a larger matrix held row-wise so that
   // the orientation is not flipped
   HighsInt row_block_num_col = 5;
@@ -291,10 +291,10 @@ TEST_CASE("LP-717-full1", "[highs_data]") {
     printf("After run() LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-717-full2", "[highs_data]") {
+TEST_CASE("LP-717-full2", "[highs_test_lp_modification]") {
   // Add columns and then rows to an LP with a larger matrix held
   // row-wise so that the orientation is not flipped
   HighsInt row_block_num_col = 5;
@@ -419,10 +419,10 @@ TEST_CASE("LP-717-full2", "[highs_data]") {
     printf("After run() LP matrix has format %d\n",
            (int)highs_lp.a_matrix_.format_);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-modification", "[highs_data]") {
+TEST_CASE("LP-modification", "[highs_test_lp_modification]") {
   if (dev_run) printf("testAllDeleteKeep\n");
   testAllDeleteKeep(10);
 
@@ -1076,10 +1076,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   free(col0123_index);
   free(col0123_value);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-getcols", "[highs_data]") {
+TEST_CASE("LP-getcols", "[highs_test_lp_modification]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
@@ -1105,10 +1105,10 @@ TEST_CASE("LP-getcols", "[highs_data]") {
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -1.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-getrows", "[highs_data]") {
+TEST_CASE("LP-getrows", "[highs_test_lp_modification]") {
   Highs highs;
   if (!dev_run) highs.setOptionValue("output_flag", false);
   highs.addCol(-1.0, 0.0, 1.0, 0, NULL, NULL);
@@ -1136,12 +1136,12 @@ TEST_CASE("LP-getrows", "[highs_data]") {
   REQUIRE(matrix_values[0] == 1.0);
   REQUIRE(matrix_values[1] == -2.0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-interval-changes", "[highs_data]") {
+TEST_CASE("LP-interval-changes", "[highs_test_lp_modification]") {
   Highs highs;
-  // highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   const HighsOptions& options = highs.getOptions();
   const HighsInfo& info = highs.getInfo();
 
@@ -1222,8 +1222,7 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
                         og_col01234_lower.data(), og_col01234_upper.data(),
                         get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
   REQUIRE(highs.changeColsBounds(from_col, to_col, set_col01234_lower.data(),
-                                 og_col01234_upper.data()) ==
-          HighsStatus::kWarning);
+                                 og_col01234_upper.data()) == HighsStatus::kOk);
   REQUIRE(highs.getCols(from_col, to_col, get_num_col, NULL,
                         get_col01234_lower.data(), og_col01234_upper.data(),
                         get_num_nz, NULL, NULL, NULL) == HighsStatus::kOk);
@@ -1278,10 +1277,10 @@ TEST_CASE("LP-interval-changes", "[highs_data]") {
   REQUIRE(optimal_objective_function_value ==
           avgas_optimal_objective_function_value);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-delete", "[highs_data]") {
+TEST_CASE("LP-delete", "[highs_test_lp_modification]") {
   // Rather better testing of deleteCols() and deleteRows()
   Highs highs;
   HighsOptions options;
@@ -1437,10 +1436,10 @@ TEST_CASE("LP-delete", "[highs_data]") {
       std::fabs(objective_function_value - adlittle_objective_function_value) <
       double_equal_tolerance);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-free-row", "[highs_data]") {
+TEST_CASE("LP-free-row", "[highs_test_lp_modification]") {
   HighsLp lp;
   lp.num_col_ = 2;
   lp.num_row_ = 1;
@@ -1470,10 +1469,10 @@ TEST_CASE("LP-free-row", "[highs_data]") {
   highs.run();
   REQUIRE(highs.getInfo().objective_function_value == -3);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("LP-delete-ip-var", "[highs_data]") {
+TEST_CASE("LP-delete-ip-var", "[highs_test_lp_modification]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsInt num_var = 5;
@@ -1508,7 +1507,7 @@ TEST_CASE("LP-delete-ip-var", "[highs_data]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 void HighsStatusReport(const HighsLogOptions& log_options, std::string message,
@@ -1865,7 +1864,7 @@ void messageReportMatrix(const char* message, const HighsInt num_col,
   reportMatrix(log_options, message, num_col, num_nz, start, index, value);
 }
 
-TEST_CASE("mod-duplicate-indices", "[highs_data]") {
+TEST_CASE("mod-duplicate-indices", "[highs_test_lp_modification]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const std::string filename =
@@ -1896,7 +1895,7 @@ TEST_CASE("mod-duplicate-indices", "[highs_data]") {
   REQUIRE(objective0 < objective1);
   REQUIRE(objective0 == -7.75);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 bool equalSparseVectors(const HighsInt dim, const HighsInt num_nz0,
@@ -1932,7 +1931,7 @@ bool equalSparseVectors(const HighsInt dim, const HighsInt num_nz0,
   return true;
 }
 
-TEST_CASE("resize-integrality", "[highs_data]") {
+TEST_CASE("resize-integrality", "[highs_test_lp_modification]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   SpecialLps special_lps;
@@ -1985,7 +1984,7 @@ TEST_CASE("resize-integrality", "[highs_data]") {
   }
 }
 
-TEST_CASE("modify-empty-model", "[highs_data]") {
+TEST_CASE("modify-empty-model", "[highs_test_lp_modification]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.changeColIntegrality(0, HighsVarType::kInteger) ==
@@ -1995,7 +1994,7 @@ TEST_CASE("modify-empty-model", "[highs_data]") {
   REQUIRE(highs.changeRowBounds(0, 1, 1) == HighsStatus::kError);
 }
 
-TEST_CASE("zero-matrix-entries", "[highs_data]") {
+TEST_CASE("zero-matrix-entries", "[highs_test_lp_modification]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   HighsLp lp;
@@ -2258,7 +2257,7 @@ void testAvgasGetCol(Highs& h) {
   }
 }
 
-TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
+TEST_CASE("row-wise-get-row-avgas", "[highs_test_lp_modification]") {
   Avgas avgas;
   const HighsInt avgas_num_col = 8;
   const HighsInt avgas_num_row = 10;
@@ -2294,7 +2293,7 @@ TEST_CASE("row-wise-get-row-avgas", "[highs_data]") {
   testAvgasGetCol(h);
 }
 
-TEST_CASE("hot-start-after-delete", "[highs_data]") {
+TEST_CASE("hot-start-after-delete", "[highs_test_lp_modification]") {
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   const HighsLp& lp = h.getLp();
@@ -2494,10 +2493,10 @@ TEST_CASE("hot-start-after-delete", "[highs_data]") {
         info.objective_function_value);
   //  REQUIRE(info.simplex_iteration_count < ieration_count0);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
-TEST_CASE("no-modification-on-error", "[highs_data]") {
+TEST_CASE("no-modification-on-error", "[highs_test_lp_modification]") {
   const double cost = -1;
   const double col_lb = 0;
   const double col_ub = 1;
@@ -2540,7 +2539,7 @@ TEST_CASE("no-modification-on-error", "[highs_data]") {
   REQUIRE((lp == highs_lp));
   REQUIRE(h.changeColBounds(0, -inf, -inf) == HighsStatus::kError);
   REQUIRE((lp == highs_lp));
-  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kWarning);
+  REQUIRE(h.changeColBounds(0, 1, -1) == HighsStatus::kOk);
   REQUIRE(h.changeColBounds(0, col_lb, col_ub) == HighsStatus::kOk);
   REQUIRE((lp == highs_lp));
 
@@ -2548,7 +2547,7 @@ TEST_CASE("no-modification-on-error", "[highs_data]") {
   REQUIRE((lp == highs_lp));
   REQUIRE(h.changeRowBounds(0, -inf, -inf) == HighsStatus::kError);
   REQUIRE((lp == highs_lp));
-  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kWarning);
+  REQUIRE(h.changeRowBounds(0, 1, -1) == HighsStatus::kOk);
   REQUIRE(h.changeRowBounds(0, row0_lb, row0_ub) == HighsStatus::kOk);
   REQUIRE((lp == highs_lp));
 
@@ -2580,3 +2579,129 @@ TEST_CASE("no-modification-on-error", "[highs_data]") {
 
   REQUIRE((lp == highs_lp));
 }
+
+TEST_CASE("add-extreme-values", "[highs_test_lp_modification]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const double large_value = 1e1 * h.getOptions().large_matrix_value;
+  const double ok_value = 8;
+  const double small_value = 1e-1 * h.getOptions().small_matrix_value;
+  std::vector<HighsInt> index = {0, 1};
+  std::vector<double> one_large_value = {1, large_value};
+  std::vector<double> one_small_value = {1, small_value};
+  std::vector<double> two_ok_value = {1, ok_value};
+  HighsInt* p_index = index.data();
+  double* p_one_large_value = one_large_value.data();
+  double* p_one_small_value = one_small_value.data();
+  double* p_two_ok_value = two_ok_value.data();
+
+  HighsInt num_col = 0;
+  HighsInt num_row = 0;
+  HighsInt num_nz = 0;
+
+  auto checkDimensions = [&]() {
+    REQUIRE(h.getLp().num_col_ == num_col);
+    REQUIRE(h.getLp().num_row_ == num_row);
+    REQUIRE(h.getLp().numNz() == num_nz);
+  };
+
+  REQUIRE(h.addCol(0, 0, 1, 0, nullptr, nullptr) == HighsStatus::kOk);
+  REQUIRE(h.addCol(0, 0, 1, 0, nullptr, nullptr) == HighsStatus::kOk);
+  num_col += 2;
+
+  // Illegal row isn't added
+  REQUIRE(h.addRow(0, 1, 2, p_index, p_one_large_value) == HighsStatus::kError);
+  checkDimensions();
+
+  // Legal row with small value adds one nonzero
+  REQUIRE(h.addRow(0, 1, 2, p_index, p_one_small_value) ==
+          HighsStatus::kWarning);
+  num_row++;
+  num_nz++;
+  checkDimensions();
+
+  // Legal row with illegal bounds isn't added
+  REQUIRE(h.addRow(inf, inf, 2, p_index, p_two_ok_value) ==
+          HighsStatus::kError);
+  checkDimensions();
+
+  // Legal row with inconsistent bounds is added without warning
+  REQUIRE(h.addRow(1, 0, 2, p_index, p_two_ok_value) == HighsStatus::kOk);
+  num_row++;
+  num_nz += 2;
+  checkDimensions();
+
+  // Legal row with ok value adds two nonzeros
+  REQUIRE(h.addRow(0, 1, 2, p_index, p_two_ok_value) == HighsStatus::kOk);
+  num_row++;
+  num_nz += 2;
+  checkDimensions();
+
+  // Illegal col isn't added
+  REQUIRE(h.addCol(0, 0, 1, 2, p_index, p_one_large_value) ==
+          HighsStatus::kError);
+  checkDimensions();
+
+  // Legal col with small value adds one nonzero
+  REQUIRE(h.addCol(0, 0, 1, 2, p_index, p_one_small_value) ==
+          HighsStatus::kWarning);
+  num_col++;
+  num_nz++;
+  checkDimensions();
+
+  // Legal col with illegal bounds isn't added
+  REQUIRE(h.addCol(0, inf, inf, 2, p_index, p_two_ok_value) ==
+          HighsStatus::kError);
+  checkDimensions();
+
+  // Legal col with inconsistent bounds is added without warning
+  REQUIRE(h.addCol(0, 1, 0, 2, p_index, p_two_ok_value) == HighsStatus::kOk);
+  num_col++;
+  num_nz += 2;
+  checkDimensions();
+
+  // Legal col with ok value adds two nonzeros
+  REQUIRE(h.addCol(0, 0, 1, 2, p_index, p_two_ok_value) == HighsStatus::kOk);
+  num_col++;
+  num_nz += 2;
+  checkDimensions();
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kInfeasible);
+
+  h.resetGlobalScheduler(true);
+}
+
+/*
+#include <chrono>
+TEST_CASE("issue-3476", "[highs_data]") {
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  HighsInt num_col = 10;
+  std::chrono::_V2::system_clock timer;
+  double prev_tt0 = 1.0;
+  double prev_tt1 = 1.0;
+  for (;;) {
+    double tt0 =
+-std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    for (HighsInt iCol = 0; iCol < num_col; iCol++) h.addVar();
+    tt0 +=
+std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    printf("For num_col = %9d: %-32s time taken is %9.4f (ratio = %4.0f)\n",
+           int(num_col), "addVar", tt0, tt0/prev_tt0);
+
+    double tt1 =
+-std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    for (HighsInt iCol = 0; iCol < num_col; iCol++)
+       h.changeColIntegrality(iCol, HighsVarType::kContinuous);
+    tt1 +=
+std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    printf("For num_col = %9d: %-32s time taken is %9.4f (ratio = %4.0f)\n",
+           int(num_col), "changeColIntegrality", tt1, tt1/prev_tt1);
+    num_col *= 4;
+    prev_tt0 = tt0;
+    prev_tt1 = tt1;
+    if (num_col > 20000000) break;
+  }
+}
+*/

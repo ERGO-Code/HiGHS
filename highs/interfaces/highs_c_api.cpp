@@ -1550,8 +1550,8 @@ HighsInt Highs_feasibilityRelaxation(void* highs,
                               local_upper_penalty, local_rhs_penalty);
 }
 
-void Highs_resetGlobalScheduler(HighsInt blocking) {
-  Highs::resetGlobalScheduler(blocking != 0);
+void Highs_resetThreadScheduler(HighsInt blocking) {
+  Highs::resetThreadScheduler(blocking != 0);
 }
 
 const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
@@ -1822,4 +1822,10 @@ double Highs_getHighsInfinity(const void* highs) {
 
 HighsInt Highs_getScaledModelStatus(const void* highs) {
   return (HighsInt)((Highs*)highs)->getModelStatus();
+}
+
+// Deprecated in favour of resetThreadScheduler().
+// Cannot call deprecationMessage here.
+void Highs_resetGlobalScheduler(HighsInt blocking) {
+  Highs::resetGlobalScheduler(blocking != 0);
 }

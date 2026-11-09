@@ -56,7 +56,7 @@ TEST_CASE("user-scale-after-run", "[highs_user_scale]") {
             HighsStatus::kOk);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("chip-user-bound-scale", "[highs_user_scale]") {
@@ -107,7 +107,7 @@ TEST_CASE("chip-user-bound-scale", "[highs_user_scale]") {
     chip_solution0 = 40;
     chip_solution1 = 21;
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
@@ -166,10 +166,10 @@ TEST_CASE("user-small-cost-scale", "[highs_user_scale]") {
 
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
-TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
+TEST_CASE("build-get-objective-bound-scaling", "[highs_user_scale]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   const double large_cost = 1.0e+10;           // Algebraically C
@@ -278,7 +278,7 @@ TEST_CASE("build-get-objective-bound-scaling", "[highs_data]") {
   REQUIRE(suggested_objective_scale == 0);
   REQUIRE(suggested_bound_scale == 0);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 HighsLp lp0(const double cost, const double bound) {
@@ -552,5 +552,5 @@ TEST_CASE("ill-scaled-model", "[highs_user_scale]") {
     testQp(h, large_cost, large_hessian, small_col_lower, large_bound);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }

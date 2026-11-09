@@ -6,7 +6,7 @@
 - Default: "choose"
 
 ## [solver](@id option-solver)
-- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "hipdlp" or "qpasm"
+- LP/QP solver: "choose", "simplex", "ipm", "ipx", "hipo", "pdlp", "qpasm" or "hipdlp", 
 - Type: string
 - Default: "choose"
 
@@ -200,9 +200,9 @@
 - Default: "false"
 
 ## [write\_solution\_style](@id option-write-solution-style)
-- Style of solution file (raw = computer-readable, pretty = human-readable): -1 => HiGHS old raw (deprecated); 0 => HiGHS raw; 1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; 4 => HiGHS sparse raw
+- Style of solution file (raw = computer-readable, pretty = human-readable): -1 => HiGHS old raw (deprecated); 0 => HiGHS raw; 1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; 4 => HiGHS sparse raw; 5 => HiGHS partial raw
 - Type: integer
-- Range: {-1, 4}
+- Range: {-1, 5}
 - Default: 0
 
 ## [glpsol\_cost\_row\_location](@id option-glpsol-cost-row-location)
@@ -245,6 +245,12 @@
 - Write IIS model file
 - Type: string
 - Default: ""
+
+## [presolve\_mode](@id option-presolve-mode)
+- Presolve mode 0 => default; 1 => initial sweep; 2 => light; 3 => full
+- Type: integer
+- Range: {0, 3}
+- Default: 0
 
 ## [mip\_detect\_symmetry](@id option-mip-detect-symmetry)
 - Whether MIP symmetry should be detected
@@ -445,13 +451,13 @@
 - Default: "choose"
 
 ## [hipo\_parallel\_force](@id option-hipo-parallel-force)
-- Bit map to force the use of parallel techniques in HiPO
+- Bit mask to force parallel techniques in HiPO
 - Type: integer
 - Range: {0, 1023}
 - Default: 0
 
 ## [hipo\_parallel\_forbid](@id option-hipo-parallel-forbid)
-- Bit map to forbid the use of parallel techniques in HiPO
+- Bit mask to forbid parallel techniques in HiPO
 - Type: integer
 - Range: {0, 1023}
 - Default: 0
@@ -461,8 +467,8 @@
 - Type: string
 - Default: "choose"
 
-## [hipo\_fatcor](@id option-hipo-factor)
-- HiPO matrix factorisation: "choose", "multifrontal", or "uplooking"
+## [hipo\_factor](@id option-hipo-factor)
+- HiPO matrix factorisation: "choose", "multifrontal" or "uplooking"
 - Type: string
 - Default: "choose"
 
@@ -471,6 +477,11 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 128
+
+## [hipo\_serial\_blas](@id option-hipo-serial-blas)
+- Force OpenBLAS to run in serial when used by HiPO. This setting is process-wide, so affects any other use of OpenBLAS
+- Type: boolean
+- Default: "true"
 
 ## [pdlp\_iteration\_limit](@id option-pdlp-iteration-limit)
 - Iteration limit for PDLP solver
@@ -513,6 +524,11 @@
 - Type: double
 - Range: [1e-10, inf]
 - Default: 1e-07
+
+## [test\_qp\_oracle](@id option-test-qp-oracle)
+- Use an oracle for the QP Hessian
+- Type: boolean
+- Default: "false"
 
 ## [qp\_allow\_hot\_start](@id option-qp-allow-hot-start)
 - Allow the active set QP solver to hot start

@@ -456,6 +456,7 @@ HighsStatus Highs::addColsInterface(
   // that is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_a_matrix;
+  local_a_matrix.name_ = "local_a_matrix";
   local_a_matrix.num_col_ = ext_num_new_col;
   local_a_matrix.num_row_ = lp.num_row_;
   local_a_matrix.format_ = MatrixFormat::kColwise;
@@ -469,10 +470,9 @@ HighsStatus Highs::addColsInterface(
     // Assess the matrix rows
     return_status = interpretCallStatus(
         options_.log_options,
-        local_a_matrix.assess(options.log_options, "LP",
-                              options.small_matrix_value,
+        local_a_matrix.assess(options.log_options, options.small_matrix_value,
                               options.large_matrix_value, sum_duplicates),
-        return_status, "assessMatrix");
+        return_status, "local_a_matrix.assess");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is column-wise or
@@ -507,7 +507,7 @@ HighsStatus Highs::addColsInterface(
 
   // Increase the number of columns in the LP
   lp.num_col_ += ext_num_new_col;
-  assert(lpDimensionsOk("addCols", lp, options.log_options));
+  assert(lp.legalDimensions("addCols", options.log_options));
 
   // Interpret possible introduction of infinite costs
   lp.has_infinite_cost_ = lp.has_infinite_cost_ || local_has_infinite_cost;
@@ -589,6 +589,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   // is easy to handle and, if there are nonzeros, it can be
   // normalised
   HighsSparseMatrix local_ar_matrix;
+  local_ar_matrix.name_ = "local_ar_matrix";
   local_ar_matrix.num_col_ = lp.num_col_;
   local_ar_matrix.num_row_ = ext_num_new_row;
   local_ar_matrix.format_ = MatrixFormat::kRowwise;
@@ -602,10 +603,9 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
     const bool sum_duplicates = false;
     return_status = interpretCallStatus(
         options_.log_options,
-        local_ar_matrix.assess(options.log_options, "LP",
-                               options.small_matrix_value,
+        local_ar_matrix.assess(options.log_options, options.small_matrix_value,
                                options.large_matrix_value, sum_duplicates),
-        return_status, "assessMatrix");
+        return_status, "local_ar_matrix.assess");
     if (return_status == HighsStatus::kError) return return_status;
   } else {
     // No nonzeros so, whether the constraint matrix is row-wise or
@@ -639,7 +639,7 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
 
   // Increase the number of rows in the LP
   lp.num_row_ += ext_num_new_row;
-  assert(lpDimensionsOk("addRows", lp, options.log_options));
+  assert(lp.legalDimensions("addRows", options.log_options));
 
   // Deduce the consequences of adding new rows
   invalidateModelStatusSolutionAndInfo();
@@ -766,7 +766,7 @@ void Highs::deleteColsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_col == lp.num_col_);
   }
-  assert(lpDimensionsOk("deleteCols", lp, options_.log_options));
+  assert(lp.legalDimensions("deleteCols", options_.log_options));
   lp.col_hash_.name2index.clear();
 }
 
@@ -819,7 +819,7 @@ void Highs::deleteRowsInterface(HighsIndexCollection& index_collection) {
     }
     assert(new_row == lp.num_row_);
   }
-  assert(lpDimensionsOk("deleteRows", lp, options_.log_options));
+  assert(lp.legalDimensions("deleteRows", options_.log_options));
   lp.row_hash_.name2index.clear();
 }
 
@@ -857,9 +857,8 @@ void Highs::getRowsInterface(const HighsIndexCollection& index_collection,
   }
 }
 
-void Highs::getCoefficientInterface(const HighsInt ext_row,
-                                    const HighsInt ext_col,
-                                    double& value) const {
+void Highs::getCoeffInterface(const HighsInt ext_row, const HighsInt ext_col,
+                              double& value) const {
   const HighsLp& lp = model_.lp_;
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
@@ -1062,18 +1061,23 @@ HighsStatus Highs::changeRowBoundsInterface(
 }
 
 // Change a single coefficient in the matrix
-void Highs::changeCoefficientInterface(const HighsInt ext_row,
-                                       const HighsInt ext_col,
-                                       const double ext_new_value) {
+HighsStatus Highs::changeCoeffInterface(const HighsInt ext_row,
+                                        const HighsInt ext_col,
+                                        const double ext_new_value) {
   HighsLp& lp = model_.lp_;
   // Ensure that the LP is column-wise
   lp.ensureColwise();
+  // Should alread yhave checked that the row and column indices are
+  // legal, and that the value is not large
   assert(0 <= ext_row && ext_row < lp.num_row_);
   assert(0 <= ext_col && ext_col < lp.num_col_);
-  const bool zero_new_value =
-      std::fabs(ext_new_value) <= options_.small_matrix_value;
-  changeLpMatrixCoefficient(lp, ext_row, ext_col, ext_new_value,
-                            zero_new_value);
+  const double abs_ext_new_value = std::fabs(ext_new_value);
+  assert(abs_ext_new_value < options_.large_matrix_value);
+
+  HighsStatus return_status =
+      changeLpMatrixCoeff(options_.log_options, lp, ext_row, ext_col,
+                          ext_new_value, options_.small_matrix_value);
+  assert(return_status != HighsStatus::kError);
   // Deduce the consequences of a changed element
   //
   // ToDo: Can do something more intelligent if element is in nonbasic
@@ -1094,6 +1098,7 @@ void Highs::changeCoefficientInterface(const HighsInt ext_row,
 
   // Determine any implications for simplex data
   ekk_instance_.updateStatus(LpAction::kNewRows);
+  return return_status;
 }
 
 HighsStatus Highs::scaleColInterface(const HighsInt col,
@@ -1590,6 +1595,8 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   HighsHessian hessian;
   bool solve_relaxation;
   std::string presolve;
+  std::string solver;
+  bool allow_unbounded_or_infeasible;
   bool solve_feasibility_problem = false;
   const bool is_qp = model_.isQp();
 
@@ -1607,14 +1614,18 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Solving LP to try to compute dual ray\n");
-      // Save the column costs, integrality, any Hessian and the
-      // presolve setting
+      // Save the column costs, any Hessian, the relaxation, presolve
+      // and solver settings, so that the feasibility problem is
+      // solved to yield a basic solution
       col_cost = lp.col_cost_;
       if (is_qp) hessian = model_.hessian_;
-      this->getOptionValue("presolve", presolve);
-      this->getOptionValue("solve_relaxation", solve_relaxation);
+      solve_relaxation = this->options_.solve_relaxation;
+      presolve = this->options_.presolve;
+      solver = this->options_.solver;
+      allow_unbounded_or_infeasible =
+          this->options_.allow_unbounded_or_infeasible;
       solve_feasibility_problem = true;
-      // Zero the costs, integrality and Hessian
+      // Zero the costs and Hessian
       std::vector<double> zero_costs;
       zero_costs.assign(lp.num_col_, 0);
       // Take a copy of the primal ray record, since this will be
@@ -1630,9 +1641,22 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
         HighsHessian zero_hessian;
         this->passHessian(zero_hessian);
       }
-      this->setOptionValue("presolve", kHighsOffString);
-      this->setOptionValue("solve_relaxation", true);
+      //
+      this->options_.solve_relaxation = true;
+      this->options_.presolve = kHighsOffString;
+      this->options_.solver = kSimplexString;
+      this->options_.allow_unbounded_or_infeasible = false;
       HighsStatus call_status = this->run();
+      // Restore the column costs, any Hessian, the relaxation,
+      // presolve and solver settings
+      this->options_.solve_relaxation = solve_relaxation;
+      this->options_.presolve = presolve;
+      this->options_.solver = solver;
+      this->options_.allow_unbounded_or_infeasible =
+          allow_unbounded_or_infeasible;
+
+      lp.col_cost_ = col_cost;
+      if (is_qp) model_.hessian_ = hessian;
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_dual_ray = ekk_instance_.dual_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
@@ -1677,10 +1701,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     // information has been lost. Reverting the objective function via
     // Highs calls clears info_, so better to just copy the data
     // directly and set the info_ entries that are no longer valid
-    lp.col_cost_ = col_cost;
-    if (is_qp) model_.hessian_ = hessian;
-    this->setOptionValue("presolve", presolve);
-    this->setOptionValue("solve_relaxation", solve_relaxation);
+    //
     // The relaxation for an infeasible MIP may be feasible - so no
     // ray is generated - so make sure (#2415) that the primal
     // solution status is reset
@@ -1690,7 +1711,8 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
     this->info_.objective_function_value = 0;
     this->info_.invalidateDualKkt();
     if (has_dual_ray) {
-      assert(this->info_.num_primal_infeasibilities > 0);
+      assert(this->info_.num_primal_infeasibilities > 0 ||
+             this->info_.num_semi_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kInfeasible);
     } else {
       // If someone has tried to get a dual ray for a feasible problem
@@ -1720,8 +1742,9 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
 
-  std::string presolve;
   bool solve_relaxation;
+  std::string presolve;
+  std::string solver;
   bool allow_unbounded_or_infeasible;
   bool solve_unboundedness_problem = false;
 
@@ -1740,15 +1763,24 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Solving LP to try to compute primal ray\n");
-      this->getOptionValue("presolve", presolve);
-      this->getOptionValue("solve_relaxation", solve_relaxation);
-      this->getOptionValue("allow_unbounded_or_infeasible",
-                           allow_unbounded_or_infeasible);
+      // Save the relaxation, presolve and solver settings
+      solve_relaxation = this->options_.solve_relaxation;
+      presolve = this->options_.presolve;
+      solver = this->options_.solver;
+      allow_unbounded_or_infeasible =
+          this->options_.allow_unbounded_or_infeasible;
       solve_unboundedness_problem = true;
-      this->setOptionValue("presolve", kHighsOffString);
-      this->setOptionValue("solve_relaxation", true);
-      this->setOptionValue("allow_unbounded_or_infeasible", false);
+      this->options_.solve_relaxation = true;
+      this->options_.presolve = kHighsOffString;
+      this->options_.solver = kSimplexString;
+      this->options_.allow_unbounded_or_infeasible = false;
       HighsStatus call_status = this->run();
+      // Restore the relaxation, presolve and solver settings
+      this->options_.solve_relaxation = solve_relaxation;
+      this->options_.presolve = presolve;
+      this->options_.solver = solver;
+      this->options_.allow_unbounded_or_infeasible =
+          allow_unbounded_or_infeasible;
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
@@ -1813,11 +1845,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       this->info_.dual_solution_status = SolutionStatus::kSolutionStatusNone;
       this->info_.invalidateDualKkt();
     }
-    // Restore the option values
-    this->setOptionValue("presolve", presolve);
-    this->setOptionValue("solve_relaxation", solve_relaxation);
-    this->setOptionValue("allow_unbounded_or_infeasible",
-                         allow_unbounded_or_infeasible);
     if (has_primal_ray) {
       assert(is_mip || this->info_.num_dual_infeasibilities > 0);
       assert(this->model_status_ == HighsModelStatus::kUnbounded);
@@ -3724,7 +3751,9 @@ void Highs::formIllConditioningLp1(HighsLp& ill_conditioning_lp,
   ill_conditioning_matrix.num_row_ = ill_conditioning_lp.num_row_;
 }
 
-bool Highs::infeasibleBoundsOk() {
+// ToDo: this method shouldn't change the incumbent model irrevocably,
+// since this loses user data
+bool Highs::processedBoundsFindsInfeasibility() {
   const HighsLogOptions& log_options = this->options_.log_options;
   HighsLp& lp = this->model_.lp_;
 
@@ -3828,6 +3857,9 @@ bool Highs::infeasibleBoundsOk() {
     // bounds being propagated to the relaxation, this can prevent a
     // dual ray from being constructed
   }
+  // Set performed_inward_integer_rounding = false since it's still
+  // checked in infeasibleBoundOk, and may be true from last pass with
+  // integer variable
   performed_inward_integer_rounding = false;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     if (lp.row_lower_[iRow] > lp.row_upper_[iRow])
@@ -3841,7 +3873,7 @@ bool Highs::infeasibleBoundsOk() {
     highsLogUser(log_options, HighsLogType::kInfo,
                  "Model has %d significant inconsistent bound(s): infeasible\n",
                  int(num_true_infeasible_bound));
-  return num_true_infeasible_bound == 0;
+  return num_true_infeasible_bound > 0;
 }
 
 bool Highs::validLinearObjective(const HighsLinearObjective& linear_objective,

@@ -25,7 +25,7 @@ TEST_CASE("test-analytic-centre", "[highs_ipm]") {
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::kOk);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-analytic-centre-infeasible", "[highs_ipm]") {
@@ -50,7 +50,7 @@ TEST_CASE("test-analytic-centre-infeasible", "[highs_ipm]") {
   REQUIRE(run_status == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
@@ -86,7 +86,7 @@ TEST_CASE("test-analytic-centre-box", "[highs_ipm]") {
   REQUIRE(solution_norm < 1e-6);
   if (dev_run) printf("Analytic centre solution norm is %g\n", solution_norm);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-1966", "[highs_ipm]") {
@@ -185,7 +185,7 @@ TEST_CASE("test-1966", "[highs_ipm]") {
     }
     highs.clearSolver();
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-2087", "[highs_ipm]") {
@@ -206,7 +206,7 @@ TEST_CASE("test-2087", "[highs_ipm]") {
   h.run();
   REQUIRE(first_ipm_iteration_count == h.getInfo().ipm_iteration_count);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-2527", "[highs_ipm]") {
@@ -222,7 +222,7 @@ TEST_CASE("test-2527", "[highs_ipm]") {
   h.setOptionValue("presolve", kHighsOffString);
   REQUIRE(h.run() == HighsStatus::kOk);
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-3397", "[highs_ipm]") {
@@ -248,7 +248,7 @@ TEST_CASE("test-3397", "[highs_ipm]") {
     h.run();
     REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
 
-    h.resetGlobalScheduler(true);
+    h.resetThreadScheduler(true);
   }
 
   // LP with optimal objective -185.875
@@ -275,6 +275,29 @@ TEST_CASE("test-3397", "[highs_ipm]") {
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
     REQUIRE(std::fabs(h.getInfo().objective_function_value + 185.875) < 1e-6);
 
-    h.resetGlobalScheduler(true);
+    h.resetThreadScheduler(true);
   }
+}
+
+TEST_CASE("test-3512", "[highs_ipm]") {
+  const std::vector<std::string> models = {"3512-feasible", "3512-solve-error",
+                                           "3512-dual-cancellation"};
+  const std::vector<double> objectives = {-24, -499999991, -33};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("solver", kIpxString);
+  HighsInt num_models = models.size();
+  for (HighsInt iModel = 0; iModel < num_models; iModel++) {
+    std::string filename =
+        std::string(HIGHS_DIR) + "/check/instances/" + models[iModel] + ".lp";
+    REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    double objective = h.getObjectiveValue();
+    double objective_error =
+        std::fabs(objective - objectives[iModel]) / (1 + std::fabs(objective));
+    REQUIRE(objective_error < 1e-8);
+  }
+
+  h.resetThreadScheduler(true);
 }
