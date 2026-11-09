@@ -414,6 +414,12 @@ HighsSolverSelect selectSolver(const HighsLp& lp,
       return selectSolverByModel(computeLpFeatures(lp), strategy);
     case SolverSelectStrategy::kHeuristic:
       return selectSolverByHeuristic(computeLpFeatures(lp));
+    case SolverSelectStrategy::kDualSimplex:
+      return HighsSolverSelect::kDualSimplex;
+    case SolverSelectStrategy::kIpx:
+      return HighsSolverSelect::kIpx;
+    case SolverSelectStrategy::kHipo:
+      return HighsSolverSelect::kHipo;
   }
   return HighsSolverSelect::kDualSimplex;
 }

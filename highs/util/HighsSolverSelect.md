@@ -24,7 +24,7 @@ The fitting tools are in the sibling `tests` repo, under `select/`.
 ## Strategies: `solver_select_strategy`
 
 Applies when `solver = choose`, or in the MIP solver when
-`mip_lp_solver = choose`. The range is `[0, 3]` and the default is 0.
+`mip_lp_solver = choose`. The range is `[0, 6]` and the default is 0.
 
 | Value | `SolverSelectStrategy` | Behaviour |
 |:-----:|------------------------|-----------|
@@ -32,9 +32,13 @@ Applies when `solver = choose`, or in the MIP solver when
 | 1 | `kColsRowsNnz` | Fitted model on `num_col`, `num_row` and `num_nz`. |
 | 2 | `kRankedFeatures` | Fitted model on the 12 ranked features below. |
 | 3 | `kHeuristic` | The provisional heuristic below. |
+| 4 | `kDualSimplex` | Dual simplex, through selection, to compare with 5 and 6. |
+| 5 | `kIpx` | IPX, whatever the LP. |
+| 6 | `kHipo` | HiPO, whatever the LP. |
 
 Strategies 1 and 2 send LPs smaller than the smallest training instance to dual
-simplex. Selected HiPO becomes IPX when HiPO is not available, in `solveLp`.
+simplex. Strategies 4 to 6 always choose their solver, but like the others they apply
+only to LPs without a useful basis, so in the MIP solver that is mostly the root. Selected HiPO becomes IPX when HiPO is not available, in `solveLp`.
 
 `solver_select_require_basis` (default `false`) makes `solveLp` end with a basis.
 If IPM is selected and `run_crossover` is off, it returns an error rather than

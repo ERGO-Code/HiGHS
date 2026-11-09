@@ -91,12 +91,12 @@ TEST_CASE("solver-select-features", "[solver_select]") {
 TEST_CASE("solver-select-strategy-option-bounds", "[solver_select]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  // Valid range is [0, 3]: kSimplexOnly, kColsRowsNnz,
-  // kRankedFeatures, kHeuristic
-  for (const HighsInt value : {0, 1, 2, 3})
+  // Valid range is [0, 6]: kSimplexOnly, kColsRowsNnz,
+  // kRankedFeatures, kHeuristic, kDualSimplex, kIpx, kHipo
+  for (const HighsInt value : {0, 1, 2, 3, 4, 5, 6})
     REQUIRE(highs.setOptionValue("solver_select_strategy", value) ==
             HighsStatus::kOk);
-  for (const HighsInt value : {-1, 4})
+  for (const HighsInt value : {-1, 7})
     REQUIRE(highs.setOptionValue("solver_select_strategy", value) ==
             HighsStatus::kError);
 }
@@ -104,7 +104,7 @@ TEST_CASE("solver-select-strategy-option-bounds", "[solver_select]") {
 // Every strategy x require_basis combination, via the real end-to-end
 // solver="choose" dispatch in HighsSolve.cpp, solves exampleLp() optimally
 TEST_CASE("solver-select-each-strategy-solves-optimally", "[solver_select]") {
-  for (const HighsInt strategy : {0, 1, 2, 3}) {
+  for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6}) {
     for (const bool require_basis : {false, true}) {
       INFO("strategy " << strategy << ", require_basis " << require_basis);
       Highs highs;
@@ -119,6 +119,29 @@ TEST_CASE("solver-select-each-strategy-solves-optimally", "[solver_select]") {
       REQUIRE(std::fabs(highs.getInfo().objective_function_value - 2.75) <
               1e-6);
     }
+  }
+}
+
+// Strategies 4, 5 and 6 choose their solver whatever the LP, even one
+// smaller than strategies 1 and 2 send to dual simplex
+TEST_CASE("solver-select-forced-strategies", "[solver_select]") {
+  const std::vector<std::pair<HighsInt, HighsSolverSelect>> forced = {
+      {4, HighsSolverSelect::kDualSimplex},
+      {5, HighsSolverSelect::kIpx},
+      {6, HighsSolverSelect::kHipo}};
+  for (const auto& [strategy, solver] : forced) {
+    INFO("strategy " << strategy);
+    REQUIRE(selectSolver(exampleLp(), static_cast<SolverSelectStrategy>(
+                                          strategy)) == solver);
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    highs.passModel(exampleLp());
+    highs.setOptionValue("solver", "choose");
+    highs.setOptionValue("solver_select_strategy", strategy);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    const bool ipm_ran = highs.getInfo().ipm_iteration_count > 0;
+    REQUIRE(ipm_ran == (solver != HighsSolverSelect::kDualSimplex));
   }
 }
 
@@ -225,7 +248,7 @@ TEST_CASE("solver-select-mip-tree", "[solver_select]") {
   const std::vector<std::pair<std::string, double>> mips = {
       {"flugpl", 1201500}, {"egout", 568.1007}, {"bell5", 8966406.49}};
   for (const auto& mip : mips) {
-    for (const HighsInt strategy : {0, 1, 2, 3}) {
+    for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6}) {
       INFO(mip.first << ", strategy " << strategy);
       const std::string model_file =
           std::string(HIGHS_DIR) + "/check/instances/" + mip.first + ".mps";

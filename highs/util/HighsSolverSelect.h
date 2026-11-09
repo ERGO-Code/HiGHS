@@ -28,6 +28,10 @@ enum class SolverSelectStrategy {
   kColsRowsNnz = 1,
   kRankedFeatures = 2,
   kHeuristic = 3,
+  // Always choose one solver, to compare them
+  kDualSimplex = 4,
+  kIpx = 5,
+  kHipo = 6,
 };
 
 struct HighsLpFeatures {
@@ -89,7 +93,8 @@ HighsInt countIntegerCols(const std::vector<HighsVarType>& integrality);
 // kSimplexOnly => dual simplex; kColsRowsNnz => boosted trees
 // on num_col, num_row and num_nz; kRankedFeatures => boosted trees
 // on the features in S2_FEATURES of tests/select/visualize.py;
-// kHeuristic => provisional hand-written heuristic
+// kHeuristic => provisional hand-written heuristic; kDualSimplex, kIpx
+// and kHipo => that solver
 HighsSolverSelect selectSolver(const HighsLp& lp,
                                const SolverSelectStrategy strategy);
 
