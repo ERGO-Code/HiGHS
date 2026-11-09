@@ -445,7 +445,6 @@ void HPresolve::chooseRules() {
       logRule(rule);
     highsLogUser(options->log_options, HighsLogType::kInfo,
                  " * Only in initial sweep\n");
->>>>>>> 6de11f6
   }
 
   // Set the pre-defined rules on/off according to the mode
