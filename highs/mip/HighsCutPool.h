@@ -91,7 +91,7 @@ class HighsCutPool {
         numPropNzs(0),
         numPropRows(0),
         index_(index) {
-    ageDistribution.resize(agelim_ + 1);
+    ageDistribution.resize(std::max(agelim_, HighsInt{1}) + 1);
     minScoreFactor = 0.9;
     bestObservedScore = 0.0;
     minDensityLim = 0.1 * ncols;
@@ -144,7 +144,7 @@ class HighsCutPool {
 
   void setAgeLimit(HighsInt agelim) {
     agelim_ = agelim;
-    ageDistribution.resize(agelim_ + 1);
+    ageDistribution.resize(std::max(agelim_, HighsInt{1}) + 1);
   }
 
   void increaseNumLps(HighsInt cut, HighsInt n) {
