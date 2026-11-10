@@ -2,11 +2,8 @@
 #define HCONFIG_H_
 
 #define FAST_BUILD
-/* #undef ZLIB_FOUND */
-#define CMAKE_BUILD_TYPE "RELEASE"
-#define HiGHSRELEASE
-/* #undef HIGHSINT64 */
-/* #undef HIGHS_HAVE_MM_PAUSE */
+#define CMAKE_BUILD_TYPE "Release"
+
 #ifdef __has_builtin
 #if __has_builtin(__builtin_clz) && __has_builtin(__builtin_clzll)
 #define HIGHS_HAVE_BUILTIN_CLZ
@@ -18,9 +15,9 @@
 #endif
 
 #define HIGHS_SHARED_EXTRAS_LIBRARY
-#define HIGHS_GITHASH "2c7468d502"
+#define HIGHS_GITHASH "2d18fad16d"
 #define HIGHS_VERSION_MAJOR 1
-#define HIGHS_VERSION_MINOR 15
-#define HIGHS_VERSION_PATCH 1
+#define HIGHS_VERSION_MINOR 16
+#define HIGHS_VERSION_PATCH 0
 
 #endif /* HCONFIG_H_ */
