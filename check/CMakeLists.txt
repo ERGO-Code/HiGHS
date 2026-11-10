@@ -324,20 +324,21 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             "standgub\; 1.2576994\;"
             )
     else() # CUPDLP_CPU
+        # Trimmed so both GCC <= 14 and GCC 15 results match
         set(pdlpInstances
-            "25fv47\; 5.5018469\;"
+            "25fv47\; 5.50184\;"
             "adlittle\; 2.254949\;"
-            "afiro\;-4.64753150\;"
+            "afiro\;-4.6475315\;"
             "avgas\;-7.7499999\;"
             "blending\;-3.1999999\;"
             "chip\;-8.9999999\;"
-            "e226\;-1.16389294\;"
-            "scrs8\; 9.04297094\;"
+            "e226\;-1.163893\;"
+            "scrs8\; 9.0429(69|70)\;"
             "sctest\; 5.75000000\;"
-            "shell\; 1.20882534\;"
-            "stair\;-2.51266942\;"
-            "standata\; 1.25769944\;"
-            "standgub\; 1.25769944\;"
+            "shell\; 1.2088253\;"
+            "stair\;-2.512669\;"
+            "standata\; 1.2576994\;"
+            "standgub\; 1.2576994\;"
             )
     endif()
   elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM" AND
@@ -436,7 +437,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
           if(${solutionstatus} STREQUAL "Optimal")
               if(${setting} STREQUAL "--presolve=off" AND 
-                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND 
+                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND
+                # GCC 15 floating-point codegen changes simplex iteration counts
+                (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+                      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)) AND
                 (NOT OPT_LEVEL_CHANGED) AND
                 (CMAKE_SIZEOF_VOID_P EQUAL 8))
                   set_tests_properties (${name}${setting} PROPERTIES
