@@ -197,9 +197,10 @@ struct metis : extras_feature<2> {
   }
 
   static int nodeND(idx_t* nvtxs, const idx_t* xadj, const idx_t* adjncy,
-                    idx_t* vwgt, idx_t* options, idx_t* perm, idx_t* iperm) {
+                    idx_t* vwgt, idx_t* options, idx_t* perm, idx_t* iperm,
+                    Highs_METIS_ShouldStop should_stop, void* stop_data) {
     return impl::template fn<1>()(nvtxs, xadj, adjncy, vwgt, options, perm,
-                                  iperm);
+                                  iperm, should_stop, stop_data);
   }
 };
 

@@ -25,10 +25,20 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
       data_{record},
       logger_{logger},
       model_{model},
-      options_{options} {
+      options_{options},
+      control_{control} {
   FH_.setBlockSize(options.block_size);
   FH_.setLogger(&logger);
   FH_.setStopCheck([&control]() { return control.timeLimitReached(); });
+
+  // Stop the ordering if the time limit is reached. Only the time limit is
+  // checked, since the callback may run on a worker thread and must not throw.
+  FH_.setStopCallback(
+      [](void* data) -> int {
+        return static_cast<FactorHighsSolver*>(data)
+            ->control_.timeLimitReached();
+      },
+      this);
 }
 
 void FactorHighsSolver::clear() {

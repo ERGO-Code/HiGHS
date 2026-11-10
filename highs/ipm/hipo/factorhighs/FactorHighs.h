@@ -89,6 +89,15 @@ class FHsolver {
   CliqueStack serial_stack_;
   bool local_logger_ = false;
 
+ public:
+  // C-style callback that returns nonzero to stop a long computation early.
+  // It must not throw.
+  using StopCallback = int (*)(void* data);
+
+ private:
+  StopCallback should_stop_ = nullptr;
+  void* stop_data_ = nullptr;
+
   FHoptions options_{};
 
   // Columns of factorisation, stored by supernode.
@@ -151,6 +160,11 @@ class FHsolver {
   // By default, logging is off.
   void setLogger(const Logger* logger = nullptr, bool use_printf = false);
   const Logger* getLogger() const { return logger_; }
+
+  // Pass a callback that is checked periodically during reorderMetis; if it
+  // returns nonzero, the ordering stops and reorderMetis returns an error.
+  // data is passed to the callback. Pass nullptr to remove the callback.
+  void setStopCallback(StopCallback should_stop, void* data = nullptr);
 
   // Compute number of positive, negative and zero pivots, using tol as
   // tolerance for zero.

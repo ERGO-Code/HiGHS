@@ -24,6 +24,7 @@ class FactorHighsSolver : public LinearSolver {
   const Logger& logger_;
   const Model& model_;
   Options& options_;
+  const Control& control_;
 
   std::vector<double> as_buffer_;
 
