@@ -22,7 +22,7 @@ const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
 Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
                  const Int* signs, const FHoptions& FH_opt,
-                 const Logger* logger, DataCollector& data, const Int* perm)
+                 const Logger& logger, DataCollector& data, const Int* perm)
     : FH_opt_{FH_opt}, logger_{logger}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
@@ -891,7 +891,7 @@ void Analyse::relativeIndClique() {
       } else if (consecutive_sums_[sn][i] == 1) {
         consecutive_sums_[sn][i] = consecutive_sums_[sn][i + 1] + 1;
       } else {
-        if (logger_) logger_->printInfo("Error in consecutiveSums\n");
+        logger_.printInfo("Error in consecutiveSums\n");
       }
     }
   }
@@ -1349,7 +1349,7 @@ void Analyse::computeTreeScheduleSolve() {
     const Int this_parent = schedule_solve_.task_parent[task];
     if (this_parent != -1 && this_parent <= task) {
       schedule_solve_.clear();
-      logger_->printInfo("Task tree does not have topological ordering\n");
+      logger_.printInfo("Task tree does not have topological ordering\n");
       break;
     }
   }
@@ -1430,7 +1430,7 @@ Int Analyse::run(Symbolic& S) {
   }
 
   if (checkOverflow()) {
-    if (logger_) logger_->printe("Integer overflow in analyse phase\n");
+    logger_.printe("Integer overflow in analyse phase\n");
     return kRetIntOverflow;
   }
 
