@@ -1277,7 +1277,13 @@ isFailure Solver::initialiseLinearSolver() {
     return true;
   }
   info_.error = LS_->setup();
-  if (info_.error) return true;
+  if (info_.error) {
+    if (control_.timeLimitReached()) {
+      info_.error = kOk;
+      setStatus(kStatusTimeLimit);
+    }
+    return true;
+  }
 
   LS_->clear();
 
