@@ -174,7 +174,7 @@ jobs:
           else
             # Accelerate is linked into libhighs_extras.a's *consumer* (the
             # highs library/executable), not into the static archive itself.
-            lib=$(find ${{ github.workspace }}/install/lib ${{ github.workspace }}/install/bin -name "libhighs*.dylib" -o -name "highs" | head -n1)
+            lib=$(find ${{ github.workspace }}/install/lib ${{ github.workspace }}/install/bin -type f \( -name "libhighs*.dylib" -o -name "highs" \) | head -n1)
           fi
           [ -n "$lib" ] || { echo "::error::no installed binary found to inspect"; exit 1; }
           echo "Checking linked libraries for $lib"
