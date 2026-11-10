@@ -238,8 +238,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "standmps\;218\; 1.4060175000\;"
    )
 
-   # GCC 15 optimised builds (seen with RelWithDebInfo); GCC 15 Debug
-   # still matches successInstances
+   # GCC >= 15 at -O2 (RelWithDebInfo). Debug and Release (-O3, checked
+   # on GCC 16 MinGW) still match successInstances
    set(successGcc15Instances
       "25fv47\;3148\; 5.5018458883\;"
       "80bau3b\;3705\; 9.8722419241\;"
@@ -480,7 +480,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
              NOT IS_32)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
         CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15 AND
-        NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
       add_instancetests(successGcc15Instances "Optimal")
     else()
       add_instancetests(successInstances "Optimal")
