@@ -68,3 +68,48 @@ jobs:
           source /opt/intel/oneapi/setvars.sh
           export SYCL_DEVICE_FILTER=opencl.cpu
           ctest --test-dir build --output-on-failure --timeout 300 
+
+  build_windows:
+    runs-on: windows-2022
+    env:
+      # Installer URL and components follow https://github.com/oneapi-src/oneapi-ci
+      WINDOWS_TOOLKIT_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/728c4418-1b40-47a9-ad51-31530fb27c94/intel-oneapi-toolkit-2026.2.0.661_offline.exe
+      WINDOWS_CPP_COMPONENTS: intel.oneapi.win.cpp-dpcpp-common
+      ONEAPI_ROOT: C:\Program Files (x86)\Intel\oneAPI
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Cache oneAPI install
+        id: cache-install
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\Program Files (x86)\Intel\oneAPI\setvars-vcvarsall.bat
+            C:\Program Files (x86)\Intel\oneAPI\compiler
+          key: oneapi-${{ env.WINDOWS_TOOLKIT_URL }}-${{ env.WINDOWS_CPP_COMPONENTS }}
+
+      - name: Install oneAPI C++ compiler
+        if: steps.cache-install.outputs.cache-hit != 'true'
+        shell: cmd
+        run: |
+          curl.exe --output %TEMP%\oneapi.exe --url %WINDOWS_TOOLKIT_URL% --retry 5 --retry-delay 5 || exit /b 1
+          start /b /wait %TEMP%\oneapi.exe -s -x -f oneapi_extracted --log extract.log
+          del %TEMP%\oneapi.exe
+          oneapi_extracted\bootstrapper.exe -s --action install --components=%WINDOWS_CPP_COMPONENTS% --eula=accept -p=NEED_VS2017_INTEGRATION=0 -p=NEED_VS2019_INTEGRATION=0 -p=NEED_VS2022_INTEGRATION=0 --log-dir=. || exit /b 1
+          rd /s/q oneapi_extracted
+
+      - name: Configure, build and test
+        shell: cmd
+        run: |
+          call "%ONEAPI_ROOT%\setvars-vcvarsall.bat" vs2022 || exit /b 1
+          for /f "tokens=* usebackq" %%f in (`dir /b "%ONEAPI_ROOT%\compiler\" ^| findstr /V latest ^| sort`) do @set "LATEST_VERSION=%%f"
+          call "%ONEAPI_ROOT%\compiler\%LATEST_VERSION%\env\vars.bat" || exit /b 1
+          icx --version || exit /b 1
+          cmake -S . -B build -G Ninja ^
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
+            -DCMAKE_C_COMPILER=icx ^
+            -DCMAKE_CXX_COMPILER=icx ^
+            -DALL_TESTS=ON || exit /b 1
+          cmake --build build --parallel || exit /b 1
+          ctest --test-dir build --output-on-failure --timeout 300 || exit /b 1
