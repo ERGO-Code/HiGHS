@@ -32,7 +32,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.15.1
+        run: dotnet pack -c Release /p:Version=1.16.0
 
       - name: Add local feed
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
@@ -76,7 +76,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.15.1
+        run: dotnet pack -c Release /p:Version=1.16.0
 
       - name: Add local feed
         run: dotnet nuget add source /__w/HiGHS/HiGHS/nugets
@@ -95,4 +95,4 @@ jobs:
           dotnet add package Highs.Native -s /__w/HiGHS/HiGHS/nugets
           dotnet run
 
- 
+
