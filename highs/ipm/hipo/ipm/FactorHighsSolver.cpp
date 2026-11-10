@@ -29,9 +29,7 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
       control_{control} {
   FH_.setBlockSize(options.block_size);
   FH_.setLogger(&logger);
-  FH_.setStopCheck([&control]() { return control.timeLimitReached(); });
-
-  // Stop the ordering if the time limit is reached. Only the time limit is
+  // Stop the ordering and factorisation if the time limit is reached. Only the time limit is
   // checked, since the callback may run on a worker thread and must not throw.
   FH_.setStopCallback(
       [](void* data) -> int {

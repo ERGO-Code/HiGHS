@@ -143,8 +143,6 @@ class FHsolver {
 
   // Set block size for dense linear algebra
   void setBlockSize(Int nb);
-  // Factorisation returns failure as soon as this returns true
-  void setStopCheck(std::function<bool()> should_stop);
 
   // Set pivoting optins, on by default.
   // It uses a static variation of Bunch-Kaufman pivoting, with potential
@@ -161,10 +159,10 @@ class FHsolver {
   void setLogger(const Logger* logger = nullptr, bool use_printf = false);
   const Logger* getLogger() const { return logger_; }
 
-  // Pass a callback that is checked periodically during reorderMetis and
-  // reorderAmd; if it returns nonzero, the ordering stops and the reorder
-  // function returns an error.
-  // data is passed to the callback. Pass nullptr to remove the callback.
+  // Pass a callback that is checked periodically during reorderMetis,
+  // reorderAmd and the factorisation; if it returns nonzero, the computation
+  // stops and returns an error. data is passed to the callback. Pass nullptr
+  // to remove the callback.
   void setStopCallback(StopCallback should_stop, void* data = nullptr);
 
   // Compute number of positive, negative and zero pivots, using tol as

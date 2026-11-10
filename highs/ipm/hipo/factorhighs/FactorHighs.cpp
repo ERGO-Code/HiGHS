@@ -48,10 +48,6 @@ Int FHsolver::backwardSolve(double* x, Int k) const {
 
 void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
 
-void FHsolver::setStopCheck(std::function<bool()> should_stop) {
-  options_.should_stop = std::move(should_stop);
-}
-
 void FHsolver::setBlockSize(Int nb) {
   if (nb > 0) options_.nb = nb;
 }
@@ -94,6 +90,12 @@ void FHsolver::setLogger(const Logger* logger, bool use_printf) {
 void FHsolver::setStopCallback(StopCallback should_stop, void* data) {
   should_stop_ = should_stop;
   stop_data_ = data;
+  if (should_stop)
+    options_.should_stop = [should_stop, data]() {
+      return should_stop(data) != 0;
+    };
+  else
+    options_.should_stop = nullptr;
 }
 
 void FHsolver::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
