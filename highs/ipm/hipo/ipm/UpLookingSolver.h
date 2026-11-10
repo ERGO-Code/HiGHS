@@ -1,6 +1,7 @@
 #ifndef HIPO_UP_LOOKING_SOLVER_H
 #define HIPO_UP_LOOKING_SOLVER_H
 
+#include "Control.h"
 #include "Info.h"
 #include "IpmData.h"
 #include "KktMatrix.h"
@@ -41,16 +42,18 @@ class UpLookingSolver : public LinearSolver {
   IpmData& data_;
   const Regularisation& regul_;
   const Model& model_;
+  const Control& control_;
 
   void etreeAndCounts(const std::vector<Int>& ptr, const std::vector<Int>& rows,
                       std::vector<Int64>& colcount);
-  void factor(const std::vector<Int>& ptr, const std::vector<Int>& rows,
-              const std::vector<double>& val);
+  Int factor(const std::vector<Int>& ptr, const std::vector<Int>& rows,
+             const std::vector<double>& val);
   void solve(std::vector<double>& x);
 
  public:
   UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
-                  const Regularisation& regul, const Model& model);
+                  const Regularisation& regul, const Model& model,
+                  const Control& control);
 
   Int factorAS(const std::vector<double>& scaling) override;
   Int factorNE(const std::vector<double>& scaling) override;

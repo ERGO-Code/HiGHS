@@ -413,7 +413,9 @@ isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
     }
   }
 
-  if (terminate) {
+  // If the time limit is reached, the failure may be due to the factorisation
+  // being interrupted, so don't try again with another factorisation.
+  if (terminate && !control_.timeLimitReached()) {
     if (switchToMultifrontal()) {
       // try FactorHighs factorisation before giving up
       it_->data.back().factorisation_used = LS_->type();
@@ -1277,13 +1279,7 @@ isFailure Solver::initialiseLinearSolver() {
     return true;
   }
   info_.error = LS_->setup();
-  if (info_.error) {
-    if (control_.timeLimitReached()) {
-      info_.error = kOk;
-      setStatus(kStatusTimeLimit);
-    }
-    return true;
-  }
+  if (info_.error) return true;
 
   LS_->clear();
 
@@ -1307,7 +1303,8 @@ isFailure Solver::initialiseLinearSolver() {
     do_switch = should_switch_to_uplooking;
 
   if (do_switch) {
-    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
+    LS_.reset(
+        new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_, control_));
     if (!LS_) {
       info_.error = kErrorFailedAllocation;
       return true;
@@ -1594,7 +1591,16 @@ Status Solver::getStatus() const {
 
 void Solver::finaliseStatus() {
   info_.status = getStatus();
-  if (info_.error) info_.status = kStatusError;
+  if (info_.error) {
+    // An error after the time limit may be due to an interrupted analyse or
+    // factorisation, so report the time limit instead.
+    if (control_.timeLimitReached()) {
+      info_.error = kOk;
+      info_.status = kStatusTimeLimit;
+    } else {
+      info_.status = kStatusError;
+    }
+  }
   if (info_.status == kStatusNotSet) info_.status = kStatusMaxIter;
 }
 

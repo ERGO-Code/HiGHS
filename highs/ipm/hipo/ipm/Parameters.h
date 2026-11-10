@@ -45,6 +45,9 @@ const double kUplookNzPerColUpper = 25;
 const double kUplookSpopsRatioLower = 20;
 const double kUplookSpopsRatioUpper = 100;
 
+// parameters for uplooking factorisation
+const Int64 kUplookTimeCheckWork = 1e7;
+
 // parameters for skipping AS or NE
 const double kSkipSystemNzBoundsRatio = 50.0;
 
