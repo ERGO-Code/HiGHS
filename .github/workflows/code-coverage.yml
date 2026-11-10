@@ -45,7 +45,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
-          lcov -d . -c -o cov.info --ignore-errors empty
+          lcov -d . -c -o cov.info --ignore-errors empty,inconsistent
           lcov --remove cov.info "/usr/include/*" -o cov.info
           lcov --remove cov.info "/usr/lib/*" -o cov.info
           lcov --remove cov.info "extern/pdqsort/*" -o cov.info
