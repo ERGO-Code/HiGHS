@@ -343,7 +343,7 @@ Int FactorHighsSolver::chooseNla() {
     else
       status = kErrorAnalyse;
 
-    logger_.printe("Both NE and AS failed analyse phase\n");
+    logger_.printw("Both NE and AS failed analyse phase\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
@@ -561,10 +561,10 @@ Int FactorHighsSolver::setNla() {
     Int status = kkt_.buildASstructure();
     if (!status) status = analyseAS(kkt_.S);
     if (status == kErrorOverflow) {
-      logger_.printe("AS requested, integer overflow\n");
+      logger_.printw("AS requested, integer overflow\n");
       return kErrorOverflow;
     } else if (status) {
-      logger_.printe("AS requested, failed analyse phase\n");
+      logger_.printw("AS requested, failed analyse phase\n");
       return kErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "AS requested\n";
@@ -573,10 +573,10 @@ Int FactorHighsSolver::setNla() {
     Int status = kkt_.buildNEstructure();
     if (!status) status = analyseNE(kkt_.S);
     if (status == kErrorOverflow) {
-      logger_.printe("NE requested, integer overflow\n");
+      logger_.printw("NE requested, integer overflow\n");
       return kErrorOverflow;
     } else if (status) {
-      logger_.printe("NE requested, failed analyse phase\n");
+      logger_.printw("NE requested, failed analyse phase\n");
       return kErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "NE requested\n";
