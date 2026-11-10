@@ -105,8 +105,10 @@ struct amd : extras_feature<0> {
   }
 
   static int order(amd_int n, const amd_int Ap[], const amd_int Ai[],
-                   amd_int P[], double Control[], double Info[]) {
-    return impl::template fn<1>()(n, Ap, Ai, P, Control, Info);
+                   amd_int P[], double Control[], double Info[],
+                   Highs_amd_ShouldStop should_stop, void* stop_data) {
+    return impl::template fn<1>()(n, Ap, Ai, P, Control, Info, should_stop,
+                                  stop_data);
   }
 };
 

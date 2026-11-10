@@ -183,7 +183,8 @@ Int FHsolver::reorderAmd(Int n, Int nz, const Int* rows, const Int* ptr,
   double info[AMD_INFO];
 
   Int status =
-      HighsExtras::amd::order(n, full_ptr, full_rows, perm, control, info);
+      HighsExtras::amd::order(n, full_ptr, full_rows, perm, control, info,
+                              should_stop_, stop_data_);
 
   if (options_.one_indexing)
     for (Int i = 0; i < n; ++i) perm[i]++;
