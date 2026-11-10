@@ -332,8 +332,8 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             "avgas\;-7.7499999\;"
             "blending\;-3.1999999\;"
             "chip\;-8.9999999\;"
-            "e226\;-1.163893\;"
-            "scrs8\; 9.0429(69|70)\;"
+            "e226\;-1.16389\;"
+            "scrs8\; 9.0429\;"
             "sctest\; 5.75000000\;"
             "shell\; 1.2088253\;"
             "stair\;-2.512669\;"
@@ -438,9 +438,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
           if(${solutionstatus} STREQUAL "Optimal")
               if(${setting} STREQUAL "--presolve=off" AND 
                 (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND
-                # GCC 15 floating-point codegen changes simplex iteration counts
-                (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-                      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)) AND
                 (NOT OPT_LEVEL_CHANGED) AND
                 (CMAKE_SIZEOF_VOID_P EQUAL 8))
                   set_tests_properties (${name}${setting} PROPERTIES
