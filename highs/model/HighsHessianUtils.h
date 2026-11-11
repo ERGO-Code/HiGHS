@@ -22,7 +22,8 @@
 
 using std::vector;
 
-HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options);
+HighsStatus assessHessian(HighsHessian& hessian, const HighsOptions& options,
+                          const std::string* col_names = nullptr);
 void completeHessianDiagonal(const HighsOptions& options,
                              HighsHessian& hessian);
 bool okHessianDiagonal(const HighsOptions& options, HighsHessian& hessian,

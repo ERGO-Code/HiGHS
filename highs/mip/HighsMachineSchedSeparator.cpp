@@ -258,6 +258,7 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
   vals.resize(neighbours.size());
   inds.resize(neighbours.size());
   rhss.resize(neighbours.size());
+  std::vector<HighsInt> binColCutPositions(mipsolver.numCol(), -1);
   for (size_t i = 0; i != neighbours.size(); ++i) {
     vals[i].reserve(neighbours.size());
     inds[i].reserve(neighbours.size());
@@ -268,11 +269,32 @@ bool HighsMachineSchedSeparator::findSingleMachineScheduleClique(
       HighsInt neighbour = neighbours[j];
       const auto toArc = adjacency.find({neighbour, col});
       assert(toArc != nullptr);
-      inds[i].emplace_back(std::get<1>(*toArc));
-      vals[i].emplace_back(processingTimes[j]);
+      const HighsInt binCol = std::get<1>(*toArc);
+      double val = processingTimes[j];
       if (std::get<2>(*toArc) == ArcType::kImplicationWhenZero) {
-        rhss[i] -= vals[i].back();
-        vals[i].back() *= -1;
+        rhss[i] -= val;
+        val = -val;
+      }
+      HighsInt& pos = binColCutPositions[binCol];
+      if (pos == -1) {
+        pos = static_cast<HighsInt>(inds[i].size());
+        inds[i].emplace_back(binCol);
+        vals[i].emplace_back(val);
+      } else {
+        vals[i][pos] += val;
+      }
+    }
+    // Drop any potential zeros (if the same binary sets the order of many jobs)
+    size_t j = 0;
+    while (j != inds[i].size()) {
+      binColCutPositions[inds[i][j]] = -1;
+      if (vals[i][j] == 0.0) {
+        std::swap(inds[i][j], inds[i].back());
+        std::swap(vals[i][j], vals[i].back());
+        inds[i].pop_back();
+        vals[i].pop_back();
+      } else {
+        ++j;
       }
     }
     // Put the job start time on the LHS

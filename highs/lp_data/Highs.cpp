@@ -1188,9 +1188,15 @@ HighsStatus Highs::presolve() {
     }
     default: {
       assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory ||
-             model_presolve_status_ == HighsPresolveStatus::kException);
-      setHighsModelStatusAndClearSolutionAndBasis(
-          HighsModelStatus::kPresolveError);
+             model_presolve_status_ == HighsPresolveStatus::kException ||
+             model_presolve_status_ == HighsPresolveStatus::kMatrixValueError);
+      HighsModelStatus model_status;
+      if (model_presolve_status_ == HighsPresolveStatus::kOutOfMemory) {
+        model_status = HighsModelStatus::kMemoryLimit;
+      } else {
+        model_status = HighsModelStatus::kPresolveError;
+      }
+      setHighsModelStatusAndClearSolutionAndBasis(model_status);
       return_status = HighsStatus::kError;
     }
   }
@@ -1803,8 +1809,9 @@ HighsStatus Highs::calledOptimizeModel() {
           // ToDo. Analyse the extent of small value creation. See #1187
           assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
         } else {
-          reduced_lp.a_matrix_.assessSmallValues(options_.log_options,
-                                                 options_.small_matrix_value);
+          // Just analyse extreme values: none is changed
+          reduced_lp.a_matrix_.assessExtremeValues("of presolved problem ",
+                                                   options_);
         }
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
@@ -1945,13 +1952,18 @@ HighsStatus Highs::calledOptimizeModel() {
             HighsModelStatus::kSolveError);
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
+      case HighsPresolveStatus::kMatrixValueError: {
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kPresolveError);
+        return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+      }
       default: {
         assert(model_presolve_status_ == HighsPresolveStatus::kNullError);
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kPresolveError);
         highsLogDev(log_options, HighsLogType::kError,
-                    "Presolve returned status %d\n",
-                    (int)model_presolve_status_);
+                    "Presolve returned status %s\n",
+                    presolveStatusToString(model_presolve_status_).c_str());
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
     }
@@ -2696,14 +2708,15 @@ HighsStatus Highs::getKappa(double& kappa, const bool exact,
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   this->logHeader();
   HighsStatus return_status = HighsStatus::kOk;
+  HighsLp& lp = this->model_.lp_;
   // Determine whether a new solution will be defined. If so,
   // the old solution and any basis are cleared
   const bool new_primal_solution =
-      model_.lp_.num_col_ > 0 &&
-      solution.col_value.size() >= static_cast<size_t>(model_.lp_.num_col_);
+      lp.num_col_ > 0 &&
+      solution.col_value.size() >= static_cast<size_t>(lp.num_col_);
   const bool new_dual_solution =
-      model_.lp_.num_row_ > 0 &&
-      solution.row_dual.size() >= static_cast<size_t>(model_.lp_.num_row_);
+      lp.num_row_ > 0 &&
+      solution.row_dual.size() >= static_cast<size_t>(lp.num_row_);
   const bool new_solution = new_primal_solution || new_dual_solution;
 
   if (new_solution) {
@@ -2717,36 +2730,45 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
         "size of col_value and row_dual vectors (%d, %d) and number "
         "of columns and rows in the model (%d, %d)\n",
         int(solution.col_value.size()), int(solution.row_dual.size()),
-        int(model_.lp_.num_col_), int(model_.lp_.num_row_));
-    return_status = HighsStatus::kError;
+        int(lp.num_col_), int(lp.num_row_));
+    return HighsStatus::kError;
   }
 
+  HighsSolution modifiable_solution = solution;
   if (new_primal_solution) {
-    solution_.col_value = solution.col_value;
-    if (model_.lp_.num_row_ > 0) {
+    // There should be no error return from assessUserColValues, since
+    // this corresponds to index illegalities, but use it to warn about
+    // infeasibilities in value
+    return_status = assessUserColValues(lp, options_, lp.num_col_, nullptr,
+                                        solution.col_value.data());
+    assert(return_status != HighsStatus::kError);
+    if (lp.num_row_ > 0) {
       // Worth computing the row values
-      solution_.row_value.resize(model_.lp_.num_row_);
+      modifiable_solution.row_value.resize(lp.num_row_);
       // Matrix must be column-wise
-      model_.lp_.a_matrix_.ensureColwise();
+      lp.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateRowValuesQuad(model_.lp_, solution_),
+          options_.log_options, calculateRowValuesQuad(lp, modifiable_solution),
           return_status, "calculateRowValuesQuad");
       if (return_status == HighsStatus::kError) return return_status;
     }
+    solution_.col_value = modifiable_solution.col_value;
+    solution_.row_value = modifiable_solution.row_value;
     solution_.value_valid = true;
   }
   if (new_dual_solution) {
-    solution_.row_dual = solution.row_dual;
-    if (model_.lp_.num_col_ > 0) {
+    if (lp.num_col_ > 0) {
       // Worth computing the column duals
-      solution_.col_dual.resize(model_.lp_.num_col_);
+      modifiable_solution.col_dual.resize(lp.num_col_);
       // Matrix must be column-wise
-      model_.lp_.a_matrix_.ensureColwise();
+      lp.a_matrix_.ensureColwise();
       return_status = interpretCallStatus(
-          options_.log_options, calculateColDualsQuad(model_.lp_, solution_),
+          options_.log_options, calculateColDualsQuad(lp, modifiable_solution),
           return_status, "calculateColDuals");
       if (return_status == HighsStatus::kError) return return_status;
     }
+    solution_.col_dual = modifiable_solution.col_dual;
+    solution_.row_dual = modifiable_solution.row_dual;
     solution_.dual_valid = true;
   }
   return returnFromHighs(return_status);
@@ -2782,74 +2804,21 @@ HighsStatus Highs::getColOrRowName(const HighsLp& lp, const bool is_col,
 HighsStatus Highs::setSolution(const HighsInt num_entries,
                                const HighsInt* index, const double* value) {
   this->logHeader();
-  const bool packed = index != nullptr;
-  if (packed) {
-    const bool ok_num_entries = num_entries >= 0;
-    if (!ok_num_entries) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: Packed user solution has %d < 0 entries\n",
-                   int(num_entries));
-      assert(ok_num_entries);
-      return HighsStatus::kError;
-    }
-  } else {
-    const bool ok_num_entries = num_entries == model_.lp_.num_col_;
-    if (!ok_num_entries) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: Packed user solution has %d != %d entries\n",
-                   int(num_entries), int(model_.lp_.num_col_));
-      assert(ok_num_entries);
-      return HighsStatus::kError;
-    }
-  }
-  HighsStatus return_status = HighsStatus::kOk;
-  if (model_.lp_.num_col_ == 0) return return_status;
-  // Warn about duplicates in index
-  HighsInt num_duplicates = 0;
-  std::vector<HighsBool> is_set;
-  is_set.assign(model_.lp_.num_col_, false);
-  const HighsInt to_ix = packed ? num_entries : model_.lp_.num_col_;
-  for (HighsInt iX = 0; iX < to_ix; iX++) {
-    HighsInt iCol = packed ? index[iX] : iX;
-    if (iCol < 0 || iCol >= model_.lp_.num_col_) {
-      assert(packed);
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: User solution index %d has value %d out of "
-                   "range [0, %d)\n",
-                   int(iX), int(iCol), int(model_.lp_.num_col_));
-      return HighsStatus::kError;
-    } else if (value[iX] < model_.lp_.col_lower_[iCol] -
-                               options_.primal_feasibility_tolerance ||
-               model_.lp_.col_upper_[iCol] +
-                       options_.primal_feasibility_tolerance <
-                   value[iX]) {
-      highsLogUser(options_.log_options, HighsLogType::kError,
-                   "setSolution: User solution value %d of %g is infeasible "
-                   "for bounds [%g, %g]\n",
-                   int(iX), value[iX], model_.lp_.col_lower_[iCol],
-                   model_.lp_.col_upper_[iCol]);
-      return HighsStatus::kError;
-    }
-    if (is_set[iCol]) num_duplicates++;
-    is_set[iCol] = true;
-  }
-  if (num_duplicates > 0) {
-    assert(packed);
-    highsLogUser(options_.log_options, HighsLogType::kWarning,
-                 "setSolution: User set of indices has %d duplicate%s: last "
-                 "value used\n",
-                 int(num_duplicates), num_duplicates == 1 ? "" : "s");
-    return_status = HighsStatus::kWarning;
-  }
+  HighsLp& lp = this->model_.lp_;
+  if (lp.num_col_ == 0) return HighsStatus::kOk;
+  // Check for illegalities, and warn about duplicates in index, but
+  // don't check for feasibility of values, as this will be done when
+  // setSolution is called below.
+  const bool perform_feasibility_check = false;
+  HighsStatus return_status = assessUserColValues(
+      lp, options_, num_entries, index, value, perform_feasibility_check);
+  if (return_status == HighsStatus::kError) return return_status;
 
   // Clear the solution, indicate the values not determined by the
   // user, and insert the values determined by the user
   HighsSolution new_solution;
-  new_solution.col_value.assign(model_.lp_.num_col_, kHighsUndefined);
-  for (HighsInt iX = 0; iX < to_ix; iX++) {
-    HighsInt iCol = packed ? index[iX] : iX;
-    new_solution.col_value[iCol] = value[iX];
-  }
+  assignUserColValues(lp.num_col_, new_solution.col_value, num_entries, index,
+                      value);
   return interpretCallStatus(options_.log_options, setSolution(new_solution),
                              return_status, "setSolution");
 }
@@ -2968,13 +2937,14 @@ HighsStatus Highs::stopCallback(const HighsCallbackType callback_type) {
 HighsStatus Highs::setBasis(const HighsBasis& basis,
                             const std::string& origin) {
   this->logHeader();
+  HighsLp& lp = this->model_.lp_;
   if (basis.alien) {
     // An alien basis needs to be checked properly, since it may be
     // singular, or even incomplete.
-    if (model_.lp_.num_row_ == 0) {
+    if (lp.num_row_ == 0) {
       // Special case where there are no rows, so no singularity
       // issues. All columns with basic status must be set nonbasic
-      for (HighsInt iCol = 0; iCol < model_.lp_.num_col_; iCol++)
+      for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
         basis_.col_status[iCol] =
             basis.col_status[iCol] == HighsBasisStatus::kBasic
                 ? HighsBasisStatus::kNonbasic
@@ -2982,14 +2952,14 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       basis_.alien = false;
     } else {
       // Check whether a new basis can be defined
-      if (!isBasisRightSize(model_.lp_, basis)) {
+      if (!isBasisRightSize(lp, basis)) {
         highsLogUser(
             options_.log_options, HighsLogType::kError,
             "setBasis: User basis is rejected due to mismatch between "
             "size of column and row status vectors (%d, %d) and number "
             "of columns and rows in the model (%d, %d)\n",
             int(basis_.col_status.size()), int(basis_.row_status.size()),
-            int(model_.lp_.num_col_), int(model_.lp_.num_row_));
+            int(lp.num_col_), int(lp.num_row_));
         return HighsStatus::kError;
       }
       HighsBasis modifiable_basis = basis;
@@ -3001,9 +2971,9 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
       const bool already_profiling = this->profiling_;
       if (!already_profiling)
         this->initializeSingleThreadedProfiling(&profiling);
-      HighsLpSolverObject solver_object(model_.lp_, modifiable_basis, solution_,
-                                        info_, ekk_instance_, callback_,
-                                        options_, timer_);
+      HighsLpSolverObject solver_object(lp, modifiable_basis, solution_, info_,
+                                        ekk_instance_, callback_, options_,
+                                        timer_);
       solver_object.setProfiling(this->profiling_);
       HighsStatus return_status = formSimplexLpBasisAndFactor(solver_object);
       if (!already_profiling) this->clearProfiling();
@@ -3013,7 +2983,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis,
     }
   } else {
     // Check the user-supplied basis
-    if (!isBasisConsistent(model_.lp_, basis)) {
+    if (!isBasisConsistent(lp, basis)) {
       highsLogUser(options_.log_options, HighsLogType::kError,
                    "setBasis: invalid basis\n");
       return HighsStatus::kError;
@@ -3966,6 +3936,8 @@ std::string Highs::presolveStatusToString(
       return "Memory allocation error";
     case HighsPresolveStatus::kException:
       return "Exception error";
+    case HighsPresolveStatus::kMatrixValueError:
+      return "Matrix value error";
     default:
       assert(1 == 0);
       return "Unrecognised presolve status";
@@ -4301,15 +4273,16 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
       const double lower = lp.col_lower_[iCol];
       const double upper = lp.col_upper_[iCol];
       const HighsVarType type = lp.integrality_[iCol];
-      double col_infeasibility = 0;
+      double bound_infeasibility = 0;
       double integer_infeasibility = 0;
       assessColPrimalSolution(assess_as_mip, options_, primal, lower, upper,
-                              type, col_infeasibility, integer_infeasibility);
-      if (integer_infeasibility > options_.mip_feasibility_tolerance) {
+                              type, bound_infeasibility, integer_infeasibility);
+      if (integer_infeasibility > options_.mip_feasibility_tolerance ||
+          bound_infeasibility > options_.mip_feasibility_tolerance) {
         num_unfixed_discrete_variable++;
       } else {
-        // Variable is integer feasible, so fix it at this value and
-        // remove its integrality
+        // Variable is integer and bound feasible, so fix it at this
+        // value and remove its integrality
         num_fixed_discrete_variable++;
         lp.col_lower_[iCol] = primal;
         lp.col_upper_[iCol] = primal;
@@ -5194,6 +5167,11 @@ void Highs::resetGlobalScheduler(bool blocking) {
   // Deprecated in favour of resetThreadScheduler().
   // Cannot call deprecationMessage here.
   resetThreadScheduler(blocking);
+}
+
+HighsStatus Highs::initializeExtras(const std::string& directory,
+                                    bool search_if_empty) {
+  return HighsExtras::initialize(directory, search_if_empty);
 }
 
 void Highs::initializeSingleThreadedProfiling(HighsProfiling* profiling) {

@@ -133,11 +133,27 @@ void HighsMipSolver::run() {
   if (profiling_->mip_ && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
-  // Identify whether time limit has been reached (in presolve)
-  if (modelstatus_ == HighsModelStatus::kNotset &&
-      timer_.read() >= options_mip_->time_limit)
-    modelstatus_ = HighsModelStatus::kTimeLimit;
-
+  if (modelstatus_ == HighsModelStatus::kNotset) {
+    // Time limit has been reached (in presolve)
+    if (mipdata_->presolve_status == HighsPresolveStatus::kTimeout
+        // I think this is a legacy timeout check dataing from before there was
+        // a timeout in presolve
+        //
+        // || timer_.read() >= options_mip_->time_limit
+    ) {
+      modelstatus_ = HighsModelStatus::kTimeLimit;
+    } else if (mipdata_->presolve_status == HighsPresolveStatus::kOutOfMemory ||
+               mipdata_->presolve_status == HighsPresolveStatus::kException ||
+               mipdata_->presolve_status ==
+                   HighsPresolveStatus::kMatrixValueError) {
+      // Handle failures in presolve
+      if (mipdata_->presolve_status == HighsPresolveStatus::kOutOfMemory) {
+        modelstatus_ = HighsModelStatus::kMemoryLimit;
+      } else {
+        modelstatus_ = HighsModelStatus::kPresolveError;
+      }
+    }
+  }
   if (modelstatus_ != HighsModelStatus::kNotset) {
     HighsModelStatus presolveStatus = modelstatus_;
     if (presolveStatus == HighsModelStatus::kInfeasible &&
@@ -1305,7 +1321,9 @@ void HighsMipSolver::solvingReport(const std::string& solutionstatus) const {
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Status            %s\n",
                utilModelStatusToString(modelstatus_).c_str());
-  if (modelstatus_ != HighsModelStatus::kSolveError) {
+  if (modelstatus_ != HighsModelStatus::kSolveError &&
+      modelstatus_ != HighsModelStatus::kMemoryLimit &&
+      modelstatus_ != HighsModelStatus::kPresolveError) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "  Primal bound      %.12g\n"
                  "  Dual bound        %.12g\n"
