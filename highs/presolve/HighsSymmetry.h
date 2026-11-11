@@ -20,7 +20,9 @@
 #include "lp_data/HighsLp.h"
 #include "util/HighsDisjointSets.h"
 #include "util/HighsHash.h"
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
+
+class HighsTimer;
 
 /// class that is responsible for assigning distinct colors for each distinct
 /// double value
@@ -84,7 +86,7 @@ struct HighsOrbitopeMatrix {
   };
   HighsInt rowLength;
   HighsInt numRows;
-  HighsInt numSetPackingRows;
+  HighsInt numSetPackingRows = 0;
   HighsHashTable<HighsInt, HighsInt> columnToRow;
   std::vector<RowPackingStatus> rowIsSetPacking;
   std::vector<HighsInt> matrix;
@@ -117,6 +119,8 @@ struct HighsOrbitopeMatrix {
 
   HighsInt orbitalFixingForPackingOrbitope(const std::vector<HighsInt>& rows,
                                            HighsDomain& domain) const;
+
+  void detectSetPackingRows(HighsCliqueTable& cliquetable, HighsInt cliqueVal);
 };
 
 struct HighsSymmetries {
@@ -182,7 +186,7 @@ class HighsSymmetryDetection {
   std::vector<HighsInt> orbitSize;
 
   std::vector<HighsInt> cellCreationStack;
-  std::vector<std::uint8_t> cellInRefinementQueue;
+  std::vector<HighsBool> cellInRefinementQueue;
   std::vector<HighsInt> refinementQueue;
   std::vector<HighsInt*> distinguishCands;
   std::vector<HighsInt> automorphisms;
@@ -195,7 +199,7 @@ class HighsSymmetryDetection {
   std::vector<HighsInt> firstLeavePartition;
   std::vector<HighsInt> bestLeavePartition;
 
-  HighsHashTable<HighsInt, u32> vertexHash;
+  HighsHashTable<HighsInt, u64> vertexHash;
   HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>> firstLeaveGraph;
   HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>> bestLeaveGraph;
 
@@ -239,10 +243,11 @@ class HighsSymmetryDetection {
   HighsInt getOrbit(HighsInt vertex);
 
   void initializeHashValues();
+  void clearRefinementState();
   bool isomorphicToFirstLeave();
   bool partitionRefinement();
   bool checkStoredAutomorphism(HighsInt vertex) const;
-  u32 getVertexHash(HighsInt vertex);
+  u64 getVertexHash(HighsInt vertex);
   HighsInt selectTargetCell() const;
 
   bool updateCellMembership(HighsInt vertex, HighsInt cell,
@@ -295,12 +300,17 @@ class HighsSymmetryDetection {
   bool isFullOrbitope(const ComponentData& componentData, HighsInt component,
                       HighsSymmetries& symmetries);
 
+  bool recordAutomorphism(const std::vector<HighsInt>& leavePartition,
+                          HighsSymmetries& symmetries, HighsInt maxPerms,
+                          HighsInt pathDepth, HighsInt& backtrackDepth);
+
  public:
   void loadModelAsGraph(const HighsLp& model, double epsilon);
 
   bool initializeDetection();
 
-  void run(HighsSymmetries& symmetries);
+  void run(HighsSymmetries& symmetries, const HighsTimer* timer = nullptr,
+           double timeLimit = kHighsInf);
 };
 
 #endif

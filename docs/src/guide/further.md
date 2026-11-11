@@ -8,12 +8,18 @@ cases, the time saved by solving the reduced model is very much
 greater than the time taken to perform presolve. Once the presolved
 model is solved, a postsolve procedure (of minimal computational cost)
 deduces the optimal solution to the original model. Hence presolve is
-performed by default. The only exception occus when there is a valid
+performed by default. The only exception occurs when there is a valid
 basis for an LP and the simplex solver is used. In this case the
 original LP is solved, starting from this basis. In cases where the
 use of presolve is found not to be advantageous, its use can be
 switched off by setting the [presolve](@ref option-presolve) option to
 "off".
+
+HiGHS has four presolve modes for LPs, selected by setting the value of the [presolve\_mode](@ref option-presolve-mode) option
+* Default (`presolve_mode=0`): HiGHS chooses the appropriate presolve rules for the problem to be solved
+* Initial sweep (`presolve_mode=1`): This mode removes variables that are fixed or have no coefficients in the constraint matrix, and constraints that have no coefficients in the constraint matrix, a single coefficient in the constraint matrix, or are satisfied by virtue of bounds on the constraint activity corresponding to bounds on the variables.
+* Light (`presolve_mode=2`): This mode applies the "cheap" presolve rules
+* Full (`presolve_mode=3`): This mode applies all presolve rules
 
 HiGHS has a method [presolve](@ref Presolve/postsolve) that performs presolve on
 the incumbent model, allowing the presolved model to be extracted or
@@ -139,11 +145,11 @@ lexicographic optimization according to the truth of the
 linear objective is represented by the following data, held in the
 [HighsLinearObjective](@ref HighsLinearObjective) structure
 
-- weight: Scalar of type double - The weight of this objective when blending 
+- weight: Scalar of type double - The weight of this objective when blending
 - offset: Scalar of type double - The offset of this objective
 - coefficients: Vector of type double - The coefficients of this objective
-- abs\_tolerance: Scalar of type double - The absolute tolerance on this objective when performing lexicographic optimization 
-- rel\_tolerance: Scalar of type double - The relative tolerance on this objective when performing lexicographic optimization 
+- abs\_tolerance: Scalar of type double - The absolute tolerance on this objective when performing lexicographic optimization
+- rel\_tolerance: Scalar of type double - The relative tolerance on this objective when performing lexicographic optimization
 - priority: Scalar of type HighsInt - The priority of this objective when performing lexicographic optimization
 
 ### Methods
@@ -174,7 +180,7 @@ priority values must be distinct_.
 
 * Minimize/maximize with respect to the linear objective of highest priority value, according to whether its `weight` is positive/negative
 
-* Add a constraint to the model so that the value of the linear objective of highest priority satsifies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
+* Add a constraint to the model so that the value of the linear objective of highest priority satisfies a bound given by the values of `abs_tolerance` and/or `rel_tolerance`.
     + If the objective was minimized to a value ``f^*\ge0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+abs\_tolerance,~f^*\times[1+rel\_tolerance]).``
 
     + If the objective was minimized to a value ``f^*<0``, then the constraint ensures that the this objective value is no greater than ``\min(f^*+abs\_tolerance,~f^*\times[1-rel\_tolerance]).``
@@ -189,5 +195,3 @@ Note
 
 * Negative values of `abs_tolerance` and `rel_tolerance` will be ignored. This is a convenient way of "switching off" a bounding technique that is not of interest.
 * When the model is continuous, no dual information will be returned if there is more than one linear objective.
-
-

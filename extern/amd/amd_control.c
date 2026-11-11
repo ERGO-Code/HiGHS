@@ -66,5 +66,5 @@ void Highs_amd_control
 	HIGHS_ORDERING_PRINT ("    aggressive absorption:  no\n") ;
     }
 
-    HIGHS_ORDERING_PRINT ("    size of AMD integer: %lu\n\n", sizeof (amd_int)) ;
+    HIGHS_ORDERING_PRINT ("    size of AMD integer: %zu\n\n", sizeof (amd_int)) ;
 }

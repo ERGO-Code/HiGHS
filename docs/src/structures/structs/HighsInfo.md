@@ -38,6 +38,10 @@ Scalar information about a solved model is communicated via an instance of the H
 - Comparison with [BasisValidity](@ref) gives the status of any basis information
 - Type: integer
 
+## centring\_status
+- Comparison with [CentringStatus](@ref) gives the outcome of any centring by the interior point solver when the `run_centring` option is true
+- Type: integer
+
 ## objective\_function\_value
 - The optimal value of the objective function
 - Type: double

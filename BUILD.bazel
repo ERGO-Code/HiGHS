@@ -39,10 +39,12 @@ cuda_library(
     ]),
     hdrs = glob([
         "highs/pdlp/cupdlp/cuda/*.cuh",
+        "highs/pdlp/hipdlp/*.hpp",
     ]),
     defines = ["CUPDLP_GPU"],
     target_compatible_with = requires_cuda(),
     deps = [
+        ":config",
         "@local_cuda//:cublas",
         "@local_cuda//:cusparse",
     ],
@@ -56,7 +58,6 @@ cc_library(
         "highs/HighsExternalDeps.cpp",
     ] + glob([
         "highs/io/*.cpp",
-        "highs/io/filereaderlp/*.cpp",
         "highs/ipm/*.cpp",
         "highs/ipm/ipx/*.cc",
         "highs/ipm/basiclu/*.c",
@@ -73,7 +74,6 @@ cc_library(
         "highs/presolve/*.cpp",
         "highs/qpsolver/*.cpp",
         "highs/simplex/*.cpp",
-        "highs/test_kkt/*.cpp",
         "highs/util/*.cpp",
     ]),
     hdrs = [
@@ -81,7 +81,6 @@ cc_library(
     ] + glob([
         "**/*.h",
         "highs/pdlp/hipdlp/*.hpp",
-        "highs/io/filereaderlp/*.hpp",
         "highs/qpsolver/*.hpp",
         "extern/zstr/*.hpp",
     ]),
@@ -100,7 +99,6 @@ cc_library(
     includes = [
         "extern",
         "extern/catch",
-        # "extern/filereaderlp",
         # "extern/zstr",
         "highs",
         # "highs/ipm",
@@ -113,11 +111,14 @@ cc_library(
         # "highs/presolve",
         # "highs/qpsolver",
         # "highs/simplex",
-        # "highs/test_kkt",
         # "highs/util",
     ],
     linkopts = select({
         "@rules_cc//cc/compiler:msvc-cl": ["-DEFAULTLIB:shell32.lib"],
+        "@platforms//os:linux": [
+          "-Wl,--no-as-needed -ldl",
+          "-pthread",
+        ],
         "//conditions:default": ["-lpthread"],
     }),
     visibility = ["//visibility:public"],
@@ -213,6 +214,7 @@ TEST_NAMES = [
     "TestHighsModel",
     "TestHighsParallel",
     "TestHighsRbTree",
+    "TestHiPdlp",
     "TestHSet",
     "TestICrash",
     "TestInfo",
@@ -226,6 +228,7 @@ TEST_NAMES = [
     "TestMipSolver",
     "TestPresolve",
     "TestPresolveRules",
+    "TestQpOracle",
     "TestQpSolver",
     "TestRanging",
     "TestRunData",

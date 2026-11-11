@@ -4,15 +4,26 @@
 #include <omp.h>
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 #include <iostream>
 
 #include "catch.hpp"
+#include "interfaces/highs_c_api.h"
 #include "matrix_multiplication.hpp"
 #include "parallel/HighsParallel.h"
 
 using namespace highs;
 
-const int numThreads = (std::thread::hardware_concurrency() + 1) / 2;
+const int numThreads = highs::parallel::available_core_count();
 const bool dev_run = false;
 
 int64_t fib_sequential(const int64_t n) {
@@ -282,7 +293,7 @@ TEST_CASE("FibonacciTasksOmp", "[parallel]") {
 // This was fixed by catching and rethrowing in the TaskGroup destructor.
 
 static void loseTime() {
-  int total = 0;
+  long long total = 0;
   for (int i = 0; i < 1000; ++i) {
     total += i * i * i;
   }
@@ -305,4 +316,150 @@ TEST_CASE("CancelNestedTasks", "[parallel]") {
   }
 
   HighsTaskExecutor::shutdown();
+}
+
+TEST_CASE("AvailableCoreCount", "[parallel]") {
+  unsigned int cores = highs::parallel::available_core_count();
+  REQUIRE(cores > 0);
+}
+
+#if defined(_WIN32) || defined(_WIN64)
+TEST_CASE("AffinityReducedCoreCount", "[parallel]") {
+  // Initialize scheduler with full core count
+  highs::parallel::initialize_scheduler();
+  int initial_threads = highs::parallel::num_threads();
+
+  // Restrict affinity to a single core
+  DWORD_PTR original_mask, system_mask;
+  GetProcessAffinityMask(GetCurrentProcess(), &original_mask, &system_mask);
+  SetProcessAffinityMask(GetCurrentProcess(), 1);
+
+  // available_core_count should now report 1
+  unsigned int cores = highs::parallel::available_core_count();
+  REQUIRE(cores == 1);
+  REQUIRE(initial_threads >= static_cast<int>(cores));
+
+  // Restore original affinity
+  SetProcessAffinityMask(GetCurrentProcess(), original_mask);
+  HighsTaskExecutor::shutdown();
+}
+#elif defined(__linux__)
+TEST_CASE("AffinityReducedCoreCount", "[parallel]") {
+  // Initialize scheduler with full core count
+  highs::parallel::initialize_scheduler();
+  int initial_threads = highs::parallel::num_threads();
+
+  // Restrict affinity to a single core
+  cpu_set_t original_set, restricted_set;
+  sched_getaffinity(0, sizeof(original_set), &original_set);
+  CPU_ZERO(&restricted_set);
+  CPU_SET(0, &restricted_set);
+  sched_setaffinity(0, sizeof(restricted_set), &restricted_set);
+
+  // available_core_count should now report 1
+  unsigned int cores = highs::parallel::available_core_count();
+  REQUIRE(cores == 1);
+  REQUIRE(initial_threads >= static_cast<int>(cores));
+
+  // Restore original affinity
+  sched_setaffinity(0, sizeof(original_set), &original_set);
+  HighsTaskExecutor::shutdown();
+}
+#endif
+
+// Spin until flag >= value. Returns false on timeout so a bug can't hang CI.
+bool waitFor(const std::atomic<int>& flag, int value) {
+  const auto start = std::chrono::steady_clock::now();
+  while (flag.load() < value) {
+    if (std::chrono::steady_clock::now() - start > std::chrono::seconds(30))
+      return false;
+    std::this_thread::yield();
+  }
+  return true;
+}
+
+long long parallelSum(HighsInt n) {
+  std::atomic<long long> sum{0};
+  highs::parallel::for_each(
+      0, n,
+      [&](HighsInt start, HighsInt end) {
+        long long local = 0;
+        for (HighsInt i = start; i < end; ++i) local += i;
+        sum += local;
+      },
+      16);
+  return sum.load();
+}
+
+struct ThreadResult {
+  int threads_after_init = -1;
+  long long sum_after_init = -1;
+  int threads_after_reset = -1;
+  long long sum_after_reset = -1;
+  bool synced = true;
+};
+
+TEST_CASE("ParallelSchedulerIsPerThread", "[parallel]") {
+  const int num_threads_A_first = 2;
+  const int num_threads_A_second = 4;
+
+  const int num_threads_B = 3;
+  const HighsInt n = 1000;
+  const long long expected_sum = (long long)n * (n - 1) / 2;
+
+  std::atomic<int> init_done{0};
+  std::atomic<int> reset_done{0};
+  ThreadResult a, b;
+
+  std::thread threadA([&]() {
+    highs::parallel::initialize_scheduler(num_threads_A_first);
+    a.threads_after_init = highs::parallel::num_threads();
+    a.sum_after_init = parallelSum(n);
+    init_done++;
+    a.synced = waitFor(init_done, 2);
+
+    HighsTaskExecutor::shutdown(true);
+    reset_done++;
+
+    highs::parallel::initialize_scheduler(num_threads_A_second);
+    a.threads_after_reset = highs::parallel::num_threads();
+    a.sum_after_reset = parallelSum(n);
+
+    HighsTaskExecutor::shutdown(true);
+  });
+
+  std::thread threadB([&]() {
+    highs::parallel::initialize_scheduler(num_threads_B);
+    b.threads_after_init = highs::parallel::num_threads();
+    b.sum_after_init = parallelSum(n);
+    init_done++;
+
+    b.synced = waitFor(reset_done, 1);
+    b.threads_after_reset = highs::parallel::num_threads();
+    b.sum_after_reset = parallelSum(n);
+
+    HighsTaskExecutor::shutdown(true);
+  });
+
+  threadA.join();
+  threadB.join();
+
+  REQUIRE(a.synced);
+  REQUIRE(b.synced);
+
+  // Both threads got their own scheduler, with the correct sizes
+  REQUIRE(a.threads_after_init == num_threads_A_first);
+  REQUIRE(b.threads_after_init == num_threads_B);
+  REQUIRE(a.sum_after_init == expected_sum);
+  REQUIRE(b.sum_after_init == expected_sum);
+
+  // A's reset did not affect B
+  REQUIRE(b.threads_after_reset == num_threads_B);
+  REQUIRE(b.sum_after_reset == expected_sum);
+
+  HighsTaskExecutor::shutdown(true);
+
+  // A really was reset
+  REQUIRE(a.threads_after_reset == num_threads_A_second);
+  REQUIRE(a.sum_after_reset == expected_sum);
 }

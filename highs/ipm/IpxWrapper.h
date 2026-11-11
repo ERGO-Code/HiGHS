@@ -18,6 +18,7 @@
 #include "ipm/hipo/ipm/Solver.h"
 #include "ipm/ipx/ipx_status.h"
 #include "ipm/ipx/lp_solver.h"
+#include "lp_data/HighsQpSolverObject.h"
 #include "lp_data/HighsSolution.h"
 
 HighsStatus solveLpIpx(HighsLpSolverObject& solver_object);
@@ -29,6 +30,8 @@ HighsStatus solveLpIpx(const HighsOptions& options, HighsTimer& timer,
                        HighsCallback& callback);
 
 HighsStatus solveLpHipo(HighsLpSolverObject& solver_object);
+
+HighsStatus solveQpHipo(HighsQpSolverObject& solver_object);
 
 HighsStatus solveHipo(const HighsOptions& options, HighsTimer& timer,
                       const HighsLp& lp, const HighsHessian& H,

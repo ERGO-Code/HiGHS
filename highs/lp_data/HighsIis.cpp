@@ -272,7 +272,7 @@ bool HighsIis::rowValueBounds(const HighsLp& lp, const HighsOptions& options) {
     }
   }
   bool below_lower = false;
-  bool above_upper;
+  bool above_upper = false;
   for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++) {
     below_lower = upper_value[iRow] <
                   lp.row_lower_[iRow] - options.primal_feasibility_tolerance;

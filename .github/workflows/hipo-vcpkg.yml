@@ -7,6 +7,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The Windows jobs use vcpkg's standard MSVC triplets, which build quickly;
+  # the clang-cl triplet that HIGHS_VCPKG picks by default is tested in
+  # vcpkg-clang-cl.yml
   win-vcpkg:
     runs-on: windows-latest
 
@@ -21,7 +24,8 @@ jobs:
           -B "${{ github.workspace }}/build" `
           -DHIPO=ON `
           -DALL_TESTS=OFF `
-          -DHIGHS_VCPKG=ON
+          -DHIGHS_VCPKG=ON `
+          -DHIGHS_VCPKG_CLANG_CL=OFF
 
       - name: Build Release
         shell: pwsh
@@ -157,7 +161,8 @@ jobs:
           -A ${{ matrix.arch }} `
           -DHIPO=ON `
           -DALL_TESTS=${{ matrix.all_tests }} `
-          -DHIGHS_VCPKG=ON
+          -DHIGHS_VCPKG=ON `
+          -DHIGHS_VCPKG_CLANG_CL=OFF
 
       - name: Build
         shell: pwsh

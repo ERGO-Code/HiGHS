@@ -154,7 +154,7 @@ The `HighsCallbackDataOut` struct supplies data to the user that is
 relevant to the particular callback. The general data are
 
 * `log_type`: An integer cast of the `HighsLogType` value, indicating the severity of the logging message--relevant to the logging callback.
-* `running_time`: The excution time of HiGHS--relevant to the interrupt callbacks.
+* `running_time`: The execution time of HiGHS--relevant to the interrupt callbacks.
 * `simplex_iteration_count`: The number of simplex iterations performed--relevant to the simplex interrupt callback.
 * `ipm_iteration_count`: The number of IPM iterations performed--relevant to the IPM interrupt callback.
 * `pdlp_iteration_count`: The number of PDLP iterations performed--relevant to the PDLP interrupt callback.

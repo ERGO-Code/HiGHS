@@ -14,7 +14,6 @@
 
 class HighsMutex {
   std::atomic<unsigned int> state{0u};
-  enum Constants { kNumSpinTries = 10 };
 
  public:
   bool try_lock() {
@@ -30,7 +29,7 @@ class HighsMutex {
     if (try_lock()) return;
 
     // Now spin a few times to check if the lock becomes available
-    for (int i = 0; i < kNumSpinTries; ++i) {
+    for (int i = 0; i < HighsSchedulerConstants::kNumSpinTries; ++i) {
       if (state.load(std::memory_order_relaxed) == 0) {
         if (try_lock()) return;
       }
@@ -47,7 +46,7 @@ class HighsMutex {
     auto tStart = std::chrono::high_resolution_clock::now();
 
     while (true) {
-      int numTries = kNumSpinTries;
+      int numTries = HighsSchedulerConstants::kNumSpinTries;
 
       for (int i = 0; i < numTries; ++i) {
         if (state.load(std::memory_order_relaxed) == 0) {

@@ -6,6 +6,18 @@ NVIDIA GPU under Linux and Windows. However, to achieve this, CUDA
 utilities must be installed and HiGHS must be built locally using
 CMake, as described below.
 
+The native HiPDLP solver additionally supports AMD GPUs through
+[ROCm](https://rocm.docs.amd.com/) / HIP.
+
+Whether HiPDLP (and cuPDLP-C) runs on the CPU or on a GPU is fixed at
+build time: the GPU backend is only compiled with `-DHIPDLP_HIP=ON`
+(AMD, HiPDLP only) or `-DCUPDLP_GPU=ON` (NVIDIA, HiPDLP and
+cuPDLP-C). The runtime [__solver__](@ref option-solver) option selects
+the *solver*, not the *device*: on a build without GPU support,
+`solver = "hipdlp"` still runs, but on the CPU. Conversely, on a GPU
+build, HiPDLP cannot fall back to the CPU: if no GPU is available at
+run time, the solve returns with an error.
+
 ### PDLP: A health warning
 
 First order solvers for LP are still very much "work in
@@ -17,6 +29,11 @@ relative termination conditions, a solution deemed optimal by PDLP may
 not be accepted as optimal by HiGHS. The user should consider the
 infeasibility data returned by [HighsInfo](@ref HighsInfo) to decide
 whether the solution is acceptable to them.
+
+PDLP works in double precision, and each iteration is cheap, so a GPU
+only pays off for large LPs. For small LPs, the cost of launching GPU
+kernels dominates, and HiPDLP on a GPU can be slower than on the
+CPU.
 
 #### Termination criteria
 
@@ -38,21 +55,28 @@ instance.
 
 ### Requirements
 
-CUDA Toolkit and CMake. 
+CMake, plus a CUDA Toolkit (for NVIDIA GPUs) or a ROCm installation
+(for AMD GPUs). HiGHS must be built locally with CMake.
 
-A [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
+For NVIDIA GPUs, a [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
 installation is required, along with the matching NVIDIA
 driver. Please install both following the instructions on NVIDIA's
-website.
-
-HiGHS must be build locally with CMake. 
-
-Make sure the CUDA compiler `nvcc` is installed by running 
+website. Make sure the CUDA compiler `nvcc` is installed by running
 
 ```
 nvcc --version
 ```
 
+For AMD GPUs, a [ROCm](https://rocm.docs.amd.com/) installation providing
+the HIP compiler and the hipBLAS / hipSPARSE libraries is required instead;
+see [Building HiGHS with AMD GPU support](@ref gpu-build-amd) for details.
+
 ### Build HiGHS with GPU support
 
-See [Building HiGHS with NVidia GPU support](@ref gpu-build).
+For NVIDIA GPUs, see [Building HiGHS with NVidia GPU support](@ref
+gpu-build).
+
+For AMD GPUs, see [Building HiGHS with AMD GPU support](@ref
+gpu-build-amd).
+This uses ROCm / HIP and its hipBLAS and hipSPARSE libraries
+instead of CUDA.

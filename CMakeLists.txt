@@ -67,6 +67,14 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   endif()
 
   find_package(IntelSYCL REQUIRED)
+
+  # IntelLLVM defaults to a fast floating-point model that allows
+  # reassociation, which breaks the error terms in HighsCDouble.
+  if (MSVC)
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/fp:precise>")
+  else()
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-fp-model=precise>")
+  endif()
 endif()
 
 # MSVC
@@ -143,6 +151,22 @@ option(HIGHS_COVERAGE "Activate the code coverage compilation" OFF)
 # See below for RelWithDeb info, todo test wip
 set(DEBUG_MEMORY "Off" CACHE STRING "Sanitizers")
 
+if (NOT DEBUG_MEMORY STREQUAL "Off" AND BUILD_SHARED_EXTRAS_LIB)
+  # On Apple platforms, sanitizer runtimes interpose dlopen() such that the
+  # "@loader_path" token used to locate the highs_extras plugin resolves
+  # relative to the sanitizer runtime itself rather than libhighs, so the
+  # dynamic load fails. On Linux, HighsDynamicLibrary::load() dlopen()s
+  # "libhighs_extras.so" by bare filename, and dlopen() never consults the
+  # calling executable's own DT_RUNPATH (that only applies to resolving its
+  # own DT_NEEDED entries), so the plugin isn't found unless it happens to
+  # already be on LD_LIBRARY_PATH or a system library path. Statically link
+  # highs_extras instead to avoid the dlopen path entirely when sanitizers
+  # are enabled.
+  message(STATUS "DEBUG_MEMORY=${DEBUG_MEMORY}: forcing BUILD_SHARED_EXTRAS_LIB=OFF")
+  set (BUILD_SHARED_EXTRAS_LIB OFF)
+  set(HIGHS_SHARED_EXTRAS_LIBRARY ${BUILD_SHARED_EXTRAS_LIB})
+endif()
+
 # emscripten
 option(EMSCRIPTEN_HTML "Emscripten HTML output" OFF)
 
@@ -156,13 +180,20 @@ message(STATUS "Use FindCUDAConf: ${CUPDLP_FIND_CUDA}")
 option(HIGHS_GPU_LIB "Build highs GPU as a single lib" OFF)
 message(STATUS "Build GPU with delayed loading: ${HIGHS_GPU_LIB}")
 
+option(HIPDLP_HIP "Build HiPDLP with AMD HIP (ROCm)" OFF)
+message(STATUS "Build HiPDLP with HIP: ${HIPDLP_HIP}")
+
 # For now
 if (HIGHS_GPU_LIB)
   set(CUPDLP_GPU ON)
 endif()
 
+if (HIPDLP_HIP)
+  set(HIPDLP_GPU ON)
+endif()
+
 if(CUPDLP_GPU AND CMAKE_VERSION VERSION_LESS "3.25.0")
-    message("CUPDLP FindCUDAConf requires CMake version minumum 3.24. Please use a higher version of CMake.")
+    message("CUPDLP FindCUDAConf requires CMake version minimum 3.24. Please use a higher version of CMake.")
 endif()
 
 # if (NOT LINUX)
@@ -192,30 +223,91 @@ if (HIPO AND NOT FAST_BUILD)
   message(ERROR "HIPO is only available with FAST_BUILD=ON.")
 endif()
 
-if (CUPDLP_GPU)
+if (CUPDLP_GPU OR HIPDLP_GPU)
   if (WIN32)
     set(BUILD_SHARED_LIBS ON)
   endif()
 
-  set (CUPDLP_CPU OFF)
-  message(NOTICE "Set build cuPDLP with CUDA")
+  set(CUPDLP_CPU OFF)
 
-  if (CUPDLP_FIND_CUDA)
-    # With FindCUDAConf.cmake
-    # Need to have the CUDA_HOME environment variable set.
-    include(FindCUDAConf)
+  if (HIPDLP_HIP)
+    message(NOTICE "Set build HiPDLP with HIP (AMD ROCm)")
+
+    # ROCm/HIP requires CMake 3.21+
+    if(CMAKE_VERSION VERSION_LESS "3.21.0")
+      message(FATAL_ERROR "HIP support requires CMake >= 3.21")
+    endif()
+
+    # Allow the user to point to a non-standard ROCm install
+    if(DEFINED ENV{ROCM_PATH})
+      set(CMAKE_PREFIX_PATH "$ENV{ROCM_PATH}" ${CMAKE_PREFIX_PATH})
+    elseif(EXISTS "/opt/rocm")
+      set(CMAKE_PREFIX_PATH "/opt/rocm" ${CMAKE_PREFIX_PATH})
+    endif()
+
+    enable_language(HIP)
+
+    # Clang adds the ROCm include directory with -idirafter, i.e. after
+    # /usr/include, so a system HIP package in /usr/include/hip would shadow
+    # the headers of the ROCm install matching the compiler. CMake drops it
+    # from -I since it is an implicit include directory, so force it first.
+    if (CMAKE_HIP_COMPILER_ROCM_ROOT AND
+        EXISTS "${CMAKE_HIP_COMPILER_ROCM_ROOT}/include/hip/hip_runtime.h")
+      set(CMAKE_HIP_FLAGS
+        "-isystem ${CMAKE_HIP_COMPILER_ROCM_ROOT}/include ${CMAKE_HIP_FLAGS}")
+    endif()
+
+    find_package(hipblas REQUIRED)
+    find_package(hipsparse REQUIRED)
+
+    # The default bfd linker is slow and memory-hungry with the ROCm toolchain
+    # and can stall on memory-constrained machines.
+    # The ROCm clang bundles lld and we use it if it is available.
+    find_program(HIGHS_LLD_LINKER NAMES ld.lld lld
+      HINTS ENV ROCM_PATH /opt/rocm
+      PATH_SUFFIXES lib/llvm/bin bin llvm/bin)
+    if (HIGHS_LLD_LINKER)
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
+      message(STATUS "HIP: linking with lld (${HIGHS_LLD_LINKER})")
+    else()
+      message(STATUS "HIP: lld not found; using the default linker")
+    endif()
+
+    set(GPU_LIBRARY roc::hipblas roc::hipsparse)
+    set(GPU_COMPILE_DEFINITIONS USE_HIP)
+
   else()
-    # Without FindCUDAConf.cmake
-    enable_language(CUDA)
-    find_package(CUDAToolkit REQUIRED)
+    message(NOTICE "Set build cuPDLP with CUDA")
 
-    set(CUDA_LIBRARY-NOTFOUND, OFF)
-    set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+    if (CUPDLP_FIND_CUDA)
+      # With FindCUDAConf.cmake
+      # Need to have the CUDA_HOME environment variable set.
+      include(FindCUDAConf)
+    else()
+      # Without FindCUDAConf.cmake
+      enable_language(CUDA)
+      find_package(CUDAToolkit REQUIRED)
+
+      set(CUDA_LIBRARY-NOTFOUND, OFF)
+      set(CUDA_LIBRARY CUDA::cudart CUDA::cublas CUDA::cusparse)
+    endif()
+
+    set(GPU_LIBRARY ${CUDA_LIBRARY})
+    set(GPU_COMPILE_DEFINITIONS "")
   endif()
 
 else()
-  set (CUPDLP_CPU ON)
-    set(CUDA_LIBRARY-NOTFOUND true)
+  set(CUPDLP_CPU ON)
+  set(CUDA_LIBRARY-NOTFOUND true)
+  set(HIPDLP_GPU OFF)
+endif()
+
+# Link HiGHS statically into the highspy extension module by default. A
+# separate libhighs in the wheel shares its SONAME / install name with any other
+# libhighs in the process, e.g. the one bundled by OR-Tools, so the dynamic
+# loader can give one package the other's copy. GPU wheels still need libhighs.
+if (HIPO_PYTHON AND NOT DEFINED BUILD_SHARED_LIBS AND NOT (CUPDLP_GPU OR HIPDLP_GPU))
+  set(BUILD_SHARED_LIBS OFF)
 endif()
 
 if(BUILD_STATIC_EXE)
@@ -397,7 +489,7 @@ if (BUILD_CXX)
       message(STATUS "IPO / LTO: enabled")
     endif()
   endif()
-  if (CUPDLP_GPU AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+  if ((CUPDLP_GPU OR HIPDLP_HIP) AND CMAKE_INTERPROCEDURAL_OPTIMIZATION)
       set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
       message(STATUS "IPO / LTO is not supported at the moment when PDLP is using GPU: LTO disabled.")
   endif()
@@ -584,6 +676,24 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
+# Private dependencies of a static highs for highs.pc. Shared builds list none
+# because a missing Requires.private module makes every pkg-config query fail.
+# For the same reason macOS uses -lz: its SDK has zlib but may have no zlib.pc
+set(HIGHS_PC_LIBS_PRIVATE "")
+set(HIGHS_PC_REQUIRES_PRIVATE "")
+if(NOT BUILD_SHARED_LIBS)
+  if(FAST_BUILD AND NOT BUILD_SHARED_EXTRAS_LIB)
+    set(HIGHS_PC_LIBS_PRIVATE "-lhighs_extras")
+  endif()
+  if(ZLIB AND ZLIB_FOUND)
+    if(APPLE)
+      string(APPEND HIGHS_PC_LIBS_PRIVATE " -lz")
+    else()
+      set(HIGHS_PC_REQUIRES_PRIVATE "zlib")
+    endif()
+  endif()
+endif()
+
 if (NOT CMAKE_INSTALL_DOCDIR STREQUAL "" AND BUILD_CXX)
   install(FILES
       README.md
@@ -622,6 +732,10 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fsanitize-address-use-after-scope")
+  set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fsanitize-address-use-after-scope")
   set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
@@ -636,18 +750,26 @@ if (DEBUG_MEMORY STREQUAL "Address")
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
+  set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      -fno-optimize-sibling-calls ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} \
       -fsanitize=address,undefined \
       -fno-omit-frame-pointer \
       -fno-optimize-sibling-calls ")
 
 elseif (DEBUG_MEMORY STREQUAL "Thread")
-  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
+  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
       -fno-omit-frame-pointer")
-  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread,undefined \
+  set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
+      -fno-omit-frame-pointer")
+  set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} -fsanitize=thread \
       -fno-omit-frame-pointer")
 
   set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread \
+      -fno-omit-frame-pointer ")
+  set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=thread \
       -fno-omit-frame-pointer ")
   set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=thread \
       -fno-omit-frame-pointer ")
@@ -657,10 +779,15 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak \
         -fno-omit-frame-pointer ")
@@ -668,10 +795,15 @@ elseif (DEBUG_MEMORY STREQUAL "Leak")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak,undefined \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=leak,undefined \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=leak,undefined \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak,undefined \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=leak,undefined \
         -fno-omit-frame-pointer ")
@@ -681,10 +813,15 @@ elseif (DEBUG_MEMORY STREQUAL "Memory")
     set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} \
         -fsanitize=memory \
         -fno-omit-frame-pointer")
+    set (CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} \
+        -fsanitize=memory \
+        -fno-omit-frame-pointer")
     set (CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} \
         -fsanitize=memory \
         -fno-omit-frame-pointer")
     set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=memory \
+        -fno-omit-frame-pointer ")
+    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=memory \
         -fno-omit-frame-pointer ")
     set (CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fsanitize=memory \
         -fno-omit-frame-pointer ")
@@ -838,7 +975,6 @@ if(NOT FAST_BUILD)
     ${PROJECT_SOURCE_DIR}/highs/presolve
     ${PROJECT_SOURCE_DIR}/highs/qpsolver
     ${PROJECT_SOURCE_DIR}/highs/simplex
-    ${PROJECT_SOURCE_DIR}/highs/test_kkt
     ${PROJECT_SOURCE_DIR}/highs/util)
 
   # explicitly switch on colored output for ninja
@@ -912,6 +1048,14 @@ if (HIPO_PYTHON)
   add_subdirectory(highspy)
 else()
   add_subdirectory(extern)
+  if(FAST_BUILD AND BUILD_CXX)
+    # After extern, which adds the private dependencies of a static highs_extras
+    configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
+      "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+  endif()
 endif()
 
 # Prevent nested directory structure in the archive

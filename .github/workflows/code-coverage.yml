@@ -38,29 +38,25 @@ jobs:
       - name: Test
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ctest --parallel --timeout 300 --output-on-failure
+        run: ctest --parallel --timeout 600 --output-on-failure
 
         # Coverage with HiPO will be different
       - name: Generate Report
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
-          lcov -d . -c -o cov.info --ignore-errors empty
-          lcov --remove cov.info "/usr/include/*" -o cov.info
-          lcov --remove cov.info "/usr/lib/*" -o cov.info
-          lcov --remove cov.info "extern/pdqsort/*" -o cov.info
-          lcov --remove cov.info "extern/zstr/*" -o cov.info
-          lcov --remove cov.info "extern/catch/*" -o cov.info
-          lcov --remove cov.info "extern/cli11/*" -o cov.info
-          lcov --remove cov.info "highs/test_kkt*" -o cov.info
-          lcov --list cov.info
+          lcov -d . -c -o cov.info --ignore-errors empty,inconsistent
+          lcov --remove cov.info "/usr/include/*" "/usr/lib/*" \
+            "extern/pdqsort/*" "extern/zstr/*" "extern/catch/*" "extern/cli11/*" \
+            -o cov.info --ignore-errors inconsistent
+          lcov --list cov.info --ignore-errors inconsistent
           mv cov.info coverage.info
 
       - name: Genhtml Results Summary
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
-          genhtml -o coverage coverage.info
+          genhtml -o coverage coverage.info --ignore-errors inconsistent
 
       # Made it past the first token issue.
       # May need some more time to porpagate on the codecov side.

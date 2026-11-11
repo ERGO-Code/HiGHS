@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <tuple>
+
 #include "ipm/ipx/basiclu_kernel.h"
 #include "ipm/ipx/basiclu_wrapper.h"
 #include "ipm/ipx/forrest_tomlin.h"
@@ -72,47 +73,15 @@ void Basis::SetToSlackBasis() {
         map2basis_[j] = -1;
     for (Int i = 0; i < m; i++)
         map2basis_[n+i] = i;
-    Int err = Factorize();
+    const bool allow_timeout = false;
+    Int err = Factorize(allow_timeout);
     // factorization of slack basis cannot fail other than out of memory
     assert(err == 0);
 }
 
-Int Basis::Load(const int* basic_status) {
-    const Int m = model_.rows();
-    const Int n = model_.cols();
-
-    // Change member variables only when basis is valid.
-    std::vector<Int> basis, map2basis(n+m);
-    Int p = 0;
-    for (Int j = 0; j < n+m; j++) {
-        switch (basic_status[j]) {
-        case NONBASIC_FIXED:
-            map2basis[j] = -2;
-            break;
-        case NONBASIC:
-            map2basis[j] = -1;
-            break;
-        case BASIC:
-            basis.push_back(j);
-            map2basis[j] = p++;
-            break;
-        case BASIC_FREE:
-            basis.push_back(j);
-            map2basis[j] = p++ + m;
-            break;
-        default:
-            return IPX_ERROR_invalid_basis;
-        }
-    }
-    if (p != m)
-        return IPX_ERROR_invalid_basis;
-
-    std::copy(basis.begin(), basis.end(), basis_.begin());
-    std::copy(map2basis.begin(), map2basis.end(), map2basis_.begin());
-    return Factorize();
-}
-
-Int Basis::Factorize() {
+Int Basis::Factorize(const bool allow_timeout) {
+    // Factorize the basis, where allow_timeout is false for a slack
+    // basis
     const Int m = model_.rows();
     const SparseMatrix& AI = model_.AI();
     Timer timer;
@@ -137,8 +106,18 @@ Int Basis::Factorize() {
 
     Int err = 0;                // return code
     while (true) {
+	double highs_time_limit = control_.timeLimit();
+	assert(highs_time_limit >= 0);
+	lu_->timeStart(luTime());
+        double basiclu_time_limit = INFINITY;
+	if (allow_timeout && highs_time_limit < INFINITY) {
+	  basiclu_time_limit = highs_time_limit - control_.Elapsed();
+	  if (basiclu_time_limit <= 0) return IPX_ERROR_time_interrupt;
+	}
+	lu_->timeLimit(basiclu_time_limit);
         Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                                   AI.values(), false);
+	if (flag == IPX_ERROR_time_interrupt) return flag;
         num_factorizations_++;
         fill_factors_.push_back(lu_->fill_factor());
         if (flag & 2) {
@@ -375,15 +354,24 @@ void Basis::ConstructBasisFromWeights(const double* colscale, Info* info) {
     info->dependent_cols = 0;
 
     if (control_.crash_basis()) {
-        CrashBasis(colscale);
+	bool interrupt = false;
+        CrashBasis(colscale, interrupt);
+	if (interrupt) {
+	  info->errflag = IPX_ERROR_time_interrupt;
+	  return;
+	}
         double sigma = MinSingularValue();
         control_.Debug()
             << Textline("Minimum singular value of crash basis:") << sci2(sigma)
             << '\n';
-        Repair(info);
+        Repair(info, interrupt);
+	if (interrupt) {
+	  info->errflag = IPX_ERROR_time_interrupt;
+	  return;
+	}
         if (info->basis_repairs < 0) {
 	  control_.hLog(" discarding crash basis\n");
-            SetToSlackBasis();
+	     SetToSlackBasis();
         }
         else if (info->basis_repairs > 0) {
             sigma = MinSingularValue();
@@ -522,20 +510,22 @@ bool Basis::TightenLuPivotTol() {
     return true;
 }
 
-void Basis::CrashBasis(const double* colweights) {
+  void Basis::CrashBasis(const double* colweights, bool& interrupt) {
     const Int m = model_.rows();
 
     // Make a guess for a basis. Then use LU factorization with a strict
     // absolute pivot tolerance to remove dependent columns. This is not a
     // rank revealing factorization, but it detects many dependencies in
     // practice.
-    std::vector<Int> cols_guessed = GuessBasis(control_, model_, colweights);
+    std::vector<Int> cols_guessed = GuessBasis(control_, model_, colweights, interrupt);
+    if (interrupt) return;
+
     assert((Int)cols_guessed.size() <= m);
     assert((Int)cols_guessed.size() == m); // at the moment
 
     // Initialize the Basis object and factorize the (partial) basis. If
     // basis_[p] is negative, the p-th column of the basis matrix is zero,
-    // and a slack column will be inserted by CrashFacorize().
+    // and a slack column will be inserted by CrashFactorize().
     std::fill(basis_.begin(), basis_.end(), -1);
     std::fill(map2basis_.begin(), map2basis_.end(), -1);
     for (size_t k = 0; k < cols_guessed.size(); k++) {
@@ -544,7 +534,8 @@ void Basis::CrashBasis(const double* colweights) {
         map2basis_[basis_[k]] = k;
     }
     Int num_dropped = 0;
-    CrashFactorize(&num_dropped);
+    CrashFactorize(&num_dropped, interrupt);
+    if (interrupt) return;
     control_.Debug()
         << Textline("Number of columns dropped from guessed basis:")
         << num_dropped << '\n';
@@ -587,7 +578,7 @@ static std::tuple<Int,Int,double> InverseSearch(const Basis& basis,
     return std::make_tuple(-1,-1,INFINITY); // failure
 }
 
-void Basis::Repair(Info* info) {
+void Basis::Repair(Info* info, bool& interrupt) {
     const Int m = model_.rows();
     const Int n = model_.cols();
     Vector work(m);
@@ -616,14 +607,16 @@ void Basis::Repair(Info* info) {
         }
         SolveForUpdate(jb);
         SolveForUpdate(jn);
-        CrashExchange(jb, jn, pivot, 0, nullptr);
+        CrashExchange(jb, jn, pivot, 0, nullptr, interrupt);
+	if (interrupt) return;
+
         info->basis_repairs++;
         control_.Debug(3) << " basis repair: |pivot| = "
                       << sci2(std::abs(pivot)) << '\n';
     }
 }
 
-void Basis::CrashFactorize(Int* num_dropped) {
+void Basis::CrashFactorize(Int* num_dropped, bool& interrupt) {
     const Int m = model_.rows();
     const SparseMatrix& AI = model_.AI();
     Timer timer;
@@ -643,8 +636,24 @@ void Basis::CrashFactorize(Int* num_dropped) {
             end[i] = 0;
         }
     }
+    double highs_time_limit = control_.timeLimit();
+    assert(highs_time_limit >= 0);
+    lu_->timeStart(luTime());
+    double basiclu_time_limit = INFINITY;
+    if (highs_time_limit < INFINITY) {
+      basiclu_time_limit = highs_time_limit - control_.Elapsed();
+      if (basiclu_time_limit <= 0) {
+	interrupt = true;
+	return;
+      }
+    }
+    lu_->timeLimit(basiclu_time_limit);
     Int flag = lu_->Factorize(begin.data(), end.data(), AI.rowidx(),
                               AI.values(), true);
+    if (flag == IPX_ERROR_time_interrupt) {
+      interrupt = true;
+      return;
+    }
     num_factorizations_++;
     fill_factors_.push_back(lu_->fill_factor());
     Int ndropped = 0;
@@ -664,7 +673,7 @@ void Basis::CrashFactorize(Int* num_dropped) {
 }
 
 void Basis::CrashExchange(Int jb, Int jn, double tableau_entry, int sys,
-                          Int* num_dropped) {
+                          Int* num_dropped, bool& interrupt) {
     assert(IsBasic(jb));
     assert(IsNonbasic(jn));
     if (sys > 0)                // forward system needs to be solved
@@ -689,7 +698,8 @@ void Basis::CrashExchange(Int jb, Int jn, double tableau_entry, int sys,
     time_update_ += timer.Elapsed();
     if (err != 0 || lu_->NeedFreshFactorization()) {
         control_.Debug(3) << " refactorization required in CrashExchange()\n";
-        CrashFactorize(num_dropped);
+        CrashFactorize(num_dropped, interrupt);
+	if (interrupt) return;
     }
 }
 
@@ -940,6 +950,8 @@ void Basis::PivotFixedVariablesOutOfBasis(const double* colweights, Info* info){
         << Textline("Number of fixed variables swapped for stability:")
         << stability_pivots << '\n';
 }
+
+double luTime() { return basiclu_wallclock(); }
 
 Vector CopyBasic(const Vector& x, const Basis& basis) {
     const Int m = basis.model().rows();

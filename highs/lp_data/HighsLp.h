@@ -18,7 +18,10 @@
 
 class HighsLp {
  public:
-  HighsLp() { clear(); }
+  HighsLp() {
+    clear();
+    a_matrix_.name_ = "HighsLp::a_matrix_";
+  }
   // Model data
   HighsInt num_col_;
   HighsInt num_row_;
@@ -55,6 +58,7 @@ class HighsLp {
   bool is_moved_;
   HighsInt cost_row_location_;
   bool has_infinite_cost_;
+  HighsInt fme_obj_col_ = -1;
   HighsLpMods mods_;
 
   bool operator==(const HighsLp& lp) const;
@@ -64,6 +68,8 @@ class HighsLp {
   bool equalNames(const HighsLp& lp) const;
   bool equalScaling(const HighsLp& lp) const;
   bool isMip() const;
+  HighsInt numNz() const { return this->a_matrix_.numNz(); }
+  bool isEmpty() const { return this->num_col_ <= 0 && this->num_row_ <= 0; }
   bool hasSemiVariables() const;
   bool hasInfiniteCost(const double infinite_cost) const;
   bool hasMods() const;
@@ -72,6 +78,11 @@ class HighsLp {
   HighsCDouble objectiveCDoubleValue(const std::vector<double>& solution) const;
   void setMatrixDimensions();
   void setFormat(const MatrixFormat format);
+  void setEmptyColwise(const HighsInt num_col) {
+    this->a_matrix_.setEmptyColwise(num_col);
+  }
+  bool isColwise() const { return this->a_matrix_.isColwise(); };
+  bool isRowwise() const { return this->a_matrix_.isRowwise(); };
   void ensureColwise() { this->a_matrix_.ensureColwise(); };
   void ensureRowwise() { this->a_matrix_.ensureRowwise(); };
   void clearScaling();
@@ -82,8 +93,8 @@ class HighsLp {
   void moveBackLpAndUnapplyScaling(HighsLp& lp);
   void exactResize();
   bool okNames() const;
-  void addColNames(const std::string name, const HighsInt num_new_col = 1);
-  void addRowNames(const std::string name, const HighsInt num_new_row = 1);
+  void addColNames(const std::string& name, const HighsInt num_new_col = 1);
+  void addRowNames(const std::string& name, const HighsInt num_new_row = 1);
   void deleteColsFromVectors(HighsInt& new_num_col,
                              const HighsIndexCollection& index_collection);
   void deleteRowsFromVectors(HighsInt& new_num_row,
@@ -91,6 +102,15 @@ class HighsLp {
   void deleteCols(const HighsIndexCollection& index_collection);
   void deleteRows(const HighsIndexCollection& index_collection);
   void unapplyMods();
+  void clearAllNameHash() {
+    this->col_hash_.clear();
+    this->row_hash_.clear();
+  }
+
+  bool legalDimensions(const std::string& message,
+                       const HighsLogOptions& log_options) const;
+  HighsStatus trimDimensions(const HighsLogOptions& log_options);
+  HighsStatus assess(const HighsOptions& options);
   void clear();
 };
 

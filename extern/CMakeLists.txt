@@ -26,6 +26,7 @@ set(highs_extras_headers
     HighsExtrasApi.h
     HighsExtrasApiBinding.h
     HighsExtrasExternalDeps.h
+    HighsMetis.h
     OrderingPrint.h)
 
 # add optional dependencies (source code)
@@ -99,18 +100,27 @@ if(BUILD_SHARED_EXTRAS_LIB)
       INSTALL_RPATH "${highs_extras_rpath}"
       INSTALL_RPATH_USE_LINK_PATH TRUE)
   else()
+    # no "lib" prefix with MinGW: the loader looks for highs_extras.dll
     set_target_properties(highs_extras PROPERTIES
+      PREFIX ""
       WINDOWS_EXPORT_ALL_SYMBOLS OFF)
   endif()
-else()
-  install(TARGETS highs_extras
-      EXPORT highs-targets
-      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      COMPONENT libs)
+endif()
 
+# This CMake file is only inlcluded if not (HIPO_PYTHON)
+install(TARGETS highs_extras
+    EXPORT highs-targets
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT libs)
+
+if(DEFINED HIGHS_BINARY_DIR)
   export(TARGETS highs_extras
     APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+  if(HIPO)
+    highs_export_blas_dependency()
+    highs_export_blas_pkgconfig()
+  endif()
 endif()

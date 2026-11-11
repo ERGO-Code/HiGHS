@@ -156,6 +156,8 @@ void Crossover::PushPrimal(Basis* basis, Vector& x,
             bool exchanged;
             info->errflag = basis->ExchangeIfStable(jb, jn, pivot, -1,
                                                     &exchanged);
+	    if (info->errflag == IPX_ERROR_user_interrupt ||
+		info->errflag == IPX_ERROR_time_interrupt) break;
             if (info->errflag) {
                 control_.Debug()
                     << Textline("Minimum singular value of basis matrix:")
@@ -288,6 +290,8 @@ void Crossover::PushDual(Basis* basis, Vector& y, Vector& z,
             bool exchanged;
             info->errflag = basis->ExchangeIfStable(jb, jn, pivot, 1,
                                                     &exchanged);
+	    if (info->errflag == IPX_ERROR_user_interrupt ||
+		info->errflag == IPX_ERROR_time_interrupt) break;
             if (info->errflag) {
                 control_.Debug()
                     << Textline("Minimum singular value of basis matrix:")

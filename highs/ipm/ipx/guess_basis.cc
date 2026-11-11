@@ -65,7 +65,7 @@ static Int ComputeValues(const SparseMatrix& L, const SparseMatrix& AI,
 // entry is chosen as pivot row.
 static void ProcessFreeColumns(const Control& control, const Model& model,
                                const double* weights, std::vector<Int>* basis,
-                               Int* rownumber, int* active) {
+                               Int* rownumber, int* active, bool& interrupt) {
     const Int m = model.rows();
     const Int n = model.cols();
     const SparseMatrix& AI = model.AI();
@@ -100,6 +100,8 @@ static void ProcessFreeColumns(const Control& control, const Model& model,
             num_free++;
         }
         active[j] = false;
+	interrupt = control.InterruptCheck() != 0;
+	if (interrupt) return;
     }
     control.Debug()
         << Textline("Number of free variables in starting basis:")
@@ -110,7 +112,7 @@ static void ProcessFreeColumns(const Control& control, const Model& model,
 // 2.0 in its row.
 static void ProcessSingletons(const Control& control, const Model& model,
                               const double* weights, std::vector<Int>* basis,
-                              Int* rownumber, int* active) {
+                              Int* rownumber, int* active, bool& interrupt) {
     const Int m = model.rows();
     const SparseMatrix& AI = model.AI();
     const SparseMatrix& AT = model.AIt();
@@ -138,6 +140,8 @@ static void ProcessSingletons(const Control& control, const Model& model,
             active[jsingleton] = false;
             num_singletons++;
         }
+	interrupt = control.InterruptCheck() != 0;
+	if (interrupt) return;
     }
     control.Debug()
         << Textline("Number of singletons in starting basis:")
@@ -149,7 +153,7 @@ static void ProcessSingletons(const Control& control, const Model& model,
 // decreasing order of their weight.
 static void ProcessRemaining(const Control& control, const Model& model,
                              const double* weights, std::vector<Int>* basis,
-                             Int* rownumber, int* active) {
+                             Int* rownumber, int* active, bool& interrupt) {
     const Int m = model.rows();
     const Int n = model.cols();
     const SparseMatrix& AI = model.AI();
@@ -187,6 +191,8 @@ static void ProcessRemaining(const Control& control, const Model& model,
         }
         if (num_failed >= 10*(m-(Int)basis->size()))
             break;
+	interrupt = control.InterruptCheck() != 0;
+	if (interrupt) return;
     }
     for (Int i = 0; i < m; i++) {
         if (jmatch[i] >= 0) {
@@ -203,7 +209,7 @@ static void ProcessRemaining(const Control& control, const Model& model,
 }
 
 std::vector<Int> GuessBasis(const Control& control, const Model& model,
-                            const double* colweights) {
+                            const double* colweights, bool& interrupt) {
     const Int m = model.rows();
     const Int n = model.cols();
 
@@ -215,11 +221,14 @@ std::vector<Int> GuessBasis(const Control& control, const Model& model,
     std::vector<int> active(n+m, 1);
 
     ProcessFreeColumns(control, model, colweights, &basis, rownumber.data(),
-                       active.data());
+		       active.data(), interrupt);
+    if (interrupt) return basis;
     ProcessSingletons(control, model, colweights, &basis, rownumber.data(),
-                      active.data());
+                      active.data(), interrupt);
+    if (interrupt) return basis;
     ProcessRemaining(control, model, colweights, &basis, rownumber.data(),
-                     active.data());
+                     active.data(), interrupt);
+    if (interrupt) return basis;
 
     // Complete basis with unit columns.
     for (Int i = 0; i < m; i++) {

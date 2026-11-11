@@ -1,0 +1,163 @@
+# Regression test for https://github.com/ERGO-Code/HiGHS/issues/3599:
+# `cmake --install` must install the shared highs_extras library, and the
+# installed highs binary must run HiPO without the build tree present and
+# without LD_LIBRARY_PATH / DYLD_LIBRARY_PATH. The python job checks the same
+# for pip-installed highspy + highspy-extras, run from outside the checkout.
+name: hipo-install
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hipo-install:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenBLAS (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev
+
+      # macOS uses the default BLAS (Apple Accelerate), no install needed.
+
+      - name: Install OpenBLAS (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install openblas[threads]:x64-windows-static
+
+      - name: Configure, build and install (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/install \
+            -DHIPO=ON
+          cmake --build build --parallel
+          cmake --install build
+
+      - name: Configure, build and install (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Pin the static triplet so highs_extras.dll does not depend on an
+          # openblas.dll that is never installed (see hipo-install-extras.yml).
+          cmake -S . -B build `
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE/install" `
+            -DHIPO=ON
+          cmake --build build --parallel --config Release
+          cmake --install build --config Release
+
+      - name: Check highs_extras was installed
+        shell: bash
+        run: |
+          ls -l install/lib install/bin
+          case "$RUNNER_OS" in
+            Linux)   ls install/lib/libhighs_extras.so ;;
+            macOS)   ls install/lib/libhighs_extras*.dylib ;;
+            Windows) ls install/bin/highs_extras.dll ;;
+          esac
+
+      - name: Run installed highs with HiPO
+        shell: bash
+        run: |
+          # Remove the build tree so nothing can be loaded from it.
+          rm -rf build
+          out=$(install/bin/highs --solver hipo check/instances/afiro.mps 2>&1) || true
+          echo "$out"
+          echo "$out" | grep -Eq "Model status\s*:\s*Optimal"
+
+  # #3599, python part: with a C++ HiGHS install in the ld.so cache, a plain
+  # `pip install .` (no highspy-extras) must NOT pick up that system
+  # libhighs_extras.so. On 1.15.1 it did, so HiPO "worked" by accident.
+  hipo-python-no-system-extras:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install C++ HiGHS with HiPO and register it with ldconfig
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/opt/HiGHS -DHIPO=ON
+          cmake --build build --parallel
+          sudo cmake --install build
+          rm -rf build
+          echo /opt/HiGHS/lib | sudo tee /etc/ld.so.conf.d/highs.conf
+          sudo ldconfig
+          ldconfig -p | grep libhighs_extras
+
+      - name: Install highspy only (no highspy-extras)
+        run: python -m pip install .
+
+      - name: HiPO must not load the system libhighs_extras.so
+        working-directory: ${{ runner.temp }}
+        env:
+          MODEL: ${{ github.workspace }}/check/instances/afiro.mps
+        run: |
+          python - <<'EOF'
+          import os, highspy
+          from highspy import _core
+          print("extras status:", _core.getExtrasLoadStatus())
+          h = highspy.Highs()
+          # Rejected when extras are not loaded; run() would then silently
+          # fall back to simplex, so the model status proves nothing.
+          ok = h.setOptionValue("solver", "hipo")
+          assert ok != highspy.HighsStatus.kOk, \
+              "HiPO is available: the system libhighs_extras.so was loaded"
+          EOF
+
+  hipo-install-python:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install highspy and highspy-extras
+        run: |
+          python -m pip install ./highspy-extras
+          python -m pip install .
+
+      - name: Run HiPO from outside the checkout
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        env:
+          MODEL: ${{ github.workspace }}/check/instances/afiro.mps
+        run: |
+          python - <<'EOF'
+          import os, highspy
+          h = highspy.Highs()
+          # If HiPO is unavailable this is rejected and run() falls back to
+          # simplex, which would still reach Optimal.
+          assert h.setOptionValue("solver", "hipo") == highspy.HighsStatus.kOk, \
+              "HiPO unavailable"
+          h.readModel(os.environ["MODEL"])
+          h.run()
+          status = h.getModelStatus()
+          print("highspy from", highspy.__file__, "->", h.modelStatusToString(status))
+          assert status == highspy.HighsModelStatus.kOptimal
+          EOF

@@ -13,7 +13,7 @@
 
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 // using std::map;
 using std::vector;
@@ -45,7 +45,7 @@ class HVectorBase {
   double synthetic_tick;  //!< Synthetic clock for operations with this vector
 
   // For update
-  vector<char> cwork;       //!< char working buffer for UPDATE
+  vector<HighsBool> cwork;  //!< Working buffer for UPDATE
   vector<HighsInt> iwork;   //!< integer working buffer for UPDATE
   HVectorBase<Real>* next;  //!< Allows vectors to be linked for PAMI
 
@@ -68,7 +68,7 @@ class HVectorBase {
    */
   void reIndex();
 
-  bool packFlag;               //!< Flag to indicate whether to pack or not
+  bool packFlag = false;       //!< Flag to indicate whether to pack or not
   HighsInt packCount;          //!< Number of nonzeros packed
   vector<HighsInt> packIndex;  //!< Packed indices
   vector<Real> packValue;      //!< Packed values

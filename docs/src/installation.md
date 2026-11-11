@@ -39,9 +39,9 @@ HiGHS does not have any external dependencies, however, the new interior point s
 
 ### External ordering heuristics
 
-HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is already part of the HiGHS library, so there is no need to link them. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD.
+HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is built with HiGHS, so there is no need to install them separately. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD.
 
-### BLAS
+### [BLAS](@id install-blas)
 
 On MacOS no BLAS installation is required because HiPO uses [Apple Accelerate](https://developer.apple.com/accelerate/) by default.
 
@@ -59,6 +59,19 @@ cmake -S. -B build -DHIPO=ON
 ```
 cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON
 ```
+
+##### [Windows: clang-cl](@id install-blas-clang-cl)
+
+MSVC can only compile OpenBLAS's generic C kernels, not the optimised ones, which makes HiPO several times slower. `clang-cl`, the MSVC-compatible driver of Clang, can compile them, and its libraries can be linked into an MSVC build. So, on Windows x64 and ARM64, HiGHS builds OpenBLAS separately with `clang-cl` and Ninja, while HiGHS itself is still compiled with MSVC. On x64, OpenBLAS then selects the best kernels for the CPU at runtime.
+
+`clang-cl` is included in the Visual Studio component "C++ Clang Compiler for Windows" and in [LLVM](https://github.com/llvm/llvm-project/releases) for Windows. Ninja is included in Visual Studio's "C++ CMake tools for Windows" component.
+
+Related CMake options:
+- `-DHIGHS_OPENBLAS_C_COMPILER=<path to clang-cl>` selects a specific `clang-cl`.
+- `-DBUILD_OPENBLAS_CLANG_CL=OFF` builds OpenBLAS with MSVC instead.
+- If `clang-cl` or Ninja cannot be found, HiGHS warns and builds OpenBLAS with MSVC. With `-DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON`, this is a configure error instead.
+
+If HiGHS itself is compiled with `clang-cl`, for example with `cmake -S. -B build -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DHIPO=ON -DBUILD_OPENBLAS=ON`, OpenBLAS is built with the same compiler as part of the HiGHS build.
 
 #### Linux and Windows: Link with BLAS installatied on your machine
 
@@ -87,9 +100,50 @@ On Windows, you also need to specify the path to OpenBLAS. If it was installed w
 cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
 ```
 
+##### Windows: OpenBLAS from vcpkg, built with clang-cl
+
+vcpkg's standard Windows triplets, such as `x64-windows-static`, build OpenBLAS with MSVC. That gives only the generic kernels, which make HiPO several times slower (see [Windows: clang-cl](@ref install-blas-clang-cl)). HiGHS therefore provides the triplets `x64-windows-static-clang` and `arm64-windows-static-clang` in `cmake/vcpkg-triplets`. They are the same as `x64-windows-static` and `arm64-windows-static`, except that the ports are built with `clang-cl`, which is searched for on `PATH`, in the default LLVM install location, and in Visual Studio installs with the "C++ Clang Compiler for Windows" component. HiGHS itself can still be compiled with MSVC.
+
+On x64, the triplet builds OpenBLAS for the CPU of the build machine, so the resulting library may not run on a machine with an older CPU.
+
+When HiGHS is configured with `-DHIGHS_VCPKG=ON`, these triplets are used by default on Windows x64 and ARM64 if `clang-cl` is found. Add `-DHIGHS_VCPKG_CLANG_CL=OFF` to use `x64-windows-static` or `arm64-windows-static` instead.
+
+To use the triplets with your own vcpkg setup, e.g.
+```
+vcpkg install openblas[threads]:x64-windows-static-clang --overlay-triplets=<HiGHS>/cmake/vcpkg-triplets --host-triplet=x64-windows-static-clang
+cmake -S. -B build -DHIPO=ON -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-clang -DVCPKG_OVERLAY_TRIPLETS=<HiGHS>/cmake/vcpkg-triplets -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
+```
+OpenBLAS needs a copy of itself for the host as a build tool, so using the same triplet for the host means that copy is not also built with MSVC.
+
 ##### Path to BLAS
 
-To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` coud be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
+To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` could be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
+
+When `BLAS_LIBRARIES` is used, HiGHS can only tell which vendor provides BLAS from the library name: if the name contains "openblas" (in any case), the library is treated as OpenBLAS. This matters for performance, because HiPO runs OpenBLAS in serial (see [BLAS threads](@ref parallel-blas-threads)). If OpenBLAS is provided under a different name, also set `-DBLA_VENDOR=OpenBLAS`.
+
+### Using HiPO in your own application
+
+By default, the dependencies of HiPO are built into a separate shared library, `highs_extras`, which HiGHS loads when it runs. This applies even if HiGHS itself is a static library, so linking `highs.lib` or `libhighs.a` is not enough to make HiPO available: your application must also be able to find the shared library. If it cannot, setting `solver=hipo` fails with an error that gives the reason, and the `solver` option is left unchanged.
+
+To choose the folder that `highs_extras` is loaded from, call
+```cpp
+Highs::initializeExtras("<folder containing highs_extras>", false);
+```
+or, from C, `Highs_initializeExtras("<folder containing highs_extras>", 0)`, once, before HiPO is first used. If the folder is empty and the second argument is true, the default locations described below are searched; if the second argument is false, nothing is loaded. Only the first call attempts to load the library: later calls return its result, whatever their arguments. These methods do nothing when the extras are linked statically.
+
+If neither method is called, HiGHS searches the default locations when HiPO is first used.
+
+On Windows, `cmake --install` places `highs_extras.dll` in the `bin` folder of the install directory. Copy it next to your application's `.exe` and distribute it with your application. For security, `PATH` and the current folder are not searched: by default only the folder of the application's `.exe` and the Windows system folder are searched. Any DLL that `highs_extras.dll` depends on, such as `openblas.dll`, must also be in one of these folders or, if `Highs::initializeExtras` is given a folder, in that folder. If one is missing, the error says that the module could not be found, even when `highs_extras.dll` is present.
+
+On Linux, `libhighs_extras.so` must be next to `libhighs.so`, as it is after `cmake --install`, or on the runtime library search path, for example through `LD_LIBRARY_PATH`. On MacOS, `libhighs_extras.dylib` must be in the same folder as the binary that contains HiGHS.
+
+The Python package `highspy` loads `highs_extras` only from the installed `highspy-extras` package, so no call to `initializeExtras` is needed.
+
+To link everything into your application instead, so that no shared library is needed, build with
+```
+cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_SHARED_EXTRAS_LIB=OFF -DBUILD_SHARED_LIBS=OFF
+```
+and link `highs`, `highs_extras` and `openblas`. If you did not use `-DBUILD_OPENBLAS=ON`, link your BLAS library instead of `openblas`.
 
 
 ## [Building HiGHS with NVidia GPU support](@id gpu-build)
@@ -117,7 +171,7 @@ cmake --build build --parallel
 
 to build HiGHS.
 
-### Bazel build with Cuda
+### Bazel build with CUDA
 
 Alternatively, for Bazel run
 
@@ -130,3 +184,88 @@ It may be necessary to also specify the architecture, e.g.
 ```
 bazel build //... --//:cupdlp_gpu --@rules_cuda//cuda:archs=sm_89
 ```
+
+## [Building HiGHS with AMD GPU support](@id gpu-build-amd)
+
+The native HiPDLP solver can also run on an AMD GPU using
+[ROCm](https://rocm.docs.amd.com/) / HIP. This requires a ROCm
+installation providing the HIP compiler and the hipBLAS and hipSPARSE
+libraries. Make sure the HIP compiler is available by running
+
+```
+hipcc --version
+```
+
+ROCm 10.0 or newer is recommended (this is the version the HIP backend
+is tested against). On such a ROCm, the supported GPU architectures are
+`gfx908` and newer (e.g. `gfx908`/MI100, `gfx90a`/MI200,
+`gfx942`/MI300, and recent RDNA cards).
+
+Then build HiGHS, from the root directory, with
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON
+cmake --build build --parallel
+```
+
+CMake must be able to find ROCm. If it is not installed in the default
+location, point it there, for example
+
+```
+export PATH=/opt/rocm/bin:$PATH
+export CMAKE_PREFIX_PATH=/opt/rocm
+```
+
+By default the HIP device code is compiled for a generic set of GPU
+architectures. To target the specific GPU on the build machine (which
+also speeds up compilation and linking), set `CMAKE_HIP_ARCHITECTURES`
+to its `gfx` target, for example
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx90a
+```
+
+You can find the `gfx` identifier of the installed GPU with `rocminfo`
+(look for the `gfx` name, e.g. `gfx90a` for MI200-class cards or
+`gfx942` for MI300). Multiple architectures may be given as a
+semicolon-separated list, e.g. `-DCMAKE_HIP_ARCHITECTURES="gfx90a;gfx942"`.
+
+By default the host C/C++ sources are compiled with the system compiler
+(e.g. GCC) and only the HIP device code with ROCm's compiler. To build
+the whole of HiGHS with the ROCm toolchain instead, for a uniform
+Clang-based build, point CMake at `amdclang` / `amdclang++`
+
+```
+cmake -S. -Bbuild -DHIPDLP_HIP=ON \
+  -DCMAKE_C_COMPILER=amdclang -DCMAKE_CXX_COMPILER=amdclang++
+```
+
+The HIP backend compiles the same HiPDLP source as the CUDA backend,
+selecting the AMD implementation at build time. Once built, the solver
+is selected at run time by setting the [__solver__](@ref
+option-solver) option to "hipdlp". Only HiPDLP has an AMD backend:
+with `solver = "pdlp"`, the cuPDLP-C solver runs on the CPU in a HIP
+build.
+
+If no AMD GPU is visible at run time (for example because
+`HIP_VISIBLE_DEVICES` hides it, or the driver is not loaded), HiPDLP
+reports an error and the solve returns with model status "Solve error".
+A HIP build cannot fall back to running HiPDLP on the CPU.
+
+To check the ROCm / HIP backend on the local machine, run the example
+`call_highs_hipdlp` (also registered as the ctest
+`cxx_examples_call_highs_hipdlp`), which solves a small LP with
+`solver = "hipdlp"` and verifies the result. A successful run is a
+quick end-to-end sanity check of the GPU backend.
+
+When HiPDLP runs on the GPU, the HiGHS log reports the device used, for
+example
+
+```
+Using HiPDLP first order PDLP solver on a GPU
+HIP device: <name of the AMD GPU>
+```
+
+To confirm that the work is running on the GPU, watch `amd-smi monitor`
+(or `rocm-smi` on older ROCm releases) while the solve runs,
+and check that GPU utilisation and memory usage rise.

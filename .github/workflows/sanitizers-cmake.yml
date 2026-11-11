@@ -1,18 +1,25 @@
 name: sanitizers-cmake
 
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # GCC's ASan reports a false positive odr-violation for libstdc++ inline
+  # globals (e.g. shared_ptr's __tag) present in both unit_tests and
+  # libhighs.so; level 1 still reports globals whose sizes differ
+  ASAN_OPTIONS: detect_odr_violation=1
+
 jobs:
-  gcc_relwithdebinfo:
+  gcc:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+        config: [Debug, RelWithDebInfo]
         sanitizer: [Address, Thread, Leak]
     steps:
       - uses: actions/checkout@v6
@@ -24,7 +31,13 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+          # libstdc++ only annotates std::vector for ASan container-overflow
+          # detection when _GLIBCXX_SANITIZE_VECTOR is defined
+          EXTRA_FLAGS=""
+          if [ "${{ matrix.sanitizer }}" = "Address" ]; then
+            EXTRA_FLAGS="-DCMAKE_CXX_FLAGS=-D_GLIBCXX_SANITIZE_VECTOR"
+          fi
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DALL_TESTS=ON -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ $EXTRA_FLAGS
           cmake --build . -j2
 
       - name: Run
@@ -32,39 +45,19 @@ jobs:
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-  gcc_debug:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # os: [ubuntu-latest, macos-latest]
-        os: [ubuntu-latest]
-        sanitizer: [Address, Thread, Leak]
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake and Build
-        shell: bash
-        working-directory: ${{github.workspace}}/build
-        run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-          cmake --build . -j2
-
-      - name: Run
+      - name: Test
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+        run: ctest --parallel --timeout 3000 --output-on-failure
 
-  clang_relwithdebinfo:
+  clang:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         # os: [ubuntu-latest, macos-latest]
         os: [ubuntu-latest]
+        config: [Debug, RelWithDebInfo]
         sanitizer: [Address, Thread, Leak]
     steps:
       - uses: actions/checkout@v6
@@ -76,7 +69,13 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          # libstdc++ only annotates std::vector for ASan container-overflow
+          # detection when _GLIBCXX_SANITIZE_VECTOR is defined
+          EXTRA_FLAGS=""
+          if [ "${{ matrix.sanitizer }}" = "Address" ]; then
+            EXTRA_FLAGS="-DCMAKE_CXX_FLAGS=-D_GLIBCXX_SANITIZE_VECTOR"
+          fi
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DALL_TESTS=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ $EXTRA_FLAGS
           cmake --build . -j2
 
       - name: Run
@@ -84,14 +83,19 @@ jobs:
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-  clang_debug:
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ctest --parallel --timeout 3000 --output-on-failure
+
+  no_hipo_macos:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # os: [ubuntu-latest, macos-latest]
-        os: [ubuntu-latest]
-        sanitizer: [Address, Thread, Leak]
+        os: [macos-latest]
+        config: [Debug, RelWithDebInfo]
+        sanitizer: [Address, Thread]
     steps:
       - uses: actions/checkout@v6
 
@@ -102,13 +106,18 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          cmake --build . -j2
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DALL_TESTS=ON
+          cmake --build . -j3
 
       - name: Run
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: ./bin/highs $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ctest --parallel --timeout 3000 --output-on-failure
 
   hipo:
     runs-on: ${{ matrix.os }}
@@ -117,7 +126,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        config: [Debug]
+        config: [Debug, RelWithDebInfo]
         all_tests: [ON]
         sanitizer: [Address, Thread, Leak]
 
@@ -129,13 +138,21 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
+        shell: bash
         run: |
-          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON \
+          # libstdc++ only annotates std::vector for ASan container-overflow
+          # detection when _GLIBCXX_SANITIZE_VECTOR is defined
+          EXTRA_FLAGS=""
+          if [ "${{ matrix.sanitizer }}" = "Address" ]; then
+            EXTRA_FLAGS="-DCMAKE_CXX_FLAGS=-D_GLIBCXX_SANITIZE_VECTOR"
+          fi
+          cmake $GITHUB_WORKSPACE -DHIPO=ON -DBUILD_OPENBLAS=ON $EXTRA_FLAGS \
             -DALL_TESTS=${{ matrix.all_tests }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
             -DDEBUG_MEMORY=${{ matrix.sanitizer }} \
             -DNO_AVX512=ON \
-            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF \
+            -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
 
 
       - name: Build
@@ -147,7 +164,43 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
 
-      - name: Test hipo
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest --parallel --timeout 3000 --output-on-failure
+
+  hipo_macos:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        config: [Debug, RelWithDebInfo]
+        sanitizer: [Address, Thread]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         run: |
-          ./bin/unit_tests [highs_hipo]
+          cmake $GITHUB_WORKSPACE -DHIPO=ON \
+            -DCMAKE_BUILD_TYPE=${{ matrix.config }} \
+            -DDEBUG_MEMORY=${{ matrix.sanitizer }} \
+            -DALL_TESTS=ON
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: |
+          cmake --build . -j3
+
+      - name: Test executable
+        working-directory: ${{github.workspace}}/build
+        run: ./bin/highs --solver=hipo $GITHUB_WORKSPACE/check/instances/afiro.mps
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest --parallel --timeout 3000 --output-on-failure

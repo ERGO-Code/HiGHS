@@ -5,8 +5,8 @@
 
 namespace hipo {
 
-void vectorAdd(std::vector<double>& v1, const std::vector<double>& v2,
-               double beta, double alpha) {
+void vectorAdd(std::vector<double>& v1, double alpha,
+               const std::vector<double>& v2, double beta) {
   for (Int i = 0; i < static_cast<Int>(v1.size()); ++i) {
     v1[i] = alpha * v1[i] + beta * v2[i];
   }
@@ -15,20 +15,6 @@ void vectorAdd(std::vector<double>& v1, const std::vector<double>& v2,
 void vectorAdd(std::vector<double>& v1, const double alpha) {
   for (Int i = 0; i < static_cast<Int>(v1.size()); ++i) {
     v1[i] += alpha;
-  }
-}
-
-void vectorMultiply(std::vector<double>& v1, const std::vector<double>& v2,
-                    double alpha, double beta) {
-  for (Int i = 0; i < static_cast<Int>(v1.size()); ++i) {
-    v1[i] = alpha * v1[i] * v2[i] + beta;
-  }
-}
-
-void vectorAddMult(std::vector<double>& v1, const std::vector<double>& v2,
-                   const std::vector<double>& v3, double beta, double alpha) {
-  for (Int i = 0; i < static_cast<Int>(v1.size()); ++i) {
-    v1[i] = alpha * v1[i] + beta * v2[i] * v3[i];
   }
 }
 
@@ -60,44 +46,12 @@ double norm2(const std::vector<double>& x) {
   return std::sqrt(norm);
 }
 
-double norm2(const std::vector<double>& x0, const std::vector<double>& x1) {
-  double norm{};
-  for (Int i = 0; i < static_cast<Int>(x0.size()); ++i) {
-    norm += (x0[i] * x0[i]);
-  }
-  for (Int i = 0; i < static_cast<Int>(x1.size()); ++i) {
-    norm += (x1[i] * x1[i]);
-  }
-  return std::sqrt(norm);
-}
-
 double infNorm(const std::vector<double>& x) {
   double norm{};
   for (Int i = 0; i < static_cast<Int>(x.size()); ++i) {
     norm = std::max(norm, std::fabs(x[i]));
   }
   return norm;
-}
-
-double infNorm(const std::vector<double>& x0, const std::vector<double>& x1) {
-  double norm{};
-  for (Int i = 0; i < static_cast<Int>(x0.size()); ++i) {
-    norm = std::max(norm, std::fabs(x0[i]));
-  }
-  for (Int i = 0; i < static_cast<Int>(x1.size()); ++i) {
-    norm = std::max(norm, std::fabs(x1[i]));
-  }
-  return norm;
-}
-
-double infNormDiff(const std::vector<double>& x, const std::vector<double>& y) {
-  assert(x.size() == y.size());
-  double inf_norm_diff = 0;
-  for (Int i = 0; i < static_cast<Int>(x.size()); i++) {
-    double diff = std::fabs(x[i] - y[i]);
-    inf_norm_diff = std::max(diff, inf_norm_diff);
-  }
-  return inf_norm_diff;
 }
 
 bool isNanVector(const std::vector<double>& x) {

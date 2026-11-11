@@ -9,11 +9,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: julia-actions/setup-julia@latest
         with:
-          version: '1.9'
+          version: '1.12'
+      - name: Install dependencies
+        shell: julia --color=yes --project=docs/ {0}
+        run: |
+          using Pkg
+          Pkg.instantiate()
       - name: Build and deploy
+        run: julia --project=docs/ --color=yes docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: julia --project=docs/ docs/make.jl

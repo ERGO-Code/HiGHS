@@ -1,7 +1,7 @@
 #include "DgemmParallel.h"
 
 #include "CallAndTimeBlas.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "parallel/HighsParallel.h"
 
 namespace hipo {

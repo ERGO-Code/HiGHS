@@ -17,7 +17,6 @@ set(include_dirs
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/presolve>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/qpsolver>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/simplex>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/test_kkt>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/highs/util>
   $<BUILD_INTERFACE:${HIGHS_BINARY_DIR}>)
 
@@ -68,6 +67,7 @@ set(metis_sources
   metis/libmetis/refine.c
   metis/libmetis/separator.c
   metis/libmetis/sfm.c
+  metis/libmetis/sort.cpp
   metis/libmetis/srefine.c
   metis/libmetis/util.c
   metis/libmetis/wspace.c)
@@ -80,7 +80,6 @@ set(metis_headers
   metis/GKlib/gk_mkmemory.h
   metis/GKlib/gk_mkpqueue.h
   metis/GKlib/gk_mkrandom.h
-  metis/GKlib/gk_mksort.h
   metis/GKlib/gk_ms_inttypes.h
   metis/GKlib/gk_ms_stat.h
   metis/GKlib/gk_ms_stdint.h
@@ -260,18 +259,19 @@ set(ipx_headers
 
 set(hipo_sources
     ipm/hipo/ipm/IpmData.cpp
-    ipm/hipo/ipm/FactorHiGHSSolver.cpp
+    ipm/hipo/ipm/FactorHighsSolver.cpp
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp
     ipm/hipo/ipm/KktMatrix.cpp
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/PreProcess.cpp
     ipm/hipo/ipm/Refine.cpp
-    ipm/hipo/ipm/Solver.cpp)
+    ipm/hipo/ipm/Solver.cpp
+    ipm/hipo/ipm/UpLookingSolver.cpp)
 
 set(hipo_headers
     ipm/hipo/ipm/IpmData.h
-    ipm/hipo/ipm/FactorHiGHSSolver.h
+    ipm/hipo/ipm/FactorHighsSolver.h
     ipm/hipo/ipm/Parameters.h
     ipm/hipo/ipm/Control.h
     ipm/hipo/ipm/Info.h
@@ -282,7 +282,8 @@ set(hipo_headers
     ipm/hipo/ipm/Options.h
     ipm/hipo/ipm/PreProcess.h
     ipm/hipo/ipm/Solver.h
-    ipm/hipo/ipm/Status.h)
+    ipm/hipo/ipm/Status.h
+    ipm/hipo/ipm/UpLookingSolver.h)
 
 set(factor_highs_sources
     ipm/hipo/factorhighs/Analyse.cpp
@@ -292,7 +293,8 @@ set(factor_highs_sources
     ipm/hipo/factorhighs/DenseFactHybrid.cpp
     ipm/hipo/factorhighs/DenseFactKernel.cpp
     ipm/hipo/factorhighs/DgemmParallel.cpp
-    ipm/hipo/factorhighs/FactorHiGHS.cpp
+    ipm/hipo/factorhighs/FactorHighs_c_api.cpp
+    ipm/hipo/factorhighs/FactorHighs.cpp
     ipm/hipo/factorhighs/Factorise.cpp
     ipm/hipo/factorhighs/FormatHandler.cpp
     ipm/hipo/factorhighs/HybridHybridFormatHandler.cpp
@@ -310,8 +312,10 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/DataCollector.h
     ipm/hipo/factorhighs/DenseFact.h
     ipm/hipo/factorhighs/DgemmParallel.h
-    ipm/hipo/factorhighs/FactorHiGHS.h
-    ipm/hipo/factorhighs/FactorHiGHSSettings.h
+    ipm/hipo/factorhighs/FactorHighs_c_api.h
+    ipm/hipo/factorhighs/FactorHighs.h
+    ipm/hipo/factorhighs/FactorHighsOptions.h
+    ipm/hipo/factorhighs/FactorHighsSettings.h
     ipm/hipo/factorhighs/Factorise.h
     ipm/hipo/factorhighs/FormatHandler.h
     ipm/hipo/factorhighs/HybridHybridFormatHandler.h
@@ -337,9 +341,6 @@ set(hipo_util_headers
     ipm/hipo/auxiliary/Logger.h
     ipm/hipo/auxiliary/VectorOperations.h)
 
-# redefinition of 'kHighsInf'
-set_source_files_properties (io/filereaderlp/reader.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
-
 set(highs_sources
     interfaces/highs_c_api.cpp
     io/Filereader.cpp
@@ -349,7 +350,7 @@ set(highs_sources
     io/HMpsFF.cpp
     io/HMPSIO.cpp
     io/LoadOptions.cpp
-    io/filereaderlp/reader.cpp
+    io/LpReader.cpp
     ipm/IpxWrapper.cpp
     lp_data/Highs.cpp
     lp_data/HighsCallback.cpp
@@ -381,6 +382,7 @@ set(highs_sources
     mip/HighsImplications.cpp
     mip/HighsLpAggregator.cpp
     mip/HighsLpRelaxation.cpp
+    mip/HighsMachineSchedSeparator.cpp
     mip/HighsMipSolver.cpp
     mip/HighsMipSolverData.cpp
     mip/HighsMipWorker.cpp
@@ -410,7 +412,25 @@ set(highs_sources
     presolve/HighsPostsolveStack.cpp
     presolve/HighsSymmetry.cpp
     presolve/HPresolve.cpp
+    presolve/HPresolveAggregator.cpp
     presolve/HPresolveAnalysis.cpp
+    presolve/HPresolveCliqueTable.cpp
+    presolve/HPresolveColStuffing.cpp
+    presolve/HPresolveDependent.cpp
+    presolve/HPresolveDominatedCols.cpp
+    presolve/HPresolveDualFixing.cpp
+    presolve/HPresolveEnumeration.cpp
+    presolve/HPresolveFourierMotzkin.cpp
+    presolve/HPresolveImpliedInts.cpp
+    presolve/HPresolveInitialSweep.cpp
+    presolve/HPresolveParallelRowsAndCols.cpp
+    presolve/HPresolveProbing.cpp
+    presolve/HPresolveProbingUtil.cpp
+    presolve/HPresolveSparsify.cpp
+    presolve/HPresolveStrengthenIneq.cpp
+    presolve/HPresolveUtils.cpp
+    presolve/HPresolveVarBndAggregation.cpp
+    presolve/HPresolveZeroCostSingleton.cpp
     presolve/HPresolveTest.cpp
     presolve/ICrash.cpp
     presolve/ICrashUtil.cpp
@@ -419,7 +439,7 @@ set(highs_sources
     qpsolver/a_asm.cpp
     qpsolver/a_quass.cpp
     qpsolver/basis.cpp
-    qpsolver/perturbation.cpp
+    qpsolver/QpAsmWrapper.cpp
     qpsolver/quass.cpp
     qpsolver/ratiotest.cpp
     qpsolver/scaling.cpp
@@ -440,8 +460,6 @@ set(highs_sources
     simplex/HSimplexNlaFreeze.cpp
     simplex/HSimplexNlaProductForm.cpp
     simplex/HSimplexReport.cpp
-    test_kkt/KktCh2.cpp
-    test_kkt/DevKkt.cpp
     util/HFactor.cpp
     util/HFactorDebug.cpp
     util/HFactorExtend.cpp
@@ -474,10 +492,7 @@ set(highs_headers
     io/HMpsFF.h
     io/HMPSIO.h
     io/LoadOptions.h
-    io/filereaderlp/builder.hpp
-    io/filereaderlp/def.hpp
-    io/filereaderlp/model.hpp
-    io/filereaderlp/reader.hpp
+    io/LpReader.h
     ipm/IpxSolution.h
     ipm/IpxWrapper.h
     lp_data/HConst.h
@@ -491,8 +506,10 @@ set(highs_headers
     lp_data/HighsLp.h
     lp_data/HighsLpSolverObject.h
     lp_data/HighsLpUtils.h
+    lp_data/HighsMipSolverObject.h
     lp_data/HighsModelUtils.h
     lp_data/HighsOptions.h
+    lp_data/HighsQpSolverObject.h
     lp_data/HighsRanging.h
     lp_data/HighsRunData.h
     lp_data/HighsSolution.h
@@ -513,6 +530,7 @@ set(highs_headers
     mip/HighsImplications.h
     mip/HighsLpAggregator.h
     mip/HighsLpRelaxation.h
+    mip/HighsMachineSchedSeparator.h
     mip/HighsMipSolver.h
     mip/HighsMipSolverData.h
     mip/HighsMipWorker.h
@@ -557,10 +575,14 @@ set(highs_headers
     presolve/HighsSymmetry.h
     presolve/HPresolve.h
     presolve/HPresolveAnalysis.h
+    presolve/HPresolveCliqueTable.h
+    presolve/HPresolveInitialSweep.h
+    presolve/HPresolveUtils.h
     presolve/ICrash.h
     presolve/ICrashUtil.h
     presolve/ICrashX.h
     presolve/PresolveComponent.h
+    presolve/PresolveTimer.h
     qpsolver/a_asm.hpp
     qpsolver/a_quass.hpp
     qpsolver/basis.hpp
@@ -573,8 +595,8 @@ set(highs_headers
     qpsolver/gradient.hpp
     qpsolver/instance.hpp
     qpsolver/matrix.hpp
-    qpsolver/perturbation.hpp
     qpsolver/pricing.hpp
+    qpsolver/QpAsmWrapper.h
     qpsolver/qpconst.hpp
     qpsolver/qpvector.hpp
     qpsolver/quass.hpp
@@ -599,8 +621,6 @@ set(highs_headers
     simplex/SimplexConst.h
     simplex/SimplexStruct.h
     simplex/SimplexTimer.h
-    test_kkt/DevKkt.h
-    test_kkt/KktCh2.h
     util/FactorTimer.h
     util/HFactor.h
     util/HFactorConst.h
@@ -613,6 +633,7 @@ set(highs_headers
     util/HighsHash.h
     util/HighsHashTree.h
     util/HighsInt.h
+    util/HighsType.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h

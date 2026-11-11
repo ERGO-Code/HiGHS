@@ -27,7 +27,7 @@ void HVectorBase<Real>::setup(HighsInt size_) {
   count = 0;
   index.resize(size);
   array.assign(size, Real{0});
-  cwork.assign(size + 6400, 0);  // MAX invert
+  cwork.assign(size + 6400, false);  // MAX invert
   iwork.assign(size * 4, 0);
 
   packCount = 0;

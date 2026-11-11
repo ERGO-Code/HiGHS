@@ -13,10 +13,14 @@
 #include <cstring>
 #include <memory>
 
+#include "HighsSchedulerConstants.h"
+
 namespace highs {
 
 struct cache_aligned {
-  static constexpr std::size_t alignment() { return 64; }
+  static constexpr std::size_t alignment() {
+    return HighsSchedulerConstants::kCacheLineSize;
+  }
 
   static void* alloc(std::size_t size) {
     using std::uintptr_t;

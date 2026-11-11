@@ -37,7 +37,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.15.1
+        run: dotnet pack -c Release /p:Version=1.16.0
 
       - name: Add local feed
         run: dotnet nuget add source ${{github.workspace}}/nugets
@@ -58,7 +58,7 @@ jobs:
 
 
   build_macos_arm:
-    runs-on: macos-14  # macos-14 is arm64
+    runs-on: macos-15  # macos-15 is arm64
     steps:
       - uses: actions/checkout@v6
       - name: Build HiGHS
@@ -85,7 +85,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.15.1
+        run: dotnet pack -c Release /p:Version=1.16.0
 
       - name: Add local feed
         run: dotnet nuget add source ${{github.workspace}}/nugets

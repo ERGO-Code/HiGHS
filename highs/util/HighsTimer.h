@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 const HighsInt check_clock = -46;
 const HighsInt simplex_no_basis_clock = 8;
@@ -232,6 +232,21 @@ class HighsTimer {
     clock_time[i_clock] += time;
   }
 
+  /*
+  void logRunTime(const char* message) const {
+    if (!printf_flag) return;
+    double time = this->read();
+    std::string time_string =
+    // std::to_string(time);
+#ifndef NDEBUG
+      std::to_string(time);
+#else
+      std::to_string(static_cast<int>(time));
+#endif
+    printf("%-30s: %s\n", message, time_string.c_str());
+  }
+      */
+
   /**
    * @brief Report timing information for the clock indices in the list
    */
@@ -380,6 +395,29 @@ class HighsTimer {
   HighsInt solve_clock;
   HighsInt postsolve_clock;
   bool printf_flag;
+};
+
+// Starts a clock and stops it when the scope is left, on every exit. The clock
+// is only used if active is true. Clocks must provide start(clock) and
+// stop(clock)
+template <typename Clocks>
+class HighsClockScope {
+ public:
+  HighsClockScope(Clocks& clocks, const HighsInt clock,
+                  const bool active = true)
+      : clocks_(clocks), clock_(clock), active_(active) {
+    if (active_) clocks_.start(clock_);
+  }
+  ~HighsClockScope() {
+    if (active_) clocks_.stop(clock_);
+  }
+  HighsClockScope(const HighsClockScope&) = delete;
+  HighsClockScope& operator=(const HighsClockScope&) = delete;
+
+ private:
+  Clocks& clocks_;
+  const HighsInt clock_;
+  const bool active_;
 };
 
 #endif /* UTIL_HIGHSTIMER_H_ */

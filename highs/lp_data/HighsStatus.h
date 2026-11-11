@@ -19,7 +19,7 @@ std::string highsStatusToString(HighsStatus status);
 
 // Return the maximum of two HighsStatus and possibly report on
 // call_status not being HighsStatus::kOk
-HighsStatus interpretCallStatus(const HighsLogOptions log_options,
+HighsStatus interpretCallStatus(const HighsLogOptions& log_options,
                                 const HighsStatus call_status,
                                 const HighsStatus from_return_status,
                                 const std::string& message = "");

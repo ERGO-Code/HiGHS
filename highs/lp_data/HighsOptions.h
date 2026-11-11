@@ -33,8 +33,8 @@ class OptionRecord {
   std::string description;
   bool advanced;
 
-  OptionRecord(HighsOptionType Xtype, std::string Xname,
-               std::string Xdescription, bool Xadvanced) {
+  OptionRecord(HighsOptionType Xtype, const std::string& Xname,
+               const std::string& Xdescription, bool Xadvanced) {
     this->type = Xtype;
     this->name = Xname;
     this->description = Xdescription;
@@ -48,8 +48,8 @@ class OptionRecordBool : public OptionRecord {
  public:
   bool* value;
   bool default_value;
-  OptionRecordBool(std::string Xname, std::string Xdescription, bool Xadvanced,
-                   bool* Xvalue_pointer, bool Xdefault_value)
+  OptionRecordBool(const std::string& Xname, const std::string& Xdescription,
+                   bool Xadvanced, bool* Xvalue_pointer, bool Xdefault_value)
       : OptionRecord(HighsOptionType::kBool, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
@@ -67,9 +67,10 @@ class OptionRecordInt : public OptionRecord {
   HighsInt lower_bound;
   HighsInt default_value;
   HighsInt upper_bound;
-  OptionRecordInt(std::string Xname, std::string Xdescription, bool Xadvanced,
-                  HighsInt* Xvalue_pointer, HighsInt Xlower_bound,
-                  HighsInt Xdefault_value, HighsInt Xupper_bound)
+  OptionRecordInt(const std::string& Xname, const std::string& Xdescription,
+                  bool Xadvanced, HighsInt* Xvalue_pointer,
+                  HighsInt Xlower_bound, HighsInt Xdefault_value,
+                  HighsInt Xupper_bound)
       : OptionRecord(HighsOptionType::kInt, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
@@ -89,7 +90,7 @@ class OptionRecordDouble : public OptionRecord {
   double lower_bound;
   double upper_bound;
   double default_value;
-  OptionRecordDouble(std::string Xname, std::string Xdescription,
+  OptionRecordDouble(const std::string& Xname, const std::string& Xdescription,
                      bool Xadvanced, double* Xvalue_pointer,
                      double Xlower_bound, double Xdefault_value,
                      double Xupper_bound)
@@ -110,16 +111,16 @@ class OptionRecordString : public OptionRecord {
  public:
   std::string* value;
   std::string default_value;
-  OptionRecordString(std::string Xname, std::string Xdescription,
+  OptionRecordString(const std::string& Xname, const std::string& Xdescription,
                      bool Xadvanced, std::string* Xvalue_pointer,
-                     std::string Xdefault_value)
+                     const std::string& Xdefault_value)
       : OptionRecord(HighsOptionType::kString, Xname, Xdescription, Xadvanced) {
     value = Xvalue_pointer;
     default_value = Xdefault_value;
     *value = default_value;
   }
 
-  void assignvalue(std::string Xvalue) { *value = Xvalue; }
+  void assignvalue(const std::string& Xvalue) { *value = Xvalue; }
 
   virtual ~OptionRecordString() {}
 };
@@ -144,6 +145,8 @@ bool optionHipoSystemOk(const HighsLogOptions& report_log_options,
                         const string& value);
 bool optionHipoOrderingOk(const HighsLogOptions& report_log_options,
                           const string& value);
+bool optionHipoFactorOk(const HighsLogOptions& report_log_options,
+                        const string& value);
 
 bool boolFromString(std::string value, bool& bool_value);
 
@@ -332,6 +335,10 @@ const string kHipoMetisString = "metis";
 const string kHipoAmdString = "amd";
 const string kHipoRcmString = "rcm";
 
+const string kHipoFactorString = "hipo_factor";
+const string kHipoFactorMultifrontal = "multifrontal";
+const string kHipoFactorUplooking = "uplooking";
+
 struct HighsOptionsStruct {
   // Run-time options read from the command line
   std::string presolve;
@@ -397,7 +404,11 @@ struct HighsOptionsStruct {
   std::string hipo_system;
   std::string hipo_parallel_type;
   std::string hipo_ordering;
+  std::string hipo_factor;
   HighsInt hipo_block_size;
+  HighsInt hipo_parallel_force;
+  HighsInt hipo_parallel_forbid;
+  bool hipo_serial_blas;
 
   // Options for PDLP solver
   HighsInt pdlp_features_off;
@@ -410,6 +421,7 @@ struct HighsOptionsStruct {
   double pdlp_optimality_tolerance;
 
   // Options for QP solver
+  bool test_qp_oracle;
   bool qp_allow_hot_start;
   HighsInt qp_iteration_limit;
   HighsInt qp_nullspace_limit;
@@ -444,6 +456,7 @@ struct HighsOptionsStruct {
   HighsInt max_dual_simplex_phase1_cleanup_level;
   HighsInt simplex_price_strategy;
   HighsInt simplex_unscaled_solution_strategy;
+  HighsInt presolve_mode;
   HighsInt presolve_reduction_limit;
   HighsInt restart_presolve_reduction_limit;
   HighsInt presolve_substitution_maxfillin;
@@ -451,6 +464,7 @@ struct HighsOptionsStruct {
   HighsInt presolve_rule_test;
   bool presolve_rule_logging;
   bool presolve_remove_slacks;
+  bool presolve_fm_obj_reformulation;
   bool no_unnecessary_rebuild_refactor;
   double rebuild_refactor_solution_error_tolerance;
   double dual_steepest_edge_weight_error_tolerance;
@@ -577,7 +591,11 @@ struct HighsOptionsStruct {
         hipo_system(""),
         hipo_parallel_type(""),
         hipo_ordering(""),
+        hipo_factor(""),
         hipo_block_size(0),
+        hipo_parallel_force(0),
+        hipo_parallel_forbid(0),
+        hipo_serial_blas(true),
         pdlp_features_off(0),
         pdlp_iteration_limit(0),
         pdlp_scaling_mode(0),
@@ -586,6 +604,7 @@ struct HighsOptionsStruct {
         pdlp_cupdlpc_restart_method(0),
         pdlp_step_size_strategy(0),
         pdlp_optimality_tolerance(0.0),
+        test_qp_oracle(false),
         qp_allow_hot_start(false),
         qp_iteration_limit(0),
         qp_nullspace_limit(0),
@@ -614,6 +633,7 @@ struct HighsOptionsStruct {
         max_dual_simplex_phase1_cleanup_level(0),
         simplex_price_strategy(0),
         simplex_unscaled_solution_strategy(0),
+        presolve_mode(0),
         presolve_reduction_limit(0),
         restart_presolve_reduction_limit(0),
         presolve_substitution_maxfillin(0),
@@ -621,6 +641,7 @@ struct HighsOptionsStruct {
         presolve_rule_test(0),
         presolve_rule_logging(false),
         presolve_remove_slacks(false),
+        presolve_fm_obj_reformulation(false),
         no_unnecessary_rebuild_refactor(false),
         rebuild_refactor_solution_error_tolerance(0.0),
         dual_steepest_edge_weight_error_tolerance(0.0),
@@ -705,13 +726,6 @@ class HighsOptions : public HighsOptionsStruct {
     setLogOptions();
   }
 
-  HighsOptions(HighsOptions&& options) {
-    records = std::move(options.records);
-    HighsOptionsStruct::operator=(std::move(options));
-    this->log_options.log_stream = options.log_options.log_stream;
-    setLogOptions();
-  }
-
   const HighsOptions& operator=(const HighsOptions& other) {
     if (&other != this) {
       if ((HighsInt)records.size() == 0) initRecords();
@@ -722,15 +736,15 @@ class HighsOptions : public HighsOptionsStruct {
     return *this;
   }
 
-  const HighsOptions& operator=(HighsOptions&& other) {
-    if (&other != this) {
-      if ((HighsInt)records.size() == 0) initRecords();
-      HighsOptionsStruct::operator=(other);
-      this->log_options.log_stream = other.log_options.log_stream;
-      setLogOptions();
-    }
-    return *this;
-  }
+  // there is deliberately no move constructor or move assignment operator.
+  // each option record holds a pointer to the member of the object that
+  // created it, so records cannot be taken over from another object: a move
+  // constructor that steals them leaves the new object's records pointing at
+  // the members of the moved-from object (and dangling once it is destroyed).
+  // without move operations, rvalues bind to the copy constructor and copy
+  // assignment operator above, which give each object its own records. do
+  // not declare the move operations as deleted, since this would make moving
+  // (e.g. via std::move or returning by value) fail to compile.
 
   virtual ~HighsOptions() {
     if (records.size() > 0) deleteRecords();
@@ -795,7 +809,7 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_double = new OptionRecordDouble(
         "infinite_bound",
-        "Limit on |constraint bound|: values greater than or equal to "
+        "Limit on |variable/constraint bound|: values greater than or equal to "
         "this will be treated as infinite",
         advanced, &infinite_bound, 1e15, 1e20, kHighsInf);
     records.push_back(record_double);
@@ -1006,7 +1020,7 @@ class HighsOptions : public HighsOptionsStruct {
         "pretty = human-readable): "
         "-1 => HiGHS old raw (deprecated); 0 => HiGHS raw; "
         "1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; "
-        "4 => HiGHS sparse raw",
+        "4 => HiGHS sparse raw; 5 => HiGHS partial raw",
         advanced, &write_solution_style, kSolutionStyleMin, kSolutionStyleRaw,
         kSolutionStyleMax);
     records.push_back(record_int);
@@ -1094,6 +1108,13 @@ class HighsOptions : public HighsOptionsStruct {
         kWriteIisModelFileString, "Write IIS model file", advanced,
         &write_iis_model_file, kHighsFilenameDefault);
     records.push_back(record_string);
+
+    record_int = new OptionRecordInt(
+        "presolve_mode",
+        "Presolve mode 0 => default; 1 => initial sweep; 2 => light; 3 => full",
+        advanced, &presolve_mode, kPresolveModeMin, kPresolveModeDefault,
+        kPresolveModeMax);
+    records.push_back(record_int);
 
     record_bool = new OptionRecordBool(
         "mip_detect_symmetry", "Whether MIP symmetry should be detected",
@@ -1317,24 +1338,49 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &hipo_system, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kHipoParallelString,
-                               "HiPO parallelism: \"tree\", "
-                               "\"node\" or \"both\"",
-                               advanced, &hipo_parallel_type, kHipoBothString);
+    record_string = new OptionRecordString(
+        kHipoParallelString,
+        "HiPO parallelism: \"tree\", \"node\", \"both\" or \"choose\"",
+        advanced, &hipo_parallel_type, kHighsChooseString);
     records.push_back(record_string);
 
-    record_string =
-        new OptionRecordString(kHipoOrderingString,
-                               "HiPO matrix reordering: \"choose\", \"metis\", "
-                               "\"amd\" or \"rcm\"",
-                               advanced, &hipo_ordering, kHighsChooseString);
+    record_int = new OptionRecordInt(
+        "hipo_parallel_force", "Bit mask to force parallel techniques in HiPO",
+        advanced, &hipo_parallel_force, 0, 0,
+        static_cast<int>(hipo::ParallelTechnique::kMaxSum));
+    records.push_back(record_int);
+
+    record_int =
+        new OptionRecordInt("hipo_parallel_forbid",
+                            "Bit mask to forbid parallel techniques in HiPO",
+                            advanced, &hipo_parallel_forbid, 0, 0,
+                            static_cast<int>(hipo::ParallelTechnique::kMaxSum));
+    records.push_back(record_int);
+
+    record_string = new OptionRecordString(
+        kHipoOrderingString,
+        "HiPO matrix reordering: \"choose\", \"metis\", \"amd\" or \"rcm\"",
+        advanced, &hipo_ordering, kHighsChooseString);
+    records.push_back(record_string);
+
+    record_string = new OptionRecordString(
+        kHipoFactorString,
+        "HiPO matrix factorisation: \"choose\", \"multifrontal\" "
+        "or \"uplooking\"",
+        advanced, &hipo_factor, kHighsChooseString);
     records.push_back(record_string);
 
     record_int = new OptionRecordInt(
         "hipo_block_size", "Block size for dense linear algebra within HiPO",
         advanced, &hipo_block_size, 0, 128, kHighsIInf);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool(
+        "hipo_serial_blas",
+        "Force OpenBLAS to run in serial when used by HiPO. This setting is "
+        "process-wide, so affects any other use of OpenBLAS",
+        advanced, &hipo_serial_blas, true);
+    records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
         "pdlp_iteration_limit", "Iteration limit for PDLP solver", advanced,
@@ -1384,6 +1430,11 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsInf);
     records.push_back(record_double);
 
+    record_bool = new OptionRecordBool("test_qp_oracle",
+                                       "Use an oracle for the QP Hessian",
+                                       advanced, &test_qp_oracle, false);
+    records.push_back(record_bool);
+
     record_bool = new OptionRecordBool(
         "qp_allow_hot_start", "Allow the active set QP solver to hot start",
         advanced, &qp_allow_hot_start, false);
@@ -1410,8 +1461,8 @@ class HighsOptions : public HighsOptionsStruct {
         "iis_strategy",
         "Strategy for IIS calculation: "
         "0 => Light test; 1 => Try dual ray; "
-        "2 => Try elastic LP; 4 => Prioritise columns; "
-        "8 => Find true IIS; 16 => Find relaxation IIS for MIP",
+        "2 => Try elastic LP; 4 => Find true IIS; "
+        "8 => Prioritise columns; 16 => Find relaxation IIS for MIP",
         advanced, &iis_strategy, kIisStrategyMin, kIisStrategyDefault,
         kIisStrategyMax);
     records.push_back(record_int);
@@ -1458,14 +1509,14 @@ class HighsOptions : public HighsOptionsStruct {
 
     record_bool = new OptionRecordBool(
         "use_implied_bounds_from_presolve",
-        "Use relaxed implied bounds from presolve", advanced,
+        "Use relaxed implied bounds from presolve: redundant option!", advanced,
         &use_implied_bounds_from_presolve, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
         "lp_presolve_requires_basis_postsolve",
         "Prevents LP presolve steps for which postsolve cannot maintain a "
-        "basis",
+        "basis: redundant option!",
         advanced, &lp_presolve_requires_basis_postsolve, true);
     records.push_back(record_bool);
 
@@ -1643,9 +1694,16 @@ class HighsOptions : public HighsOptionsStruct {
         advanced, &presolve_rule_logging, false);
     records.push_back(record_bool);
 
-    record_bool = new OptionRecordBool("presolve_remove_slacks",
-                                       "Remove slacks after presolve", advanced,
-                                       &presolve_remove_slacks, false);
+    record_bool =
+        new OptionRecordBool("presolve_remove_slacks",
+                             "Remove slacks after presolve: redundant option!",
+                             advanced, &presolve_remove_slacks, false);
+    records.push_back(record_bool);
+
+    record_bool =
+        new OptionRecordBool("presolve_fm_obj_reformulation",
+                             "Fourier-Motzkin objective reformulation",
+                             advanced, &presolve_fm_obj_reformulation, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
@@ -1734,6 +1792,12 @@ class HighsOptions : public HighsOptionsStruct {
   std::vector<OptionRecord*> records;
   HighsInt num_user_settable_options_;
   void setLogOptions();
+  double getMipPrimalFeasibilityTolerance() const {
+    return this->mip_feasibility_tolerance;
+  }
+  double getMipDualFeasibilityTolerance() const {
+    return this->mip_feasibility_tolerance * 0.1;
+  }
 };
 
 void warnSolverInvalid(const HighsOptions& options,
@@ -1743,4 +1807,8 @@ bool solverValidForLp(const std::string& solver);
 bool solverValidForMip(const std::string& solver);
 bool solverValidForQp(const std::string& solver);
 
+bool useIpm(const std::string& solver);
+bool usePdlp(const std::string& solver);
+bool mayRequireDualPostsolve(const HighsOptions* options);
+bool mayRequireBasisPostsolve(const HighsOptions* options);
 #endif

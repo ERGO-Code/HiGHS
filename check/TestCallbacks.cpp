@@ -9,12 +9,14 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsCallback.h"
 
-const bool dev_run = false;
+const bool dev_run = false;  // true;//
 
 const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
 const HighsInt adlittle_ipm_iteration_limit = 5;
 const HighsInt adlittle_simplex_iteration_limit = 30;
+
+const HighsInt primal1_qp_iteration_limit = 5;
 
 const HighsInt kLogBufferSize = kIoBufferSize;
 const HighsInt kUserCallbackNoData = -1;
@@ -269,6 +271,35 @@ HighsCallbackFunctionType userkMipUserSetPartialSolution =
       }
     };
 
+HighsCallbackFunctionType userQpCallback =
+    [](int callback_type, const std::string& message,
+       const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+       void* user_callback_data) {
+      // Extract local_callback_data from user_callback_data unless it
+      // is nullptr
+      if (callback_type == kCallbackQpFirstFeasiblePoint) {
+        if (dev_run) {
+          HighsInt num_solution_nz = 0;
+          for (HighsInt iCol = 0;
+               iCol < static_cast<HighsInt>(data_out->qp_solution.size());
+               iCol++)
+            if (data_out->qp_solution[iCol]) num_solution_nz++;
+          printf("userQpCallback(type %2d): %s with %d nonzero values\n",
+                 callback_type, message.c_str(), int(num_solution_nz));
+        }
+      } else if (callback_type == kCallbackQpInterrupt) {
+        if (dev_run)
+          printf(
+              "userQpCallback(type %2d): %s with iteration "
+              "count = %d and objective_value = %g\n",
+              callback_type, message.c_str(),
+              int(data_out->qpasm_iteration_count),
+              data_out->objective_function_value);
+        data_in->user_interrupt =
+            data_out->qpasm_iteration_count > primal1_qp_iteration_limit;
+      }
+    };
+
 std::function<void(int, const std::string&, const HighsCallbackOutput*,
                    HighsCallbackInput*, void*)>
     userDataCallback = [](int callback_type, const std::string& message,
@@ -355,7 +386,7 @@ TEST_CASE("highs-callback-logging", "[highs_callback]") {
   highs.readModel(filename);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
@@ -372,7 +403,7 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
   if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   if (dev_run) highs.writeBasis("");
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
@@ -389,7 +420,7 @@ TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
   REQUIRE(highs.getInfo().simplex_iteration_count >
           adlittle_simplex_iteration_limit);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
@@ -416,7 +447,7 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
     REQUIRE(highs.getInfo().ipm_iteration_count ==
             adlittle_ipm_iteration_limit + 1);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-interrupt", "[highs_callback]") {
@@ -432,7 +463,7 @@ TEST_CASE("highs-callback-mip-interrupt", "[highs_callback]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
   REQUIRE(highs.getInfo().objective_function_value > egout_optimal_objective);
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-improving", "[highs_callback]") {
@@ -447,7 +478,7 @@ TEST_CASE("highs-callback-mip-improving", "[highs_callback]") {
   highs.readModel(filename);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-data", "[highs_callback]") {
@@ -461,7 +492,7 @@ TEST_CASE("highs-callback-mip-data", "[highs_callback]") {
   highs.readModel(filename);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-solution", "[highs_callback]") {
@@ -483,7 +514,7 @@ TEST_CASE("highs-callback-mip-solution", "[highs_callback]") {
   highs.startCallback(kCallbackMipSolution);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
@@ -495,7 +526,7 @@ TEST_CASE("highs-callback-mip-cut-pool", "[highs_callback]") {
   highs.startCallback(kCallbackMipGetCutPool);
   highs.run();
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 static void runMipUserSolutionTest(
@@ -535,7 +566,7 @@ static void runMipUserSolutionTest(
         std::max(1.0, std::fabs(objective_function_value0));
     REQUIRE(objective_diff < 1e-12);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-mip-user-solution", "[highs-callback]") {
@@ -606,5 +637,89 @@ TEST_CASE("highs-callback-mip-user-solution-c", "[highs-callback]") {
   highs.startCallback(kCallbackMipSolution);
 
   highs.run();
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("highs-callback-qpasm", "[highs_callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/primal1.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.readModel(filename);
+  void* p_user_callback_data = nullptr;
+
+  highs.setCallback(userQpCallback, p_user_callback_data);
+  highs.startCallback(kCallbackQpFirstFeasiblePoint);
+  highs.startCallback(kCallbackQpInterrupt);
+  highs.run();
+  REQUIRE(highs.getInfo().qp_iteration_count == 6);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3340", "[highs_callback]") {
+  struct Offer {
+    std::vector<double> solution;
+    std::vector<double> primal_bound_at_query;
+  };
+
+  const HighsInt n = 40;
+  std::vector<double> cost(n + 1), lower(n + 1, 0), upper(n + 1, 1);
+  std::vector<HighsInt> index(n);
+  std::vector<double> weight(n);
+  for (int i = 0; i < n; i++) {
+    cost[i] = -(10 + (i * 37) % 23);
+    index[i] = i;
+    weight[i] = 5 + (i * 53) % 19;
+  }
+  // column n is fixed at 1: presolve moves its cost into the offset
+  cost[n] = 1e6;
+  lower[n] = 1;
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_heuristic_effort", 0.0);
+  highs.setOptionValue("mip_heuristic_run_feasibility_jump", false);
+  highs.addCols(n + 1, cost.data(), lower.data(), upper.data(), 0, nullptr,
+                nullptr, nullptr);
+  std::vector<HighsVarType> integrality(n, HighsVarType::kInteger);
+  highs.changeColsIntegrality(0, n - 1, integrality.data());
+  highs.addRow(-kHighsInf, 97, n, index.data(), weight.data());
+
+  highs.run();
+  Offer offer;
+  offer.solution = highs.getSolution().col_value;
+  const double optimum = highs.getInfo().objective_function_value;
+  highs.clearSolver();
+
+  // Start from a poor solution: item 0 only.
+  HighsSolution start;
+  start.col_value.assign(n + 1, 0);
+  start.col_value[0] = 1;
+  start.col_value[n] = 1;
+  highs.setSolution(start);
+
+  // Offer the optimum at the first user-solution query; record the primal
+  // bound at each query.
+  highs.setCallback(
+      [](int, const std::string&, const HighsCallbackOutput* data_out,
+         HighsCallbackInput* data_in, void* user_data) {
+        auto& offer = *static_cast<Offer*>(user_data);
+        if (offer.primal_bound_at_query.empty()) {
+          data_in->user_has_solution = true;
+          data_in->user_solution = offer.solution;
+        }
+        offer.primal_bound_at_query.push_back(data_out->mip_primal_bound);
+      },
+      &offer);
+  highs.startCallback(kCallbackMipUserSolution);
+  highs.run();
+
+  if (dev_run) printf("optimum                      %.1f\n", optimum);
+  for (size_t q = 0; q < offer.primal_bound_at_query.size(); q++) {
+    if (dev_run)
+      printf("primal bound at query %zu      %.1f\n", q,
+             offer.primal_bound_at_query[q]);
+    if (q > 0) REQUIRE(offer.primal_bound_at_query[q] == optimum);
+  }
+
+  highs.resetThreadScheduler(true);
 }

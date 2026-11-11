@@ -35,7 +35,7 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --parallel
+        run: cmake --build . -j2
 
   conan-cpp20-libcxx:
     runs-on: ubuntu-latest
@@ -129,4 +129,4 @@ jobs:
         env:
           HIGHS_SOURCE: ${{ github.workspace }}
         run: |
-          conan create /tmp/conan-highs --version 1.15.1 --build=missing
+          conan create /tmp/conan-highs --version 1.16.0 --build=missing

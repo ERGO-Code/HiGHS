@@ -61,7 +61,7 @@ void printMinorIterationDetails(const double iteration, const double col,
                                 const double old_value, const double update,
                                 const double ctx, const std::vector<double>& r,
                                 const double quadratic_objective,
-                                HighsLogOptions options) {
+                                const HighsLogOptions& options) {
   double rnorm = getNorm2(r);
   std::stringstream ss;
   ss << "iter " << iteration;

@@ -21,7 +21,7 @@ class Eventhandler {
   }
 
   void fire(T args) {
-    for (std::function<void(T)> fun : subscribers) {
+    for (const std::function<void(T)>& fun : subscribers) {
       fun(args);
     }
   }

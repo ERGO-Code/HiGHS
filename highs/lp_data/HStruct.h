@@ -11,6 +11,7 @@
 #ifndef LP_DATA_HSTRUCT_H_
 #define LP_DATA_HSTRUCT_H_
 
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -29,9 +30,6 @@ struct HighsSolution {
   void clear();
   void print(const std::string& prefix = "",
              const std::string& message = "") const;
-  bool isModelRow(HighsInt row) const {
-    return static_cast<size_t>(row) < row_value.size();
-  }
 };
 
 struct HighsObjectiveSolution {
@@ -128,11 +126,15 @@ struct HighsLpMods {
 
 struct HighsNameHash {
   std::unordered_map<std::string, int> name2index;
-  void form(const std::vector<std::string>& name);
-  bool hasDuplicate(const std::vector<std::string>& name);
-  void update(int index, const std::string& old_name,
-              const std::string& new_name);
-  void clear();
+  size_t size() { return this->name2index.size(); }
+  void form(const std::vector<std::string>& names);
+  bool hasDuplicate(const std::vector<std::string>& names);
+  void addName(const HighsInt index, const std::string& name);
+  bool addNameFindsDuplicate(const HighsInt index, const std::string& name);
+  bool updateFindsDuplicate(const HighsInt index, const std::string& old_name,
+                            const std::string& new_name);
+  bool ok(const std::vector<std::string>& names);
+  void clear() { this->name2index.clear(); }
 };
 
 struct HighsPresolveRuleLog {
@@ -181,7 +183,7 @@ struct HighsProfiling {
   HighsInt num_profiling_clock_ = -1;
   std::vector<std::string> name;
   // These vectors are over threads
-  std::vector<uint8_t> submip;
+  std::vector<HighsBool> submip;
   std::vector<HighsProfilingRecord> record;
   std::vector<HighsProfilingRecord> submip_record;
   bool initialized = false;
@@ -207,6 +209,9 @@ struct HighsProfiling {
   //  HighsInt getSepaClockIndex(const std::string& name);
 };
 
+// Starts a profiling clock and stops it when the scope is left, on every exit
+using HighsProfilingScope = HighsClockScope<HighsProfiling>;
+
 struct HighsSimplexStats {
   bool valid;
   HighsInt iteration_count;
@@ -217,7 +222,7 @@ struct HighsSimplexStats {
   double row_ep_density;
   double row_ap_density;
   double row_DSE_density;
-  void report(FILE* file, const std::string message = "") const;
+  void report(FILE* file, const std::string& message = "") const;
   void initialise(const HighsInt iteration_count_ = 0);
 };
 
@@ -244,6 +249,46 @@ struct HighsUserScaleData {
                   const double& large_matrix_value_);
   bool scaleError(std::string& message) const;
   bool scaleWarning(std::string& message) const;
+};
+
+using HighsHessianFunctionType = std::function<HighsInt(
+    const HighsInt call_type, const HighsInt* x_num_entries,
+    const HighsInt* x_index, const double* x_value,
+    HighsInt* hessian_x_num_entries, HighsInt* hessian_x_index,
+    double* hessian_x_value, void*)>;
+
+struct HessianOracle {
+  // Oracle to obtain values of Q' = multiplier_*Q + shift_*I and form
+  // products with Q', by calling a user-supplied function (call_) to
+  // form products with Q and then apply any non-trivial multiplier_
+  // or shift_
+  HighsInt dim_ = 0;
+  double multiplier_ = 1.0;  // Minimize
+  double shift_ = 0.0;       // No regularization
+  HighsHessianFunctionType call_ = nullptr;
+  void* data_ = nullptr;
+  void clear();
+  bool isValid() const { return hasProductCall(); }
+  bool hasProductCall() const;
+  void formFromOracle();
+  double diagonal(const HighsInt i) const;
+  double entry(const HighsInt i, const HighsInt j) const;
+  void getPackedColumn(const HighsInt col, HighsInt& col_num_entries,
+                       HighsInt* col_index, double* col_value) const;
+  void getScatteredColumn(const HighsInt col, HighsInt& col_num_entries,
+                          HighsInt* col_index, double* col_value) const;
+  void product(const std::vector<double>& x_value,
+               std::vector<double>& hessian_x_value) const;
+  void product(const double* x_value, double* hessian_x_value) const;
+  void product(const HighsInt x_num_entries, const HighsInt* x_index,
+               const double* x_value, double* hessian_x_value) const;
+  void scaleAndShift(const HighsInt* x_num_entries, const HighsInt* x_index,
+                     const double* x_value, double* hessian_x_value) const;
+};
+
+struct StatusString {
+  std::string full_;
+  std::string s2_;
 };
 
 #endif /* LP_DATA_HSTRUCT_H_ */

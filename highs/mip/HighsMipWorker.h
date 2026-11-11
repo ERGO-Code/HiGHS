@@ -70,11 +70,14 @@ class HighsMipWorker {
  public:
   std::unique_ptr<HighsSearch> search_ptr_;
   std::unique_ptr<HighsSeparation> sepa_ptr_;
-  HighsNodeQueue nodequeue;
+  std::vector<std::pair<HighsNodeQueue::OpenNode, bool>> processedNodes;
+  std::vector<HighsNodeQueue::OpenNode> preparedNodes;
+  size_t prepNodeIdx;
 
   double upper_bound;
   double upper_limit;
   double optimality_limit;
+  bool early_termination;
 
   std::vector<std::tuple<std::vector<double>, double, int>> solutions_;
 
@@ -86,10 +89,7 @@ class HighsMipWorker {
                  HighsDomain* domain, HighsCutPool* cutpool,
                  HighsConflictPool* conflictpool, HighsPseudocost* pseudocost);
 
-  ~HighsMipWorker() {
-    search_ptr_.reset();
-    sepa_ptr_.reset();
-  }
+  ~HighsMipWorker();
 
   void resetSearch();
 
@@ -128,6 +128,8 @@ class HighsMipWorker {
   void setAllowHeuristics(const bool allowed) { heuristics_allowed = allowed; }
 
   bool getAllowHeuristics() const { return heuristics_allowed; }
+
+  double getOptimalityLimit() const;
 
   int64_t& getNumNeighbourhoodQueries() {
     return sepa_stats.numNeighbourhoodQueries;

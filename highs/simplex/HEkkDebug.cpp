@@ -216,7 +216,7 @@ void HEkk::debugReporting(const HighsInt save_mod_recover,
   }
 }
 
-HighsDebugStatus HEkk::debugSimplex(const std::string message,
+HighsDebugStatus HEkk::debugSimplex(const std::string& message,
                                     const SimplexAlgorithm algorithm,
                                     const HighsInt phase,
                                     const bool initialise) const {
@@ -686,7 +686,7 @@ HighsDebugStatus HEkk::debugSimplex(const std::string message,
 // Methods below are not called externally
 
 void HEkk::debugReportReinvertOnNumericalTrouble(
-    const std::string method_name, const double numerical_trouble_measure,
+    const std::string& method_name, const double numerical_trouble_measure,
     const double alpha_from_col, const double alpha_from_row,
     const double numerical_trouble_tolerance, const bool reinvert) const {
   if (this->options_->highs_debug_level < kHighsDebugLevelCheap) return;
@@ -1069,7 +1069,7 @@ bool HEkk::debugNlaScalingOk(const HighsLp& lp) const {
   return ok;
 }
 HighsDebugStatus HEkk::debugNlaCheckInvert(
-    const std::string message, const HighsInt alt_debug_level) const {
+    const std::string& message, const HighsInt alt_debug_level) const {
   assert(this->status_.has_nla);
   return this->simplex_nla_.debugCheckInvert(message, alt_debug_level);
 }
@@ -1431,7 +1431,7 @@ bool HEkk::debugOneNonbasicMoveVsWorkArraysOk(const HighsInt var) const {
 }
 
 HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
-    const HighsInt num_free_col, const HSet nonbasic_free_col_set) const {
+    const HighsInt num_free_col, const HSet& nonbasic_free_col_set) const {
   const HighsOptions& options = *(this->options_);
   if (options.highs_debug_level < kHighsDebugLevelCheap)
     return HighsDebugStatus::kNotChecked;
@@ -1502,7 +1502,7 @@ HighsDebugStatus HEkk::debugNonbasicFreeColumnSet(
 }
 
 HighsDebugStatus HEkk::devDebugDualSteepestEdgeWeights(
-    const std::string message) {
+    const std::string& message) {
   // Possibly force the expensive check for development work
   const bool check_dual_edge_weights = false;  // true;
   if (check_dual_edge_weights) {
@@ -1680,7 +1680,7 @@ HighsDebugStatus HEkk::debugComputeDual(const bool initialise) const {
   return HighsDebugStatus::kOk;
 }
 
-HighsDebugStatus HEkk::debugSimplexDualInfeasible(const std::string message,
+HighsDebugStatus HEkk::debugSimplexDualInfeasible(const std::string& message,
                                                   const bool force_report) {
   const HighsSimplexInfo& info = this->info_;
   computeSimplexDualInfeasible();

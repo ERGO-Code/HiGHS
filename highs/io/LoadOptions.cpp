@@ -29,10 +29,10 @@ HighsLoadOptionsStatus loadOptionsFromFile(
     while (file.good()) {
       getline(file, line);
       line_count++;
-      size_t non_space = line.find_first_not_of(" ");
+      size_t non_space = line.find_first_not_of(' ');
       if (line.size() == 0 || line[0] == '#' || non_space == std::string::npos)
         continue;
-      size_t equals = line.find_first_of("=");
+      size_t equals = line.find_first_of('=');
       if (equals == std::string::npos || equals + 1 >= line.size()) {
         highsLogUser(report_log_options, HighsLogType::kError,
                      "Error on line %" HIGHSINT_FORMAT

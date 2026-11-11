@@ -58,7 +58,7 @@ which case the optimal solution is said to be __non-unique__.
 
 ## Primal values
 
-The values of the decision variables are referred to as __primal__ values to distingush them from __dual__ values.
+The values of the decision variables are referred to as __primal__ values to distinguish them from __dual__ values.
 
 ## Dual values
 
@@ -160,4 +160,3 @@ relative to the primal bound is a better measure. When the gap reaches
 zero then the MIP is solved to optimality. However, it is often
 preferable to stop the MIP solver when the relative gap is below a
 specified tolerance.
-

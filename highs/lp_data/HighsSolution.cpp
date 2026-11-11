@@ -27,49 +27,62 @@ const uint8_t kHighsSolutionUp = 1;
 
 const bool printf_kkt = false;  // true;  //
 
-void getKktFailures(const HighsOptions& options, const HighsModel& model,
-                    const HighsSolution& solution, const HighsBasis& basis,
-                    HighsInfo& highs_info) {
-  HighsPrimalDualErrors primal_dual_errors;
-  getKktFailures(options, model, solution, basis, highs_info,
-                 primal_dual_errors);
-}
-
+// getKktFailures determines at least the KKT data in HighsInfo, and
+// possibly data in HighsPrimalDualErrors for solution logging when
+// solving LPs.
+//
+// Need both a generic entry point and generic method to perform KKT
+// checking. The former is because we want to just pass a HighsModel
+// instance, its solution and basis, and the latter is to avoid code
+// duplication. Between the minimal entry point and the inner method,
+// there are specific entry points for LP and QP - because a
+// HighsModel may not exist at the calling point when solving an
+// LP/MIP - and because the basis is only used when computing
+// HighsPrimalDualErrors for LPs
+//
+// Generic entry point is getKktFailures, noting that there are
+// default values of nullptr for primal_dual_errors and false for
+// get_residuals, since their calculation is not always needed
+//
 void getKktFailures(const HighsOptions& options, const HighsModel& model,
                     const HighsSolution& solution, const HighsBasis& basis,
                     HighsInfo& highs_info,
-                    HighsPrimalDualErrors& primal_dual_errors,
+                    HighsPrimalDualErrors* primal_dual_errors,
                     const bool get_residuals) {
+  if (model.isQp()) {
+    getQpKktFailures(options, model, solution, highs_info);
+  } else {
+    getLpKktFailures(options, model.lp_, solution, basis, highs_info,
+                     primal_dual_errors, get_residuals);
+  }
+}
+
+// Entry point for QPs
+void getQpKktFailures(const HighsOptions& options, const HighsModel& model,
+                      const HighsSolution& solution, HighsInfo& highs_info) {
+  assert(model.isQp());
   vector<double> gradient;
   model.objectiveGradient(solution.col_value, gradient);
   const HighsLp& lp = model.lp_;
-  getKktFailures(options, model.isQp(), lp, gradient, solution, highs_info,
-                 get_residuals);
-  getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
-  getPrimalDualGlpsolErrors(options, lp, gradient, solution,
-                            primal_dual_errors);
+  getKktFailures(options, model.isQp(), lp, gradient, solution, highs_info);
 }
 
-void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
-                      const HighsSolution& solution, const HighsBasis& basis,
-                      HighsInfo& highs_info) {
-  HighsPrimalDualErrors primal_dual_errors;
-  getLpKktFailures(options, lp, solution, basis, highs_info,
-                   primal_dual_errors);
-}
-
+// Entry point for QPs
 void getLpKktFailures(const HighsOptions& options, const HighsLp& lp,
                       const HighsSolution& solution, const HighsBasis& basis,
                       HighsInfo& highs_info,
-                      HighsPrimalDualErrors& primal_dual_errors,
+                      HighsPrimalDualErrors* primal_dual_errors,
                       const bool get_residuals) {
   getKktFailures(options, false, lp, lp.col_cost_, solution, highs_info,
                  get_residuals);
-  getPrimalDualBasisErrors(options, lp, solution, basis, primal_dual_errors);
-  getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
-                            primal_dual_errors);
+  if (primal_dual_errors != nullptr) {
+    getPrimalDualBasisErrors(options, lp, solution, basis, *primal_dual_errors);
+    getPrimalDualGlpsolErrors(options, lp, lp.col_cost_, solution,
+                              *primal_dual_errors);
+  }
 }
 
+// Inner method
 void getKktFailures(const HighsOptions& options, const bool is_qp,
                     const HighsLp& lp, const std::vector<double>& gradient,
                     const HighsSolution& solution, HighsInfo& highs_info,
@@ -134,6 +147,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   double& primal_dual_objective_error = highs_info.primal_dual_objective_error;
 
+  double& active_cost_norm = highs_info.active_cost_norm;
+  double& active_bound_norm = highs_info.active_bound_norm;
+
   const bool& have_primal_solution = solution.value_valid;
   const bool& have_dual_solution = solution.dual_valid;
   const bool have_integrality = (lp.integrality_.size() != 0);
@@ -149,6 +165,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
   // Invalidate all the KKT measures
   highs_info.invalidateKkt();
+
+  std::vector<double> effective_costs = getEffectiveCosts(lp, options);
 
   if (have_primal_solution) {
     // There's a primal solution, so check its size and initialise the
@@ -209,6 +227,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   double dual_infeasibility;
   double semi_infeasibility;
   double cost = 0.0;
+  double effective_cost = 0.0;
   double lower;
   double upper;
   double value;
@@ -235,13 +254,13 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   // since they determine the RHS of the system solved for the values
   // of the basic variables values. That said, by computing the norm
   // as we do, we capture the active bounds of all the nonbasic variables
-  double highs_norm_bounds = 0.0;
+  active_bound_norm = 0.0;
   // Compute the infinity norm of all near-active column duals, since
   // they contribute to the magnitude of the row values, and dividing
   // their residual error by the norm gives a relative residual error:
   // don't consider large inactive bounds, since they don't affect the
   // model
-  double highs_norm_costs = 0.0;
+  active_cost_norm = 0.0;
 
   // Pass twice through this loop, once to determine the bound and
   // cost norms, and once to use them to assess relative
@@ -252,6 +271,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       if (is_col) {
         HighsInt iCol = iVar;
         cost = gradient[iCol];
+        effective_cost = effective_costs[iCol];
         lower = lp.col_lower_[iCol];
         upper = lp.col_upper_[iCol];
         value = solution.col_value[iCol];
@@ -260,7 +280,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         if (pass == 0) {
           if (dual * dual < dual_feasibility_tolerance) {
             // Dual close to zero
-            highs_norm_costs = std::max(std::fabs(cost), highs_norm_costs);
+            active_cost_norm =
+                std::max(std::fabs(effective_cost), active_cost_norm);
           }
           if (get_residuals && have_dual_solution) {
             // Subtract off the gradient value
@@ -285,7 +306,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
       // at_status: Indicates whether the variable is close to its
       // lower bound, upper bound or not at all. Use this as a proxy
       // for being non-basic, so the active bound contributes to
-      // highs_norm_bounds for calculating relative primal measures.
+      // active_bound_norm for calculating relative primal measures.
       //
       // mid_status: Indicates whether a variable with meaningful
       // bound interval length is below the midpoint of its bound
@@ -302,9 +323,9 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
         // If the primal value is close to a bound then include the bound
         // in the active bound norm
         if (at_status == kHighsSolutionLo) {
-          highs_norm_bounds = std::max(std::fabs(lower), highs_norm_bounds);
+          active_bound_norm = std::max(std::fabs(lower), active_bound_norm);
         } else if (at_status == kHighsSolutionUp) {
-          highs_norm_bounds = std::max(std::fabs(upper), highs_norm_bounds);
+          active_bound_norm = std::max(std::fabs(upper), active_bound_norm);
         }
       } else {
         if (primal_infeasibility > 0) {
@@ -316,12 +337,12 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           sum_primal_infeasibility += primal_infeasibility;
           // Determine the denominator for the relative primal
           // infeasibility
-          double relative_bound_measure = highs_norm_bounds;
+          double relative_bound_measure = active_bound_norm;
           if (at_status == kHighsSolutionNo) {
             // Primal value is infeasible, but not close to a bound:
             // unusual, but possible if absolute primal infeasibilities
             // are not small. Bound has not been included in
-            // highs_norm_bounds, but should be used for local
+            // active_bound_norm, but should be used for local
             // relative infeasibility
             if (mid_status == kHighsSolutionNo ||
                 mid_status == kHighsSolutionLo) {
@@ -363,17 +384,17 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
 
             // Determine the denominator for the relative dual
             // infeasibility
-            double relative_cost_measure = highs_norm_costs;
+            double relative_cost_measure = active_cost_norm;
             if (is_col && cost && dual * dual >= dual_feasibility_tolerance) {
               // Dual value is infeasible, but not close to zero:
               // unusual, but possible if absolute dual infeasibilities
               // are not small. Hence the cost has not been included in
-              // highs_norm_costs, but should be used for local relative
+              // active_cost_norm, but should be used for local relative
               // infeasibility.
               //
               // updateRelativeMeasure(cost, relative_cost_measure);
               relative_cost_measure =
-                  std::max(std::fabs(cost), relative_cost_measure);
+                  std::max(std::fabs(effective_cost), relative_cost_measure);
             }
             double relative_dual_infeasibility =
                 dual_infeasibility / (1.0 + relative_cost_measure);
@@ -390,7 +411,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           double primal_residual_error =
               std::fabs(primal_activity[iRow] - solution.row_value[iRow]);
           double relative_primal_residual_error =
-              primal_residual_error / (1.0 + highs_norm_bounds);
+              primal_residual_error / (1.0 + active_bound_norm);
 
           if (primal_residual_error > primal_residual_tolerance)
             num_primal_residual_error++;
@@ -409,10 +430,11 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
           double dual_residual_error =
               std::fabs(dual_activity[iCol] + solution.col_dual[iCol]);
           double relative_dual_residual_error =
-              dual_residual_error / (1.0 + highs_norm_costs);
+              dual_residual_error / (1.0 + active_cost_norm);
 
-          if (dual_residual_error > dual_residual_tolerance)
+          if (dual_residual_error > dual_residual_tolerance) {
             num_dual_residual_error++;
+          }
           if (max_dual_residual_error < dual_residual_error)
             max_dual_residual_error = dual_residual_error;
 
@@ -497,7 +519,7 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   if (printf_kkt || options.log_dev_level > 0) {
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "getKktFailures:: cost norm = %8.3g; bound norm = %8.3g\n",
-                highs_norm_costs, highs_norm_bounds);
+                active_cost_norm, active_bound_norm);
     highsLogDev(options.log_options, HighsLogType::kInfo,
                 "getKktFailures:                      LP  (abs / rel)    "
                 "     Col (abs / rel)         Row (abs / rel)\n");
@@ -658,6 +680,106 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
         semi_infeasibility = 0;
     }
   }
+}
+
+std::vector<double> getEffectiveCosts(const HighsLp& lp,
+                                      const HighsOptions& options) {
+  // Look for free column singletons that allow equations to be added
+  // into the objective and, hence, compute the effective costs of an
+  // LP: handles the case where the objective is min z, with a
+  // constraint z - c^Tx so the "true" costs are c.
+  //
+  // Constants to distinguish row status: kFree (row may contain a
+  // free column singleton); >0 (position in "ID" vectors to indicate
+  // that its singleton column is to be added into costs); kUsed (row
+  // contains a free column singleton already added into costs);
+  const HighsInt kUsed = -2;
+  const HighsInt kFree = -1;
+  std::vector<double> effective_costs = lp.col_cost_;
+  std::vector<HighsInt> col_count;
+  std::vector<HighsInt> row_id(lp.num_row_, kFree);
+  std::vector<HighsInt> row_of_id;
+  std::vector<HighsInt> col_of_id;
+  std::vector<double> row_mu_of_id;
+
+  assert(lp.a_matrix_.isColwise());
+  col_count.reserve(lp.num_col_);
+  for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
+    col_count.push_back(lp.a_matrix_.start_[iCol + 1] -
+                        lp.a_matrix_.start_[iCol]);
+  for (HighsInt pass_n = 0;; pass_n++) {
+    col_of_id.clear();
+    row_of_id.clear();
+    row_mu_of_id.clear();
+    HighsInt num_id = 0;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      bool free_column_singleton =
+          col_count[iCol] == 1 && lp.col_lower_[iCol] == -kHighsInf &&
+          lp.col_upper_[iCol] == kHighsInf && effective_costs[iCol];
+      if (!free_column_singleton) continue;
+      // Potential free column singleton - so long as the row is an
+      // equation and has not already been selected for substitution
+      // into the objective
+      //
+      // Find the row in the column (which may originally have had
+      // more than one entry)
+      HighsInt iEl = -1;
+      HighsInt iRow = -1;
+      for (iEl = lp.a_matrix_.start_[iCol]; iEl < lp.a_matrix_.start_[iCol + 1];
+           iEl++) {
+        HighsInt this_row = lp.a_matrix_.index_[iEl];
+        if (row_id[this_row] == kFree) {
+          iRow = this_row;
+          break;
+        }
+      }
+      if (iRow < 0) continue;
+      assert(iRow == lp.a_matrix_.index_[iEl]);
+      // Row must be an equation
+      if (lp.row_lower_[iRow] != lp.row_upper_[iRow]) continue;
+      // Found a free column singleton, so can zero its column cost,
+      // as its effective cost is zero after substitution, so the
+      // elimination need not be done
+      col_count[iCol] = 0;
+      // Retain the index of the free column singleton, its
+      // corresponding row, the multiplier for the elimination, and
+      // row_id[iRow]: this is both a marker to indicate that the row
+      // cannot be chosen for a subsequent free column singleton, and
+      // the position in col_of_id/row_of_id/row_mu_of_id so that
+      // these values can be extracted when passing through the matrix
+      col_of_id.push_back(iCol);
+      row_of_id.push_back(iRow);
+      row_mu_of_id.push_back(effective_costs[iCol] / lp.a_matrix_.value_[iEl]);
+      row_id[iRow] = num_id;
+      num_id++;
+    }
+    if (num_id == 0) break;
+    // Now pass through the matrix, adding multiples of selected rows
+    // into the objective
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
+      if (col_count[iCol] == 0) continue;
+      for (HighsInt iEl = lp.a_matrix_.start_[iCol];
+           iEl < lp.a_matrix_.start_[iCol + 1]; iEl++) {
+        HighsInt id = row_id[lp.a_matrix_.index_[iEl]];
+        if (id < 0) continue;
+        // Entry in a row to be added into effective_costs: get the
+        // multiplier, reduce the column's count and update its
+        // effective cost
+        double row_mu = row_mu_of_id[id];
+        col_count[iCol]--;
+        effective_costs[iCol] -= row_mu * lp.a_matrix_.value_[iEl];
+      }
+    }
+    // Update row_id so that these rows cannot be chosen again, and
+    // zero the effective cost for the free column singletons
+    for (HighsInt id = 0; id < num_id; id++) {
+      HighsInt iCol = col_of_id[id];
+      HighsInt iRow = row_of_id[id];
+      row_id[iRow] = kUsed;
+      effective_costs[iCol] = 0;
+    }
+  }
+  return effective_costs;
 }
 
 void getPrimalDualGlpsolErrors(const HighsOptions& options, const HighsLp& lp,
@@ -1060,10 +1182,8 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
     optimality_tolerance = options.kkt_tolerance;
   }
   info.objective_function_value = lp.objectiveValue(solution.col_value);
-  HighsPrimalDualErrors primal_dual_errors;
   const bool get_residuals = !basis.valid;
-  getLpKktFailures(options, lp, solution, basis, info, primal_dual_errors,
-                   get_residuals);
+  getLpKktFailures(options, lp, solution, basis, info, nullptr, get_residuals);
   if (model_status == HighsModelStatus::kOptimal)
     reportKktFailures(lp, options, info, message);
   // get_residuals is false when there is a valid basis, since
@@ -1308,6 +1428,10 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                    "Model status changed from \"Optimal\" to \"Unknown\""
                    " since relative violation of tolerances is %8.3g\n",
                    max_tolerance_relative_violation);
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "         Using active cost norm = %8.3g; active bound norm "
+                   "= %8.3g\n",
+                   info.active_cost_norm, info.active_bound_norm);
     } else if (max_allowed_tolerance_relative_violation > 1 &&
                max_tolerance_relative_violation > 1) {
       highsLogUser(log_options, HighsLogType::kInfo,
@@ -1322,7 +1446,6 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
     highsLogUser(log_options, HighsLogType::kWarning,
                  "Model status changed from \"Unknown\" to \"Optimal\"\n");
   }
-  highsLogUser(log_options, HighsLogType::kInfo, "\n");
   return;
 }
 
@@ -1353,18 +1476,19 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
   assert(solution.row_value.size() == static_cast<size_t>(lp.num_row_));
   assert(solution.row_dual.size() == static_cast<size_t>(lp.num_row_));
 
-  dual_objective_value = lp.offset_;
+  HighsCDouble extended_dual_objective_value = lp.offset_;
   if (gradient) {
     // The dual objective for a QP has a -(1/2)x^TQx term, and this
     // can be computed from the gradient (g = Qx + c) as
     // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, a pointer to the gradient data
     // is passed if this is necessary
-    double quad_value = 0;
+    HighsCDouble extended_quad_value = 0;
     for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) {
-      quad_value +=
-          (lp.col_cost_[iCol] - gradient[iCol]) * solution.col_value[iCol];
+      HighsCDouble extended_coefficient =
+          HighsCDouble(lp.col_cost_[iCol]) - HighsCDouble(gradient[iCol]);
+      extended_quad_value += extended_coefficient * solution.col_value[iCol];
     }
-    dual_objective_value += 0.5 * quad_value;
+    extended_dual_objective_value += 0.5 * extended_quad_value;
   }
   double bound = 0;
   for (HighsInt iVar = 0; iVar < lp.num_col_ + lp.num_row_; iVar++) {
@@ -1383,12 +1507,13 @@ bool computeDualObjectiveValue(const double* gradient, const HighsLp& lp,
       const double mid = (lower + upper) * 0.5;
       bound = primal < mid ? lower : upper;
     }
-    dual_objective_value += bound * dual;
+    extended_dual_objective_value += HighsCDouble(bound) * dual;
   }
+  dual_objective_value = double(extended_dual_objective_value);
   return true;
 }
 
-void HighsError::print(std::string message) {
+void HighsError::print(const std::string& message) {
   printf(
       "\n%s\nAbsolute value = %11.4g; index = %9d\nRelative value = %11.4g; "
       "index = %9d\n",
@@ -1519,7 +1644,7 @@ HighsStatus ipxSolutionToHighsSolution(
   const bool get_row_activities = ipx_num_row < lp.num_row_;
   if (get_row_activities) row_activity.assign(lp.num_row_, 0);
   HighsInt ipx_slack = lp.num_col_;
-  assert(ipx_num_row == lp.num_row_);
+  assert(ipx_num_row <= lp.num_row_);
   HighsInt dual_infeasibility_count = 0;
   double primal_infeasibility;
   double relative_primal_infeasibility;
@@ -2051,8 +2176,8 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
   double primal_residual_tolerance = options.primal_residual_tolerance;
   double dual_residual_tolerance = options.dual_residual_tolerance;
   double optimality_tolerance = options.optimality_tolerance;
-  const bool is_mip = lp.isMip();
-  if (is_mip) {
+  const bool solved_as_mip = lp.isMip() && !options.solve_relaxation;
+  if (solved_as_mip) {
     primal_feasibility_tolerance = mip_feasibility_tolerance;
   } else if (options.kkt_tolerance != kDefaultKktTolerance) {
     mip_feasibility_tolerance = options.kkt_tolerance;
@@ -2065,9 +2190,10 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
 
   const bool force_report = options.log_dev_level >= kHighsLogDevLevelInfo;
   const bool complementarity_error =
-      !is_mip && info.primal_dual_objective_error > optimality_tolerance;
+      !solved_as_mip && info.primal_dual_objective_error > optimality_tolerance;
   const bool integrality_error =
-      is_mip && info.max_integrality_violation >= mip_feasibility_tolerance;
+      solved_as_mip &&
+      info.max_integrality_violation >= mip_feasibility_tolerance;
   const bool has_kkt_failures =
       integrality_error || info.num_primal_infeasibilities > 0 ||
       info.num_dual_infeasibilities > 0 ||
@@ -2080,7 +2206,10 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
 
   highsLogUser(log_options, log_type, "Solution optimality conditions%s%s\n",
                message == "" ? "" : ": ", message == "" ? "" : message.c_str());
-  if (is_mip && info.max_integrality_violation >= 0)
+  highsLogUser(log_options, HighsLogType::kInfo,
+               "Using active cost norm = %8.3g; active bound norm = %8.3g\n",
+               info.active_cost_norm, info.active_bound_norm);
+  if (solved_as_mip && info.max_integrality_violation >= 0)
     highsLogUser(log_options, HighsLogType::kInfo,
                  "    max      %8.3g                                  "
                  "integrality violations"
@@ -2143,6 +2272,123 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
            info.primal_dual_objective_error);
   }
   return has_kkt_failures;
+}
+
+HighsStatus assessUserColValues(const HighsLp& lp, const HighsOptions& options,
+                                const HighsInt num_entries,
+                                const HighsInt* index, const double* value,
+                                const bool perform_feasibility_check) {
+  const bool packed = index != nullptr;
+  if (packed) {
+    if (num_entries < 0) {
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "assessUserColValues: packed solution has num_entries = %d < 0\n",
+          int(num_entries));
+      return HighsStatus::kError;
+    }
+    if (num_entries == 0) {
+      // No solution provided, which suggests a user error so, rather
+      // than going on to define a completely undefined start
+      // solution, issue a warning amd return
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "assessUserColValues: packed solution has num_entries = 0, "
+                   "so no user solution is defined\n");
+      return HighsStatus::kWarning;
+    }
+  } else {
+    // lp.num_col_ entries of value will be used, so num_entries
+    // should reflect this
+    if (num_entries != lp.num_col_) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "assessUserColValues: full solution has num_entries (%d) "
+                   "not equal to num_col (%d)\n",
+                   int(num_entries), int(lp.num_col_));
+      return HighsStatus::kError;
+    }
+  }
+  HighsStatus return_status = HighsStatus::kOk;
+  const HighsInt to_ix = packed ? num_entries : lp.num_col_;
+  HighsInt num_duplicates = 0;
+  std::vector<HighsBool> is_set;
+  is_set.assign(lp.num_col_, false);
+  HighsInt num_infeasible_value = 0;
+  const HighsInt max_warning = 10;
+  const bool has_integrality = lp.integrality_.size() > 0;
+  const bool assess_as_mip = lp.isMip() && !options.solve_relaxation;
+  const double kPrimalFeasibilityTolerance =
+      assess_as_mip ? options.mip_feasibility_tolerance
+                    : options.primal_feasibility_tolerance;
+  for (HighsInt iX = 0; iX < to_ix; iX++) {
+    HighsInt iCol = packed ? index[iX] : iX;
+    if (iCol < 0 || iCol >= lp.num_col_) {
+      assert(packed);
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "assessUserColValues: Entry %d of user solution has index %d out of "
+          "range [0, %d)\n",
+          int(iX), int(iCol), int(lp.num_col_));
+      return HighsStatus::kError;
+    }
+    // Count duplicates, and record that this value has been set, so
+    // future duplicates can be spotted
+    if (is_set[iCol]) num_duplicates++;
+    is_set[iCol] = true;
+    // Don't test undefined values for feasibility!
+    if (!perform_feasibility_check || value[iX] == kHighsUndefined) continue;
+    double col_infeasibility;
+    double integer_infeasibility;
+    HighsVarType type =
+        has_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+    assessColPrimalSolution(assess_as_mip, options, value[iX],
+                            lp.col_lower_[iCol], lp.col_upper_[iCol], type,
+                            col_infeasibility, integer_infeasibility);
+    if (col_infeasibility > kPrimalFeasibilityTolerance ||
+        integer_infeasibility > options.mip_feasibility_tolerance) {
+      num_infeasible_value++;
+      if (num_infeasible_value <= max_warning)
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "assessUserColValues: Entry %d of user solution has value "
+                     "%g: infeasible "
+                     "for bounds [%g, %g]%s%s\n",
+                     int(iX), value[iX], lp.col_lower_[iCol],
+                     lp.col_upper_[iCol], has_integrality ? " and type " : "",
+                     has_integrality ? highsVarTypeToString(type).c_str() : "");
+      return_status = HighsStatus::kWarning;
+    }
+  }
+  if (num_duplicates > 0) {
+    assert(packed);
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "assessUserColValues: Set of user solution indices has %d "
+                 "duplicate%s: last "
+                 "value used\n",
+                 int(num_duplicates), num_duplicates == 1 ? "" : "s");
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_infeasible_value > max_warning) {
+    assert(return_status == HighsStatus::kWarning);
+    highsLogUser(
+        options.log_options, HighsLogType::kWarning,
+        "assessUserColValues: %d entries of user solution are infeasible\n",
+        int(num_infeasible_value));
+    return_status = HighsStatus::kWarning;
+  }
+  return return_status;
+}
+
+void assignUserColValues(const HighsInt num_col, std::vector<double>& col_value,
+                         const HighsInt num_entries, const HighsInt* index,
+                         const double* value) {
+  assert(num_col >= 0);
+  const bool packed = index != nullptr;
+  if (!packed) assert(num_entries == num_col);
+  const HighsInt to_ix = packed ? num_entries : num_col;
+  col_value.assign(num_col, kHighsUndefined);
+  for (HighsInt iX = 0; iX < to_ix; iX++) {
+    HighsInt iCol = packed ? index[iX] : iX;
+    col_value[iCol] = value[iX];
+  }
 }
 
 bool HighsSolution::hasUndefined() const {

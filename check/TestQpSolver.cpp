@@ -4,7 +4,6 @@
 #include "HCheckConfig.h"
 #include "Highs.h"
 #include "catch.hpp"
-#include "io/FilereaderLp.h"
 
 const bool dev_run = false;
 const double inf = kHighsInf;
@@ -60,18 +59,37 @@ void testPrimalDualObjective(Highs& h,
 TEST_CASE("qp-unbounded", "[qpsolver]") {
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/qpunbounded.lp";
-
+  // Maximize
+  //  obj: x2 + [ - x1^2 ]/2
+  // Bounds
+  //  0 <= x1 <= 40
+  // End
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
 
-  for (auto& solver : solvers) {
-    highs.setOptionValue("solver", solver);
-    REQUIRE(highs.run() == HighsStatus::kOk);
-    REQUIRE(highs.getModelStatus() == unboundedStatus(solver));
+  for (HighsInt k = 0; k < 2; k++) {
+    for (auto& solver : solvers) {
+      highs.setOptionValue("solver", solver);
+      REQUIRE(highs.run() == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == unboundedStatus(solver));
+      // Test the oracle Hessian
+      highs.setOptionValue("test_qp_oracle", true);
+      REQUIRE(highs.run() == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == unboundedStatus(solver));
+      highs.setOptionValue("test_qp_oracle", false);
+    }
+    // Now flip the cost and bounds of x2 (which has index 0 since it
+    // appears first in LP file objective) for code coverage
+    REQUIRE(highs.changeColCost(0, -highs.getLp().col_cost_[0]) ==
+            HighsStatus::kOk);
+    REQUIRE(highs.changeColBounds(0, -highs.getLp().col_upper_[0],
+                                  -highs.getLp().col_lower_[0]) ==
+            HighsStatus::kOk);
+    highs.clearSolver();
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("qp-infeasible", "[qpsolver]") {
@@ -88,7 +106,7 @@ TEST_CASE("qp-infeasible", "[qpsolver]") {
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("qpsolver", "[qpsolver]") {
@@ -211,7 +229,7 @@ TEST_CASE("qpsolver", "[qpsolver]") {
     REQUIRE(return_status == HighsStatus::kOk);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qod", "[qpsolver]") {
@@ -222,6 +240,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
   double required_x1;
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
 
   for (auto& solver : solvers) {
     HighsModel local_model;
@@ -247,7 +266,6 @@ TEST_CASE("test-qod", "[qpsolver]") {
     hessian.index_ = {0};
     hessian.value_ = {2.0};
 
-    highs.setOptionValue("output_flag", dev_run);
     const HighsInfo& info = highs.getInfo();
     const HighsSolution& solution = highs.getSolution();
     const double& objective_function_value = info.objective_function_value;
@@ -364,7 +382,7 @@ TEST_CASE("test-qod", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1] - required_x1) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qjh", "[qpsolver]") {
@@ -378,6 +396,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
   double required_objective_function_value;
 
   Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
 
   for (auto& solver : solvers) {
     HighsModel local_model;
@@ -404,7 +423,6 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     hessian.index_ = {0, 2, 1, 2};
     hessian.value_ = {2.0, -1.0, 0.2, 2.0};
 
-    highs.setOptionValue("output_flag", dev_run);
     highs.setOptionValue("solver", solver);
     const HighsInfo& info = highs.getInfo();
     const double& objective_function_value = info.objective_function_value;
@@ -491,7 +509,7 @@ TEST_CASE("test-qjh", "[qpsolver]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-min-negative-definite", "[qpsolver]") {
@@ -520,7 +538,7 @@ TEST_CASE("test-min-negative-definite", "[qpsolver]") {
     REQUIRE(highs.run() == HighsStatus::kError);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-max-negative-definite", "[qpsolver]") {
@@ -579,7 +597,7 @@ TEST_CASE("test-max-negative-definite", "[qpsolver]") {
     REQUIRE(fabs(solution.col_dual[0] + 1.0) < double_equal_tolerance);
     REQUIRE(fabs(solution.row_dual[0] + 0.5) < double_equal_tolerance);
   }
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite0", "[qpsolver]") {
@@ -627,7 +645,7 @@ TEST_CASE("test-semi-definite0", "[qpsolver]") {
     if (dev_run) highs.writeSolution("", kSolutionStylePretty);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite1", "[qpsolver]") {
@@ -677,7 +695,7 @@ TEST_CASE("test-semi-definite1", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1]) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-semi-definite2", "[qpsolver]") {
@@ -727,7 +745,7 @@ TEST_CASE("test-semi-definite2", "[qpsolver]") {
     REQUIRE(fabs(solution.col_value[1] - 2) < double_equal_tolerance);
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-modification", "[qpsolver]") {
@@ -842,7 +860,7 @@ TEST_CASE("test-qp-modification", "[qpsolver]") {
     highs.run();
     if (dev_run) highs.writeSolution("", kSolutionStylePretty);
 
-    highs.resetGlobalScheduler(true);
+    highs.resetThreadScheduler(true);
   }
 }
 
@@ -1128,7 +1146,7 @@ TEST_CASE("test-qp-hot-start", "[qpsolver]") {
     }
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-terminations", "[qpsolver]") {
@@ -1174,7 +1192,7 @@ TEST_CASE("test-qp-terminations", "[qpsolver]") {
   highs.setOptionValue("time_limit", kHighsInf);
 #endif
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("rowless-qp", "[qpsolver]") {
@@ -1202,11 +1220,12 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
   REQUIRE(highs.setOptionValue("qp_regularization_value", 0) ==
           HighsStatus::kOk);
 
+  HighsStatus require_write_solution_status = HighsStatus::kWarning;
   for (auto& solver : solvers) {
     highs.setOptionValue("solver", solver);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.writeSolution("", kSolutionStylePretty) ==
-            HighsStatus::kWarning);
+            require_write_solution_status);
 
     const double required_objective_function_value = -2.25;
 
@@ -1219,9 +1238,13 @@ TEST_CASE("rowless-qp", "[qpsolver]") {
     REQUIRE(dl_solution < 1e-6);
     dl_solution = std::fabs(col_value[1] - 1.5);
     REQUIRE(dl_solution < 1e-6);
+    // If there is more than one solver, writeSolution returns
+    // HighsStatus::kOk, since column names exist for the model and
+    // the absence of row names no longer yields a warning
+    require_write_solution_status = HighsStatus::kOk;
   }
 
-  highs.resetGlobalScheduler(true);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2489", "[qpsolver]") {
@@ -1265,7 +1288,7 @@ TEST_CASE("issue-2489", "[qpsolver]") {
     REQUIRE(run_status == expected_status);
   }
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("issue-2821", "[qpsolver]") {
@@ -1318,7 +1341,7 @@ TEST_CASE("issue-2821", "[qpsolver]") {
                                 optimal_objective_value));
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("pass-square-hessian", "[qpsolver]") {
@@ -1362,7 +1385,7 @@ TEST_CASE("pass-square-hessian", "[qpsolver]") {
   REQUIRE(okValueDifference(info.objective_function_value,
                             optimal_objective_value));
 
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 /*
@@ -1387,9 +1410,33 @@ TEST_CASE("issue-2894", "[qpsolver]") {
       REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
     }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 */
+
+TEST_CASE("issue-3322", "[qpsolver]") {
+  // Convex QP: a maximization whose only quadratic term is a negative
+  // multiple of the square of a free column. The active set solver
+  // declared it non-convex, because the new diagonal entry of the
+  // Cholesky factor of the reduced Hessian was computed as the
+  // difference of two nearly equal numbers
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  const std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/3322.mps";
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.setOptionValue("solver", kQpAsmString) == HighsStatus::kOk);
+  const double required_objective_function_value = -1.5339266953e-02;
+  for (const double regularization : {1e-7, 0.0}) {
+    REQUIRE(h.setOptionValue("qp_regularization_value", regularization) ==
+            HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(okValueDifference(h.getInfo().objective_function_value,
+                              required_objective_function_value));
+  }
+  h.resetThreadScheduler(true);
+}
 
 TEST_CASE("issue-3045", "[qpsolver]") {
   // Nonconvex QP
@@ -1483,7 +1530,7 @@ TEST_CASE("issue-3045", "[qpsolver]") {
             (solver == kHipoString ? HighsStatus::kOk : HighsStatus::kError));
     //    }
   }
-  h.resetGlobalScheduler(true);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-qp-atwood", "[qpsolver]") {
@@ -1582,5 +1629,82 @@ TEST_CASE("test-qp-atwood", "[qpsolver]") {
       assert(basis_.valid);
     }
   }
+  h.resetThreadScheduler(true);
+}
+
+TEST_CASE("test-assess-model", "[qpsolver]") {
+  HighsModel model;
+  model.lp_.num_col_ = 1;
+  model.lp_.num_row_ = 0;
+  model.lp_.col_cost_ = {0};
+  model.lp_.col_lower_ = {1};
+  model.lp_.col_upper_ = {2};
+  model.lp_.a_matrix_.num_col_ = 1;
+  model.lp_.a_matrix_.num_row_ = 0;
+  model.lp_.a_matrix_.start_ = {0, 0};
+  model.hessian_.dim_ = 2;
+  model.hessian_.start_ = {0, 1, 1};
+  model.hessian_.index_ = {0};
+  model.hessian_.value_ = {1};
+  HighsOptions options;
+  options.output_flag = dev_run;
+  options.setLogOptions();
+  // LP and Hessian are valid individually, but Hessian dimension
+  // cannot exceed the LP dimension
+  REQUIRE(model.lp_.assess(options) == HighsStatus::kOk);
+  REQUIRE(model.hessian_.assess(options) == HighsStatus::kOk);
+  REQUIRE(model.assess(options) == HighsStatus::kError);
+
+  Highs h;
+  h.passOptions(options);
+  HighsHessian empty_hessian;
+  HighsModel empty_model;
+  REQUIRE(h.passModel(model) == HighsStatus::kError);
+  REQUIRE((h.getModel() == empty_model));
+
+  // Passing the Hessian without an LP yields an error
+  REQUIRE(h.passHessian(model.hessian_) == HighsStatus::kError);
+  REQUIRE((h.getModel() == empty_model));
+
+  // Passing the LP and then the Hessian yields an error
+  REQUIRE(h.passModel(model.lp_) == HighsStatus::kOk);
+  REQUIRE(h.passHessian(model.hessian_) == HighsStatus::kError);
+  // Hence the model Hessian is empty
+  REQUIRE((h.getModel().hessian_ == empty_hessian));
+  h.clearModel();
+
+  // Add a couple of columns so that the LP dimension exceeds the
+  // Hessian dimension
+  model.lp_.num_col_ = 3;
+  model.lp_.col_cost_ = {0, 1, 1};
+  model.lp_.col_lower_ = {1, -1, -2};
+  model.lp_.col_upper_ = {2, 1, 1};
+  model.lp_.a_matrix_.num_col_ = 3;
+  model.lp_.a_matrix_.num_row_ = 0;
+  model.lp_.a_matrix_.start_ = {0, 0, 0, 0};
+
+  auto CheckSolutionAndObjective = [&]() {
+    REQUIRE(std::fabs(h.getSolution().col_value[0] - 1.0) < 1e-8);
+    REQUIRE(std::fabs(h.getSolution().col_value[1] + 1.0) < 1e-8);
+    REQUIRE(std::fabs(h.getSolution().col_value[2] + 2.0) < 1e-8);
+    REQUIRE(std::fabs(h.getObjectiveValue() + 2.5) < 1e-8);
+  };
+
+  // LP and Hessian are valid individually, and LP dimension
+  // can exceed the Hessian dimension
+  REQUIRE(model.lp_.assess(options) == HighsStatus::kOk);
+  REQUIRE(model.hessian_.assess(options) == HighsStatus::kOk);
+  REQUIRE(model.assess(options) == HighsStatus::kOk);
+
+  // Passing the LP and then the Hessian is OK
+  REQUIRE(h.passModel(model.lp_) == HighsStatus::kOk);
+  REQUIRE(h.passHessian(model.hessian_) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  CheckSolutionAndObjective();
+
+  REQUIRE(h.passModel(model) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  CheckSolutionAndObjective();
+
   h.resetGlobalScheduler(true);
 }

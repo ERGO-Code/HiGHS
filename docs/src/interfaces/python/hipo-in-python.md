@@ -40,6 +40,16 @@ h.setOptionValue("solver", "hipo")
 h.run()
 ```
 
+### BLAS threads
+
+HiPO runs OpenBLAS in serial for better performance. The number of OpenBLAS threads is a process-wide setting, so after HiPO has run, any other library in the same Python process that is linked to the same OpenBLAS library also runs it in serial. (NumPy and SciPy wheels from PyPI bundle their own copy of OpenBLAS, so are not affected, but this may not hold for other installations such as conda.) If this is a problem, disable it with
+
+```python
+h.setOptionValue("hipo_serial_blas", False)
+```
+
+and set the number of OpenBLAS threads yourself, e.g. using the `OPENBLAS_NUM_THREADS` environment variable. See [BLAS threads](@ref parallel-blas-threads) for details.
+
 For debugging library packaging issues, you can also query the ABI version reported directly by the shared library:
 
 ```python

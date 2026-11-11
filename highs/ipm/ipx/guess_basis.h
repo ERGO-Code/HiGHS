@@ -14,7 +14,7 @@ namespace ipx {
 //             interval [0,INFINITY].
 //
 std::vector<Int> GuessBasis(const Control& control, const Model& model,
-                            const double* colweights);
+                            const double* colweights, bool& interrupt);
 
 }  // namespace ipx
 

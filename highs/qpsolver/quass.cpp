@@ -20,7 +20,6 @@
 #include "qpsolver/factor.hpp"
 #include "qpsolver/gradient.hpp"
 #include "qpsolver/instance.hpp"
-#include "qpsolver/perturbation.hpp"
 #include "qpsolver/ratiotest.hpp"
 #include "qpsolver/reducedcosts.hpp"
 #include "qpsolver/reducedgradient.hpp"
@@ -106,7 +105,7 @@ static QpVector& computesearchdirection_major(
     Gradient& gradient, QpVector& gyp, QpVector& l, QpVector& m, QpVector& p,
     QpSolverStatus& status) {
   status = QpSolverStatus::OK;
-  QpVector yyp = yp;  // TODO PERF: buffer QpVector
+  const QpVector& yyp = yp;
   // if (gradient.getGradient().dot(yp) > 0.0) {
   //   yyp.scale(-1.0);
   // }
@@ -120,11 +119,16 @@ static QpVector& computesearchdirection_major(
                      yyp);  // Bogus return to satisfy method definition
     QpVector v = l;         // TODO PERF: buffer QpVector
     factor.solveLT(v);
+    // the triangular solves fill in v beyond the sparsity pattern of m,
+    // which Zprod reads
+    v.resparsify();
     basis.Zprod(v, p);
+    // p = +/-(yp - Zv), the part of yp that is Q-conjugate to Z, with the
+    // sign that makes p a descent direction
     if (gradient.getGradient().dot(yyp) < 0.0) {
       return p.saxpy(-1.0, 1.0, yyp);
     } else {
-      return p.saxpy(-1.0, -1.0, yyp);
+      return p.saxpy(1.0, -1.0, yyp);
     }
 
   } else {
@@ -146,7 +150,7 @@ static double computemaxsteplength(Runtime& runtime, const QpVector& p,
     }
   } else {
     zcd = true;
-    return std::numeric_limits<double>::infinity();
+    return kHighsInf;
   }
 }
 
@@ -307,7 +311,7 @@ static QpSolverStatus reinvert(Basis& basis, CholeskyFactor& factor,
 }
 
 void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
-                  HighsTimer& timer) {
+                  HighsTimer& timer, HighsCallback& callback) {
   // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);
 
   runtime.statistics.time_start = std::chrono::high_resolution_clock::now();
@@ -348,6 +352,8 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
 
   const HighsInt current_num_active = basis.getnumactive();
   bool atfsep = current_num_active == runtime.instance.num_var;
+  HighsInt null = 0;
+  runtime.settings.iteration_log_header.fire(null);
   while (true) {
     // check iteration limit
     if (runtime.statistics.num_iterations >= runtime.settings.iteration_limit) {
@@ -360,7 +366,19 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       runtime.status = QpModelStatus::kTimeLimit;
       break;
     }
-
+    // Check interrupt
+    if (callback.active[kCallbackQpInterrupt]) {
+      callback.clearHighsCallbackOutput();
+      callback.data_out.qpasm_iteration_count =
+          runtime.statistics.num_iterations;
+      callback.data_out.objective_function_value =
+          runtime.instance.objval(runtime.primal);
+      if (callback.callbackAction(kCallbackQpInterrupt, "QP: interrupt")) {
+        runtime.status = QpModelStatus::kInterrupt;
+        return;
+      }
+    }
+    // Check null space limit
     if (basis.getnuminactive() > runtime.settings.nullspace_limit) {
       runtime.settings.nullspace_limit_log.fire(
           runtime.settings.nullspace_limit);
@@ -369,12 +387,14 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
     }
 
     // LOGGING
+    const bool force_logging = false;
     double run_time = timer.read();
-    if ((runtime.statistics.num_iterations %
-                 runtime.settings.reportingfequency ==
-             0 ||
-         run_time - last_logging_time > logging_time_interval) &&
-        runtime.statistics.num_iterations > last_logging_iteration) {
+    if (force_logging ||
+        ((runtime.statistics.num_iterations %
+                  runtime.settings.reportingfequency ==
+              0 ||
+          run_time - last_logging_time > logging_time_interval) &&
+         runtime.statistics.num_iterations > last_logging_iteration)) {
       bool log_report = true;
       if (runtime.statistics.num_iterations >
           10 * runtime.settings.reportingfequency) {
@@ -382,7 +402,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
         log_report = false;
       }
       if (run_time > 10 * logging_time_interval) logging_time_interval *= 2.0;
-      if (log_report) {
+      if (force_logging || log_report) {
         last_logging_time = run_time;
         last_logging_iteration = runtime.statistics.num_iterations;
         loginformation(runtime, basis, factor, timer);
@@ -431,12 +451,13 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
       basis.deactivate(minidx);
       computerowmove(runtime, basis, p, rowmove);
       tidyup(p, rowmove, basis, runtime);
-      maxsteplength = std::numeric_limits<double>::infinity();
+      maxsteplength = kHighsInf;
       // if (runtime.instance.Q.mat.value.size() > 0) {
       maxsteplength = computemaxsteplength(runtime, p, gradient, buffer_Qp,
                                            zero_curvature_direction);
       if (!zero_curvature_direction) {
-        status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m);
+        status = factor.expand(buffer_yp, buffer_gyp, buffer_l, buffer_m,
+                               p * buffer_Qp);
         if (status != QpSolverStatus::OK) return notOkReturn();
       }
       redgrad.expand(buffer_yp);
@@ -489,6 +510,11 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
           factor.reduce(
               buffer_d, maxabsd,
               indexof(basis.getinactive(), stepres.limitingconstraint) != -1);
+        } else {
+          // yp was not added to the factor, and the change of basis alters
+          // the other null space columns too: recompute the factor when next
+          // needed
+          factor.invalidate();
         }
         redgrad.reduce(buffer_d, maxabsd);
         redgrad.update(stepres.alpha, false);
@@ -506,7 +532,7 @@ void Quass::solve(const QpVector& x0, const QpVector& ra, Basis& b0,
           atfsep = false;
         }
       } else {
-        if (stepres.alpha == std::numeric_limits<double>::infinity()) {
+        if (stepres.alpha == kHighsInf) {
           // unbounded
           runtime.status = QpModelStatus::kUnbounded;
           return;

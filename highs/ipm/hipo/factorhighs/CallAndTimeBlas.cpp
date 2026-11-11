@@ -2,7 +2,7 @@
 
 #include "DataCollector.h"
 #include "DenseFact.h"
-#include "FactorHiGHSSettings.h"
+#include "FactorHighsSettings.h"
 #include "HighsExternalApi.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"

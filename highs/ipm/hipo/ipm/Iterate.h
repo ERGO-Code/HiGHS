@@ -30,7 +30,8 @@ struct Residuals {
 };
 
 struct Iterate {
-  const Model& model;
+  Model& model;
+  Info& info;
   IpmData data;
   std::vector<double> x, xl, xu, y, zl, zu;
   Residuals res;
@@ -50,10 +51,14 @@ struct Iterate {
   double largest_dx_x_{}, largest_dy_y_{};
   double best_pinf_ = kHighsInf, best_dinf_ = kHighsInf;
 
+  double best_violation = kHighsInf;
+  Int best_iter = -1;
+  std::vector<double> best_x, best_xl, best_xu, best_y, best_zl, best_zu;
+
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
   // ===================================================================================
-  Iterate(const Model& model_input, Regularisation& r);
+  Iterate(Model& model_input, Info& info_input, Regularisation& r);
 
   // clear existing data
   void clearIter();
@@ -151,7 +156,7 @@ struct Iterate {
                              std::vector<double>& y_cmp,
                              std::vector<double>& z_cmp) const;
 
-  Int finalResiduals(Info& info) const;
+  void finalResiduals() const;
 
   // ===================================================================================
   // Compute residual of 6x6 linear system for iterative refinement.
@@ -159,6 +164,9 @@ struct Iterate {
   void residuals6x6(const NewtonDir& d);
 
   void makeStep(double alpha_primal, double alpha_dual);
+
+  void saveBest(double feas_tol, double opt_tol, Int iter);
+  bool resetBest(Int iter);
 
   bool stagnation(std::stringstream& log_stream);
 

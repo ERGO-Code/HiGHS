@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include "util/HighsInt.h"
+#include "util/HighsType.h"
 
 template <bool kMinimalRepresentative = false>
 class HighsDisjointSets {

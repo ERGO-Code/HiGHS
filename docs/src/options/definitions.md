@@ -44,7 +44,7 @@
 - Default: 1e+20
 
 ## [infinite\_bound](@id option-infinite-bound)
-- Limit on |constraint bound|: values greater than or equal to this will be treated as infinite
+- Limit on |variable/constraint bound|: values greater than or equal to this will be treated as infinite
 - Type: double
 - Range: [1e+15, inf]
 - Default: 1e+20
@@ -200,9 +200,9 @@
 - Default: "false"
 
 ## [write\_solution\_style](@id option-write-solution-style)
-- Style of solution file (raw = computer-readable, pretty = human-readable): -1 => HiGHS old raw (deprecated); 0 => HiGHS raw; 1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; 4 => HiGHS sparse raw
+- Style of solution file (raw = computer-readable, pretty = human-readable): -1 => HiGHS old raw (deprecated); 0 => HiGHS raw; 1 => HiGHS pretty; 2 => Glpsol raw; 3 => Glpsol pretty; 4 => HiGHS sparse raw; 5 => HiGHS partial raw
 - Type: integer
-- Range: {-1, 4}
+- Range: {-1, 5}
 - Default: 0
 
 ## [glpsol\_cost\_row\_location](@id option-glpsol-cost-row-location)
@@ -245,6 +245,12 @@
 - Write IIS model file
 - Type: string
 - Default: ""
+
+## [presolve\_mode](@id option-presolve-mode)
+- Presolve mode 0 => default; 1 => initial sweep; 2 => light; 3 => full
+- Type: integer
+- Range: {0, 3}
+- Default: 0
 
 ## [mip\_detect\_symmetry](@id option-mip-detect-symmetry)
 - Whether MIP symmetry should be detected
@@ -440,12 +446,29 @@
 - Default: "choose"
 
 ## [hipo\_parallel\_type](@id option-hipo-parallel-type)
-- HiPO parallelism: "tree", "node" or "both"
+- HiPO parallelism: "tree", "node", "both" or "choose"
 - Type: string
-- Default: "both"
+- Default: "choose"
+
+## [hipo\_parallel\_force](@id option-hipo-parallel-force)
+- Bit mask to force parallel techniques in HiPO
+- Type: integer
+- Range: {0, 1023}
+- Default: 0
+
+## [hipo\_parallel\_forbid](@id option-hipo-parallel-forbid)
+- Bit mask to forbid parallel techniques in HiPO
+- Type: integer
+- Range: {0, 1023}
+- Default: 0
 
 ## [hipo\_ordering](@id option-hipo-ordering)
 - HiPO matrix reordering: "choose", "metis", "amd" or "rcm"
+- Type: string
+- Default: "choose"
+
+## [hipo\_factor](@id option-hipo-factor)
+- HiPO matrix factorisation: "choose", "multifrontal" or "uplooking"
 - Type: string
 - Default: "choose"
 
@@ -454,6 +477,11 @@
 - Type: integer
 - Range: {0, 2147483647}
 - Default: 128
+
+## [hipo\_serial\_blas](@id option-hipo-serial-blas)
+- Force OpenBLAS to run in serial when used by HiPO. This setting is process-wide, so affects any other use of OpenBLAS
+- Type: boolean
+- Default: "true"
 
 ## [pdlp\_iteration\_limit](@id option-pdlp-iteration-limit)
 - Iteration limit for PDLP solver
@@ -497,6 +525,11 @@
 - Range: [1e-10, inf]
 - Default: 1e-07
 
+## [test\_qp\_oracle](@id option-test-qp-oracle)
+- Use an oracle for the QP Hessian
+- Type: boolean
+- Default: "false"
+
 ## [qp\_allow\_hot\_start](@id option-qp-allow-hot-start)
 - Allow the active set QP solver to hot start
 - Type: boolean
@@ -521,7 +554,7 @@
 - Default: 1e-07
 
 ## [iis\_strategy](@id option-iis-strategy)
-- Strategy for IIS calculation: 0 => Light test; 1 => Try dual ray; 2 => Try elastic LP; 4 => Prioritise columns; 8 => Find true IIS; 16 => Find relaxation IIS for MIP
+- Strategy for IIS calculation: 0 => Light test; 1 => Try dual ray; 2 => Try elastic LP; 4 => Find true IIS; 8 => Prioritise columns; 16 => Find relaxation IIS for MIP
 - Type: integer
 - Range: {0, 31}
 - Default: 0

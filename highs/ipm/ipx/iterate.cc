@@ -232,7 +232,7 @@ bool Iterate::optimal() const {
     Evaluate();
     double pobj = pobjective_after_postproc();
     double dobj = dobjective_after_postproc();
-    double ave_obj = 0.5 * (pobj + dobj);
+    double ave_obj = 0.5 * (pobj + dobj - 2 * offset_);
     double gap = pobj - dobj;
     const double abs_gap = std::abs(gap);
     const double obj_measure = 1.0+std::abs(ave_obj);

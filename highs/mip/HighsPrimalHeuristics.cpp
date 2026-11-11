@@ -40,6 +40,31 @@ HighsPrimalHeuristics::HighsPrimalHeuristics(HighsMipSolver& mipsolver)
       numInfeasObservations(0),
       randgen(mipsolver.options_mip_->random_seed) {}
 
+bool HighsPrimalHeuristics::subMipShouldRetry(HighsMipWorker& worker,
+                                              const HighsSearch& heur,
+                                              double fixingrate,
+                                              double& maxfixingrate,
+                                              HighsInt& targetdepth) {
+  int64_t new_lp_iterations =
+      worker.getHeurLpIterations() + heur.getLocalLpIterations();
+  if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
+      100000 + ((mipsolver.mipdata_->total_lp_iterations -
+                 mipsolver.mipdata_->heuristic_lp_iterations -
+                 mipsolver.mipdata_->sb_lp_iterations) >>
+                1)) {
+    worker.getHeurLpIterations() = new_lp_iterations;
+    return false;
+  }
+
+  targetdepth = heur.getCurrentDepth() / 2;
+  if (targetdepth <= 1 || worker.search_ptr_->checkLimits()) {
+    worker.getHeurLpIterations() = new_lp_iterations;
+    return false;
+  }
+  maxfixingrate = fixingrate * 0.5;
+  return true;
+}
+
 void HighsPrimalHeuristics::setupIntCols() {
   intcols = mipsolver.mipdata_->integer_cols;
 
@@ -391,6 +416,8 @@ static double calcFixVal(double rootchange, double fracval, double cost) {
     return std::floor(fracval + 0.5);
 }
 
+static constexpr int64_t kDepthFirstNodeLimit = 1000;
+
 void HighsPrimalHeuristics::RENS(HighsMipWorker& worker,
                                  const std::vector<double>& tmp) {
   // return if domain is infeasible
@@ -609,7 +636,7 @@ retry:
       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
     // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
-    heur.solveDepthFirst(10);
+    heur.solveDepthFirst(10, kDepthFirstNodeLimit);
     worker.getHeurLpIterations() += heur.getLocalLpIterations();
     if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
     // lpiterations += heur.lpiterations;
@@ -632,27 +659,9 @@ retry:
       200 + mipsolver.mipdata_->num_nodes / (node_reduction_factor * 20), 12);
   if (worker.terminatorTerminated()) return;
   if (!solve_sub_mip_return) {
-    int64_t new_lp_iterations =
-        worker.getHeurLpIterations() + heur.getLocalLpIterations();
-    if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
-        100000 + ((mipsolver.mipdata_->total_lp_iterations -
-                   mipsolver.mipdata_->heuristic_lp_iterations -
-                   mipsolver.mipdata_->sb_lp_iterations) >>
-                  1)) {
-      worker.getHeurLpIterations() = new_lp_iterations;
-      return;
-    }
-
-    targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1 || (!mipsolver.mipdata_->parallelLockActive() &&
-                             mipsolver.mipdata_->checkLimits())) {
-      worker.getHeurLpIterations() = new_lp_iterations;
-      return;
-    }
-    maxfixingrate = fixingrate * 0.5;
-    // printf("infeasible in root node, trying with lower fixing rate %g\n",
-    //        maxfixingrate);
-    goto retry;
+    if (subMipShouldRetry(worker, heur, fixingrate, maxfixingrate, targetdepth))
+      goto retry;
+    return;
   }
 
   worker.getHeurLpIterations() += heur.getLocalLpIterations();
@@ -920,7 +929,7 @@ retry:
       (mipsolver.submip && mipsolver.mipdata_->numImprovingSols != 0)) {
     // heur.childselrule = ChildSelectionRule::kBestCost;
     heur.setMinReliable(0);
-    heur.solveDepthFirst(10);
+    heur.solveDepthFirst(10, kDepthFirstNodeLimit);
     worker.getHeurLpIterations() += heur.getLocalLpIterations();
     if (mipsolver.submip) mipsolver.mipdata_->num_nodes += heur.getLocalNodes();
     // lpiterations += heur.lpiterations;
@@ -943,26 +952,9 @@ retry:
       200 + mipsolver.mipdata_->num_nodes / (node_reduction_factor * 20), 12);
   if (worker.terminatorTerminated()) return;
   if (!solve_sub_mip_return) {
-    int64_t new_lp_iterations =
-        worker.getHeurLpIterations() + heur.getLocalLpIterations();
-    if (new_lp_iterations + mipsolver.mipdata_->heuristic_lp_iterations >
-        100000 + ((mipsolver.mipdata_->total_lp_iterations -
-                   mipsolver.mipdata_->heuristic_lp_iterations -
-                   mipsolver.mipdata_->sb_lp_iterations) >>
-                  1)) {
-      worker.getHeurLpIterations() = new_lp_iterations;
-      return;
-    }
-
-    targetdepth = heur.getCurrentDepth() / 2;
-    if (targetdepth <= 1 || (!mipsolver.mipdata_->parallelLockActive() &&
-                             mipsolver.mipdata_->checkLimits())) {
-      worker.getHeurLpIterations() = new_lp_iterations;
-      return;
-    }
-    // printf("infeasible in root node, trying with lower fixing rate\n");
-    maxfixingrate = fixingrate * 0.5;
-    goto retry;
+    if (subMipShouldRetry(worker, heur, fixingrate, maxfixingrate, targetdepth))
+      goto retry;
+    return;
   }
 
   worker.getHeurLpIterations() += heur.getLocalLpIterations();

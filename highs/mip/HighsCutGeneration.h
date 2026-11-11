@@ -18,8 +18,8 @@
 #include <vector>
 
 #include "util/HighsCDouble.h"
-#include "util/HighsInt.h"
 #include "util/HighsRandom.h"
+#include "util/HighsType.h"
 
 class HighsLpRelaxation;
 class HighsTransformedLp;
@@ -38,8 +38,8 @@ class HighsCutGeneration {
   HighsCDouble lambda;
   std::vector<double> upper;
   std::vector<double> solval;
-  std::vector<uint8_t> complementation;
-  std::vector<uint8_t> isintegral;
+  std::vector<HighsBool> complementation;
+  std::vector<HighsBool> isintegral;
   const double feastol;
   const double epsilon;
 
@@ -56,7 +56,7 @@ class HighsCutGeneration {
 
   std::vector<double> tmpVals;
   std::vector<HighsInt> tmpInds;
-  std::vector<uint8_t> tmpComplementation;
+  std::vector<HighsBool> tmpComplementation;
   std::vector<double> tmpSolval;
 
   bool determineCover(bool lpSol = true);

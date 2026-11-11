@@ -19,14 +19,14 @@
 HighsDebugStatus debugHighsLpSolution(const std::string& message,
                                       const HighsLpSolverObject& solver_object);
 
-HighsDebugStatus debugHighsSolution(const string message,
+HighsDebugStatus debugHighsSolution(const string& message,
                                     const HighsOptions& options,
                                     const HighsModel& model,
                                     const HighsSolution& solution,
                                     const HighsBasis& basis);
 
 HighsDebugStatus debugHighsSolution(
-    const string message, const HighsOptions& options, const HighsModel& model,
+    const string& message, const HighsOptions& options, const HighsModel& model,
     const HighsSolution& solution, const HighsBasis& basis,
     const HighsModelStatus model_status, const HighsInfo& info);
 
@@ -36,7 +36,7 @@ HighsDebugStatus debugHighsSolution(
     const HighsBasis& basis, const HighsModelStatus model_status,
     const HighsInfo& highs_info, const bool check_model_status_and_highs_info);
 
-void debugReportHighsSolution(const string message,
+void debugReportHighsSolution(const string& message,
                               const HighsLogOptions& log_options,
                               const HighsInfo& highs_info,
                               const HighsModelStatus model_status);
@@ -75,11 +75,11 @@ HighsDebugStatus debugCompareHighsInfoInfeasibility(
     const HighsOptions& options, const HighsInfo& highs_info0,
     const HighsInfo& highs_info1);
 
-HighsDebugStatus debugCompareHighsInfoDouble(const string name,
+HighsDebugStatus debugCompareHighsInfoDouble(const string& name,
                                              const HighsOptions& options,
                                              const double v0, const double v1);
 
-HighsDebugStatus debugCompareHighsInfoInteger(const string name,
+HighsDebugStatus debugCompareHighsInfoInteger(const string& name,
                                               const HighsOptions& options,
                                               const HighsInt v0,
                                               const HighsInt v1);

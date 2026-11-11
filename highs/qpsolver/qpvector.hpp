@@ -8,7 +8,7 @@
 #ifndef __SRC_LIB_VECTOR_HPP__
 #define __SRC_LIB_VECTOR_HPP__
 
-#include <util/HighsInt.h>
+#include <util/HighsType.h>
 
 #include <cmath>
 #include <cstdio>
@@ -72,7 +72,7 @@ struct QpVector {
     return vec;
   }
 
-  void report(std::string name = "") const {
+  void report(const std::string& name = "") const {
     if (name != "") {
       printf("%s: ", name.c_str());
     }
