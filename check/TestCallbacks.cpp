@@ -406,6 +406,35 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
   highs.resetThreadScheduler(true);
 }
 
+// An exception that reaches Highs::optimizeModelTryCatch must not stop
+// later solves of the same Highs instance. Presolve and the solvers catch
+// their own exceptions, so throw from a log line between them
+TEST_CASE("highs-exception-then-solve-again", "[highs_callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  bool throw_exception = true;
+  HighsCallbackFunctionType throwingLogCallback =
+      [](int callback_type, const std::string& message,
+         const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+         void* user_callback_data) {
+        if (*static_cast<bool*>(user_callback_data) &&
+            message.find("Solving the presolved LP") != std::string::npos)
+          throw std::runtime_error("test exception");
+      };
+  Highs highs;
+  // The logging callback is only called when output_flag is true
+  highs.setOptionValue("log_to_console", dev_run);
+  highs.setCallback(throwingLogCallback, &throw_exception);
+  highs.startCallback(kCallbackLogging);
+  highs.readModel(filename);
+  REQUIRE(highs.run() == HighsStatus::kError);
+  throw_exception = false;
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  highs.resetThreadScheduler(true);
+}
+
 TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";

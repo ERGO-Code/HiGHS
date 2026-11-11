@@ -355,3 +355,26 @@ TEST_CASE("solver-select-basis-without-crossover", "[solver_select]") {
     if (require_basis) REQUIRE(highs.getBasis().valid);
   }
 }
+
+// With crossover off, IPM can end with "unbounded or infeasible". As the
+// user did not ask for IPM, selection must not return that, or an error
+TEST_CASE("solver-select-ipm-infeasible-or-unbounded", "[solver_select]") {
+  const std::vector<std::pair<std::string, HighsModelStatus>> models = {
+      {"galenet", HighsModelStatus::kInfeasible},
+      {"gas11", HighsModelStatus::kUnbounded}};
+  for (const auto& model : models) {
+    for (const HighsInt strategy : {5, 6}) {
+      INFO(model.first << ", strategy " << strategy);
+      const std::string model_file =
+          std::string(HIGHS_DIR) + "/check/instances/" + model.first + ".mps";
+      Highs highs;
+      highs.setOptionValue("output_flag", dev_run);
+      REQUIRE(highs.readModel(model_file) != HighsStatus::kError);
+      highs.setOptionValue("presolve", kHighsOffString);
+      highs.setOptionValue("run_crossover", kHighsOffString);
+      highs.setOptionValue("solver_select_strategy", strategy);
+      REQUIRE(highs.run() != HighsStatus::kError);
+      REQUIRE(highs.getModelStatus() == model.second);
+    }
+  }
+}
