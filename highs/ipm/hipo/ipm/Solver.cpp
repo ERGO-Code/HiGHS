@@ -663,6 +663,11 @@ void Solver::stepSizes() {
   alpha_primal_ = std::min(alpha_p, 1.0 - 1e-4);
   alpha_dual_ = std::min(alpha_d, 1.0 - 1e-4);
 
+  if (model_.qp()) {
+    alpha_primal_ = std::min(alpha_primal_, alpha_dual_);
+    alpha_dual_ = alpha_primal_;
+  }
+
   assert(alpha_primal_ > 0 && alpha_primal_ < 1 && alpha_dual_ > 0 &&
          alpha_dual_ < 1);
 }
@@ -1018,25 +1023,51 @@ isFailure Solver::centralityCorrectors() {
     double wd = wp;
     bestWeight(it_->delta, corrector, wp, wd, alpha_p, alpha_d);
 
-    if (alpha_p < alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin &&
-        alpha_d < alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
-      // reject corrector
-      break;
-    }
+    const double min_increase = kMccIncreaseAlpha * kMccIncreaseMin;
 
-    if (alpha_p >= alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin) {
-      // accept primal corrector
+    if (model_.qp()) {
+      // For QPs, the primal and dual correctors are accepted or rejected
+      // together, with the same weight, otherwise the direction does not
+      // satisfy the Newton equations, because of the term Q * dx in the dual
+      // residual. The corrector is accepted if it increases the smallest
+      // stepsize, since primal and dual stepsizes are the same.
+      if (std::min(alpha_p, alpha_d) <
+          std::min(alpha_p_old, alpha_d_old) + min_increase) {
+        // reject corrector
+        break;
+      }
+
+      assert(wp == wd);
       vectorAdd(it_->delta.x, 1.0, corrector.x, wp);
       vectorAdd(it_->delta.xl, 1.0, corrector.xl, wp);
       vectorAdd(it_->delta.xu, 1.0, corrector.xu, wp);
-      alpha_p_old = alpha_p;
-    }
-    if (alpha_d >= alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
-      // accept dual corrector
       vectorAdd(it_->delta.y, 1.0, corrector.y, wd);
       vectorAdd(it_->delta.zl, 1.0, corrector.zl, wd);
       vectorAdd(it_->delta.zu, 1.0, corrector.zu, wd);
+      alpha_p_old = alpha_p;
       alpha_d_old = alpha_d;
+
+    } else {
+      if (alpha_p < alpha_p_old + min_increase &&
+          alpha_d < alpha_d_old + min_increase) {
+        // reject corrector
+        break;
+      }
+
+      if (alpha_p >= alpha_p_old + min_increase) {
+        // accept primal corrector
+        vectorAdd(it_->delta.x, 1.0, corrector.x, wp);
+        vectorAdd(it_->delta.xl, 1.0, corrector.xl, wp);
+        vectorAdd(it_->delta.xu, 1.0, corrector.xu, wp);
+        alpha_p_old = alpha_p;
+      }
+      if (alpha_d >= alpha_d_old + min_increase) {
+        // accept dual corrector
+        vectorAdd(it_->delta.y, 1.0, corrector.y, wd);
+        vectorAdd(it_->delta.zl, 1.0, corrector.zl, wd);
+        vectorAdd(it_->delta.zu, 1.0, corrector.zu, wd);
+        alpha_d_old = alpha_d;
+      }
     }
 
     if (alpha_p > 0.95 && alpha_d > 0.95) {
@@ -1071,17 +1102,31 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
   // divide interval into 9 points
   const double step = (1.0 - w) / 8;
 
+  // For QPs, primal and dual weights must be the same (see
+  // centralityCorrectors), and the weight is chosen to maximise the smallest
+  // stepsize.
+  const bool same_weight = model_.qp();
+
   // for each weight, compute stepsizes and save best ones
   for (; w <= 1.0; w += step) {
     double ap, ad;
     stepsToBoundary(ap, ad, delta, &corrector, w);
-    if (ap > alpha_p) {
-      alpha_p = ap;
-      wp = w;
-    }
-    if (ad > alpha_d) {
-      alpha_d = ad;
-      wd = w;
+    if (same_weight) {
+      if (std::min(ap, ad) > std::min(alpha_p, alpha_d)) {
+        alpha_p = ap;
+        alpha_d = ad;
+        wp = w;
+        wd = w;
+      }
+    } else {
+      if (ap > alpha_p) {
+        alpha_p = ap;
+        wp = w;
+      }
+      if (ad > alpha_d) {
+        alpha_d = ad;
+        wd = w;
+      }
     }
 
     if (step == 0.0) break;

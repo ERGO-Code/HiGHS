@@ -706,6 +706,8 @@ bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
   //           + (alpha_primal - alpha_dual) * Q * dx
   // The second term is a known change that is not related to the reduction of
   // the residual, so it is removed from r4_new before testing.
+  // Stepsizes should be equal for QPs and the code below should never run, so
+  // this is just a safety measure.
   if (model.qp() && alpha_primal != alpha_dual) {
     std::vector<double> res4_corrected = res.r4;
     model.Q().alphaProductPlusY(-model.sense() * (alpha_primal - alpha_dual),
