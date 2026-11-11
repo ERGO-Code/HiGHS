@@ -8,6 +8,24 @@
 /**@file util/HighsSolverSelect.h
  * @brief Choose an LP algorithm (simplex / IPX / HiPO) from cheap
  *        structural features of the (presolved) model.
+ *
+ * Regenerating the models in HighsSolverSelectModels.h
+ *
+ * The models are fitted offline by the scripts in select/ of the HiGHS
+ * test repo:
+ *
+ * 1. presolve_set.sh writes the presolved model of each instance.
+ * 2. run_solvers.sh <version> LP|MIP times dual simplex, IPX and HiPO on
+ *    the presolved LPs and on the LP relaxations of presolved MIPs.
+ * 3. extract_features/ applies LP presolve, as solveLp sees the LP, and
+ *    writes computeLpFeatures() of each model to a CSV.
+ * 4. collect_results.py --version <version> writes select.csv.
+ * 5. visualize.py --cpp-out <HiGHS>/highs/util/HighsSolverSelectModels.h
+ *    fits the gradient boosted trees and writes the header.
+ *
+ * The models index highsLpFeatureVector() by position: changing the order
+ * of the features, or what computeLpFeatures() computes, needs a refit.
+ * The test solver-select-feature-order fixes the order.
  */
 #ifndef UTIL_HIGHS_SOLVER_SELECT_H_
 #define UTIL_HIGHS_SOLVER_SELECT_H_
@@ -33,6 +51,18 @@ enum class SolverSelectStrategy {
   kIpx = 5,
   kHipo = 6,
 };
+
+// Whether LPs go through solver selection with this strategy
+inline bool useSolverSelection(const HighsInt strategy) {
+  return strategy > static_cast<HighsInt>(SolverSelectStrategy::kSimplexOnly);
+}
+
+// Whether solver selection with this strategy may choose IPM. Presolve
+// must then allow for dual postsolve
+inline bool solverSelectionMayChooseIpm(const HighsInt strategy) {
+  return useSolverSelection(strategy) &&
+         strategy != static_cast<HighsInt>(SolverSelectStrategy::kDualSimplex);
+}
 
 struct HighsLpFeatures {
   // --- Raw size ---
@@ -89,15 +119,15 @@ std::vector<std::string> highsLpFeatureNames();
 
 // kSimplexOnly => dual simplex; kColsRowsNnz => boosted trees
 // on num_col, num_row and num_nz; kRankedFeatures => boosted trees
-// on the features in S2_FEATURES of tests/select/visualize.py;
+// on the ranked features chosen when fitting (see the top of this file);
 // kHeuristic => provisional hand-written heuristic; kDualSimplex, kIpx
 // and kHipo => that solver
 HighsSolverSelect selectSolver(const HighsLp& lp,
                                const SolverSelectStrategy strategy);
 
 // kColsRowsNnz and kRankedFeatures: evaluate the gradient boosted
-// trees fitted offline by tests/select/visualize.py (see
-// HighsSolverSelectModels.h)
+// trees in HighsSolverSelectModels.h, fitted offline as described at the
+// top of this file
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
                                       const SolverSelectStrategy strategy);
 

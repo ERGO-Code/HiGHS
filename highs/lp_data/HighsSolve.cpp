@@ -99,17 +99,22 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   // required, simplex must find it and confirm any claim of infeasibility:
   // in the MIP solver, the next LP would otherwise select IPM again, and a
   // node could be pruned with no proof. Presolve assumed that crossover would
-  // yield a basis if it's on, so duals from IPM alone can't be trusted either
+  // yield a basis if it's on, so duals from IPM alone can't be trusted either.
+  // Without crossover, IPM may not tell unbounded from infeasible, which
+  // Highs::run only permits when the user chose IPM
   const HighsModelStatus model_status = solver_object.model_status_;
+  const bool undecided =
+      model_status == HighsModelStatus::kUnboundedOrInfeasible;
+  const bool claim_needs_basis =
+      options.solver_select_require_basis &&
+      (model_status == HighsModelStatus::kOptimal ||
+       model_status == HighsModelStatus::kInfeasible ||
+       model_status == HighsModelStatus::kUnbounded);
+  const bool optimal_needs_basis = options.run_crossover == kHighsOnString &&
+                                   model_status == HighsModelStatus::kOptimal;
   const bool solved_without_basis =
-      !solver_object.basis_.valid &&
-      (options.solver_select_require_basis
-           ? model_status == HighsModelStatus::kOptimal ||
-                 model_status == HighsModelStatus::kInfeasible ||
-                 model_status == HighsModelStatus::kUnbounded ||
-                 model_status == HighsModelStatus::kUnboundedOrInfeasible
-           : options.run_crossover == kHighsOnString &&
-                 model_status == HighsModelStatus::kOptimal);
+      undecided || (!solver_object.basis_.valid &&
+                    (claim_needs_basis || optimal_needs_basis));
   if (selected_ipm && (status == HighsStatus::kError || solved_without_basis)) {
     highsLogUser(
         options.log_options, HighsLogType::kWarning,
@@ -131,7 +136,8 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
 
   // The analytic centre calculation always uses IPX
   if (options.solver == kHighsChooseString &&
-      options.solver_select_strategy > 0 && !options.run_centring)
+      useSolverSelection(options.solver_select_strategy) &&
+      !options.run_centring)
     return solveLpWithSelection(solver_object, message);
 
   // Reset unscaled model status and solution params - except for

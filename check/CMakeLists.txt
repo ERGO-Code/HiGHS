@@ -520,9 +520,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       endforeach(setting)
   endforeach(instance)
 
-  # Each solver_select_strategy, so LPs in the MIP solver go through solver
-  # selection: 4, 5 and 6 force dual simplex, IPX and HiPO
-  foreach(strategy RANGE 6)
+  # Each solver_select_strategy that may choose IPM, so LPs in the MIP solver
+  # go through solver selection: 5 and 6 force IPX and HiPO. Strategy 0 is
+  # the default tested above, and 4 always chooses dual simplex
+  foreach(strategy 1 2 3 5 6)
       set(select_options ${CMAKE_BINARY_DIR}/testoptions_select_${strategy}.txt)
       FILE(WRITE ${select_options}
       "mip_rel_gap=0.0

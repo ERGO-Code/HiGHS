@@ -165,11 +165,7 @@ void Solver::doSolve() {
   printInfo();
 
   runIpm();
-  // Factorisation stops at the time limit by reporting failure
-  if (info_.error == kErrorFactorise && control_.timeLimitReached()) {
-    info_.error = kOk;
-    setStatus(kStatusTimeLimit);
-  }
+  // A factorisation stopped by the time limit is reported by finaliseStatus
   if (errorOrInterrupt()) return;
 
   runIpx();
@@ -1590,9 +1586,12 @@ Status Solver::getStatus() const {
 void Solver::finaliseStatus() {
   info_.status = getStatus();
   if (info_.error) {
-    // An error after the time limit may be due to an interrupted analyse or
-    // factorisation, so report the time limit instead.
-    if (control_.timeLimitReached()) {
+    // The time limit stops analyse and factorise by making them fail, so
+    // report such a failure after the time limit as the time limit. Other
+    // errors, such as NaN or failed allocation, stay errors
+    const bool stoppable =
+        info_.error == kErrorAnalyse || info_.error == kErrorFactorise;
+    if (stoppable && control_.timeLimitReached()) {
       info_.error = kOk;
       info_.status = kStatusTimeLimit;
     } else {

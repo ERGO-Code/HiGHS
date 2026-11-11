@@ -918,8 +918,9 @@ class HighsOptions : public HighsOptionsStruct {
     record_int = new OptionRecordInt(
         "solver_select_strategy",
         "Strategy for automatic solver selection 0 => Simplex only; 1 => "
-        "Columns, rows and nonzeros; 2 => 12 ranked features; "
-        "3 => Heuristic; 4 => Dual simplex; 5 => IPX; 6 => HiPO",
+        "Fitted model on columns, rows and nonzeros; 2 => Fitted model on "
+        "ranked features; 3 => Heuristic (provisional); 4, 5, 6 => Always "
+        "dual simplex, IPX, HiPO (for testing)",
         advanced, &solver_select_strategy, 0, 0, 6);
     records.push_back(record_int);
 

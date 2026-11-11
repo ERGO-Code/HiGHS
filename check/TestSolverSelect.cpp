@@ -233,14 +233,15 @@ TEST_CASE("solver-select-heuristic", "[solver_select]") {
   REQUIRE(selectSolverByHeuristic(f) == HighsSolverSelect::kIpx);
 }
 
-// With strategy 3 the root LP of these MIPs is dense enough to choose
-// IPM, so this runs IPM + crossover and then the whole tree from that
-// basis, including the sub-MIPs, which make their own selections
+// Strategy 3 chooses IPM for the root LP of these MIPs, as strategy 6
+// always does, so this runs IPM + crossover and then the whole tree from
+// that basis, including the sub-MIPs, which make their own selections.
+// ctest solves these and other MIPs with each strategy that selects
 TEST_CASE("solver-select-mip-tree", "[solver_select]") {
   const std::vector<std::pair<std::string, double>> mips = {
       {"flugpl", 1201500}, {"egout", 568.1007}, {"bell5", 8966406.49}};
   for (const auto& mip : mips) {
-    for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6}) {
+    for (const HighsInt strategy : {3, 6}) {
       INFO(mip.first << ", strategy " << strategy);
       const std::string model_file =
           std::string(HIGHS_DIR) + "/check/instances/" + mip.first + ".mps";
@@ -303,20 +304,18 @@ TEST_CASE("solver-select-feature-order", "[solver_select]") {
 TEST_CASE("solver-select-fitted-models-solve", "[solver_select]") {
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/greenbea.mps";
+  // require_basis doesn't change which trees are evaluated
   for (const HighsInt strategy : {1, 2}) {
-    for (const bool require_basis : {false, true}) {
-      INFO("strategy " << strategy << ", require_basis " << require_basis);
-      Highs highs;
-      highs.setOptionValue("output_flag", dev_run);
-      REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-      highs.setOptionValue("presolve", kHighsOffString);
-      highs.setOptionValue("solver_select_strategy", strategy);
-      highs.setOptionValue("solver_select_require_basis", require_basis);
-      REQUIRE(highs.run() == HighsStatus::kOk);
-      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-      REQUIRE(std::fabs(highs.getInfo().objective_function_value +
-                        7.2555248130e7) < 1);
-    }
+    INFO("strategy " << strategy);
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+    highs.setOptionValue("presolve", kHighsOffString);
+    highs.setOptionValue("solver_select_strategy", strategy);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(std::fabs(highs.getInfo().objective_function_value +
+                      7.2555248130e7) < 1);
   }
 }
 

@@ -29,14 +29,22 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
       control_{control} {
   FH_.setBlockSize(options.block_size);
   FH_.setLogger(&logger);
-  // Stop the ordering and factorisation if the time limit is reached. Only the time limit is
-  // checked, since the callback may run on a worker thread and must not throw.
+  // Stop the ordering and factorisation if the time limit is reached. Only the
+  // time limit is checked, since the callback may run on a worker thread and
+  // must not throw.
   FH_.setStopCallback(
       [](void* data) -> int {
         return static_cast<FactorHighsSolver*>(data)
             ->control_.timeLimitReached();
       },
       this);
+}
+
+void FactorHighsSolver::printAnalyseFailure(const char* message) const {
+  if (control_.timeLimitReached())
+    logger_.printw("%s", message);
+  else
+    logger_.printe("%s", message);
 }
 
 void FactorHighsSolver::clear() {
@@ -341,7 +349,7 @@ Int FactorHighsSolver::chooseNla() {
     else
       status = kErrorAnalyse;
 
-    logger_.printw("Both NE and AS failed analyse phase\n");
+    printAnalyseFailure("Both NE and AS failed analyse phase\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
@@ -559,10 +567,10 @@ Int FactorHighsSolver::setNla() {
     Int status = kkt_.buildASstructure();
     if (!status) status = analyseAS(kkt_.S);
     if (status == kErrorOverflow) {
-      logger_.printw("AS requested, integer overflow\n");
+      logger_.printe("AS requested, integer overflow\n");
       return kErrorOverflow;
     } else if (status) {
-      logger_.printw("AS requested, failed analyse phase\n");
+      printAnalyseFailure("AS requested, failed analyse phase\n");
       return kErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "AS requested\n";
@@ -571,10 +579,10 @@ Int FactorHighsSolver::setNla() {
     Int status = kkt_.buildNEstructure();
     if (!status) status = analyseNE(kkt_.S);
     if (status == kErrorOverflow) {
-      logger_.printw("NE requested, integer overflow\n");
+      logger_.printe("NE requested, integer overflow\n");
       return kErrorOverflow;
     } else if (status) {
-      logger_.printw("NE requested, failed analyse phase\n");
+      printAnalyseFailure("NE requested, failed analyse phase\n");
       return kErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "NE requested\n";

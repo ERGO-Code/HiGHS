@@ -19,6 +19,7 @@
 #include "mip/MipTimer.h"
 #include "util/HighsCDouble.h"
 #include "util/HighsHash.h"
+#include "util/HighsSolverSelect.h"
 
 void HighsLpRelaxation::setProfiling(HighsProfiling* profiling) {
   assert(profiling);
@@ -1163,7 +1164,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // solveLp
       use_solver = use_hipo ? kHipoString : kIpxString;
     } else if (mip_lp_solver == kHighsChooseString &&
-               mipsolver.options_mip_->solver_select_strategy > 0 &&
+               useSolverSelection(
+                   mipsolver.options_mip_->solver_select_strategy) &&
                lpsolver.getOptions().simplex_strategy !=
                    kSimplexStrategyPrimal) {
       // Defer the choice of simplex, IPX or HiPO to solveLp, so that it
@@ -1191,8 +1193,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   // Now allowing the use of IPM at the root node
   lpsolver.setOptionValue("solver", use_solver);
   const bool use_choose = use_solver == kHighsChooseString;
-  // Selection may choose IPM, so needs the fallback to simplex
-  bool use_ipm = useIpm(use_solver) || use_choose;
+  // Selection falls back to simplex itself if IPM fails, in solveLp
+  bool use_ipm = useIpm(use_solver);
   bool use_simplex = !use_ipm;
   if (use_ipm) {
     assert(!valid_basis);
@@ -1256,7 +1258,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue("solver", solver);
   // Other solves of lpsolver, such as after removing cuts, must not select
   if (use_choose) {
-    lpsolver.setOptionValue("solver_select_strategy", 0);
+    lpsolver.setOptionValue(
+        "solver_select_strategy",
+        static_cast<HighsInt>(SolverSelectStrategy::kSimplexOnly));
     lpsolver.setOptionValue("solver_select_require_basis", false);
     lpsolver.setOptionValue("ipm_iteration_limit", ipm_iteration_limit);
   }
@@ -1268,7 +1272,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   }
   this->solved_first_lp = true;
   HighsInt itercount = -1;
-  if (use_simplex || use_choose) {
+  if (use_simplex) {
     itercount = std::max(HighsInt{0}, info.simplex_iteration_count);
     // Iteration limits are multiples of the root LP's count, so must not
     // be left at zero if selection chose IPM

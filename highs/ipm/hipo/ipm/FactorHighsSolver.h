@@ -41,6 +41,8 @@ class FactorHighsSolver : public LinearSolver {
                      std::string& ordering, const std::string& nla);
   Int analyseAS(Symbolic& S);
   Int analyseNE(Symbolic& S);
+  // An analyse stopped by the time limit is a warning, otherwise an error
+  void printAnalyseFailure(const char* message) const;
 
  public:
   FactorHighsSolver(KktMatrix& kkt, Options& options, const Model& model,

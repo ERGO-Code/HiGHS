@@ -1313,6 +1313,9 @@ HighsStatus Highs::optimizeModelTryCatch() {
   auto handleCatch = [&]() {
     // Clear all solver data, since there may be nothing useful
     this->clearSolver();
+    // The exception skipped returnFromOptimizeModel(), and later calls to
+    // optimizeModel() must not fail for that
+    called_return_from_optimize_model = true;
     status = HighsStatus::kError;
   };
   try {
