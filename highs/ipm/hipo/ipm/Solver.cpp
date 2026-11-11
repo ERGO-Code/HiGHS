@@ -236,6 +236,9 @@ shouldTerminate Solver::prepareIter() {
   if (model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_)) {
     it_->residual1234();
     it_->computeMu();
+    ++it_->tests.free_bounds_changed_iter;
+  } else {
+    it_->tests.free_bounds_changed_iter = 0;
   }
 
   it_->clearDir();
@@ -258,7 +261,7 @@ isFailure Solver::predictor() {
 
   sigmaAffine();
   it_->residual56(sigma_);
-  it_->saveResidualNorms();
+  it_->tests.saveResidualNorms(*it_);
 
   if (solveNewtonSystem(it_->delta)) return true;
 
@@ -1162,8 +1165,8 @@ shouldTerminate Solver::checkIterate() {
 
 shouldTerminate Solver::checkStagnation() {
   std::stringstream log_stream;
-  bool stagnation = it_->stagnation(
-      alpha_primal_, alpha_dual_, iter_, options_.feasibility_tol,
+  bool stagnation = it_->tests.stagnation(
+      *it_, alpha_primal_, alpha_dual_, iter_, options_.feasibility_tol,
       options_.optimality_tol, options_.crossover_tol, log_stream);
   logger_.printInfo("%s", log_stream.str().c_str());
   return stagnation;
@@ -1191,7 +1194,15 @@ shouldTerminate Solver::checkBadIter() {
     bool dobj_is_larger =
         it_->dobj > std::max(std::abs(it_->pobj) * kDivergeTol, 1.0);
 
-    if (pobj_is_larger) {
+    // If the iterate is primal feasible and the artificial bounds of free
+    // variables keep being pushed away, the problem is likely to be primal
+    // unbounded. In this case, the dual objective follows the primal one,
+    // because of the artificial bounds, so pobj_is_larger does not detect it.
+    bool free_vars_diverge =
+        stagnation && it_->pinf < options_.feasibility_tol &&
+        it_->tests.free_bounds_changed_iter >= kFreeVarsDivergeIter;
+
+    if (pobj_is_larger || free_vars_diverge) {
       // problem is likely to be primal unbounded, i.e. dual infeasible
       logger_.print("=== Dual infeasible\n");
       setStatus(kStatusDualInfeasible);
@@ -1368,7 +1379,7 @@ isSuccess Solver::switchToMultifrontal() {
       info_.error = kErrorFailedAllocation;
     } else {
       LS_->clear();
-      it_->clearTestData(iter_);
+      it_->tests.clear(iter_);
       info_.error = kOk;
       switch_successful = true;
     }

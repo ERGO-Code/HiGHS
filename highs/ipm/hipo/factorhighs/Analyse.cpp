@@ -1409,7 +1409,10 @@ Int Analyse::run(Symbolic& S) {
   S.artificial_ops_ = dense_ops_ - dense_ops_norelax_;
   S.spops_ = sparse_ops_;
   S.critops_ = critical_ops_;
-  S.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
+  S.largest_front_ =
+      sn_indices_.empty()
+          ? 0
+          : *std::max_element(sn_indices_.begin(), sn_indices_.end());
   S.serial_storage_ = serial_storage_;
   S.flops_ = dense_ops_;
   S.max_stack_size_ = max_stack_size_;
@@ -1420,7 +1423,8 @@ Int Analyse::run(Symbolic& S) {
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());
   for (Int i = sn_count_ - 1; i > 0; --i) sn_size[i] -= sn_size[i - 1];
-  S.largest_sn_ = *std::max_element(sn_size.begin(), sn_size.end());
+  S.largest_sn_ =
+      sn_size.empty() ? 0 : *std::max_element(sn_size.begin(), sn_size.end());
 
   // build statistics about supernodes size
   for (Int i : sn_size) {

@@ -92,7 +92,9 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
       if (row != col) one_norm_cols[row] += std::abs(val);
     }
   }
-  M_norm1_ = *std::max_element(one_norm_cols.begin(), one_norm_cols.end());
+  M_norm1_ = one_norm_cols.empty() ? 0.0
+                                   : *std::max_element(one_norm_cols.begin(),
+                                                       one_norm_cols.end());
 
   data_.setNorms(M_norm1_, max_diag_);
 }
