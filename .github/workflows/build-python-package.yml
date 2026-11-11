@@ -8,7 +8,7 @@ concurrency:
 
 jobs:
   build_sdist:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
       # - uses: seanmiddleditch/gha-setup-ninja@master
@@ -75,7 +75,7 @@ jobs:
           python -m pytest ./highspy
 
   build_wheel_linux:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
         matrix:
           python: [3.15]
@@ -104,7 +104,7 @@ jobs:
           python3 -m pytest ./highspy
 
   build_wheel_linux_arm:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     strategy:
         matrix:
           python: [3.11]

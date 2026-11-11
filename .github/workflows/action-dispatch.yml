@@ -13,7 +13,7 @@ run-name: ${{ github.actor }} is testing out Actions 🚀
 
 jobs:
   trigger:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Generate token from GitHub App
         id: generate-token

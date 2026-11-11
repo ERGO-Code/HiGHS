@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   check-metis:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:

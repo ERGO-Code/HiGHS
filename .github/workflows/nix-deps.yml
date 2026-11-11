@@ -7,7 +7,7 @@ jobs:
 
   test-highspy:
     name: pytest HiGHS own test suite
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout HiGHS repo
         uses: actions/checkout@v6
@@ -39,7 +39,7 @@ jobs:
 
   test-revdeps:
     name: Build ${{ matrix.package }} against local HiGHS
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:

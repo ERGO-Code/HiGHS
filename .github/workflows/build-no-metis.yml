@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   meson-no-metis:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
 
@@ -34,7 +34,7 @@ jobs:
           meson compile -C bbdir
 
   cmake-no-metis:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
 

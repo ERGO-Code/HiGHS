@@ -120,7 +120,7 @@ jobs:
           path: ${{github.workspace}}/build_arm64/dotnet/Highs.Native/runtimes/win-arm64/
 
   build_linux:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container: stabletec/build-core:debian-11
     steps:
       - uses: actions/checkout@v6
@@ -142,7 +142,7 @@ jobs:
           path: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native/runtimes
 
   build_linux_arm64:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     container: stabletec/build-core:debian-11
     steps:
       - uses: actions/checkout@v6

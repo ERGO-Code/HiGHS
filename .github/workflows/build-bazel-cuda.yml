@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   bazel-cuda-compile:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       # The devel image bundles nvcc, cuBLAS and cuSPARSE under /usr/local/cuda
       image: nvidia/cuda:13.0.2-devel-ubuntu24.04

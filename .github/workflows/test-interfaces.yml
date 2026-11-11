@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   python:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
 
@@ -37,7 +37,7 @@ jobs:
         run: python3 check/interfaces/pyomo_smoke.py
 
   rust:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v6
 

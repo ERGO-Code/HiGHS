@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   hip-compile:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     container:
       # 24.04 + ROCm 10.x; the "-full" image bundles hipBLAS / hipSPARSE
       image: rocm/dev-ubuntu-24.04:10.0.0-full
