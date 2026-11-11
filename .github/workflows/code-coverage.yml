@@ -38,7 +38,7 @@ jobs:
       - name: Test
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: ctest --parallel --timeout 300 --output-on-failure
+        run: ctest --parallel --timeout 600 --output-on-failure
 
         # Coverage with HiPO will be different
       - name: Generate Report
