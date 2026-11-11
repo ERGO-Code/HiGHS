@@ -92,7 +92,8 @@ class Model {
 
   void nzBounds();
 
-  void adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
+  // returns true if any bound was changed
+  bool adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
                       std::vector<double>& xu, const Logger& logger);
 
   void saveBounds();

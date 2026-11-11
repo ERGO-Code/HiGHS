@@ -414,8 +414,9 @@ void Model::printDense() const {
   printf("offset %6.2f\n", offset_);
 }
 
-void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
+bool Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
                            std::vector<double>& xu, const Logger& logger) {
+  bool changed = false;
   for (Int i : free_variables_) {
     if (x[i] < lower_[i] * kFreeVarsCloseRatio) {
       // getting close to lower bound
@@ -425,6 +426,7 @@ void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
           x[i], lower_[i], new_lower);
       lower_[i] = new_lower;
       xl[i] = x[i] - lower_[i];
+      changed = true;
     }
     if (x[i] > upper_[i] * kFreeVarsCloseRatio) {
       // getting close to upper bound
@@ -434,8 +436,10 @@ void Model::adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
           x[i], upper_[i], new_upper);
       upper_[i] = new_upper;
       xu[i] = upper_[i] - x[i];
+      changed = true;
     }
   }
+  return changed;
 }
 
 void Model::saveBounds() {

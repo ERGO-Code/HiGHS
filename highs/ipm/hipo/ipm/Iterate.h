@@ -51,6 +51,19 @@ struct Iterate {
   double largest_dx_x_{}, largest_dy_y_{};
   double best_pinf_ = kHighsInf, best_dinf_ = kHighsInf;
 
+  // data for residual reduction test
+  double res_norm_old_[4]{};
+  std::vector<double> res4_old_;
+
+  double infeas_drop = 0.0;
+
+  // data for progress test: for pinf, dinf, pdgap and infeas_drop, the
+  // reference value and the iteration at which it was set
+  static constexpr Int kNumProgressQuantities = 4;
+  double progress_ref[kNumProgressQuantities]{kHighsInf, kHighsInf, kHighsInf,
+                                              kHighsInf};
+  Int progress_iter[kNumProgressQuantities]{};
+
   double best_violation = kHighsInf;
   Int best_iter = -1;
   std::vector<double> best_x, best_xl, best_xu, best_y, best_zl, best_zu;
@@ -169,6 +182,51 @@ struct Iterate {
   bool resetBest(Int iter);
 
   bool stagnation(std::stringstream& log_stream);
+
+  // ===================================================================================
+  // Save the norms of residuals 1,2,3,4 used as rhs of the Newton system, to be
+  // used by residualReductionTest. Must be called before the correctors
+  // overwrite the residuals.
+  // ===================================================================================
+  void saveResidualNorms();
+
+  // ===================================================================================
+  // Check that the step reduced the residuals by at least a fraction of what
+  // the stepsizes predict:
+  //  ||rk_new|| <= max( (1 - eta * alpha) * ||rk_old||, floor )
+  // with alpha_primal for k=1,2,3 and alpha_dual for k=4. For QPs with
+  // different primal and dual stepsizes, the prediction for r4 includes the
+  // term (alpha_primal - alpha_dual) * Q * dx.
+  // Must be called after the step, while delta still holds the direction.
+  // ===================================================================================
+  bool residualReductionTest(double alpha_primal, double alpha_dual,
+                             double feas_tol,
+                             std::stringstream& log_stream) const;
+
+  // ===================================================================================
+  // Check that at least one of pinf, dinf, pdgap and infeas_drop has decreased
+  // by at least a factor kProgressFactor within the last kProgressMaxIter
+  // iterations.
+  // Only the quantities above their tolerance are tracked. If all quantities
+  // are below their tolerance, but the ipm is still iterating (e.g. because
+  // the kkt check failed), all quantities are tracked.
+  // ===================================================================================
+  bool progressTest(Int iter, double feas_tol, double opt_tol,
+                    double crossover_tol, std::stringstream& log_stream);
+
+  // ===================================================================================
+  // Clear the data used by the tests for stagnation, numerical issues and lack
+  // of progress. The windows of the progress test restart from iteration iter.
+  // ===================================================================================
+  void clearTestData(Int iter);
+
+  // ===================================================================================
+  // Compute infeas_drop, the infeasibility after dropping to complementarity.
+  // It is needed only to decide if crossover can start, so it is computed only
+  // if crossover is on and the iterate is primal-dual feasible and optimal.
+  // Otherwise, it is set to zero.
+  // ===================================================================================
+  void computeInfeasDrop(bool crossover_on, double feas_tol, double opt_tol);
 
   void getReg(LinearSolver& LS, const std::string& nla);
 

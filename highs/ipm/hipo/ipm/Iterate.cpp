@@ -693,4 +693,152 @@ bool Iterate::stagnation(std::stringstream& log_stream) {
   return stagnation;
 }
 
+void Iterate::saveResidualNorms() {
+  res_norm_old_[0] = infNorm(res.r1);
+  res_norm_old_[1] = infNorm(res.r2);
+  res_norm_old_[2] = infNorm(res.r3);
+  res_norm_old_[3] = infNorm(res.r4);
+
+  // for QPs, r4 is needed to predict the dual residual if the primal and dual
+  // stepsizes are different
+  if (model.qp()) res4_old_ = res.r4;
+}
+
+bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
+                                    double feas_tol,
+                                    std::stringstream& log_stream) const {
+  // below these values, the residuals are small enough that their reduction is
+  // not needed
+  const double floor_p = feas_tol * (1.0 + model.normScaledRhs());
+  const double floor_d = feas_tol * (1.0 + model.normScaledObj());
+
+  const double alpha[4] = {alpha_primal, alpha_primal, alpha_primal,
+                           alpha_dual};
+  const double floor[4] = {floor_p, floor_p, floor_p, floor_d};
+  const double res_norm_new[4] = {infNorm(res.r1), infNorm(res.r2),
+                                  infNorm(res.r3), infNorm(res.r4)};
+
+  // Relaxed prediction of the norms of the residuals after the step, i.e.
+  // only a fraction eta of the reduction predicted by the stepsizes is
+  // required:
+  //  rk_relaxed = (1 - eta * alpha) * rk
+  const double eta = kResReductionFraction;
+  double res_norm_relaxed[4];
+  for (Int k = 0; k < 4; ++k)
+    res_norm_relaxed[k] = (1.0 - eta * alpha[k]) * res_norm_old_[k];
+
+  // For QPs, r4 depends also on x, so the reduction predicted by the stepsizes
+  // contains also the term (alpha_primal - alpha_dual) * Q * dx, and the
+  // relaxed prediction is
+  //  r4_relaxed = (1 - eta * alpha_dual) * r4
+  //               + eta * (alpha_primal - alpha_dual) * Q * dx
+  if (model.qp() && alpha_primal != alpha_dual) {
+    std::vector<double> res4_relaxed = res4_old_;
+    vectorScale(res4_relaxed, 1.0 - eta * alpha_dual);
+    model.Q().alphaProductPlusY(
+        model.sense() * eta * (alpha_primal - alpha_dual), delta.x,
+        res4_relaxed);
+    res_norm_relaxed[3] = infNorm(res4_relaxed);
+  }
+
+  bool passed = true;
+  for (Int k = 0; k < 4; ++k) {
+    // test is meaningless if the step is tiny or the residual is already small
+    if (alpha[k] < kResReductionMinAlpha || res_norm_old_[k] <= floor[k])
+      continue;
+
+    const double thresh = std::max(res_norm_relaxed[k], floor[k]);
+
+    if (res_norm_new[k] > thresh) {
+      passed = false;
+      log_stream << "Bad reduction of residual " << k + 1 << ", old "
+                 << sci(res_norm_old_[k], 0, 1) << ", new "
+                 << sci(res_norm_new[k], 0, 1) << ", relaxed prediction "
+                 << sci(res_norm_relaxed[k], 0, 1) << ", alpha "
+                 << sci(alpha[k], 0, 1) << "\n";
+    }
+  }
+
+  return passed;
+}
+
+bool Iterate::progressTest(Int iter, double feas_tol, double opt_tol,
+                           double crossover_tol,
+                           std::stringstream& log_stream) {
+  const Int num = kNumProgressQuantities;
+  const double value[num] = {pinf, dinf, pdgap, infeas_drop};
+  const double tol[num] = {feas_tol, feas_tol, opt_tol, crossover_tol};
+
+  // a quantity is tracked only if it is above its tolerance
+  bool tracked[num];
+  bool any_tracked = false;
+  for (Int k = 0; k < num; ++k) {
+    tracked[k] = value[k] > tol[k];
+    if (tracked[k]) any_tracked = true;
+  }
+
+  // If no quantity is above its tolerance, but the ipm is still iterating,
+  // track all of them.
+  if (!any_tracked)
+    for (Int k = 0; k < num; ++k) tracked[k] = true;
+
+  bool passed = false;
+  for (Int k = 0; k < num; ++k) {
+    if (!tracked[k]) {
+      // Reset the reference, so that, if the quantity becomes tracked again,
+      // its window starts from that iteration.
+      progress_ref[k] = kHighsInf;
+      progress_iter[k] = iter;
+      continue;
+    }
+
+    // update the reference value if enough progress was made
+    if (value[k] < kProgressFactor * progress_ref[k]) {
+      progress_ref[k] = value[k];
+      progress_iter[k] = iter;
+    }
+
+    // the test passes if any tracked quantity made progress recently
+    if (iter - progress_iter[k] < kProgressMaxIter) passed = true;
+  }
+
+  if (!passed) {
+    log_stream << "No progress in last " << kProgressMaxIter
+               << " iterations, pinf " << sci(pinf, 0, 1) << " (reference "
+               << sci(progress_ref[0], 0, 1) << "), dinf " << sci(dinf, 0, 1)
+               << " (reference " << sci(progress_ref[1], 0, 1) << "), pdgap "
+               << sci(pdgap, 0, 1) << " (reference "
+               << sci(progress_ref[2], 0, 1) << "), drop "
+               << sci(infeas_drop, 0, 1) << " (reference "
+               << sci(progress_ref[3], 0, 1) << ")\n";
+  }
+
+  return passed;
+}
+
+void Iterate::clearTestData(Int iter) {
+  bad_iter_ = 0;
+  largest_dx_x_ = 0.0;
+  largest_dy_y_ = 0.0;
+  best_pinf_ = kHighsInf;
+  best_dinf_ = kHighsInf;
+
+  // with zero old norms, the residual reduction test is skipped until the
+  // norms are saved again
+  for (Int k = 0; k < 4; ++k) res_norm_old_[k] = 0.0;
+
+  for (Int k = 0; k < kNumProgressQuantities; ++k) {
+    progress_ref[k] = kHighsInf;
+    progress_iter[k] = iter;
+  }
+}
+
+void Iterate::computeInfeasDrop(bool crossover_on, double feas_tol,
+                                double opt_tol) {
+  const bool feasible_optimal =
+      pinf < feas_tol && dinf < feas_tol && pdgap < opt_tol;
+  infeas_drop =
+      crossover_on && feasible_optimal ? infeasAfterDropping() : 0.0;
+}
+
 }  // namespace hipo

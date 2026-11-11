@@ -11,6 +11,14 @@ const double kIpmTolDefault = 1e-8;
 const Int kMaxBadIter = 5;
 const double kDivergeTol = 1e3;
 
+// parameters for residual reduction test
+const double kResReductionFraction = 0.1;
+const double kResReductionMinAlpha = 1e-3;
+
+// parameters for progress test
+const double kProgressFactor = 0.9;
+const Int kProgressMaxIter = 10;
+
 // parameters for correctors
 const double kGammaCorrector = 0.1;
 const double kSigmaAffine = 0.01;

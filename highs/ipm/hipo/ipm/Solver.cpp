@@ -223,13 +223,20 @@ shouldTerminate Solver::prepareIter() {
 
   it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
   if (checkIterate()) return true;
+
+  it_->computeInfeasDrop(crossoverIsOn(), options_.feasibility_tol,
+                         options_.optimality_tol);
+
   if (checkBadIter()) return true;
   if (checkTermination()) return true;
   if (checkInterrupt()) return true;
 
   ++iter_;
 
-  model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_);
+  if (model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_)) {
+    it_->residual1234();
+    it_->computeMu();
+  }
 
   it_->clearDir();
 
@@ -251,6 +258,7 @@ isFailure Solver::predictor() {
 
   sigmaAffine();
   it_->residual56(sigma_);
+  it_->saveResidualNorms();
 
   if (solveNewtonSystem(it_->delta)) return true;
 
@@ -1090,7 +1098,7 @@ shouldTerminate Solver::checkIterate() {
   } else if (it_->isInf()) {
     logger_.printInfo("\nIterate is inf\n");
     info_.error = kErrorNan;
-    bool terminate = true;
+    terminate = true;
   } else {
     for (Int i = 0; i < n_; ++i) {
       if ((model_.hasLb(i) && it_->xl[i] < 0) ||
@@ -1111,6 +1119,18 @@ shouldTerminate Solver::checkStagnation() {
   std::stringstream log_stream;
   bool stagnation = it_->stagnation(log_stream);
   logger_.printInfo(log_stream.str().c_str());
+
+  // New tests for numerical issues and lack of progress. For now, their result
+  // is only logged and does not affect the iterations.
+  std::stringstream test_log_stream;
+  const bool reduction_ok = it_->residualReductionTest(
+      alpha_primal_, alpha_dual_, options_.feasibility_tol, test_log_stream);
+  const bool progress_ok = it_->progressTest(
+      iter_, options_.feasibility_tol, options_.optimality_tol,
+      options_.crossover_tol, test_log_stream);
+  if (!reduction_ok || !progress_ok)
+    logger_.print("%s", test_log_stream.str().c_str());
+
   return stagnation;
 }
 
@@ -1189,8 +1209,7 @@ shouldTerminate Solver::checkTermination() {
         logger_.print("=== Primal-dual feasible point found\n");
         setStatus1(kStatusOptimal);
       }
-      bool ready_for_crossover =
-          it_->infeasAfterDropping() < options_.crossover_tol;
+      bool ready_for_crossover = it_->infeas_drop < options_.crossover_tol;
       if (ready_for_crossover) {
         logger_.print("=== Ready for crossover\n");
         terminate = true;
@@ -1314,11 +1333,7 @@ isSuccess Solver::switchToMultifrontal() {
       info_.error = kErrorFailedAllocation;
     } else {
       LS_->clear();
-      it_->bad_iter_ = 0;
-      it_->best_pinf_ = kHighsInf;
-      it_->best_dinf_ = kHighsInf;
-      it_->largest_dx_x_ = 0;
-      it_->largest_dy_y_ = 0;
+      it_->clearTestData(iter_);
       info_.error = kOk;
       switch_successful = true;
     }
