@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Highs.Native.Extras</PackageId>
+    <Version>@PROJECT_VERSION@</Version>
+
+    <!-- Native libraries only: Highs.Native loads them at run time -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+
+    <Description>Optional extension for Highs.Native that enables the HiPO solver, with third-party dependencies under the Apache-2.0 and BSD-3-Clause licenses https://github.com/ERGO-Code/HiGHS.git</Description>
+    <Authors>ERGO-Code</Authors>
+    <PackageReadmeFile>README-extras.md</PackageReadmeFile>
+    <PackageLicenseExpression>Apache-2.0 AND BSD-3-Clause</PackageLicenseExpression>
+    <PackageProjectUrl>https://www.highs.dev</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ERGO-Code/HiGHS</RepositoryUrl>
+    <PackageIcon>HiGHS_Logo.png</PackageIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README-extras.md" Pack="true" PackagePath="" />
+    <None Include="THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="" />
+    <None Include="HiGHS_Logo.png" Pack="true" PackagePath="" />
+    <None Include="runtimes/**" Pack="true" PackagePath="runtimes/" />
+  </ItemGroup>
+</Project>

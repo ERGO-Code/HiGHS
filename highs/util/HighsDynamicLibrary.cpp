@@ -25,6 +25,11 @@
 #include <dlfcn.h>
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+// any address inside this module, to find the module's directory
+static void moduleAnchor() {}
+#endif
+
 HighsDynamicLibrary::~HighsDynamicLibrary() { unload(); }
 
 bool HighsDynamicLibrary::load(const std::string& filename,
@@ -41,6 +46,25 @@ bool HighsDynamicLibrary::load(const std::string& filename,
   handle_ =
       static_cast<void*>(LoadLibraryExA(absolute_filename.c_str(), nullptr,
                                         LOAD_LIBRARY_SEARCH_SYSTEM32 | flags));
+
+  // then the directory of the module holding HiGHS, like @loader_path on
+  // macOS, e.g. runtimes/<rid>/native for a .NET app
+  HMODULE self = nullptr;
+  char self_path[MAX_PATH];
+  if (!handle_ && path.empty() &&
+      GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                             GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                         reinterpret_cast<LPCSTR>(&moduleAnchor), &self)) {
+    const DWORD len = GetModuleFileNameA(self, self_path, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+      std::string self_dir(self_path, len);
+      self_dir.resize(self_dir.find_last_of('\\') + 1);
+      handle_ = static_cast<void*>(
+          LoadLibraryExA((self_dir + filename).c_str(), nullptr,
+                         LOAD_LIBRARY_SEARCH_SYSTEM32 |
+                             LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR));
+    }
+  }
 
   if (!handle_) {
     DWORD error = GetLastError();

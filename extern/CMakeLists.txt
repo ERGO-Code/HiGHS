@@ -107,6 +107,14 @@ if(BUILD_SHARED_EXTRAS_LIB)
   endif()
 endif()
 
+# Highs.Native.Extras NuGet package: HiGHS loads the library by this file name
+# from the directory of the highs library in Highs.Native
+if(BUILD_DOTNET AND HIPO AND BUILD_SHARED_EXTRAS_LIB)
+  add_custom_command(TARGET highs_extras POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy "$<TARGET_FILE:highs_extras>"
+      "${DOTNET_PACKAGES_DIR}/Highs.Native.Extras/runtimes/${DOTNET_RID}/native/$<TARGET_FILE_NAME:highs_extras>")
+endif()
+
 # This CMake file is only inlcluded if not (HIPO_PYTHON)
 install(TARGETS highs_extras
     EXPORT highs-targets

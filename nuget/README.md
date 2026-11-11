@@ -20,6 +20,16 @@ The nuget package contains runtime libraries for
 * `macos-x64`
 * `macos-arm64`
 
+#### HiPO solver
+
+The HiPO interior point solver needs the optional `Highs.Native.Extras` package, which contains third-party dependencies under the Apache-2.0 and BSD-3-Clause licenses. It is the counterpart of `highspy-extras` for Python. Add it with the same version as `Highs.Native`:
+
+```shell
+dotnet add package Highs.Native.Extras --version 1.16.0
+```
+
+Then select HiPO with `solver.setStringOptionValue("solver", "hipo")`. Without the package, that call returns `HighsStatus.kError`.
+
 #### Local build
 
 To build the wrapper locally, you would need `cmake` and `dotnet`. CMake can be configured to generate the files required for the dotnet package locally, with the `BUILD_DOTNET` cmake variable. Assuming the build directory is called `build`, the package is generated in `build/dotnet/Highs.Native`, with a single runtime library, depending on the platform. From the HiGHS root directory, run
@@ -28,7 +38,9 @@ To build the wrapper locally, you would need `cmake` and `dotnet`. CMake can be 
 cmake -S. -Bbuild -DCSHARP=ON -DBUILD_DOTNET=ON
 ```
 
-Then, from `build/dotnet/Highs.Native`, run
+To also generate `build/dotnet/Highs.Native.Extras`, add `-DHIPO=ON -DBUILD_OPENBLAS=ON`.
+
+Then, from `build/dotnet/Highs.Native` (and `build/dotnet/Highs.Native.Extras`), run
 
 ```shell
 dotnet pack -c Release /p:Version=$version

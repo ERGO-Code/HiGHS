@@ -102,3 +102,18 @@ file(COPY
 file(COPY
   ${PROJECT_SOURCE_DIR}/nuget/HiGHS_Logo.png
   DESTINATION ${DOTNET_PROJECT_DIR})
+
+# Optional Highs.Native.Extras package (HiPO and its third-party dependencies),
+# the counterpart of highspy-extras. The library is copied in by extern/.
+if(HIPO AND BUILD_SHARED_EXTRAS_LIB)
+  set(DOTNET_EXTRAS_PROJECT_DIR ${DOTNET_PACKAGES_DIR}/Highs.Native.Extras)
+  configure_file(
+    ${PROJECT_SOURCE_DIR}/nuget/Highs.Native.Extras.csproj.in
+    ${DOTNET_EXTRAS_PROJECT_DIR}/Highs.Native.Extras.csproj
+    @ONLY)
+  file(COPY
+    ${PROJECT_SOURCE_DIR}/nuget/README-extras.md
+    ${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md
+    ${PROJECT_SOURCE_DIR}/nuget/HiGHS_Logo.png
+    DESTINATION ${DOTNET_EXTRAS_PROJECT_DIR})
+endif()

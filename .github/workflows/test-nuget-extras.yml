@@ -1,0 +1,54 @@
+name: test-nuget-extras
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test_nuget_extras:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15-intel, macos-15, windows-latest, windows-11-arm]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure CMake
+        run: cmake -S . -B build -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Dotnet pack
+        run: |
+          dotnet pack build/dotnet/Highs.Native -c Release -o nugets
+          dotnet pack build/dotnet/Highs.Native.Extras -c Release -o nugets
+          ls nugets
+
+      # HiPO is optional: Highs.Native alone must load and report it unavailable
+      - name: Test Highs.Native without extras
+        run: |
+          dotnet new console -o test_nuget
+          cd test_nuget
+          rm Program.cs
+          cp ../examples/call_hipo_from_csharp.cs .
+          dotnet add package Highs.Native -s ../nugets
+          if dotnet run > out.txt; then cat out.txt; echo "HiPO ran without Highs.Native.Extras"; exit 1; fi
+          cat out.txt
+          grep -q "HiPO is unavailable" out.txt
+
+      - name: Test Highs.Native with extras
+        working-directory: test_nuget
+        run: |
+          dotnet add package Highs.Native.Extras -s ../nugets
+          dotnet run
