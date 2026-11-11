@@ -51,6 +51,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestHighsVersion.cpp
       TestHiPdlp.cpp
       TestHiPdlpReference.cpp
+      TestHiPdlpPlanted.cpp
       TestHSet.cpp
       TestICrash.cpp
       TestIis.cpp
