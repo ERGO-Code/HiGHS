@@ -227,8 +227,10 @@ shouldTerminate Solver::prepareIter() {
   it_->computeInfeasDrop(crossoverIsOn(), options_.feasibility_tol,
                          options_.optimality_tol);
 
-  if (checkBadIter()) return true;
+  // Termination is checked first, so that an iterate that satisfies the
+  // termination criteria is accepted even if stagnation is detected.
   if (checkTermination()) return true;
+  if (checkBadIter()) return true;
   if (checkInterrupt()) return true;
 
   ++iter_;

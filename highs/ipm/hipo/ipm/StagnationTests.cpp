@@ -170,41 +170,51 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter,
   const double tol[num] = {feas_tol, feas_tol, opt_tol, crossover_tol};
   const char* name[num] = {"pinf", "dinf", "pdgap", "drop"};
 
+  // infeas_drop is computed only in some cases, otherwise it is zero
+  const bool available[num] = {true, true, true, it.infeas_drop > 0.0};
+
+  // Record the history and best value of each available quantity, whether it
+  // is tracked or not. This data is never reset, except by clear(), so that a
+  // quantity that moves above and below its tolerance cannot pass the tests
+  // just by restarting its window.
+  for (Int k = 0; k < num; ++k) {
+    if (!available[k]) continue;
+
+    std::vector<double>& history = progress_history[k];
+    history.push_back(value[k]);
+    if (static_cast<Int>(history.size()) > kProgressMaxIter + 1)
+      history.erase(history.begin());
+
+    if (value[k] < kProgressFactor * progress_ref[k]) {
+      progress_ref[k] = value[k];
+      progress_iter[k] = iter;
+    }
+  }
+
   // a quantity is tracked only if it is above its tolerance
   bool tracked[num];
   bool any_tracked = false;
   for (Int k = 0; k < num; ++k) {
-    tracked[k] = value[k] > tol[k];
+    tracked[k] = available[k] && value[k] > tol[k];
     if (tracked[k]) any_tracked = true;
   }
 
   // If no quantity is above its tolerance, but the ipm is still iterating,
   // track all of them.
   if (!any_tracked)
-    for (Int k = 0; k < num; ++k) tracked[k] = true;
+    for (Int k = 0; k < num; ++k) tracked[k] = available[k];
 
+  // The tests pass if any tracked quantity passes them.
   bool window_passed = false;
   bool best_passed = false;
   for (Int k = 0; k < num; ++k) {
-    std::vector<double>& history = progress_history[k];
-
-    if (!tracked[k]) {
-      // Reset the data, so that, if the quantity becomes tracked again, its
-      // window starts from that iteration.
-      history.clear();
-      progress_ref[k] = kHighsInf;
-      progress_iter[k] = iter;
-      continue;
-    }
+    if (!tracked[k]) continue;
+    const std::vector<double>& history = progress_history[k];
 
     // Window test: check if, at some point in the last kProgressMaxIter
     // iterations, the quantity was smaller by a factor kProgressFactor than
-    // kProgressMaxIter iterations ago. If the quantity has not been tracked for
-    // long enough, the test passes.
-    history.push_back(value[k]);
-    if (static_cast<Int>(history.size()) > kProgressMaxIter + 1)
-      history.erase(history.begin());
-
+    // kProgressMaxIter iterations ago. If there is not enough history yet, the
+    // test passes.
     if (static_cast<Int>(history.size()) <= kProgressMaxIter) {
       window_passed = true;
     } else {
@@ -216,10 +226,6 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter,
     // Best test: check if the best value was improved by a factor
     // kProgressFactor in the last kProgressBestMaxIter iterations. This
     // detects quantities that oscillate, which may pass the window test.
-    if (value[k] < kProgressFactor * progress_ref[k]) {
-      progress_ref[k] = value[k];
-      progress_iter[k] = iter;
-    }
     if (iter - progress_iter[k] < kProgressBestMaxIter) best_passed = true;
   }
 

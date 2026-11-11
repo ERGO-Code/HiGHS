@@ -31,7 +31,7 @@ struct StagnationTests {
 
   // data for progress test, for pinf, dinf, pdgap and infeas_drop:
   // - values in the last kProgressMaxIter + 1 iterations in which the quantity
-  //   was tracked, oldest first;
+  //   was available, oldest first;
   // - best value and the iteration at which it was set.
   static constexpr Int kNumProgressQuantities = 4;
   std::vector<double> progress_history[kNumProgressQuantities];
@@ -86,6 +86,9 @@ struct StagnationTests {
   // Only the quantities above their tolerance are tracked. If all quantities
   // are below their tolerance, but the ipm is still iterating (e.g. because
   // the kkt check failed), all quantities are tracked.
+  // History and best values are recorded for all quantities, tracked or not,
+  // and are reset only by clear(). infeas_drop is recorded only when it is
+  // computed.
   // ===================================================================================
   bool progressTest(const Iterate& it, Int iter, double feas_tol,
                     double opt_tol, double crossover_tol,
