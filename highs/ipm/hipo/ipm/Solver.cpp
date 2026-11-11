@@ -1117,20 +1117,10 @@ shouldTerminate Solver::checkIterate() {
 
 shouldTerminate Solver::checkStagnation() {
   std::stringstream log_stream;
-  bool stagnation = it_->stagnation(log_stream);
-  logger_.printInfo(log_stream.str().c_str());
-
-  // New tests for numerical issues and lack of progress. For now, their result
-  // is only logged and does not affect the iterations.
-  std::stringstream test_log_stream;
-  const bool reduction_ok = it_->residualReductionTest(
-      alpha_primal_, alpha_dual_, options_.feasibility_tol, test_log_stream);
-  const bool progress_ok = it_->progressTest(
-      iter_, options_.feasibility_tol, options_.optimality_tol,
-      options_.crossover_tol, test_log_stream);
-  if (!reduction_ok || !progress_ok)
-    logger_.print("%s", test_log_stream.str().c_str());
-
+  bool stagnation = it_->stagnation(
+      alpha_primal_, alpha_dual_, iter_, options_.feasibility_tol,
+      options_.optimality_tol, options_.crossover_tol, log_stream);
+  logger_.printInfo("%s", log_stream.str().c_str());
   return stagnation;
 }
 

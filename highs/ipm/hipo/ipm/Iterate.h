@@ -46,14 +46,12 @@ struct Iterate {
   double* Rd;
   Residuals ires;  // residuals for iterative refinement
 
-  // statistics for stagnation
-  Int bad_iter_{};
-  double largest_dx_x_{}, largest_dy_y_{};
-  double best_pinf_ = kHighsInf, best_dinf_ = kHighsInf;
-
   // data for residual reduction test
   double res_norm_old_[4]{};
-  std::vector<double> res4_old_;
+
+  // outcome of the residual reduction test in the last kBadResWindow
+  // iterations: bit i is set if the test failed i iterations ago
+  Int bad_res_history{};
 
   double infeas_drop = 0.0;
 
@@ -181,7 +179,18 @@ struct Iterate {
   void saveBest(double feas_tol, double opt_tol, Int iter);
   bool resetBest(Int iter);
 
-  bool stagnation(std::stringstream& log_stream);
+  // ===================================================================================
+  // Detect stagnation, which happens if any of the following is true:
+  // - residualReductionTest failed in at least kBadResMaxIter of the last
+  //   kBadResWindow iterations;
+  // - residualReductionTest found a residual increased by more than a factor
+  //   kResReductionLargeIncrease;
+  // - progressTest failed.
+  // Must be called after the step, while delta still holds the direction.
+  // ===================================================================================
+  bool stagnation(double alpha_primal, double alpha_dual, Int iter,
+                  double feas_tol, double opt_tol, double crossover_tol,
+                  std::stringstream& log_stream);
 
   // ===================================================================================
   // Save the norms of residuals 1,2,3,4 used as rhs of the Newton system, to be
@@ -195,12 +204,15 @@ struct Iterate {
   // the stepsizes predict:
   //  ||rk_new|| <= max( (1 - eta * alpha) * ||rk_old||, floor )
   // with alpha_primal for k=1,2,3 and alpha_dual for k=4. For QPs with
-  // different primal and dual stepsizes, the prediction for r4 includes the
-  // term (alpha_primal - alpha_dual) * Q * dx.
+  // different primal and dual stepsizes, the term
+  // (alpha_primal - alpha_dual) * Q * dx is removed from r4_new before the
+  // test.
+  // large_increase is set to true if a residual increased by more than a factor
+  // kResReductionLargeIncrease.
   // Must be called after the step, while delta still holds the direction.
   // ===================================================================================
   bool residualReductionTest(double alpha_primal, double alpha_dual,
-                             double feas_tol,
+                             double feas_tol, bool& large_increase,
                              std::stringstream& log_stream) const;
 
   // ===================================================================================

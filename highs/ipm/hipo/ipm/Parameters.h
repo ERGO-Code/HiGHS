@@ -8,12 +8,14 @@ namespace hipo {
 // parameters for termination
 const Int kMaxIterDefault = 200;
 const double kIpmTolDefault = 1e-8;
-const Int kMaxBadIter = 5;
 const double kDivergeTol = 1e3;
 
 // parameters for residual reduction test
 const double kResReductionFraction = 0.1;
 const double kResReductionMinAlpha = 1e-3;
+const double kResReductionLargeIncrease = 1e3;
+const Int kBadResWindow = 10;
+const Int kBadResMaxIter = 5;
 
 // parameters for progress test
 const double kProgressFactor = 0.9;

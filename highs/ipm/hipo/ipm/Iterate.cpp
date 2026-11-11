@@ -594,11 +594,6 @@ void Iterate::assertConsistency(Int n, Int m) const {
 }
 
 void Iterate::makeStep(double alpha_primal, double alpha_dual) {
-  if (std::min(alpha_primal, alpha_dual) < 0.05)
-    ++bad_iter_;
-  else
-    bad_iter_ = 0;
-
   vectorAdd(x, 1.0, delta.x, alpha_primal);
   vectorAdd(xl, 1.0, delta.xl, alpha_primal);
   vectorAdd(xu, 1.0, delta.xu, alpha_primal);
@@ -646,49 +641,39 @@ bool Iterate::resetBest(Int iter) {
   return true;
 }
 
-bool Iterate::stagnation(std::stringstream& log_stream) {
-  // too many iterations in a row with small stepsize
-  bool stagnation = (bad_iter_ >= kMaxBadIter);
+bool Iterate::stagnation(double alpha_primal, double alpha_dual, Int iter,
+                         double feas_tol, double opt_tol, double crossover_tol,
+                         std::stringstream& log_stream) {
+  bool stagnation = false;
 
-  // the next tests are aimed at problems where things are going
-  // catastrophically bad, which may continue iterating forever otherwise.
+  // residual reduction test
+  bool large_increase;
+  const bool reduction_ok = residualReductionTest(
+      alpha_primal, alpha_dual, feas_tol, large_increase, log_stream);
 
-  // dx / x or dy / y becoming way too small
-  const double thresh_dxy_xy = 1e-30;
+  // record the outcome in the history of the last kBadResWindow iterations,
+  // and count the failures
+  const Int window_mask = (Int{1} << kBadResWindow) - 1;
+  bad_res_history =
+      ((bad_res_history << 1) | (reduction_ok ? 0 : 1)) & window_mask;
+  Int bad_res_count = 0;
+  for (Int h = bad_res_history; h != 0; h >>= 1) bad_res_count += h & 1;
 
-  std::vector<double> temp = delta.x;
-  vectorDivide(temp, x);
-  const double dx_x_max = infNorm(temp);
-
-  temp = delta.y;
-  vectorDivide(temp, y);
-  const double dy_y_max = infNorm(temp);
-
-  largest_dx_x_ = std::max(largest_dx_x_, dx_x_max);
-  largest_dy_y_ = std::max(largest_dy_y_, dy_y_max);
-
-  if (dx_x_max < largest_dx_x_ * thresh_dxy_xy ||
-      dy_y_max < largest_dy_y_ * thresh_dxy_xy) {
+  if (bad_res_count >= kBadResMaxIter) {
     stagnation = true;
-    log_stream << "Bad direction ratios, dx_x " << sci(dx_x_max, 0, 1)
-               << " (max " << sci(largest_dx_x_, 0, 1) << "), dy_y "
-               << sci(dy_y_max, 0, 1) << " (max " << sci(largest_dy_y_, 0, 1)
-               << ")\n";
+    log_stream << "Bad reduction of residuals in " << bad_res_count
+               << " of the last " << kBadResWindow << " iterations\n";
   }
 
-  // infeasibilities jumping back up
-  const double thresh_inf_to_best = 1e12;
-
-  if (pinf > 0.0) best_pinf_ = std::min(best_pinf_, pinf);
-  if (dinf > 0.0) best_dinf_ = std::min(best_dinf_, dinf);
-
-  if (pinf > thresh_inf_to_best * best_pinf_ ||
-      dinf > thresh_inf_to_best * best_dinf_) {
+  if (large_increase) {
     stagnation = true;
-    log_stream << "Bad infeasibility, pinf " << sci(pinf, 0, 1) << " (best "
-               << sci(best_pinf_, 0, 1) << "), dinf " << sci(dinf, 0, 1)
-               << " (best " << sci(best_dinf_, 0, 1) << ")\n";
+    log_stream << "Residuals increased by more than a factor "
+               << sci(kResReductionLargeIncrease, 0, 1) << "\n";
   }
+
+  // progress test
+  if (!progressTest(iter, feas_tol, opt_tol, crossover_tol, log_stream))
+    stagnation = true;
 
   return stagnation;
 }
@@ -698,15 +683,13 @@ void Iterate::saveResidualNorms() {
   res_norm_old_[1] = infNorm(res.r2);
   res_norm_old_[2] = infNorm(res.r3);
   res_norm_old_[3] = infNorm(res.r4);
-
-  // for QPs, r4 is needed to predict the dual residual if the primal and dual
-  // stepsizes are different
-  if (model.qp()) res4_old_ = res.r4;
 }
 
 bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
-                                    double feas_tol,
+                                    double feas_tol, bool& large_increase,
                                     std::stringstream& log_stream) const {
+  large_increase = false;
+
   // below these values, the residuals are small enough that their reduction is
   // not needed
   const double floor_p = feas_tol * (1.0 + model.normScaledRhs());
@@ -715,8 +698,20 @@ bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
   const double alpha[4] = {alpha_primal, alpha_primal, alpha_primal,
                            alpha_dual};
   const double floor[4] = {floor_p, floor_p, floor_p, floor_d};
-  const double res_norm_new[4] = {infNorm(res.r1), infNorm(res.r2),
-                                  infNorm(res.r3), infNorm(res.r4)};
+  double res_norm_new[4] = {infNorm(res.r1), infNorm(res.r2), infNorm(res.r3),
+                            infNorm(res.r4)};
+
+  // For QPs, r4 depends also on x, so after the step
+  //  r4_new = (1 - alpha_dual) * r4_old
+  //           + (alpha_primal - alpha_dual) * Q * dx
+  // The second term is a known change that is not related to the reduction of
+  // the residual, so it is removed from r4_new before testing.
+  if (model.qp() && alpha_primal != alpha_dual) {
+    std::vector<double> res4_corrected = res.r4;
+    model.Q().alphaProductPlusY(-model.sense() * (alpha_primal - alpha_dual),
+                                delta.x, res4_corrected);
+    res_norm_new[3] = infNorm(res4_corrected);
+  }
 
   // Relaxed prediction of the norms of the residuals after the step, i.e.
   // only a fraction eta of the reduction predicted by the stepsizes is
@@ -726,20 +721,6 @@ bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
   double res_norm_relaxed[4];
   for (Int k = 0; k < 4; ++k)
     res_norm_relaxed[k] = (1.0 - eta * alpha[k]) * res_norm_old_[k];
-
-  // For QPs, r4 depends also on x, so the reduction predicted by the stepsizes
-  // contains also the term (alpha_primal - alpha_dual) * Q * dx, and the
-  // relaxed prediction is
-  //  r4_relaxed = (1 - eta * alpha_dual) * r4
-  //               + eta * (alpha_primal - alpha_dual) * Q * dx
-  if (model.qp() && alpha_primal != alpha_dual) {
-    std::vector<double> res4_relaxed = res4_old_;
-    vectorScale(res4_relaxed, 1.0 - eta * alpha_dual);
-    model.Q().alphaProductPlusY(
-        model.sense() * eta * (alpha_primal - alpha_dual), delta.x,
-        res4_relaxed);
-    res_norm_relaxed[3] = infNorm(res4_relaxed);
-  }
 
   bool passed = true;
   for (Int k = 0; k < 4; ++k) {
@@ -757,6 +738,9 @@ bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
                  << sci(res_norm_relaxed[k], 0, 1) << ", alpha "
                  << sci(alpha[k], 0, 1) << "\n";
     }
+
+    if (res_norm_new[k] > kResReductionLargeIncrease * res_norm_old_[k])
+      large_increase = true;
   }
 
   return passed;
@@ -817,11 +801,7 @@ bool Iterate::progressTest(Int iter, double feas_tol, double opt_tol,
 }
 
 void Iterate::clearTestData(Int iter) {
-  bad_iter_ = 0;
-  largest_dx_x_ = 0.0;
-  largest_dy_y_ = 0.0;
-  best_pinf_ = kHighsInf;
-  best_dinf_ = kHighsInf;
+  bad_res_history = 0;
 
   // with zero old norms, the residual reduction test is skipped until the
   // norms are saved again
@@ -837,8 +817,7 @@ void Iterate::computeInfeasDrop(bool crossover_on, double feas_tol,
                                 double opt_tol) {
   const bool feasible_optimal =
       pinf < feas_tol && dinf < feas_tol && pdgap < opt_tol;
-  infeas_drop =
-      crossover_on && feasible_optimal ? infeasAfterDropping() : 0.0;
+  infeas_drop = crossover_on && feasible_optimal ? infeasAfterDropping() : 0.0;
 }
 
 }  // namespace hipo
