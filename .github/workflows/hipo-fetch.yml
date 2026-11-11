@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24]
+        os: [ubuntu-24.04]
         config: [Release]
         all_tests: [ON]
 
@@ -86,7 +86,7 @@ jobs:
 
   # Temporarily disable ubuntu_32 for 1.13
   # ubuntu_32:
-  #   runs-on: ubuntu-24
+  #   runs-on: ubuntu-24.04
   #   strategy:
   #     matrix:
   #       config: [Release]
@@ -134,7 +134,7 @@ jobs:
   #         ctest --parallel --timeout 600 --output-on-failure
 
   ubuntu_32_no_hipo:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         config: [Release]

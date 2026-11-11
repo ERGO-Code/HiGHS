@@ -8,7 +8,7 @@ concurrency:
 
 jobs:
   build_linux:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     container: stabletec/build-core:debian-11
     steps:
       - uses: actions/checkout@v6
@@ -52,7 +52,7 @@ jobs:
           dotnet run
 
   build_linux_8:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     container: stabletec/build-core:debian-11
     steps:
       - uses: actions/checkout@v6

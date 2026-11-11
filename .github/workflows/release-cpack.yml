@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         arch: [x64]
@@ -200,7 +200,7 @@ jobs:
             build/*.tar.gz
 
   build-linux-mit:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         arch: [x64]

@@ -13,7 +13,7 @@ jobs:
       matrix:
         # macos-latest issue with micromamba action
         # windows-latest takes to long
-        os: [ubuntu-24]
+        os: [ubuntu-24.04]
     steps:
       - uses: actions/checkout@v6
         with:

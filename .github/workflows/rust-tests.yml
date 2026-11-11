@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-24, macos-latest, windows-latest ]
+        os: [ ubuntu-24.04, macos-latest, windows-latest ]
     steps:
       - name: Install LLVM and Clang (needed by bindgen)
         if: runner.os == 'Windows'

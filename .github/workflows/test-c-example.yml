@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   fast-build:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Create Build Environment
@@ -40,7 +40,7 @@ jobs:
           LD_LIBRARY_PATH=installs/highs/lib ./c_example
 
   fast-build-off:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Create Build Environment

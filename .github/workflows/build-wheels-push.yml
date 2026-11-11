@@ -14,7 +14,7 @@ concurrency:
 jobs:
   build_sdist:
     name: Build source distribution
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
@@ -135,7 +135,7 @@ jobs:
 
   build_sdist_extras:
     name: Build highspy-extras source distribution
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Build sdist
@@ -151,7 +151,7 @@ jobs:
 
   upload_testpypi:
     name: Publish highspy to TestPyPI
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     needs: [build_wheels, build_sdist]
     if: github.event_name == 'workflow_dispatch'
     environment:
@@ -177,7 +177,7 @@ jobs:
 
   upload_testpypi_extras:
     name: Publish highspy-extras to TestPyPI
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     needs: [build_wheels_extras, build_sdist_extras]
     if: github.event_name == 'workflow_dispatch'
     environment:
@@ -203,7 +203,7 @@ jobs:
 
   upload_pypi:
     name: Publish highspy to PyPI
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     needs: [build_wheels_extras, build_sdist_extras, build_wheels, build_sdist]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     environment:
@@ -226,7 +226,7 @@ jobs:
 
   upload_pypi_extras:
     name: Publish highspy-extras to PyPI
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     needs: [build_wheels_extras, build_sdist_extras, build_wheels, build_sdist]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     environment:

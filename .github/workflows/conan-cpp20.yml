@@ -8,7 +8,7 @@ concurrency:
 
 jobs:
   cmake-cpp20-libcxx:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
@@ -38,7 +38,7 @@ jobs:
         run: cmake --build . -j2
 
   conan-cpp20-libcxx:
-    runs-on: ubuntu-24
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
