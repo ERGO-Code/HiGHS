@@ -2,6 +2,9 @@ name: nix-revdeps
 
 on:
   workflow_dispatch:
+  # TEMPORARY: remove before merging; lets this run before it exists on master.
+  push:
+    branches: [nix-rev]
 
 jobs:
 
