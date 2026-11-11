@@ -679,10 +679,10 @@ bool Iterate::stagnation(double alpha_primal, double alpha_dual, Int iter,
 }
 
 void Iterate::saveResidualNorms() {
-  res_norm_old_[0] = infNorm(res.r1);
-  res_norm_old_[1] = infNorm(res.r2);
-  res_norm_old_[2] = infNorm(res.r3);
-  res_norm_old_[3] = infNorm(res.r4);
+  res_norm_old[0] = infNorm(res.r1);
+  res_norm_old[1] = infNorm(res.r2);
+  res_norm_old[2] = infNorm(res.r3);
+  res_norm_old[3] = infNorm(res.r4);
 }
 
 bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
@@ -722,12 +722,12 @@ bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
   const double eta = kResReductionFraction;
   double res_norm_relaxed[4];
   for (Int k = 0; k < 4; ++k)
-    res_norm_relaxed[k] = (1.0 - eta * alpha[k]) * res_norm_old_[k];
+    res_norm_relaxed[k] = (1.0 - eta * alpha[k]) * res_norm_old[k];
 
   bool passed = true;
   for (Int k = 0; k < 4; ++k) {
     // test is meaningless if the step is tiny or the residual is already small
-    if (alpha[k] < kResReductionMinAlpha || res_norm_old_[k] <= floor[k])
+    if (alpha[k] < kResReductionMinAlpha || res_norm_old[k] <= floor[k])
       continue;
 
     const double thresh = std::max(res_norm_relaxed[k], floor[k]);
@@ -735,13 +735,13 @@ bool Iterate::residualReductionTest(double alpha_primal, double alpha_dual,
     if (res_norm_new[k] > thresh) {
       passed = false;
       log_stream << "Bad reduction of residual " << k + 1 << ", old "
-                 << sci(res_norm_old_[k], 0, 1) << ", new "
+                 << sci(res_norm_old[k], 0, 1) << ", new "
                  << sci(res_norm_new[k], 0, 1) << ", relaxed prediction "
                  << sci(res_norm_relaxed[k], 0, 1) << ", alpha "
                  << sci(alpha[k], 0, 1) << "\n";
     }
 
-    if (res_norm_new[k] > kResReductionLargeIncrease * res_norm_old_[k])
+    if (res_norm_new[k] > kResReductionLargeIncrease * res_norm_old[k])
       large_increase = true;
   }
 
@@ -807,7 +807,7 @@ void Iterate::clearTestData(Int iter) {
 
   // with zero old norms, the residual reduction test is skipped until the
   // norms are saved again
-  for (Int k = 0; k < 4; ++k) res_norm_old_[k] = 0.0;
+  for (Int k = 0; k < 4; ++k) res_norm_old[k] = 0.0;
 
   for (Int k = 0; k < kNumProgressQuantities; ++k) {
     progress_ref[k] = kHighsInf;

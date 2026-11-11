@@ -47,7 +47,7 @@ struct Iterate {
   Residuals ires;  // residuals for iterative refinement
 
   // data for residual reduction test
-  double res_norm_old_[4]{};
+  double res_norm_old[4]{};
 
   // outcome of the residual reduction test in the last kBadResWindow
   // iterations: bit i is set if the test failed i iterations ago
