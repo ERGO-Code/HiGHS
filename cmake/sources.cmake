@@ -627,6 +627,7 @@ set(highs_headers
     util/HFactor.h
     util/HFactorConst.h
     util/HFactorDebug.h
+    util/HighsAvailableMemory.h
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
@@ -636,7 +637,6 @@ set(highs_headers
     util/HighsHashTree.h
     util/HighsInt.h
     util/HighsType.h
-    util/HighsAvailableMemory.h
     util/HighsIntegers.h
     util/HighsLinearSumBounds.h
     util/HighsMatrixPic.h
@@ -646,7 +646,6 @@ set(highs_headers
     util/HighsRandom.h
     util/HighsRbTree.h
     util/HighsSolverSelect.h
-    util/HighsSolverSelectModels.h
     util/HighsSort.h
     util/HighsSparseMatrix.h
     util/HighsSparseVectorSum.h

@@ -200,16 +200,6 @@ TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
 }
 
-TEST_CASE("solver-select-count-integer-cols", "[solver_select]") {
-  const std::vector<HighsVarType> integrality = {
-      HighsVarType::kContinuous, HighsVarType::kInteger,
-      HighsVarType::kSemiContinuous, HighsVarType::kSemiInteger,
-      HighsVarType::kImplicitInteger};
-  // Implicit integers count as continuous
-  REQUIRE(countIntegerCols(integrality) == 3);
-  REQUIRE(countIntegerCols({}) == 0);
-}
-
 TEST_CASE("solver-select-small-model-uses-dual-simplex", "[solver_select]") {
   HighsLpFeatures f;
   f.num_row = 10;

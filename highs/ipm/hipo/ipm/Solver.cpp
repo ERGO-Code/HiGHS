@@ -1299,6 +1299,9 @@ isFailure Solver::initialiseLinearSolver() {
   else
     do_switch = should_switch_to_uplooking;
 
+  // Up-looking may later switch to multifrontal, so check for that too
+  LS_->checkMemory();
+
   if (do_switch) {
     LS_.reset(
         new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_, control_));
@@ -1308,8 +1311,6 @@ isFailure Solver::initialiseLinearSolver() {
     }
     LS_->setup();
     LS_->clear();
-  } else {
-    LS_->checkMemory();
   }
 
   return false;

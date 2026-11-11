@@ -116,7 +116,6 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp) {
       min_abs_obj = std::min(min_abs_obj, abs_cost);
     }
   }
-  f.num_integer_col = countIntegerCols(lp.integrality_);
   if (min_abs_obj == kHighsInf) min_abs_obj = 0.0;
 
   // --------------------------------------------------------------------------
@@ -313,16 +312,6 @@ std::vector<std::pair<std::string, double>> highsLpFeatureVector(
       {"max_nonzeros_in_row", f.max_nonzeros_in_row},
       {"max_nonzeros_in_col", f.max_nonzeros_in_col},
   };
-}
-
-HighsInt countIntegerCols(const std::vector<HighsVarType>& integrality) {
-  HighsInt num_integer_col = 0;
-  for (const HighsVarType type : integrality)
-    if (type == HighsVarType::kInteger ||
-        type == HighsVarType::kSemiContinuous ||
-        type == HighsVarType::kSemiInteger)
-      num_integer_col++;
-  return num_integer_col;
 }
 
 std::vector<std::string> highsLpFeatureNames() {

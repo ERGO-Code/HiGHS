@@ -1159,9 +1159,11 @@ bool usePdlp(const std::string& solver) {
 
 bool mayRequireDualPostsolve(const HighsOptions* options) {
   if (usePdlp(options->solver)) return true;
-  // Presolve runs before solver selection, which may choose IPM
+  // Presolve runs before solver selection, which may choose IPM unless the
+  // strategy is simplex only (0) or always dual simplex (4)
   const bool may_select_ipm = options->solver == kHighsChooseString &&
-                              options->solver_select_strategy > 0;
+                              options->solver_select_strategy > 0 &&
+                              options->solver_select_strategy != 4;
   if (useIpm(options->solver) || may_select_ipm) {
     if (options->run_crossover == kHighsOffString) return true;
     if (options->run_crossover == kHighsChooseString) return true;

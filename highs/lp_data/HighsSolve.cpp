@@ -84,8 +84,10 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
                selected_solver_string.c_str());
   HighsStatus status = solveWith(selected_solver_string);
 
-  // IPX needs far less memory than HiPO, whose factorisation can fill in
+  // IPX needs far less memory than HiPO, whose factorisation can fill in.
+  // Without HiPO, IPX has already run
   if (selected_solver == HighsSolverSelect::kHipo &&
+      HighsExternalApi::isAvailable<HighsExtras::hipo>() &&
       solver_object.model_status_ == HighsModelStatus::kMemoryLimit) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Selected HiPO ran out of memory, so use IPX\n");
