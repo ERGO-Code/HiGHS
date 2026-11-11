@@ -39,7 +39,7 @@ HiGHS does not have any external dependencies, however, the new interior point s
 
 ### External ordering heuristics
 
-HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is already part of the HiGHS library, so there is no need to link them. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD.
+HiPO also relies on a fill-reducing ordering heuristic. HiGHS includes the source code of Metis, AMD and RCM, three open-source ordering heuristics. Their source code is built with HiGHS, so there is no need to install them separately. In particular, there is no need to have Metis installed separately, as in previous versions of HiPO. These source codes can be found in extern/metis, extern/amd, extern/rcm, together with the respective license files. Notice that the HiGHS source code is MIT licensed. However, if you build HiGHS with HiPO support, then libhighs and the HiGHS executables are licensed Apache 2.0, due to the presence of Metis and AMD.
 
 ### [BLAS](@id install-blas)
 
@@ -120,6 +120,30 @@ OpenBLAS needs a copy of itself for the host as a build tool, so using the same 
 To specify explicitly which BLAS vendor to look for, `BLA_VENDOR` could be set in CMake, e.g. `-DBLA_VENDOR=Apple` or `-DBLA_VENDOR=OpenBLAS`. Alternatively, to specify which BLAS library to use, set `BLAS_LIBRARIES` to the full path of the library e.g. `-DBLAS_LIBRARIES=/path_to/libopenblas.so`.
 
 When `BLAS_LIBRARIES` is used, HiGHS can only tell which vendor provides BLAS from the library name: if the name contains "openblas" (in any case), the library is treated as OpenBLAS. This matters for performance, because HiPO runs OpenBLAS in serial (see [BLAS threads](@ref parallel-blas-threads)). If OpenBLAS is provided under a different name, also set `-DBLA_VENDOR=OpenBLAS`.
+
+### Using HiPO in your own application
+
+By default, the dependencies of HiPO are built into a separate shared library, `highs_extras`, which HiGHS loads when it runs. This applies even if HiGHS itself is a static library, so linking `highs.lib` or `libhighs.a` is not enough to make HiPO available: your application must also be able to find the shared library. If it cannot, setting `solver=hipo` fails with an error that gives the reason, and the `solver` option is left unchanged.
+
+To choose the folder that `highs_extras` is loaded from, call
+```cpp
+Highs::initializeExtras("<folder containing highs_extras>", false);
+```
+or, from C, `Highs_initializeExtras("<folder containing highs_extras>", 0)`, once, before HiPO is first used. If the folder is empty and the second argument is true, the default locations described below are searched; if the second argument is false, nothing is loaded. Only the first call attempts to load the library: later calls return its result, whatever their arguments. These methods do nothing when the extras are linked statically.
+
+If neither method is called, HiGHS searches the default locations when HiPO is first used.
+
+On Windows, `cmake --install` places `highs_extras.dll` in the `bin` folder of the install directory. Copy it next to your application's `.exe` and distribute it with your application. For security, `PATH` and the current folder are not searched: by default only the folder of the application's `.exe` and the Windows system folder are searched. Any DLL that `highs_extras.dll` depends on, such as `openblas.dll`, must also be in one of these folders or, if `Highs::initializeExtras` is given a folder, in that folder. If one is missing, the error says that the module could not be found, even when `highs_extras.dll` is present.
+
+On Linux, `libhighs_extras.so` must be next to `libhighs.so`, as it is after `cmake --install`, or on the runtime library search path, for example through `LD_LIBRARY_PATH`. On MacOS, `libhighs_extras.dylib` must be in the same folder as the binary that contains HiGHS.
+
+The Python package `highspy` loads `highs_extras` only from the installed `highspy-extras` package, so no call to `initializeExtras` is needed.
+
+To link everything into your application instead, so that no shared library is needed, build with
+```
+cmake -S. -B build -DHIPO=ON -DBUILD_OPENBLAS=ON -DBUILD_SHARED_EXTRAS_LIB=OFF -DBUILD_SHARED_LIBS=OFF
+```
+and link `highs`, `highs_extras` and `openblas`. If you did not use `-DBUILD_OPENBLAS=ON`, link your BLAS library instead of `openblas`.
 
 
 ## [Building HiGHS with NVidia GPU support](@id gpu-build)

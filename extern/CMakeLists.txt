@@ -100,7 +100,9 @@ if(BUILD_SHARED_EXTRAS_LIB)
       INSTALL_RPATH "${highs_extras_rpath}"
       INSTALL_RPATH_USE_LINK_PATH TRUE)
   else()
+    # no "lib" prefix with MinGW: the loader looks for highs_extras.dll
     set_target_properties(highs_extras PROPERTIES
+      PREFIX ""
       WINDOWS_EXPORT_ALL_SYMBOLS OFF)
   endif()
 endif()
@@ -117,4 +119,8 @@ install(TARGETS highs_extras
 if(DEFINED HIGHS_BINARY_DIR)
   export(TARGETS highs_extras
     APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+  if(HIPO)
+    highs_export_blas_dependency()
+    highs_export_blas_pkgconfig()
+  endif()
 endif()
