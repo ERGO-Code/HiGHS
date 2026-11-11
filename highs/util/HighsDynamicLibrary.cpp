@@ -17,6 +17,9 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#ifndef NOGDI
+#define NOGDI
+#endif
 #include <windows.h>
 #else
 #include <dlfcn.h>
@@ -29,8 +32,16 @@ bool HighsDynamicLibrary::load(const std::string& filename,
   unload();
 
 #if defined(_WIN32) || defined(_WIN64)
-  std::string full_path = path + (path.empty() ? "" : "\\") + filename;
-  handle_ = static_cast<void*>(LoadLibraryA(full_path.c_str()));
+  std::string absolute_filename = path + (path.empty() ? "" : "\\") + filename;
+
+  // allow application directory if no path is specified, otherwise use DLL load
+  // directory and absolute path
+  DWORD flags = (path.empty() ? LOAD_LIBRARY_SEARCH_APPLICATION_DIR
+                              : LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+  handle_ =
+      static_cast<void*>(LoadLibraryExA(absolute_filename.c_str(), nullptr,
+                                        LOAD_LIBRARY_SEARCH_SYSTEM32 | flags));
+
   if (!handle_) {
     DWORD error = GetLastError();
     char* message = nullptr;

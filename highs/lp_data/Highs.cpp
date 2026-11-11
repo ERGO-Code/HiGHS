@@ -1188,9 +1188,15 @@ HighsStatus Highs::presolve() {
     }
     default: {
       assert(model_presolve_status_ == HighsPresolveStatus::kOutOfMemory ||
-             model_presolve_status_ == HighsPresolveStatus::kException);
-      setHighsModelStatusAndClearSolutionAndBasis(
-          HighsModelStatus::kPresolveError);
+             model_presolve_status_ == HighsPresolveStatus::kException ||
+             model_presolve_status_ == HighsPresolveStatus::kMatrixValueError);
+      HighsModelStatus model_status;
+      if (model_presolve_status_ == HighsPresolveStatus::kOutOfMemory) {
+        model_status = HighsModelStatus::kMemoryLimit;
+      } else {
+        model_status = HighsModelStatus::kPresolveError;
+      }
+      setHighsModelStatusAndClearSolutionAndBasis(model_status);
       return_status = HighsStatus::kError;
     }
   }
@@ -1803,8 +1809,9 @@ HighsStatus Highs::calledOptimizeModel() {
           // ToDo. Analyse the extent of small value creation. See #1187
           assert(assessLp(reduced_lp, options_) == HighsStatus::kOk);
         } else {
-          reduced_lp.a_matrix_.assessSmallValues(options_.log_options,
-                                                 options_.small_matrix_value);
+          // Just analyse extreme values: none is changed
+          reduced_lp.a_matrix_.assessExtremeValues("of presolved problem ",
+                                                   options_);
         }
         call_status = cleanBounds(options_, reduced_lp);
         // Ignore any warning from clean bounds since the original LP
@@ -1945,13 +1952,18 @@ HighsStatus Highs::calledOptimizeModel() {
             HighsModelStatus::kSolveError);
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
+      case HighsPresolveStatus::kMatrixValueError: {
+        setHighsModelStatusAndClearSolutionAndBasis(
+            HighsModelStatus::kPresolveError);
+        return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
+      }
       default: {
         assert(model_presolve_status_ == HighsPresolveStatus::kNullError);
         setHighsModelStatusAndClearSolutionAndBasis(
             HighsModelStatus::kPresolveError);
         highsLogDev(log_options, HighsLogType::kError,
-                    "Presolve returned status %d\n",
-                    (int)model_presolve_status_);
+                    "Presolve returned status %s\n",
+                    presolveStatusToString(model_presolve_status_).c_str());
         return returnFromOptimizeModel(HighsStatus::kError, undo_mods);
       }
     }
@@ -3924,6 +3936,8 @@ std::string Highs::presolveStatusToString(
       return "Memory allocation error";
     case HighsPresolveStatus::kException:
       return "Exception error";
+    case HighsPresolveStatus::kMatrixValueError:
+      return "Matrix value error";
     default:
       assert(1 == 0);
       return "Unrecognised presolve status";
@@ -5153,6 +5167,11 @@ void Highs::resetGlobalScheduler(bool blocking) {
   // Deprecated in favour of resetThreadScheduler().
   // Cannot call deprecationMessage here.
   resetThreadScheduler(blocking);
+}
+
+HighsStatus Highs::initializeExtras(const std::string& directory,
+                                    bool search_if_empty) {
+  return HighsExtras::initialize(directory, search_if_empty);
 }
 
 void Highs::initializeSingleThreadedProfiling(HighsProfiling* profiling) {

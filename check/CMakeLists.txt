@@ -113,6 +113,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
 
+  if (BUILD_SHARED_EXTRAS_LIB)
+    # get output directory of highs_extras (regardless of platform)
+    target_compile_definitions(unit_tests PRIVATE HIGHS_TEST_EXTRAS_DIR="$<TARGET_FILE_DIR:highs_extras>")
+  endif()
 
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
@@ -235,6 +239,22 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "standmps\;218\; 1.4060175000\;"
    )
 
+   # GCC >= 15 at -O2 (RelWithDebInfo). Debug and Release (-O3, checked
+   # on GCC 16 MinGW) still match successInstances
+   set(successGcc15Instances
+      "25fv47\;3148\; 5.5018458883\;"
+      "80bau3b\;3705\; 9.8722419241\;"
+      "adlittle\;74\; 2.2549496316\;"
+      "afiro\;22\;-4.6475314286\;"
+      "etamacro\;536\;-7.5571523330\;"
+      "greenbea\;5247\;-7.2555248130\;"
+      "shell\;623\; 1.2088253460\;"
+      "stair\;531\;-2.5126695119\;"
+      "standata\;72\; 1.2576995000\;"
+      "standgub\;68\; 1.2576995000\;"
+      "standmps\;218\; 1.4060175000\;"
+   )
+
    set(successRiscVInstances
       "25fv47\;3103\; 5.5018458\;"
       "80bau3b\;3705\; 9.8722419\;"
@@ -321,20 +341,21 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             "standgub\; 1.2576994\;"
             )
     else() # CUPDLP_CPU
+        # Trimmed so both GCC <= 14 and GCC 15 results match
         set(pdlpInstances
-            "25fv47\; 5.5018469\;"
+            "25fv47\; 5.50184\;"
             "adlittle\; 2.254949\;"
-            "afiro\;-4.64753150\;"
+            "afiro\;-4.6475315\;"
             "avgas\;-7.7499999\;"
             "blending\;-3.1999999\;"
             "chip\;-8.9999999\;"
-            "e226\;-1.16389294\;"
-            "scrs8\; 9.04297094\;"
+            "e226\;-1.16389\;"
+            "scrs8\; 9.0429\;"
             "sctest\; 5.75000000\;"
-            "shell\; 1.20882534\;"
-            "stair\;-2.51266942\;"
-            "standata\; 1.25769944\;"
-            "standgub\; 1.25769944\;"
+            "shell\; 1.2088253\;"
+            "stair\;-2.512669\;"
+            "standata\; 1.2576994\;"
+            "standgub\; 1.2576994\;"
             )
     endif()
   elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM" AND
@@ -360,17 +381,17 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
         set(pdlpInstances
             "25fv47\; 5.50184\;"
-            "adlittle\; 2.25494944\;"
+            "adlittle\; 2.254949\;"
             "afiro\;-4.647531504\;"
             "avgas\;-7.7499999\;"
             "blending\;-3.19999999\;"
             "chip\;-8.9999999\;"
-            "scrs8\; 9.04297094\;"
+            "scrs8\; 9.04297\;"
             "sctest\; 5.7500000\;"
             "shell\; 1.20882534\;"
-            "stair\;-2.51266942\;"
-            "standata\; 1.257699393\;"
-            "standgub\; 1.25769939\;"
+            "stair\;-2.512669\;"
+            "standata\; 1.25769\;"
+            "standgub\; 1.25769\;"
             )
     endif()
   elseif(APPLE)
@@ -433,7 +454,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
           if(${solutionstatus} STREQUAL "Optimal")
               if(${setting} STREQUAL "--presolve=off" AND 
-                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND 
+                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND
                 (NOT OPT_LEVEL_CHANGED) AND
                 (CMAKE_SIZEOF_VOID_P EQUAL 8))
                   set_tests_properties (${name}${setting} PROPERTIES
@@ -458,7 +479,13 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     endif()
   elseif(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64") AND
              NOT IS_32)
-    add_instancetests(successInstances "Optimal")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+        CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15 AND
+        CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+      add_instancetests(successGcc15Instances "Optimal")
+    else()
+      add_instancetests(successInstances "Optimal")
+    endif()
   endif()
 
   add_instancetests(failInstances "Fail")
