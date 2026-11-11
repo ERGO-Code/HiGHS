@@ -23,7 +23,7 @@ jobs:
         run: cmake -S . -B build -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON
 
       - name: Build
-        run: cmake --build build --config Release --parallel
+        run: cmake --build build --config Release --parallel 2
 
       - uses: actions/setup-dotnet@v5
         with:

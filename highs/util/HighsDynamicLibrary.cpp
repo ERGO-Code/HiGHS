@@ -59,10 +59,9 @@ bool HighsDynamicLibrary::load(const std::string& filename,
     if (len > 0 && len < MAX_PATH) {
       std::string self_dir(self_path, len);
       self_dir.resize(self_dir.find_last_of('\\') + 1);
-      handle_ = static_cast<void*>(
-          LoadLibraryExA((self_dir + filename).c_str(), nullptr,
-                         LOAD_LIBRARY_SEARCH_SYSTEM32 |
-                             LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR));
+      handle_ = static_cast<void*>(LoadLibraryExA(
+          (self_dir + filename).c_str(), nullptr,
+          LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR));
     }
   }
 

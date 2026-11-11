@@ -39,7 +39,7 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config Release --parallel --verbose
+        run: cmake --build . --config Release --parallel 2 --verbose
 
       - uses: actions/upload-artifact@v7
         with:
@@ -67,7 +67,7 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
@@ -93,7 +93,7 @@ jobs:
       - name: Build win32
         shell: bash
         working-directory: ${{github.workspace}}/build32
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
@@ -118,7 +118,7 @@ jobs:
       - name: Build win-arm64
         shell: bash
         working-directory: ${{github.workspace}}/build_arm64
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
@@ -142,7 +142,7 @@ jobs:
 
       - name: Build
         working-directory: /__w/HiGHS/HiGHS/build
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
@@ -168,7 +168,7 @@ jobs:
       - name: Build linux-arm-64
         working-directory: /__w/HiGHS/HiGHS/build_linux_arm64
         shell: bash
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
@@ -194,7 +194,7 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - name: Display structure of downloaded files
         run: |
