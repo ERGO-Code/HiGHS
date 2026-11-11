@@ -1311,11 +1311,14 @@ HighsStatus Highs::optimizeModelTryCatch() {
   // block
   HighsStatus status;
   auto handleCatch = [&]() {
+    // The exception skipped returnFromOptimizeModel(). Set the flag before
+    // clearSolver(), whose returnFromHighs() asserts it
+    called_return_from_optimize_model = true;
+    // It also skipped stopping any clocks that were running
+    for (HighsInt i = 0; i < timer_.num_clock; i++)
+      if (timer_.running(i)) timer_.stop(i);
     // Clear all solver data, since there may be nothing useful
     this->clearSolver();
-    // The exception skipped returnFromOptimizeModel(), and later calls to
-    // optimizeModel() must not fail for that
-    called_return_from_optimize_model = true;
     status = HighsStatus::kError;
   };
   try {
