@@ -66,6 +66,11 @@
       };
       defaultPackage = highs-binary;
       packages.highspy = highspy;
+      # HiGHS's own test suites: ctest for C++, pytest for highspy.
+      checks = {
+        highs = highs-binary.overrideAttrs { doCheck = true; };
+        highspy = highspy;
+      };
       devShells.highspy = pkgs.mkShell {
         buildInputs = [
           (pkgs.python3.withPackages (ps: [ highspy ]) )

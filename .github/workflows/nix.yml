@@ -1,0 +1,27 @@
+name: nix
+
+on: [pull_request, workflow_dispatch]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: nix ${{ matrix.check }} tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [highs, highspy]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Builds from flake.nix: `highs` runs ctest, `highspy` runs pytest.
+      - name: Build and test
+        run: nix build --print-build-logs --no-link .#checks.x86_64-linux.${{ matrix.check }}
