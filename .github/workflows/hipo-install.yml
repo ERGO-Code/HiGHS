@@ -79,6 +79,53 @@ jobs:
           echo "$out"
           echo "$out" | grep -Eq "Model status\s*:\s*Optimal"
 
+  # #3599, python part: with a C++ HiGHS install in the ld.so cache, a plain
+  # `pip install .` (no highspy-extras) must NOT pick up that system
+  # libhighs_extras.so. On 1.15.1 it did, so HiPO "worked" by accident.
+  hipo-python-no-system-extras:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install C++ HiGHS with HiPO and register it with ldconfig
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/opt/HiGHS -DHIPO=ON
+          cmake --build build --parallel
+          sudo cmake --install build
+          rm -rf build
+          echo /opt/HiGHS/lib | sudo tee /etc/ld.so.conf.d/highs.conf
+          sudo ldconfig
+          ldconfig -p | grep libhighs_extras
+
+      - name: Install highspy only (no highspy-extras)
+        run: python -m pip install .
+
+      - name: HiPO must not load the system libhighs_extras.so
+        working-directory: ${{ runner.temp }}
+        env:
+          MODEL: ${{ github.workspace }}/check/instances/afiro.mps
+        run: |
+          python - <<'EOF'
+          import os, highspy
+          from highspy import _core
+          print("extras status:", _core.getExtrasLoadStatus())
+          h = highspy.Highs()
+          h.setOptionValue("solver", "hipo")
+          h.readModel(os.environ["MODEL"])
+          h.run()
+          status = h.getModelStatus()
+          print("model status:", h.modelStatusToString(status))
+          assert status != highspy.HighsModelStatus.kOptimal, \
+              "HiPO ran using the system libhighs_extras.so"
+          EOF
+
   hipo-install-python:
     runs-on: ${{ matrix.os }}
     strategy:
