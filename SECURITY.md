@@ -41,7 +41,7 @@ normal issues):
 The following **are** in scope:
 
 - memory-safety issues (e.g. buffer overflows, out-of-bounds reads/writes)
-  triggered by reading a crafted model file (MPS, LP, etc.)
+  triggered by reading or solving a crafted model file (MPS, LP, etc.)
 - compromise of official release artifacts or the build/release pipeline
   (e.g. PyPI wheels, GitHub release binaries)
 
