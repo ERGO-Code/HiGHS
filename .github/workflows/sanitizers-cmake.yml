@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
         config: [Debug, RelWithDebInfo]
         sanitizer: [Address, Thread, Leak]
     steps:
@@ -55,8 +55,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: [ubuntu-latest, macos-latest]
-        os: [ubuntu-latest]
+        # os: [ubuntu-24, macos-latest]
+        os: [ubuntu-24]
         config: [Debug, RelWithDebInfo]
         sanitizer: [Address, Thread, Leak]
     steps:
@@ -125,7 +125,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
         config: [Debug, RelWithDebInfo]
         all_tests: [ON]
         sanitizer: [Address, Thread, Leak]

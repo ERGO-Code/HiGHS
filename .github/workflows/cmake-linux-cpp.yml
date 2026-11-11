@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
 
     steps:
       - uses: actions/checkout@v6
@@ -21,7 +21,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE 
+        run: cmake $GITHUB_WORKSPACE
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -35,7 +35,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
 
     steps:
       - uses: actions/checkout@v6
@@ -49,17 +49,17 @@ jobs:
 
       - name: Build All
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --parallel 
+        run: cmake --build . --parallel
 
       - name: Test All
         working-directory: ${{github.workspace}}/build
-        run: ctest --parallel --timeout 300 --output-on-failure 
+        run: ctest --parallel --timeout 300 --output-on-failure
 
   debug:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
 
     steps:
       - uses: actions/checkout@v6
@@ -69,7 +69,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug 
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
         working-directory: ${{github.workspace}}/build
@@ -78,13 +78,13 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ctest --parallel --timeout 300 --output-on-failure 
+        run: ctest --parallel --timeout 300 --output-on-failure
 
   debug_all_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
 
     steps:
       - uses: actions/checkout@v6
@@ -98,7 +98,7 @@ jobs:
 
       - name: Build All
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --parallel 
+        run: cmake --build . --parallel
 
       - name: Test All
         working-directory: ${{github.workspace}}/build

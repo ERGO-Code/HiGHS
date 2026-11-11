@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24, macos-latest]
     steps:
       - name: Checkout HiGHS (current branch)
         uses: actions/checkout@v4
@@ -117,7 +117,7 @@ jobs:
       fail-fast: false
       matrix:
         # ON = shared extras (libhighs_extras.so, dlopen'd), OFF = static extras (linked in).
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
         extras: ["ON", "OFF"]
         include:
           - os: macos-latest

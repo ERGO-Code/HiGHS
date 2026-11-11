@@ -8,7 +8,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24
     steps:
       - uses: actions/checkout@v6
 
@@ -19,13 +19,13 @@ jobs:
             | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
           echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
             | sudo tee /etc/apt/sources.list.d/oneAPI.list
-      
+
       - name: Install oneAPI basekit
         shell: bash
         run: |
           sudo apt update
           sudo apt install intel-basekit
-         
+
       - name: Check compiler
         run: |
           source /opt/intel/oneapi/setvars.sh
@@ -60,14 +60,14 @@ jobs:
       #     ls
       #     ls build
       #     ls build/bin
-      #     ./build/bin/unit_tests 
+      #     ./build/bin/unit_tests
 
       - name: Test
         shell: bash
         run: |
           source /opt/intel/oneapi/setvars.sh
           export SYCL_DEVICE_FILTER=opencl.cpu
-          ctest --test-dir build --output-on-failure --timeout 300 
+          ctest --test-dir build --output-on-failure --timeout 300
 
   build_windows:
     runs-on: windows-2022

@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
 
     steps:
       - uses: actions/checkout@v6
@@ -38,13 +38,13 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel --timeout 300 --output-on-failure 
+        run: ctest --parallel --timeout 300 --output-on-failure
 
   release:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
 
     steps:
       - uses: actions/checkout@v6
@@ -77,7 +77,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
 
     steps:
       - uses: actions/checkout@v6
@@ -104,13 +104,13 @@ jobs:
         shell: bash
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest --parallel --timeout 300 --output-on-failure 
+        run: ctest --parallel --timeout 300 --output-on-failure
 
   release64:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
 
     steps:
       - uses: actions/checkout@v6

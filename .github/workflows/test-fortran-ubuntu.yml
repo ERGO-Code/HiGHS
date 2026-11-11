@@ -11,13 +11,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24]
         toolchain:
           - {compiler: gcc, version: 13}
           # - {compiler: intel, version: '2023.2'}
           # - {compiler: nvidia-hpc, version: '23.11'}
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24
             toolchain: {compiler: gcc, version: 12}
 
     steps:
@@ -35,7 +35,7 @@ jobs:
       - name: Configure CMake
         shell: bash
         working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DFORTRAN=ON 
+        run: cmake $GITHUB_WORKSPACE -DFORTRAN=ON
 
       - name: Build
         shell: bash
@@ -46,5 +46,5 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: |
-          ls 
+          ls
           ./bin/fortrantest

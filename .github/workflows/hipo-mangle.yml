@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   check-metis:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24
     strategy:
       fail-fast: false
       matrix:
@@ -68,7 +68,7 @@ jobs:
       - name: Check
         working-directory: ${{runner.workspace}}
         run: |
-          if [[ "$(wc -l < common.txt)" -eq 0 ]]; then 
+          if [[ "$(wc -l < common.txt)" -eq 0 ]]; then
             exit 0
           fi
           echo "Metis symbols"

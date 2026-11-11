@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24, macos-latest]
         sanitizer: [address, undefined, thread]
     steps:
       - uses: actions/checkout@v6
