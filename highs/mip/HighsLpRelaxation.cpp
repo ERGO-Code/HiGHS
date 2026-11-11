@@ -1150,6 +1150,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   // take action on failure in SolveLp
   std::string solver;
   lpsolver.getOptionValue("solver", solver);
+  const HighsInt ipm_iteration_limit =
+      lpsolver.getOptions().ipm_iteration_limit;
   std::string use_solver;
   if (valid_basis) {
     use_solver = kSimplexString;
@@ -1223,7 +1225,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     if (callstatus == HighsStatus::kError) {
       highsLogDev(
           mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-          "HighsLpRelaxation::run HiPO has failed : status = %s Try IPX\n",
+          "HighsLpRelaxation::run Solver \"%s\" has failed: status = %s, so "
+          "use simplex\n",
+          use_solver.c_str(),
           lpsolver.modelStatusToString(lpsolver.getModelStatus()).c_str());
       lpsolver.setOptionValue("solver", kSimplexString);
       use_simplex = true;
@@ -1250,6 +1254,12 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                 int(info.simplex_iteration_count));
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
+  // Other solves of lpsolver, such as after removing cuts, must not select
+  if (use_choose) {
+    lpsolver.setOptionValue("solver_select_strategy", 0);
+    lpsolver.setOptionValue("solver_select_require_basis", false);
+    lpsolver.setOptionValue("ipm_iteration_limit", ipm_iteration_limit);
+  }
   if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
       !this->solved_first_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
