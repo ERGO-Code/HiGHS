@@ -265,6 +265,7 @@ set(hipo_sources
     ipm/hipo/ipm/KktMatrix.cpp
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/PreProcess.cpp
+    ipm/hipo/ipm/Recovery.cpp
     ipm/hipo/ipm/Refine.cpp
     ipm/hipo/ipm/Solver.cpp
     ipm/hipo/ipm/StagnationTests.cpp
@@ -282,6 +283,7 @@ set(hipo_headers
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
     ipm/hipo/ipm/PreProcess.h
+    ipm/hipo/ipm/Recovery.h
     ipm/hipo/ipm/Solver.h
     ipm/hipo/ipm/StagnationTests.h
     ipm/hipo/ipm/Status.h

@@ -34,42 +34,50 @@ StagnationTests::StagnationTests(const Model& model_input)
   }
 }
 
-bool StagnationTests::stagnation(const Iterate& it, double alpha_primal,
-                                 double alpha_dual, Int iter, double feas_tol,
-                                 double opt_tol, double crossover_tol,
-                                 std::stringstream& log_stream) {
-  bool stagnation = false;
+StagnationReport StagnationTests::stagnation(const Iterate& it,
+                                             double alpha_primal,
+                                             double alpha_dual, Int iter,
+                                             double feas_tol, double opt_tol,
+                                             double crossover_tol,
+                                             std::stringstream& log_stream) {
+  StagnationReport report;
+  report.iter = iter;
+  report.omega = it.data.record.empty() ? 0.0 : it.data.record.back().omega;
+  report.free_vars_diverging = free_bounds_changed_iter >= kFreeVarsDivergeIter;
 
-  // residual reduction test
-  bool large_increase;
-  const bool reduction_ok = residualReductionTest(
-      it, alpha_primal, alpha_dual, feas_tol, large_increase, log_stream);
+  const bool reduction_ok = residualReductionTest(it, alpha_primal, alpha_dual,
+                                                  feas_tol, report, log_stream);
 
   // record the outcome in the history of the last kBadResWindow iterations,
   // and count the failures
   const Int window_mask = (Int{1} << kBadResWindow) - 1;
   bad_res_history =
       ((bad_res_history << 1) | (reduction_ok ? 0 : 1)) & window_mask;
-  Int bad_res_count = 0;
-  for (Int h = bad_res_history; h != 0; h >>= 1) bad_res_count += h & 1;
+  for (Int h = bad_res_history; h != 0; h >>= 1) report.bad_res_count += h & 1;
 
-  if (bad_res_count >= kBadResMaxIter) {
-    stagnation = true;
-    log_stream << "Bad reduction of residuals in " << bad_res_count
+  const bool bad_residuals = report.bad_res_count >= kBadResMaxIter;
+  if (bad_residuals) {
+    log_stream << "Bad reduction of residuals in " << report.bad_res_count
                << " of the last " << kBadResWindow << " iterations\n";
   }
 
-  if (large_increase) {
-    stagnation = true;
+  if (report.large_increase) {
     log_stream << "Residuals increased by more than a factor "
                << sci(kResReductionLargeIncrease, 0, 1) << "\n";
   }
 
-  // progress test
-  if (!progressTest(it, iter, feas_tol, opt_tol, crossover_tol, log_stream))
-    stagnation = true;
+  progressTest(it, iter, feas_tol, opt_tol, crossover_tol, report, log_stream);
 
-  return stagnation;
+  if (bad_residuals || report.large_increase)
+    report.cause = StagnationCause::kNumerical;
+  else if (report.no_window_progress)
+    report.cause = StagnationCause::kNoProgress;
+  else if (report.no_best_progress)
+    report.cause = StagnationCause::kOscillation;
+
+  report.stagnation = report.cause != StagnationCause::kNone;
+
+  return report;
 }
 
 void StagnationTests::saveResidualNorms(const Iterate& it) {
@@ -81,8 +89,9 @@ void StagnationTests::saveResidualNorms(const Iterate& it) {
 
 bool StagnationTests::residualReductionTest(
     const Iterate& it, double alpha_primal, double alpha_dual, double feas_tol,
-    bool& large_increase, std::stringstream& log_stream) const {
-  large_increase = false;
+    StagnationReport& report, std::stringstream& log_stream) const {
+  report.large_increase = false;
+  report.bad_res_blocks = 0;
 
   // below these values, the residuals are small enough that their reduction is
   // not needed
@@ -147,6 +156,7 @@ bool StagnationTests::residualReductionTest(
 
     if (res_norm_new[k] > thresh) {
       passed = false;
+      report.bad_res_blocks |= Int{1} << k;
       log_stream << "Bad reduction of residual " << k + 1 << ", old "
                  << sci(res_norm_old[k], 0, 1) << ", new "
                  << sci(res_norm_new[k], 0, 1) << ", relaxed prediction "
@@ -155,15 +165,15 @@ bool StagnationTests::residualReductionTest(
     }
 
     if (res_norm_new[k] > kResReductionLargeIncrease * res_norm_old[k])
-      large_increase = true;
+      report.large_increase = true;
   }
 
   return passed;
 }
 
-bool StagnationTests::progressTest(const Iterate& it, Int iter,
-                                   double feas_tol, double opt_tol,
-                                   double crossover_tol,
+bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
+                                   double opt_tol, double crossover_tol,
+                                   StagnationReport& report,
                                    std::stringstream& log_stream) {
   const Int num = kNumProgressQuantities;
   const double value[num] = {it.pinf, it.dinf, it.pdgap, it.infeas_drop};
@@ -249,6 +259,9 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter,
     }
     log_stream << "\n";
   }
+
+  report.no_window_progress = !window_passed;
+  report.no_best_progress = !best_passed;
 
   return window_passed && best_passed;
 }

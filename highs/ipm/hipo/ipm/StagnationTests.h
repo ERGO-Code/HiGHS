@@ -11,6 +11,39 @@ namespace hipo {
 
 struct Iterate;
 
+// Most likely cause of stagnation, used to decide how to recover.
+enum class StagnationCause {
+  kNone,         // no stagnation
+  kNumerical,    // residuals not reduced as predicted by the stepsizes
+  kNoProgress,   // no quantity made progress in the last iterations
+  kOscillation,  // no quantity improved its best value for a long time
+};
+
+// Outcome of the stagnation tests at one iteration, with the information
+// needed to decide how to recover.
+struct StagnationReport {
+  bool stagnation = false;
+  StagnationCause cause = StagnationCause::kNone;
+  Int iter = 0;
+
+  // residual reduction test
+  Int bad_res_count = 0;   // failures in the last kBadResWindow iterations
+  Int bad_res_blocks = 0;  // bit k set if residual k+1 failed at this iter
+  bool large_increase = false;
+
+  // largest backward error of the linear solves in the last iteration, to
+  // distinguish failures of the linear solver from other causes
+  double omega = 0.0;
+
+  // progress test
+  bool no_window_progress = false;
+  bool no_best_progress = false;
+
+  // the bounds of free variables have been changed in the last
+  // kFreeVarsDivergeIter iterations
+  bool free_vars_diverging = false;
+};
+
 struct StagnationTests {
   const Model& model;
 
@@ -48,11 +81,14 @@ struct StagnationTests {
   // - residualReductionTest found a residual increased by more than a factor
   //   kResReductionLargeIncrease;
   // - progressTest failed.
+  // Returns a report with the outcome of the tests and the most likely cause
+  // of stagnation.
   // Must be called after the step, while it.delta still holds the direction.
   // ===================================================================================
-  bool stagnation(const Iterate& it, double alpha_primal, double alpha_dual,
-                  Int iter, double feas_tol, double opt_tol,
-                  double crossover_tol, std::stringstream& log_stream);
+  StagnationReport stagnation(const Iterate& it, double alpha_primal,
+                              double alpha_dual, Int iter, double feas_tol,
+                              double opt_tol, double crossover_tol,
+                              std::stringstream& log_stream);
 
   // ===================================================================================
   // Save the norms of residuals 1,2,3,4 used as rhs of the Newton system, to be
@@ -66,13 +102,13 @@ struct StagnationTests {
   // the stepsizes predict:
   //  ||rk_new|| <= max( (1 - eta * alpha) * ||rk_old||, floor )
   // with alpha_primal for k=1,2,3 and alpha_dual for k=4.
-  // large_increase is set to true if a residual increased by more than a factor
-  // kResReductionLargeIncrease.
+  // In report, sets bad_res_blocks, and large_increase if a residual increased
+  // by more than a factor kResReductionLargeIncrease.
   // Must be called after the step, while it.delta still holds the direction.
   // ===================================================================================
   bool residualReductionTest(const Iterate& it, double alpha_primal,
                              double alpha_dual, double feas_tol,
-                             bool& large_increase,
+                             StagnationReport& report,
                              std::stringstream& log_stream) const;
 
   // ===================================================================================
@@ -89,10 +125,11 @@ struct StagnationTests {
   // History and best values are recorded for all quantities, tracked or not,
   // and are reset only by clear(). infeas_drop is recorded only when it is
   // computed.
+  // In report, sets no_window_progress and no_best_progress.
   // ===================================================================================
   bool progressTest(const Iterate& it, Int iter, double feas_tol,
                     double opt_tol, double crossover_tol,
-                    std::stringstream& log_stream);
+                    StagnationReport& report, std::stringstream& log_stream);
 
   // ===================================================================================
   // Clear the data used by the tests. The windows of the progress test restart

@@ -11,6 +11,8 @@
 #include "Model.h"
 #include "Options.h"
 #include "Parameters.h"
+#include "Recovery.h"
+#include "StagnationTests.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -40,6 +42,7 @@ class Solver {
   double alpha_primal_{}, alpha_dual_{};
   double sigma_{};
   Regularisation regul_{};
+  Recovery recovery_{};
   Info info_;
   Control control_;
   Options options_{};
@@ -279,8 +282,14 @@ class Solver {
   // Stop if detection is detected, or if the problem is primal or dual
   // infeasible.
   // ===================================================================================
-  shouldTerminate checkStagnation();
+  StagnationReport checkStagnation();
   shouldTerminate checkBadIter();
+
+  // ===================================================================================
+  // Take the recovery action chosen by recovery_ for the stagnation described
+  // by report. Return true if the ipm should terminate.
+  // ===================================================================================
+  shouldTerminate handleStagnation(const StagnationReport& report);
 
   // ===================================================================================
   // Check the termination criterion:

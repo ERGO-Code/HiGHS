@@ -132,6 +132,7 @@ void Solver::reset() {
   alpha_dual_ = 0.0;
   sigma_ = 0.0;
   regul_ = Regularisation{};
+  recovery_ = Recovery{};
 
   LS_.reset();
   it_.reset();
@@ -1165,18 +1166,20 @@ shouldTerminate Solver::checkIterate() {
   return terminate;
 }
 
-shouldTerminate Solver::checkStagnation() {
+StagnationReport Solver::checkStagnation() {
   std::stringstream log_stream;
-  bool stagnation = it_->tests.stagnation(
+  StagnationReport report = it_->tests.stagnation(
       *it_, alpha_primal_, alpha_dual_, iter_, options_.feasibility_tol,
       options_.optimality_tol, options_.crossover_tol, log_stream);
   logger_.printInfo("%s", log_stream.str().c_str());
-  return stagnation;
+  return report;
 }
 
 shouldTerminate Solver::checkBadIter() {
   bool terminate = false;
-  bool stagnation = iter_ > 0 ? checkStagnation() : false;
+  const StagnationReport report =
+      iter_ > 0 ? checkStagnation() : StagnationReport{};
+  const bool stagnation = report.stagnation;
 
   // check for infeasibility
   bool mu_is_large =
@@ -1200,9 +1203,9 @@ shouldTerminate Solver::checkBadIter() {
     // variables keep being pushed away, the problem is likely to be primal
     // unbounded. In this case, the dual objective follows the primal one,
     // because of the artificial bounds, so pobj_is_larger does not detect it.
-    bool free_vars_diverge =
-        stagnation && it_->pinf < options_.feasibility_tol &&
-        it_->tests.free_bounds_changed_iter >= kFreeVarsDivergeIter;
+    bool free_vars_diverge = stagnation &&
+                             it_->pinf < options_.feasibility_tol &&
+                             report.free_vars_diverging;
 
     if (pobj_is_larger || free_vars_diverge) {
       // problem is likely to be primal unbounded, i.e. dual infeasible
@@ -1215,33 +1218,46 @@ shouldTerminate Solver::checkBadIter() {
       setStatus(kStatusPrimalInfeasible);
       terminate = true;
     } else if (stagnation) {
-      if (switchToMultifrontal()) {
-        logger_.printInfo("Switching to FactorHighs because of no progress\n");
-        resetToBestIter(iter_);
-      } else {
-        if (getStatus1() == kStatusOptimal) {
-          assert(crossoverIsOn());
-          setStatus2(kStatusNoProgress);
-          resetToBestIter(iter_);
-        } else {
-          if (checkTerminationKkt()) {
-            logger_.printw(
-                "HiPO stagnated but HiGHS considers the solution "
-                "acceptable\n");
-            logger_.print("=== Primal-dual feasible point found\n");
-            setStatus1(kStatusOptimal);
-          } else {
-            setStatus1(kStatusNoProgress);
-            resetToBestIter(iter_);
-          }
-        }
-
-        terminate = true;
-      }
+      terminate = handleStagnation(report);
     }
   }
 
   return terminate;
+}
+
+shouldTerminate Solver::handleStagnation(const StagnationReport& report) {
+  RecoveryAction action = recovery_.nextAction(report);
+
+  if (action == RecoveryAction::kSwitchFactorisation) {
+    recovery_.applied(action, report);
+    if (switchToMultifrontal()) {
+      logger_.printInfo("Switching to FactorHighs because of no progress\n");
+      resetToBestIter(iter_);
+    } else {
+      // switch not possible, give up
+      action = RecoveryAction::kTerminate;
+    }
+  }
+
+  if (action != RecoveryAction::kTerminate) return false;
+
+  if (getStatus1() == kStatusOptimal) {
+    assert(crossoverIsOn());
+    setStatus2(kStatusNoProgress);
+    resetToBestIter(iter_);
+  } else {
+    if (checkTerminationKkt()) {
+      logger_.printw(
+          "HiPO stagnated but HiGHS considers the solution acceptable\n");
+      logger_.print("=== Primal-dual feasible point found\n");
+      setStatus1(kStatusOptimal);
+    } else {
+      setStatus1(kStatusNoProgress);
+      resetToBestIter(iter_);
+    }
+  }
+
+  return true;
 }
 
 shouldTerminate Solver::checkTermination() {

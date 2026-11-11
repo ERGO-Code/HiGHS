@@ -200,6 +200,7 @@ _hipo_srcs = [
     'ipm/hipo/ipm/KktMatrix.cpp',
     'ipm/hipo/ipm/Model.cpp',
     'ipm/hipo/ipm/PreProcess.cpp',
+    'ipm/hipo/ipm/Recovery.cpp',
     'ipm/hipo/ipm/Refine.cpp',
     'ipm/hipo/ipm/Solver.cpp',
     'ipm/hipo/ipm/StagnationTests.cpp',
