@@ -117,13 +117,11 @@ jobs:
           from highspy import _core
           print("extras status:", _core.getExtrasLoadStatus())
           h = highspy.Highs()
-          h.setOptionValue("solver", "hipo")
-          h.readModel(os.environ["MODEL"])
-          h.run()
-          status = h.getModelStatus()
-          print("model status:", h.modelStatusToString(status))
-          assert status != highspy.HighsModelStatus.kOptimal, \
-              "HiPO ran using the system libhighs_extras.so"
+          # Rejected when extras are not loaded; run() would then silently
+          # fall back to simplex, so the model status proves nothing.
+          ok = h.setOptionValue("solver", "hipo")
+          assert ok != highspy.HighsStatus.kOk, \
+              "HiPO is available: the system libhighs_extras.so was loaded"
           EOF
 
   hipo-install-python:
@@ -153,7 +151,10 @@ jobs:
           python - <<'EOF'
           import os, highspy
           h = highspy.Highs()
-          h.setOptionValue("solver", "hipo")
+          # If HiPO is unavailable this is rejected and run() falls back to
+          # simplex, which would still reach Optimal.
+          assert h.setOptionValue("solver", "hipo") == highspy.HighsStatus.kOk, \
+              "HiPO unavailable"
           h.readModel(os.environ["MODEL"])
           h.run()
           status = h.getModelStatus()
