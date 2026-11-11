@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest]
+        os: [macOS-latest, ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v6
@@ -27,7 +27,7 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake --build . --parallel
+        run: cmake --build . --parallel --config Release
 
       - name: Test
         working-directory: ${{github.workspace}}/build
