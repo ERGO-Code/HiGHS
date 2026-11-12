@@ -155,10 +155,6 @@ void Solver::doSolve() {
 
   // iterate object needs to be initialised before potentially interrupting
   it_.reset(new Iterate(model_, info_, regul_));
-  if (!it_) {
-    info_.error = kErrorFailedAllocation;
-    return;
-  }
 
   if (checkInterrupt()) return;
 
@@ -195,10 +191,6 @@ isFailure Solver::initialise() {
   start_time_ = control_.elapsed();
 
   kkt_.reset(new KktMatrix(model_, regul_, info_, logger_, options_));
-  if (!kkt_) {
-    info_.error = kErrorFailedAllocation;
-    return true;
-  }
 
   if (initialiseLinearSolver()) return true;
 
@@ -1342,10 +1334,6 @@ void Solver::resetToBestIter(Int iter, bool print) {
 isFailure Solver::initialiseLinearSolver() {
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->data, logger_));
-  if (!LS_) {
-    info_.error = kErrorFailedAllocation;
-    return true;
-  }
   info_.error = LS_->setup();
   if (info_.error) return true;
 
@@ -1372,10 +1360,6 @@ isFailure Solver::initialiseLinearSolver() {
 
   if (do_switch) {
     LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
-    if (!LS_) {
-      info_.error = kErrorFailedAllocation;
-      return true;
-    }
     LS_->setup();
     LS_->clear();
   }
@@ -1384,22 +1368,15 @@ isFailure Solver::initialiseLinearSolver() {
 }
 
 isSuccess Solver::switchToMultifrontal() {
-  bool switch_successful = false;
+  if (LS_->type() != kUpLookingType || options_.factor != kHighsChooseString)
+    return false;
 
-  if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
-    LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                    it_->data, logger_));
-    if (!LS_) {
-      info_.error = kErrorFailedAllocation;
-    } else {
-      LS_->clear();
-      it_->tests.clear(iter_);
-      info_.error = kOk;
-      switch_successful = true;
-    }
-  }
-
-  return switch_successful;
+  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
+                                  it_->data, logger_));
+  LS_->clear();
+  it_->tests.clear(iter_);
+  info_.error = kOk;
+  return true;
 }
 
 void Solver::printHeader() const {
