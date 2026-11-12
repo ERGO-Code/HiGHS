@@ -1593,6 +1593,130 @@ TEST_CASE("test-aggregator-ranged-row", "[highs_test_presolve_rules]") {
   h.resetThreadScheduler(true);
 }
 
+TEST_CASE("test-col-stuffing-clique-fixing", "[highs_test_presolve_rules]") {
+  // issue #3628: stuffing fixes x0 = 1, which implies x1 = 1 through the
+  // clique table (e.g. from the objective cutoff). x1 then uses capacity of
+  // the row, so x2 must not be stuffed as well
+  //   min -3 x0 - 2 x1 - x2
+  //   31 x0 + 31 x1 + 31 x2 <= 62
+  //   x0, x1, x2 binary, clique (x0 = 1, x1 = 0)
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {-3.0, -2.0, -1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger,
+                     HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf};
+  lp.row_upper_ = {62.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {31.0, 31.0, 31.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleColStuffing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  std::vector<HighsCliqueTable::CliqueVar> clique = {
+      HighsCliqueTable::CliqueVar(0, 1), HighsCliqueTable::CliqueVar(1, 0)};
+  mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
+  mipsolver.mipdata_->cliquesExtracted = true;
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status != HighsModelStatus::kInfeasible);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
+TEST_CASE("test-transform-column-clique-table", "[highs_test_presolve_rules]") {
+  // the binary x0 is replaced by x0 = 2 z + 1, so z = 0 and x0 = 1. the
+  // clique table must not take z = 0 for x0 = 0, which would imply x1 = 1
+  // through the clique (x0 = 0, x1 = 0)
+  //   min x1
+  //   x0 + x1 >= 1
+  //   x0, x1 binary
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {0.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0};
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {1.0};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 2;
+  lp.a_matrix_.num_row_ = 1;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1.0, 1.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  std::vector<HighsCliqueTable::CliqueVar> clique = {
+      HighsCliqueTable::CliqueVar(0, 0), HighsCliqueTable::CliqueVar(1, 0)};
+  mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
+  mipsolver.mipdata_->cliquesExtracted = true;
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  presolve.presolveTestTransformColumn(postsolve_stack, 0, 2.0, 1.0);
+  REQUIRE(mipsolver.model_->col_lower_[1] == 0.0);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
                    const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,

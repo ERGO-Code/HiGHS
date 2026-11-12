@@ -654,7 +654,9 @@ HPresolve::Result HPresolve::fourierMotzkin(
         numRowsEliminated = 0;
         numRowsAdded = 0;
       }
-      // reformulate objective
+      // reformulate objective, which shrinks the problem, so the clique
+      // table has to be synchronised first
+      HPRESOLVE_CHECKED_CALL(synchroniseCliqueTable());
       reformulateObjective();
       // clear vector for objective and resize marker
       objRowCols.clear();

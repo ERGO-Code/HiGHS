@@ -31,6 +31,25 @@
 #define HPRESOLVE_TIMED_CHECKED_CALL(presolveClock, presolveCall) \
   HPRESOLVE_TIMED_CHECKED_CALL_IF(true, presolveClock, presolveCall)
 
+// As HPRESOLVE_CHECKED_CALL for a step of the presolve loop, synchronising
+// the clique table afterwards, so that the next step starts with the fixings
+// it implies. Only for the presolve loop, not within presolve rules, which
+// the assert checks: a step starts with a synchronised clique table
+#define HPRESOLVE_STEP(presolveCall)                  \
+  do {                                                \
+    assert(cliqueTableUpdates.empty());               \
+    HPRESOLVE_CHECKED_CALL(presolveCall);             \
+    HPRESOLVE_CHECKED_CALL(synchroniseCliqueTable()); \
+  } while (0)
+
+// As HPRESOLVE_STEP, timing the call with the given presolve clock
+#define HPRESOLVE_TIMED_STEP(presolveClock, presolveCall)      \
+  do {                                                         \
+    assert(cliqueTableUpdates.empty());                        \
+    HPRESOLVE_TIMED_CHECKED_CALL(presolveClock, presolveCall); \
+    HPRESOLVE_CHECKED_CALL(synchroniseCliqueTable());          \
+  } while (0)
+
 class HighsCliqueTable;
 
 namespace presolve {

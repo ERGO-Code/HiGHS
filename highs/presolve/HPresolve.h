@@ -43,6 +43,22 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   HPresolveCliqueTable presolveCliqueTable;
+
+  // an update of the clique table that is applied when the clique table is
+  // synchronised with presolve
+  struct CliqueTableUpdate {
+    enum class Type : uint8_t { kFixCol, kSubstituteCol, kEliminateCol };
+    Type type;
+    HighsInt col;
+    // fixing (kFixCol) or replacement (kSubstituteCol)
+    HighsCliqueTable::CliqueVar var;
+  };
+
+  // clique table updates recorded since the last synchronisation; reductions
+  // only record them, so that fixings implied by the clique table never
+  // change the problem while a presolve rule is running
+  std::vector<CliqueTableUpdate> cliqueTableUpdates;
+
   double primal_feastol;
   bool may_require_basis_postsolve_;
   bool may_require_dual_postsolve_;
@@ -570,10 +586,16 @@ class HPresolve {
 
   void extractVarBounds(HighsInt row);
 
-  Result updateCliqueTableFixedCol(HighsInt col, double val);
+  bool cliqueTableActive() const;
 
-  Result updateCliqueTableSubstituteCol(HighsInt substCol, HighsInt stayCol,
-                                        double offset, double scale);
+  void recordCliqueTableFixedCol(HighsInt col, double val);
+
+  void recordCliqueTableSubstituteCol(HighsInt substCol, HighsInt stayCol,
+                                      double offset, double scale);
+
+  void recordCliqueTableEliminatedCol(HighsInt col);
+
+  Result synchroniseCliqueTable();
 
   void aggregateVarBounds();
 
@@ -603,6 +625,9 @@ class HPresolve {
   Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestAggregator(HighsPostsolveStack& postsolve_stack);
+  Result presolveTestTransformColumn(HighsPostsolveStack& postsolve_stack,
+                                     HighsInt col, double scale,
+                                     double constant);
 
   /*
   // Methods defined and used in HPresolveDebug, and only executed if
