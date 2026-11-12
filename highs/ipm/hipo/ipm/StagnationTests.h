@@ -33,7 +33,7 @@ struct StagnationReport {
 
   // largest backward error of the linear solves in the last iteration, to
   // distinguish failures of the linear solver from other causes
-  double omega = 0.0;
+  double refinement_error = 0.0;
 
   // progress test
   bool no_window_progress = false;

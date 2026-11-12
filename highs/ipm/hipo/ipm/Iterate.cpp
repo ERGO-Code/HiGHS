@@ -527,7 +527,7 @@ void Iterate::getReg(LinearSolver& LS, const std::string& nla) {
   }
 }
 
-void Iterate::residuals6x6(const NewtonDir& d) {
+void Iterate::residuals6x6(const NewtonDir& d, bool compute_abs) {
   const std::vector<double>& dx = d.x;
   const std::vector<double>& dy = d.y;
   const std::vector<double>& dxl = d.xl;
@@ -545,45 +545,59 @@ void Iterate::residuals6x6(const NewtonDir& d) {
   // ires4 = res4 - A^T * dy - dzl + dzu + Q * dx + Rp * dx
   // iabs4 = |A^T| * |dy| + |dzl| + |dzu| + |Q| * |dx| + |Rp| * |dx|
   // A is accessed column-wise, so that A * dx and A^T * dy are computed with
-  // a single pass over A.
-
-  for (Int i = 0; i < m; ++i) {
-    ires.r1[i] = res.r1[i] - Rd[i] * dy[i];
-    iabs.r1[i] = std::abs(Rd[i]) * std::abs(dy[i]);
-  }
+  // a single pass over A. The loops over A and Q are duplicated, to avoid
+  // checking compute_abs in the inner loops.
 
   const HighsSparseMatrix& A = model.A();
   assert(A.isColwise());
-  for (Int col = 0; col < n; ++col) {
-    const double dx_col = dx[col];
-    const double abs_dx_col = std::abs(dx_col);
-    double prod = 0.0;
-    double abs_prod = 0.0;
-    for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
-      const Int row = A.index_[el];
-      const double val = A.value_[el];
-      const double abs_val = std::abs(val);
-      ires.r1[row] -= val * dx_col;
-      iabs.r1[row] += abs_val * abs_dx_col;
-      prod += val * dy[row];
-      abs_prod += abs_val * std::abs(dy[row]);
+
+  for (Int i = 0; i < m; ++i) ires.r1[i] = res.r1[i] - Rd[i] * dy[i];
+
+  if (compute_abs) {
+    for (Int i = 0; i < m; ++i) iabs.r1[i] = std::abs(Rd[i]) * std::abs(dy[i]);
+
+    for (Int col = 0; col < n; ++col) {
+      const double dx_col = dx[col];
+      const double abs_dx_col = std::abs(dx_col);
+      double prod = 0.0;
+      double abs_prod = 0.0;
+      for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
+        const Int row = A.index_[el];
+        const double val = A.value_[el];
+        const double abs_val = std::abs(val);
+        ires.r1[row] -= val * dx_col;
+        iabs.r1[row] += abs_val * abs_dx_col;
+        prod += val * dy[row];
+        abs_prod += abs_val * std::abs(dy[row]);
+      }
+      ires.r4[col] = res.r4[col] - prod;
+      iabs.r4[col] = abs_prod;
     }
-    ires.r4[col] = res.r4[col] - prod;
-    iabs.r4[col] = abs_prod;
+  } else {
+    for (Int col = 0; col < n; ++col) {
+      const double dx_col = dx[col];
+      double prod = 0.0;
+      for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
+        const Int row = A.index_[el];
+        const double val = A.value_[el];
+        ires.r1[row] -= val * dx_col;
+        prod += val * dy[row];
+      }
+      ires.r4[col] = res.r4[col] - prod;
+    }
   }
 
   for (Int i = 0; i < n; ++i) {
-    if (model.hasLb(i)) {
-      ires.r4[i] -= dzl[i];
-      iabs.r4[i] += std::abs(dzl[i]);
-    }
-    if (model.hasUb(i)) {
-      ires.r4[i] += dzu[i];
-      iabs.r4[i] += std::abs(dzu[i]);
-    }
     const double reg_p = Rp ? Rp[i] : regul.primal;
+    if (model.hasLb(i)) ires.r4[i] -= dzl[i];
+    if (model.hasUb(i)) ires.r4[i] += dzu[i];
     ires.r4[i] += reg_p * dx[i];
-    iabs.r4[i] += std::abs(reg_p) * std::abs(dx[i]);
+
+    if (compute_abs) {
+      if (model.hasLb(i)) iabs.r4[i] += std::abs(dzl[i]);
+      if (model.hasUb(i)) iabs.r4[i] += std::abs(dzu[i]);
+      iabs.r4[i] += std::abs(reg_p) * std::abs(dx[i]);
+    }
   }
 
   if (model.qp()) {
@@ -591,16 +605,27 @@ void Iterate::residuals6x6(const NewtonDir& d) {
     const HighsHessian& Q = model.Q();
     assert(Q.format_ == HessianFormat::kTriangular);
     const double sense = model.sense();
-    for (Int col = 0; col < n; ++col) {
-      for (Int el = Q.start_[col]; el < Q.start_[col + 1]; ++el) {
-        const Int row = Q.index_[el];
-        const double val = sense * Q.value_[el];
-        const double abs_val = std::abs(val);
-        ires.r4[row] += val * dx[col];
-        iabs.r4[row] += abs_val * std::abs(dx[col]);
-        if (row != col) {
-          ires.r4[col] += val * dx[row];
-          iabs.r4[col] += abs_val * std::abs(dx[row]);
+    if (compute_abs) {
+      for (Int col = 0; col < n; ++col) {
+        for (Int el = Q.start_[col]; el < Q.start_[col + 1]; ++el) {
+          const Int row = Q.index_[el];
+          const double val = sense * Q.value_[el];
+          const double abs_val = std::abs(val);
+          ires.r4[row] += val * dx[col];
+          iabs.r4[row] += abs_val * std::abs(dx[col]);
+          if (row != col) {
+            ires.r4[col] += val * dx[row];
+            iabs.r4[col] += abs_val * std::abs(dx[row]);
+          }
+        }
+      }
+    } else {
+      for (Int col = 0; col < n; ++col) {
+        for (Int el = Q.start_[col]; el < Q.start_[col + 1]; ++el) {
+          const Int row = Q.index_[el];
+          const double val = sense * Q.value_[el];
+          ires.r4[row] += val * dx[col];
+          if (row != col) ires.r4[col] += val * dx[row];
         }
       }
     }
@@ -611,10 +636,10 @@ void Iterate::residuals6x6(const NewtonDir& d) {
   for (Int i = 0; i < n; ++i) {
     if (model.hasLb(i)) {
       ires.r2[i] = res.r2[i] - dx[i] + dxl[i];
-      iabs.r2[i] = std::abs(dx[i]) + std::abs(dxl[i]);
+      if (compute_abs) iabs.r2[i] = std::abs(dx[i]) + std::abs(dxl[i]);
     } else {
       ires.r2[i] = 0.0;
-      iabs.r2[i] = 0.0;
+      if (compute_abs) iabs.r2[i] = 0.0;
     }
   }
 
@@ -623,10 +648,10 @@ void Iterate::residuals6x6(const NewtonDir& d) {
   for (Int i = 0; i < n; ++i) {
     if (model.hasUb(i)) {
       ires.r3[i] = res.r3[i] - dx[i] - dxu[i];
-      iabs.r3[i] = std::abs(dx[i]) + std::abs(dxu[i]);
+      if (compute_abs) iabs.r3[i] = std::abs(dx[i]) + std::abs(dxu[i]);
     } else {
       ires.r3[i] = 0.0;
-      iabs.r3[i] = 0.0;
+      if (compute_abs) iabs.r3[i] = 0.0;
     }
   }
 
@@ -635,11 +660,12 @@ void Iterate::residuals6x6(const NewtonDir& d) {
   for (Int i = 0; i < n; ++i) {
     if (model.hasLb(i)) {
       ires.r5[i] = res.r5[i] - zl[i] * dxl[i] - xl[i] * dzl[i];
-      iabs.r5[i] = std::abs(zl[i]) * std::abs(dxl[i]) +
-                   std::abs(xl[i]) * std::abs(dzl[i]);
+      if (compute_abs)
+        iabs.r5[i] = std::abs(zl[i]) * std::abs(dxl[i]) +
+                     std::abs(xl[i]) * std::abs(dzl[i]);
     } else {
       ires.r5[i] = 0.0;
-      iabs.r5[i] = 0.0;
+      if (compute_abs) iabs.r5[i] = 0.0;
     }
   }
 
@@ -648,11 +674,12 @@ void Iterate::residuals6x6(const NewtonDir& d) {
   for (Int i = 0; i < n; ++i) {
     if (model.hasUb(i)) {
       ires.r6[i] = res.r6[i] - zu[i] * dxu[i] - xu[i] * dzu[i];
-      iabs.r6[i] = std::abs(zu[i]) * std::abs(dxu[i]) +
-                   std::abs(xu[i]) * std::abs(dzu[i]);
+      if (compute_abs)
+        iabs.r6[i] = std::abs(zu[i]) * std::abs(dxu[i]) +
+                     std::abs(xu[i]) * std::abs(dzu[i]);
     } else {
       ires.r6[i] = 0.0;
-      iabs.r6[i] = 0.0;
+      if (compute_abs) iabs.r6[i] = 0.0;
     }
   }
 }

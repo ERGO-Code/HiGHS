@@ -179,7 +179,8 @@ class Solver {
   // Functions for iterative refinement on the large 6x6 system
   // ===================================================================================
   void refine(NewtonDir& delta);
-  double computeOmega(const NewtonDir& delta) const;
+  double computeComponentwiseError(const NewtonDir& delta) const;
+  double computeBlockwiseError(const NewtonDir& delta) const;
 
   // ===================================================================================
   // Steps to boundary are computed so that

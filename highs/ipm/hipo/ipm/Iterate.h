@@ -30,6 +30,13 @@ struct Residuals {
   std::vector<double> r1, r2, r3, r4, r5, r6;
 };
 
+// Measure of the error of the 6x6 solve used by iterative refinement:
+// - kComponentwise: componentwise backward error omega (Arioli, Demmel, Duff).
+//   Requires |A| * |dx|, |A^T| * |dy| and |Q| * |dx|.
+// - kBlockwise: normwise backward error of each block of the 6x6 system.
+//   Requires only norms of vectors, once the residual is known.
+enum class RefineMethod { kComponentwise, kBlockwise };
+
 struct Iterate {
   Model& model;
   Info& info;
@@ -47,6 +54,7 @@ struct Iterate {
   double* Rd;
   Residuals ires;  // residuals for iterative refinement
   Residuals iabs;  // |6x6 matrix| * |d| for iterative refinement
+  RefineMethod refine_method = RefineMethod::kBlockwise;
 
   double infeas_drop = 0.0;
 
@@ -164,7 +172,8 @@ struct Iterate {
   // Compute residual of 6x6 linear system for iterative refinement in ires,
   // and |6x6 matrix| * |d| in iabs, with a single pass over A and Q.
   // ===================================================================================
-  void residuals6x6(const NewtonDir& d);
+  // iabs is computed only if compute_abs is true.
+  void residuals6x6(const NewtonDir& d, bool compute_abs);
 
   void makeStep(double alpha_primal, double alpha_dual);
 

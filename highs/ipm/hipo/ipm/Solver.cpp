@@ -428,7 +428,7 @@ isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
       // Solve again. This does not create an infinite loop, as
       // switchToMultifrontal() is false in the second solve.
       delta.clear();
-      it_->data.back().omega = 0.0;
+      it_->data.back().refinement_error = 0.0;
       terminate = solveNewtonSystem(delta);
     }
   }
@@ -1414,9 +1414,8 @@ void Solver::printHeader() const {
     if (!options_.timeless_log) logger_.print("    time");
     if (logger_.debug(1)) {
       logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d  "
-          "  "
-          " minT     maxT  (xj * zj / mu)_range_&_num   max_res");
+          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d    "
+          " minT     maxT  (xj * zj / mu)_range_&_num   ref_err");
     }
     logger_.print("\n");
   }
@@ -1446,7 +1445,7 @@ void Solver::printOutput(bool reset) const {
             .front(),
         regul_.primal, regul_.dual, data.min_theta, data.max_theta,
         data.min_prod, data.max_prod, data.num_small_prod, data.num_large_prod,
-        data.omega);
+        data.refinement_error);
   }
   logger_.print("\n");
 }
@@ -1527,8 +1526,8 @@ void Solver::printSummary() const {
     logger_.print(" Solve                %.2f\n", info_.times[kSolveTime]);
     logger_.print(" Residual             %.2f\n",
                   info_.times[kRefinementResTime]);
-    logger_.print(" Omega                %.2f\n",
-                  info_.times[kRefinementOmegaTime]);
+    logger_.print(" Error                %.2f\n",
+                  info_.times[kRefinementErrorTime]);
     logger_.print(" Insert/split         %.2f\n",
                   info_.times[kInsertSplitTime]);
     logger_.print("\n");

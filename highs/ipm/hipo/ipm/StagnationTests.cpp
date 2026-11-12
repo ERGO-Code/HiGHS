@@ -21,7 +21,8 @@ StagnationReport StagnationTests::stagnation(const Iterate& it,
                                              std::stringstream& log_stream) {
   StagnationReport report;
   report.iter = iter;
-  report.omega = it.data.record.empty() ? 0.0 : it.data.record.back().omega;
+  report.refinement_error =
+      it.data.record.empty() ? 0.0 : it.data.record.back().refinement_error;
   report.free_vars_diverging = free_bounds_changed_iter >= kFreeVarsDivergeIter;
 
   const bool reduction_ok = residualReductionTest(it, alpha_primal, alpha_dual,
