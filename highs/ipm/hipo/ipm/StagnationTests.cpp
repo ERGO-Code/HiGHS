@@ -11,28 +11,7 @@
 namespace hipo {
 
 StagnationTests::StagnationTests(const Model& model_input)
-    : model{model_input} {
-  // infinity norms of A and A^T
-  for (Int i = 0; i < model.m(); ++i)
-    norm_A = std::max(norm_A, model.oneNormRows(i));
-  for (Int j = 0; j < model.n(); ++j)
-    norm_At = std::max(norm_At, model.oneNormCols(j));
-
-  // infinity norm of Q, which is stored as lower triangular
-  if (model.qp()) {
-    const HighsHessian& Q = model.Q();
-    std::vector<double> row_sum(model.n(), 0.0);
-    for (Int col = 0; col < model.n(); ++col) {
-      for (Int el = Q.start_[col]; el < Q.start_[col + 1]; ++el) {
-        const Int row = Q.index_[el];
-        const double val = std::abs(Q.value_[el]);
-        row_sum[row] += val;
-        if (row != col) row_sum[col] += val;
-      }
-    }
-    for (double val : row_sum) norm_Q = std::max(norm_Q, val);
-  }
-}
+    : model{model_input} {}
 
 StagnationReport StagnationTests::stagnation(const Iterate& it,
                                              double alpha_primal,
@@ -107,12 +86,12 @@ bool StagnationTests::residualReductionTest(
   //  r4 = c - A^T * y - zl + zu + Q * x
   const double eps = std::numeric_limits<double>::epsilon();
   const double norm_x = infNorm(it.x);
-  const double noise[4] = {norm_A * norm_x + infNorm(model.b()),
+  const double noise[4] = {model.normA() * norm_x + infNorm(model.b()),
                            norm_x + infNorm(it.xl) + model.normScaledRhs(),
                            norm_x + infNorm(it.xu) + model.normScaledRhs(),
-                           infNorm(model.c()) + norm_At * infNorm(it.y) +
+                           infNorm(model.c()) + model.normAt() * infNorm(it.y) +
                                infNorm(it.zl) + infNorm(it.zu) +
-                               norm_Q * norm_x};
+                               model.normQ() * norm_x};
 
   const double alpha[4] = {alpha_primal, alpha_primal, alpha_primal,
                            alpha_dual};

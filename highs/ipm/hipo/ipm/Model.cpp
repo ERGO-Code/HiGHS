@@ -158,21 +158,40 @@ void Model::computeNorms() {
     }
   }
 
-  // norms of rows and cols of A
-  one_norm_cols_.resize(n_);
-  one_norm_rows_.resize(m_);
-  inf_norm_cols_.resize(n_);
-  inf_norm_rows_.resize(m_);
+  // row sums of |A| and |A^T|
+  one_norm_rows_.assign(m_, 0.0);
+  one_norm_cols_.assign(n_, 0.0);
   for (Int col = 0; col < n_; ++col) {
     for (Int el = A_.start_[col]; el < A_.start_[col + 1]; ++el) {
-      Int row = A_.index_[el];
-      double val = A_.value_[el];
-      one_norm_cols_[col] += std::abs(val);
-      one_norm_rows_[row] += std::abs(val);
-      inf_norm_rows_[row] = std::max(inf_norm_rows_[row], std::abs(val));
-      inf_norm_cols_[col] = std::max(inf_norm_cols_[col], std::abs(val));
+      const Int row = A_.index_[el];
+      const double val = std::abs(A_.value_[el]);
+      one_norm_rows_[row] += val;
+      one_norm_cols_[col] += val;
     }
   }
+
+  // row sums of |Q|. Q is stored as lower triangle.
+  one_norm_Q_.clear();
+  if (qp()) {
+    assert(Q_.format_ == HessianFormat::kTriangular);
+    one_norm_Q_.assign(n_, 0.0);
+    for (Int col = 0; col < n_; ++col) {
+      for (Int el = Q_.start_[col]; el < Q_.start_[col + 1]; ++el) {
+        const Int row = Q_.index_[el];
+        const double val = std::abs(Q_.value_[el]);
+        one_norm_Q_[row] += val;
+        if (row != col) one_norm_Q_[col] += val;
+      }
+    }
+  }
+
+  // infinity norms of A, A^T and Q
+  norm_A_ = 0.0;
+  norm_At_ = 0.0;
+  norm_Q_ = 0.0;
+  for (double val : one_norm_rows_) norm_A_ = std::max(norm_A_, val);
+  for (double val : one_norm_cols_) norm_At_ = std::max(norm_At_, val);
+  for (double val : one_norm_Q_) norm_Q_ = std::max(norm_Q_, val);
 }
 
 void Model::print(const Logger& logger) const {

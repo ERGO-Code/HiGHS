@@ -50,10 +50,6 @@ struct StagnationTests {
   // data for residual reduction test
   double res_norm_old[4]{};
 
-  // infinity norms of A, A^T and Q, used to estimate the rounding errors in the
-  // computation of the residuals
-  double norm_A{}, norm_At{}, norm_Q{};
-
   // outcome of the residual reduction test in the last kBadResWindow
   // iterations: bit i is set if the test failed i iterations ago
   Int bad_res_history{};

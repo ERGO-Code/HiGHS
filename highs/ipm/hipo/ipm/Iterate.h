@@ -46,6 +46,7 @@ struct Iterate {
   double* Rp;
   double* Rd;
   Residuals ires;  // residuals for iterative refinement
+  Residuals iabs;  // |6x6 matrix| * |d| for iterative refinement
 
   double infeas_drop = 0.0;
 
@@ -160,7 +161,8 @@ struct Iterate {
   void finalResiduals() const;
 
   // ===================================================================================
-  // Compute residual of 6x6 linear system for iterative refinement.
+  // Compute residual of 6x6 linear system for iterative refinement in ires,
+  // and |6x6 matrix| * |d| in iabs, with a single pass over A and Q.
   // ===================================================================================
   void residuals6x6(const NewtonDir& d);
 
