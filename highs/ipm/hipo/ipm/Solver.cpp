@@ -1408,14 +1408,13 @@ isSuccess Solver::switchToMultifrontal() {
 
 void Solver::printHeader() const {
   if (iter_ % 20 == 0) {
-    logger_.print(
-        " iter       primal obj         dual obj       pinf       dinf       "
-        "gap");
-    if (!options_.timeless_log) logger_.print("    time");
+    logger_.print("%5s %16s %16s %10s %10s %9s", "iter", "primal obj",
+                  "dual obj", "pinf", "dinf", "gap");
+    if (!options_.timeless_log) logger_.print(" %7s", "time");
     if (logger_.debug(1)) {
-      logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d    "
-          " minT     maxT  (xj * zj / mu)_range_&_num   ref_err");
+      logger_.print(" %13s %13s %5s %5s %5s %17s %8s %8s %27s %9s", "alpha p/d",
+                    "sigma af/co", "cor", "solv", "fact", "static reg p/d",
+                    "minT", "maxT", "(xj * zj / mu)_range_&_num", "ref_err");
     }
     logger_.print("\n");
   }
