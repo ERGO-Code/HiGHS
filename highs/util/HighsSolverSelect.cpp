@@ -400,6 +400,10 @@ HighsSolverSelect selectSolver(const HighsLp& lp,
       return selectSolverByModel(f, strategy);
     }
     case SolverSelectStrategy::kRankedFeatures:
+      // The model chooses dual simplex below min_num_nz, so don't pay for
+      // the features
+      if (lp.a_matrix_.numNz() < kS2Model.min_num_nz)
+        return HighsSolverSelect::kDualSimplex;
       return selectSolverByModel(computeLpFeatures(lp), strategy);
     case SolverSelectStrategy::kHeuristic:
       return selectSolverByHeuristic(computeLpFeatures(lp));
