@@ -46,9 +46,9 @@ static void staticReg(double& pivot, Int sign, const FHoptions& options,
   double old_pivot = pivot;
   if (sign == 0) sign = pivot > 0 ? 1 : -1;
   if (sign > 0)
-    pivot += options.reg_p;
+    pivot += options.reg_d;
   else
-    pivot -= options.reg_d;
+    pivot -= options.reg_p;
   totalreg = pivot - old_pivot;
 }
 
@@ -115,8 +115,8 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
     res = maxInCol(j, n, r, A, lda);
     double gamma_r = res.second;
     const Int sign_r = sign[r] != 0 ? sign[r] : (A[r + lda * r] > 0 ? 1 : -1);
-    double Arr = sign_r > 0 ? A[r + lda * r] + options.reg_p
-                            : A[r + lda * r] - options.reg_d;
+    double Arr = sign_r > 0 ? A[r + lda * r] + options.reg_d
+                            : A[r + lda * r] - options.reg_p;
 
     if ((std::abs(Ajj) >= kAlphaBK * gamma_j ||
          std::abs(Ajj) * gamma_r >= kAlphaBK * gamma_j * gamma_j)) {
@@ -129,23 +129,21 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
       // Use pivot r
 
       swapCols('U', n, A, lda, j, r, swaps, sign, data);
-      staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
+      staticReg(A[j + lda * j], sign_r, options, totalreg[j]);
 
-      if (sign_j * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
+      if (sign_r * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
     } else {
       // Use 2x2 pivot (j,r)
 
-      const Int sign_jp1 = sign[j + 1] != 0
-                               ? sign[j + 1]
-                               : (A[j + 1 + lda * (j + 1)] > 0 ? 1 : -1);
+      // column r is moved into position j+1
       swapCols('U', n, A, lda, j + 1, r, swaps, sign, data);
       flag_2x2 = true;
       staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
-      staticReg(A[j + 1 + lda * (j + 1)], sign_jp1, options, totalreg[j + 1]);
+      staticReg(A[j + 1 + lda * (j + 1)], sign_r, options, totalreg[j + 1]);
 
       if (sign_j * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
-      if (sign_jp1 * A[j + 1 + lda * (j + 1)] < 0)
+      if (sign_r * A[j + 1 + lda * (j + 1)] < 0)
         data.setWrongSign(A[j + 1 + lda * (j + 1)]);
     }
   }
@@ -205,9 +203,8 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
 
         if (std::isnan(Ajj)) return kRetInvalidPivot;
 
-        // add regularisation
-        staticReg(Ajj, pivot_sign[j], options, totalreg[j]);
-
+        // With pivoting, regularisation was already applied to A by
+        // blockBunchKaufman.
         if (!options.pivoting) {
           // add static regularisation
           staticReg(Ajj, pivot_sign[j], options, totalreg[j]);
