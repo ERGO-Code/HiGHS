@@ -1,5 +1,8 @@
 #include "UpLookingSolver.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 
 namespace hipo {
@@ -135,6 +138,7 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
     x[row] = 0.0;
     for (Int el = ptr[row]; el < ptr[row + 1]; ++el) x[rows[el]] = val[el];
     double d = x[row];
+    const double orig_diag = d;
     x[row] = 0.0;
 
     for (Int i = 0; i < rowcount; ++i) {
@@ -163,8 +167,9 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
     else
       d -= regul_.primal;
 
-    if (d * signs_[row] < reg_threshold_) {
-      d = reg_value_ * signs_[row];
+    const double pivot_scale = std::max(1.0, std::abs(orig_diag));
+    if (d * signs_[row] < reg_threshold_ * pivot_scale) {
+      d = reg_value_ * pivot_scale * signs_[row];
     }
 
     regularisation_[row] = d - old_pivot;
@@ -286,8 +291,7 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
   return kOk;
 }
 
-void UpLookingSolver::getReg(std::vector<double>& Rp,
-                             std::vector<double>& Rd) {
+void UpLookingSolver::getReg(std::vector<double>& Rp, std::vector<double>& Rd) {
   const Int n = model_.n();
   const Int m = model_.m();
 
