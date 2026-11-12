@@ -508,29 +508,6 @@ void Iterate::finalResiduals() const {
   }
 }
 
-void Iterate::getReg(LinearSolver& LS, const std::string& nla) {
-  if (nla == kHipoNormalEqString)
-    total_reg.resize(model.m());
-  else
-    total_reg.resize(model.m() + model.n());
-
-  // extract regularisation
-  LS.getReg(total_reg);
-
-  // easy access to primal/dual regularisation
-  if (nla == kHipoNormalEqString) {
-    Rp = nullptr;
-    Rd = total_reg.data();
-  } else {
-    // The linear solver returns the perturbation added to the diagonal of the
-    // augmented system. In the (1,1) block, -(Theta^-1+Q+Rp), this is -Rp, so
-    // flip the sign to store Rp as the primal regularisation.
-    for (Int i = 0; i < model.n(); ++i) total_reg[i] = -total_reg[i];
-    Rp = total_reg.data();
-    Rd = model.m() > 0 ? &total_reg[model.n()] : nullptr;
-  }
-}
-
 void Iterate::residuals6x6(const NewtonDir& d, bool compute_abs) {
   const std::vector<double>& dx = d.x;
   const std::vector<double>& dy = d.y;
@@ -540,7 +517,7 @@ void Iterate::residuals6x6(const NewtonDir& d, bool compute_abs) {
   const std::vector<double>& dzu = d.zu;
   const Int m = model.m();
   const Int n = model.n();
-  assert(Rd || m == 0);
+  assert((Int)Rp.size() == n && (Int)Rd.size() == m);
 
   // res1,2,3,4,5,6 contain the rhs of the linear system
 
@@ -592,15 +569,14 @@ void Iterate::residuals6x6(const NewtonDir& d, bool compute_abs) {
   }
 
   for (Int i = 0; i < n; ++i) {
-    const double reg_p = Rp ? Rp[i] : regul.primal;
     if (model.hasLb(i)) ires.r4[i] -= dzl[i];
     if (model.hasUb(i)) ires.r4[i] += dzu[i];
-    ires.r4[i] += reg_p * dx[i];
+    ires.r4[i] += Rp[i] * dx[i];
 
     if (compute_abs) {
       if (model.hasLb(i)) iabs.r4[i] += std::abs(dzl[i]);
       if (model.hasUb(i)) iabs.r4[i] += std::abs(dzu[i]);
-      iabs.r4[i] += std::abs(reg_p) * std::abs(dx[i]);
+      iabs.r4[i] += std::abs(Rp[i]) * std::abs(dx[i]);
     }
   }
 

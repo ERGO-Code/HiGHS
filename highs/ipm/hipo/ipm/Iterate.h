@@ -49,9 +49,9 @@ struct Iterate {
   std::vector<double> scaling;
   double best_mu;
   const Regularisation& regul;
-  std::vector<double> total_reg;
-  double* Rp;
-  double* Rd;
+  // regularisation used in the last factorisation, see LinearSolver::getReg
+  std::vector<double> Rp;
+  std::vector<double> Rd;
   Residuals ires;  // residuals for iterative refinement
   Residuals iabs;  // |6x6 matrix| * |d| for iterative refinement
   RefineMethod refine_method = RefineMethod::kBlockwise;
@@ -187,8 +187,6 @@ struct Iterate {
   // Otherwise, it is set to zero.
   // ===================================================================================
   void computeInfeasDrop(bool crossover_on, double feas_tol, double opt_tol);
-
-  void getReg(LinearSolver& LS, const std::string& nla);
 
   void assertConsistency(Int n, Int m) const;
 };

@@ -453,7 +453,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
         logger_.printInfo("Error while factorising normal equations\n");
         return;
       }
-      it_->getReg(*LS_, options_.nla);
+      LS_->getReg(it_->Rp, it_->Rd);
     }
 
     info_.error = LS_->solveNE(res8, delta.y);
@@ -485,7 +485,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
         logger_.printInfo("Error while factorising augmented system\n");
         return;
       }
-      it_->getReg(*LS_, options_.nla);
+      LS_->getReg(it_->Rp, it_->Rd);
     }
 
     info_.error = LS_->solveAS(res7, rhs.r1, delta.x, delta.y);

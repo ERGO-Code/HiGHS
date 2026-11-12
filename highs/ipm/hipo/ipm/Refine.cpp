@@ -98,12 +98,11 @@ double Solver::computeBlockwiseError(const NewtonDir& delta) const {
 
   // norms of diagonal blocks
   double norm_Rd{}, norm_Rp{}, norm_xl{}, norm_xu{}, norm_zl{}, norm_zu{};
-  assert(it_->Rd || m_ == 0);
+  assert((Int)it_->Rp.size() == n_ && (Int)it_->Rd.size() == m_);
   for (Int i = 0; i < m_; ++i)
     norm_Rd = std::max(norm_Rd, std::abs(it_->Rd[i]));
   for (Int i = 0; i < n_; ++i) {
-    const double reg_p = it_->Rp ? it_->Rp[i] : regul_.primal;
-    norm_Rp = std::max(norm_Rp, std::abs(reg_p));
+    norm_Rp = std::max(norm_Rp, std::abs(it_->Rp[i]));
     if (model_.hasLb(i)) {
       norm_xl = std::max(norm_xl, std::abs(it_->xl[i]));
       norm_zl = std::max(norm_zl, std::abs(it_->zl[i]));
@@ -189,7 +188,7 @@ double Solver::computeComponentwiseError(const NewtonDir& delta) const {
   const double tau_const = 1000.0 * (5 * n_ + m_) * 1e-16;
   double omega_1{}, omega_2{};
 
-  assert(it_->Rd || m_ == 0);
+  assert((Int)it_->Rp.size() == n_ && (Int)it_->Rd.size() == m_);
 
   // First block
   for (Int i = 0; i < m_; ++i) {
@@ -228,9 +227,7 @@ double Solver::computeComponentwiseError(const NewtonDir& delta) const {
 
   // Fourth block
   for (Int i = 0; i < n_; ++i) {
-    const double reg_p = it_->Rp ? it_->Rp[i] : regul_.primal;
-
-    double one_norm_row = model_.oneNormCols(i) + 2 + std::abs(reg_p);
+    double one_norm_row = model_.oneNormCols(i) + 2 + std::abs(it_->Rp[i]);
     if (model_.qp()) one_norm_row += model_.oneNormQ(i);
 
     updateOmega(tau_const, omega_1, omega_2,

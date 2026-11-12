@@ -698,8 +698,28 @@ void FactorHighsSolver::printParallel() const {
 double FactorHighsSolver::flops() const { return kkt_.S.flops(); }
 double FactorHighsSolver::spops() const { return kkt_.S.spops(); }
 double FactorHighsSolver::nz() const { return (double)kkt_.S.nz(); }
-void FactorHighsSolver::getReg(std::vector<double>& reg) {
-  FH_.getRegularisation(reg.data());
+void FactorHighsSolver::getReg(std::vector<double>& Rp,
+                               std::vector<double>& Rd) {
+  const Int n = model_.n();
+  const Int m = model_.m();
+
+  if (kkt_.isAS()) {
+    // FH returns the perturbation added to the diagonal of the augmented
+    // system. In the (1,1) block, -(Theta^-1+Q+Rp), this is -Rp.
+    std::vector<double> reg(n + m);
+    FH_.getRegularisation(reg.data());
+    Rp.resize(n);
+    Rd.resize(m);
+    for (Int i = 0; i < n; ++i) Rp[i] = -reg[i];
+    for (Int i = 0; i < m; ++i) Rd[i] = reg[n + i];
+  } else {
+    assert(kkt_.isNE());
+    // Primal regularisation is added to Theta^-1 when forming the normal
+    // equations.
+    Rp.assign(n, regul_.primal);
+    Rd.resize(m);
+    FH_.getRegularisation(Rd.data());
+  }
 }
 
 }  // namespace hipo

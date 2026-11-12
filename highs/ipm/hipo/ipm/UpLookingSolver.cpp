@@ -286,9 +286,28 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
   return kOk;
 }
 
-void UpLookingSolver::getReg(std::vector<double>& reg) {
-  reg = regularisation_;
+void UpLookingSolver::getReg(std::vector<double>& Rp,
+                             std::vector<double>& Rd) {
+  const Int n = model_.n();
+  const Int m = model_.m();
+
+  std::vector<double> reg = regularisation_;
   permuteVector(reg, kkt_.iperm());
+
+  if (kkt_.isAS()) {
+    // regularisation_ is the perturbation added to the diagonal of the
+    // augmented system. In the (1,1) block, -(Theta^-1+Q+Rp), this is -Rp.
+    Rp.resize(n);
+    Rd.resize(m);
+    for (Int i = 0; i < n; ++i) Rp[i] = -reg[i];
+    for (Int i = 0; i < m; ++i) Rd[i] = reg[n + i];
+  } else {
+    assert(kkt_.isNE());
+    // Primal regularisation is added to Theta^-1 when forming the normal
+    // equations.
+    Rp.assign(n, regul_.primal);
+    Rd = std::move(reg);
+  }
 }
 
 }  // namespace hipo

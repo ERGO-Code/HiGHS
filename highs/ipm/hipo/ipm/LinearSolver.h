@@ -20,6 +20,7 @@ namespace hipo {
 // - solveAS: solve a linear system with the augmented system
 // - factorNE: factorise the normal equations
 // - solveNE: solve a linear system with the normal equations
+// - getReg: extract regularisation used in the last factorisation
 // - clear: reset the data structure for the next factorisation.
 //
 // The linear solver may also define functions:
@@ -27,7 +28,6 @@ namespace hipo {
 // - flops: return number of flops needed for factorisation
 // - spops: return number of sparse ops needed for factorisation
 // - nz: return number of nonzeros in factorisation
-// - getReg: extract regularisation
 //
 // NB: forming the normal equations or augmented system is delegated to the
 // linear solver chosen, so that only the appropriate data (upper triangle,
@@ -67,6 +67,14 @@ class LinearSolver {
 
   virtual void clear() = 0;
 
+  // Extract the regularisation used in the last factorisation, as positive
+  // magnitudes, such that the regularised augmented system is
+  //  [ -(Theta^-1 + Q + Rp)  A^T ]
+  //  [          A            Rd  ]
+  // Rp has size n and Rd has size m. For the normal equations, Rp is the static
+  // primal regularisation used to form the matrix.
+  virtual void getReg(std::vector<double>& Rp, std::vector<double>& Rd) = 0;
+
   virtual LinearSolverType type() const = 0;
 
   // =================================================================
@@ -77,7 +85,6 @@ class LinearSolver {
   virtual double flops() const { return 0; }
   virtual double spops() const { return 0; }
   virtual double nz() const { return 0; }
-  virtual void getReg(std::vector<double>& reg){};
 };
 
 inline std::string LinearSolverTypeToString(LinearSolverType t) {
