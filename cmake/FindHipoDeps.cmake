@@ -491,6 +491,12 @@ function(highs_configure_blas)
         endif()
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
 
+        if(BUILD_DOTNET)
+            # The NuGet package ships only libhighs_extras, so link OpenBLAS
+            # into it (as on Windows). Function-local, so HiGHS stays shared.
+            set(BUILD_SHARED_LIBS OFF)
+        endif()
+
         message(CHECK_START "Fetching OpenBLAS")
         list(APPEND CMAKE_MESSAGE_INDENT "  ")
         FetchContent_Declare(

@@ -4,7 +4,7 @@
 
 # Require CMake 3.15+ (matching scikit-build-core) Use new versions of all
 # policies up to CMake 3.27
-cmake_minimum_required(VERSION 3.15...3.27)
+cmake_minimum_required(VERSION 3.16...3.27)
 
 # set preference for clang compiler and intel compiler over gcc and other compilers
 include(Platform/${CMAKE_SYSTEM_NAME}-Determine-C OPTIONAL)
