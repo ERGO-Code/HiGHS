@@ -1,6 +1,6 @@
 name: test-nuget-win
 
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,10 +33,10 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=1.15.1
+        run: dotnet pack -c Release /p:Version=1.16.0
 
       - name: Add local feed
-        run: dotnet nuget add source -n name ${{github.workspace}}\nugets 
+        run: dotnet nuget add source -n name ${{github.workspace}}\nugets
 
       - name: Dotnet push to local feed
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
@@ -48,6 +48,6 @@ jobs:
         run: |
           dotnet new console
           rm Program.cs
-          cp ${{github.workspace}}\examples\call_highs_from_csharp.cs . 
-          dotnet add package Highs.Native -v 1.15.1 -s ${{github.workspace}}\nugets 
+          cp ${{github.workspace}}\examples\call_highs_from_csharp.cs .
+          dotnet add package Highs.Native -v 1.16.0 -s ${{github.workspace}}\nugets
           dotnet run
