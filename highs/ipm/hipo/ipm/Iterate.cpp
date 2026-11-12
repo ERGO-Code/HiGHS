@@ -522,6 +522,10 @@ void Iterate::getReg(LinearSolver& LS, const std::string& nla) {
     Rp = nullptr;
     Rd = total_reg.data();
   } else {
+    // The linear solver returns the perturbation added to the diagonal of the
+    // augmented system. In the (1,1) block, -(Theta^-1+Q+Rp), this is -Rp, so
+    // flip the sign to store Rp as the primal regularisation.
+    for (Int i = 0; i < model.n(); ++i) total_reg[i] = -total_reg[i];
     Rp = total_reg.data();
     Rd = model.m() > 0 ? &total_reg[model.n()] : nullptr;
   }

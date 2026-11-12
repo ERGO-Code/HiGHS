@@ -79,31 +79,35 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
   }
   assert(ind_max_diag >= j);
 
-  // put column with max pivot as first column
-  swapCols('U', n, A, lda, j, ind_max_diag, swaps, sign, data);
+  // Column c, with the largest diagonal entry, is the candidate pivot. It is
+  // not moved into position j yet: each position can record only one swap, so
+  // the columns are swapped once the pivot has been chosen.
+  const Int c = ind_max_diag;
 
-  // Max in column j of diagonal block
-  auto res = maxInCol(j, n, j, A, lda);
-  double gamma_j = res.second;
+  // Max in column c of diagonal block
+  auto res = maxInCol(j, n, c, A, lda);
+  double gamma_c = res.second;
   const Int r = res.first;
-  const Int sign_j = sign[j] != 0 ? sign[j] : (A[j + lda * j] > 0 ? 1 : -1);
-  double Ajj = sign_j > 0 ? A[j + lda * j] + options.reg_d
-                          : A[j + lda * j] - options.reg_p;
+  const Int sign_c = sign[c] != 0 ? sign[c] : (A[c + lda * c] > 0 ? 1 : -1);
+  double Acc = sign_c > 0 ? A[c + lda * c] + options.reg_d
+                          : A[c + lda * c] - options.reg_p;
 
-  if (std::max(std::abs(Ajj), gamma_j) <= thresh || sign_j * Ajj < 0 ||
+  if (std::max(std::abs(Acc), gamma_c) <= thresh || sign_c * Acc < 0 ||
       j == n - 1) {
     // Must accept current pivot
-    double old_pivot = A[j + lda * j];
-    staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
+    swapCols('U', n, A, lda, j, c, swaps, sign, data);
 
-    if (sign_j * A[j + lda * j] < 0) {
+    double old_pivot = A[j + lda * j];
+    staticReg(A[j + lda * j], sign_c, options, totalreg[j]);
+
+    if (sign_c * A[j + lda * j] < 0) {
       data.setWrongSign(A[j + lda * j]);
-      // A[j + lda * j] = sign_j * thresh;
+      // A[j + lda * j] = sign_c * thresh;
     }
 
-    if (std::max(std::abs(Ajj), gamma_j) < thresh) {
+    if (std::max(std::abs(Acc), gamma_c) < thresh) {
       // perturbe pivot
-      A[j + lda * j] = sign_j * thresh;
+      A[j + lda * j] = sign_c * thresh;
       data.countRegPiv();
     }
     totalreg[j] = A[j + lda * j] - old_pivot;
@@ -111,38 +115,43 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
 
   } else {
     // Max in column r of diagonal block
-    assert(r >= 0);
+    assert(r >= j && r != c);
     res = maxInCol(j, n, r, A, lda);
     double gamma_r = res.second;
     const Int sign_r = sign[r] != 0 ? sign[r] : (A[r + lda * r] > 0 ? 1 : -1);
     double Arr = sign_r > 0 ? A[r + lda * r] + options.reg_d
                             : A[r + lda * r] - options.reg_p;
 
-    if ((std::abs(Ajj) >= kAlphaBK * gamma_j ||
-         std::abs(Ajj) * gamma_r >= kAlphaBK * gamma_j * gamma_j)) {
+    if ((std::abs(Acc) >= kAlphaBK * gamma_c ||
+         std::abs(Acc) * gamma_r >= kAlphaBK * gamma_c * gamma_c)) {
       // Accept current pivot
-      staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
+      swapCols('U', n, A, lda, j, c, swaps, sign, data);
+      staticReg(A[j + lda * j], sign_c, options, totalreg[j]);
 
-      if (sign_j * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
+      if (sign_c * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
     } else if (std::abs(Arr) >= kAlphaBK * gamma_r) {
       // Use pivot r
-
       swapCols('U', n, A, lda, j, r, swaps, sign, data);
       staticReg(A[j + lda * j], sign_r, options, totalreg[j]);
 
       if (sign_r * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
     } else {
-      // Use 2x2 pivot (j,r)
+      // Use 2x2 pivot (c,r)
 
-      // column r is moved into position j+1
-      swapCols('U', n, A, lda, j + 1, r, swaps, sign, data);
+      // Move column c into position j. If r was in position j, it is now in
+      // position c.
+      swapCols('U', n, A, lda, j, c, swaps, sign, data);
+      const Int r_pos = r == j ? c : r;
+
+      // Move column r into position j+1
+      swapCols('U', n, A, lda, j + 1, r_pos, swaps, sign, data);
       flag_2x2 = true;
-      staticReg(A[j + lda * j], sign_j, options, totalreg[j]);
+      staticReg(A[j + lda * j], sign_c, options, totalreg[j]);
       staticReg(A[j + 1 + lda * (j + 1)], sign_r, options, totalreg[j + 1]);
 
-      if (sign_j * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
+      if (sign_c * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
       if (sign_r * A[j + 1 + lda * (j + 1)] < 0)
         data.setWrongSign(A[j + 1 + lda * (j + 1)]);
     }
