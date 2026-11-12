@@ -178,8 +178,12 @@ void Solver::runIpm() {
 
   while (iter_ < options_.max_iter) {
     if (prepareIter()) break;
-    if (predictor()) break;
-    if (correctors()) break;
+    if (predictor() || correctors()) {
+      // The iteration is abandoned. If possible, start a new one with
+      // FactorHighs, from the best iterate.
+      if (restartWithMultifrontal()) continue;
+      break;
+    }
     makeStep();
     printOutput();
   }
@@ -403,37 +407,29 @@ void Solver::crossoverWithIpx() {
 
 isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
   solve6x6(delta, it_->res);
-  bool terminate = info_.error;
+  if (info_.error) return true;
 
-  if (!terminate) {
-    refine(delta);
-    if (it_->isDirNan(delta)) {
-      logger_.printInfo("Direction is nan\n");
-      terminate = true;
-      info_.error = kErrorNan;
-    } else if (it_->isDirInf(delta)) {
-      logger_.printInfo("Direction is inf\n");
-      terminate = true;
-      info_.error = kErrorNan;
-    }
+  refine(delta);
+  if (it_->isDirNan(delta)) {
+    logger_.printInfo("Direction is nan\n");
+    info_.error = kErrorNan;
+    return true;
+  }
+  if (it_->isDirInf(delta)) {
+    logger_.printInfo("Direction is inf\n");
+    info_.error = kErrorNan;
+    return true;
   }
 
-  if (terminate) {
-    if (switchToMultifrontal()) {
-      // try FactorHighs factorisation before giving up
-      it_->data.back().factorisation_used = LS_->type();
-      logger_.printInfo("Switching to FactorHighs because of bad direction\n");
-      resetToBestIter(iter_ - 1);
+  return false;
+}
 
-      // Solve again. This does not create an infinite loop, as
-      // switchToMultifrontal() is false in the second solve.
-      delta.clear();
-      it_->data.back().refinement_error = 0.0;
-      terminate = solveNewtonSystem(delta);
-    }
-  }
-
-  return terminate;
+isSuccess Solver::restartWithMultifrontal() {
+  if (!info_.error) return false;
+  if (!switchToMultifrontal()) return false;
+  logger_.printInfo("Switching to FactorHighs because of bad direction\n");
+  resetToBestIter(iter_ - 1);
+  return true;
 }
 
 void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
