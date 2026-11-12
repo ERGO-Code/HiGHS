@@ -63,6 +63,7 @@ const double kSkipSystemNzBoundsRatio = 50.0;
 // parameters for iterative refinement
 const Int kRefineMaxIter = 3;
 const double kRefineTol = 1e-12;
+const double kRefineMinDecrease = 0.5;
 
 // parameters for scaling
 const double kScalingSmallCoeff = 1e-4;

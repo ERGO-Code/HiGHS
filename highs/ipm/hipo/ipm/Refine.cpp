@@ -46,6 +46,8 @@ void Solver::refine(NewtonDir& delta) {
       omega = old_omega;
       break;
     }
+
+    if (omega > kRefineMinDecrease * old_omega) break;
   }
 
   // save worst residual seen in this ipm iteration
