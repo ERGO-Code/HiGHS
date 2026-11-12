@@ -208,11 +208,10 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
       continue;
     }
 
-    HighsInt len = baseRowInds.size();
-    if (len > (HighsInt)fracvar.row_ep.size()) {
+    if (baseRowInds.size() > fracvar.row_ep.size()) {
       double maxAbsVal = 0.0;
       double minAbsVal = kHighsInf;
-      for (HighsInt i = 0; i < len; ++i) {
+      for (size_t i = 0; i != baseRowInds.size(); ++i) {
         if (baseRowInds[i] < mip.numCol()) {
           maxAbsVal = std::max(std::abs(baseRowVals[i]), maxAbsVal);
           minAbsVal = std::min(std::abs(baseRowVals[i]), minAbsVal);
@@ -228,13 +227,13 @@ void HighsTableauSeparator::separateLpSolution(HighsLpRelaxation& lpRelaxation,
         lpSolver.getLp(), baseRowInds.data(), baseRowVals.data(),
         baseRowInds.size());
 
-    double rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+    // the aggregation of rows (including their slacks) has right-hand side 0
+    cutGen.generateCut(transLp, baseRowInds, baseRowVals, 0.0);
     if (transLp.getGlobaldom().infeasible()) break;
 
     lpAggregator.getCurrentAggregation(baseRowInds, baseRowVals, true);
-    rhs = 0;
-    cutGen.generateCut(transLp, baseRowInds, baseRowVals, rhs);
+    // the aggregation of rows (including their slacks) has right-hand side 0
+    cutGen.generateCut(transLp, baseRowInds, baseRowVals, 0.0);
     if (transLp.getGlobaldom().infeasible()) break;
 
     lpAggregator.clear();
