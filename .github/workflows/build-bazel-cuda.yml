@@ -9,20 +9,7 @@ name: build-bazel-cuda
 # cuda_library) that are invisible to the CPU-only Bazel jobs.
 
 on:
-  push:
-    paths:
-      - 'highs/pdlp/**'
-      - 'BUILD.bazel'
-      - 'MODULE.bazel'
-      - '.bazelrc'
-      - '.github/workflows/build-bazel-cuda.yml'
   pull_request:
-    paths:
-      - 'highs/pdlp/**'
-      - 'BUILD.bazel'
-      - 'MODULE.bazel'
-      - '.bazelrc'
-      - '.github/workflows/build-bazel-cuda.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

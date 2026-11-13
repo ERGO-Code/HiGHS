@@ -1,6 +1,6 @@
 name: conan-cpp20
 
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -129,4 +129,4 @@ jobs:
         env:
           HIGHS_SOURCE: ${{ github.workspace }}
         run: |
-          conan create /tmp/conan-highs --version 1.15.1 --build=missing
+          conan create /tmp/conan-highs --version 1.16.0 --build=missing
