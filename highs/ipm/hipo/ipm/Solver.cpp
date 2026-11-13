@@ -1193,6 +1193,7 @@ shouldTerminate Solver::checkBadIter() {
     // because of the artificial bounds, so pobj_is_larger does not detect it.
     bool free_vars_diverge = stagnation &&
                              it_->pinf < options_.feasibility_tol &&
+                             it_->dinf > 100 * options_.feasibility_tol &&
                              report.free_vars_diverging;
 
     if (pobj_is_larger || free_vars_diverge) {
