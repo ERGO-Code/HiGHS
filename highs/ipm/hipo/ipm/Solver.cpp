@@ -1268,7 +1268,7 @@ shouldTerminate Solver::checkTermination() {
       }
 
     } else {
-      terminate = model_.qp() ? true : checkTerminationKkt();
+      terminate = checkTerminationKkt();
       if (terminate) {
         logger_.print("=== Primal-dual feasible point found\n");
         setStatus1(kStatusOptimal);
@@ -1280,40 +1280,68 @@ shouldTerminate Solver::checkTermination() {
 }
 
 isSuccess Solver::checkTerminationKkt() {
-  if (model_.qp()) {
-    // Not yet implemented for QP
-    logger_.printInfo("kktCheck skipped for QP\n");
-    return false;
+  logger_.printInfo("Solution may be optimal, perform kktCheck\n");
 
+  if (!model_.lpOrig()) return false;
+  if (model_.qp() && !model_.QOrig()) return false;
+
+  const HighsLp& lp = *model_.lpOrig();
+  HighsModelStatus model_status = HighsModelStatus::kOptimal;
+  HighsInfo highs_info;
+  HighsSolution highs_solution;
+
+  // Allow kktCheck to print only in debug mode (this is a copy of highs
+  // options, not the original)
+  Hoptions_.output_flag = logger_.debug(2);
+
+  getHipoNonVertexSolution(Hoptions_, lp, model_.n_orig(), model_.m_orig(),
+                           model_.rhsOrig(), model_.constraintsOrig(), *this,
+                           model_status, highs_solution);
+
+  bool success = false;
+
+  if (model_.qp()) {
+    // QP check: same measures and acceptance used by HiGHS after the QP solve
+    // (getQpKktFailures followed by checkOptimality in solveQp).
+    // HiGHS does not check the primal-dual gap for QP, so HiPO's own gap
+    // criterion is also required, otherwise any feasible point would pass.
+    if (it_->pdgap >= options_.optimality_tol) {
+      logger_.printInfo("QP kktCheck: gap %.2e too large\n", it_->pdgap);
+      logger_.printInfo("Check failed\n");
+      return false;
+    }
+
+    std::vector<double> gradient;
+    model_.QOrig()->product(highs_solution.col_value, gradient);
+    for (Int i = 0; i < lp.num_col_; ++i) gradient[i] += lp.col_cost_[i];
+
+    getKktFailures(Hoptions_, true, lp, gradient, highs_solution, highs_info);
+
+    success = highs_info.num_primal_infeasibilities == 0 &&
+              highs_info.num_dual_infeasibilities <= 0 &&
+              highs_info.num_semi_infeasibilities <= 0;
+
+    if (!success)
+      logger_.printInfo(
+          "QP kktCheck: num/max primal infeas %d / %.2e, num/max dual infeas "
+          "%d / %.2e\n",
+          (int)highs_info.num_primal_infeasibilities,
+          highs_info.max_primal_infeasibility,
+          (int)highs_info.num_dual_infeasibilities,
+          highs_info.max_dual_infeasibility);
   } else {
     // LP check
-    logger_.printInfo("Solution may be optimal, perform kktCheck\n");
-    HighsModelStatus model_status = HighsModelStatus::kOptimal;
-    HighsInfo highs_info;
-    HighsSolution highs_solution;
-
-    // Allow kktCheck to print only in debug mode (this is a copy of highs
-    // options, not the original)
-    Hoptions_.output_flag = logger_.debug(2);
-
-    if (!model_.lpOrig()) return false;
-
-    getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
-                             model_.m_orig(), model_.rhsOrig(),
-                             model_.constraintsOrig(), *this, model_status,
-                             highs_solution);
-
-    lpNoBasisKktCheck(model_status, highs_info, *model_.lpOrig(),
-                      highs_solution, Hoptions_, "During HiPO solve");
-
-    if (model_status == HighsModelStatus::kOptimal) {
-      logger_.printInfo("Check successful\n");
-      return true;
-    } else
-      logger_.printInfo("Check failed\n");
+    lpNoBasisKktCheck(model_status, highs_info, lp, highs_solution, Hoptions_,
+                      "During HiPO solve");
+    success = model_status == HighsModelStatus::kOptimal;
   }
 
-  return false;
+  if (success)
+    logger_.printInfo("Check successful\n");
+  else
+    logger_.printInfo("Check failed\n");
+
+  return success;
 }
 
 shouldTerminate Solver::checkInterrupt() {
