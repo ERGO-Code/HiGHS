@@ -201,6 +201,8 @@ TEST_CASE("solver-select-keeps-warm-start", "[solver_select]") {
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 
+// IPM only yields a basis via crossover, so if one is required and
+// crossover is off, selection uses simplex
 TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -216,8 +218,10 @@ TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {
 
   highs.clearSolver();
   highs.setOptionValue("solver_select_require_basis", true);
-  REQUIRE(highs.run() == HighsStatus::kError);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getBasis().valid);
+  REQUIRE(highs.getInfo().ipm_iteration_count == 0);
 }
 
 TEST_CASE("solver-select-small-model-uses-dual-simplex", "[solver_select]") {

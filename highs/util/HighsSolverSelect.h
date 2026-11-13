@@ -72,8 +72,8 @@ enum class HighsSolverSelect { kDualSimplex, kIpx, kHipo };
 //
 // solver_select_require_basis makes a basis part of the result: a claim
 // of optimality, infeasibility or unboundedness by a selected IPM solver
-// without a basis is replaced by a simplex solve, and it is an error for
-// IPM to be selected if run_crossover is "off". The MIP solver sets it,
+// without a basis is replaced by a simplex solve, and simplex is selected
+// if run_crossover is "off". The MIP solver sets it,
 // since it needs a basis. When false, a basis is only needed for an
 // optimal solution when run_crossover is "on"
 //

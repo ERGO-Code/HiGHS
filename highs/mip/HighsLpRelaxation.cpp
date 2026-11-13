@@ -1151,8 +1151,14 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   // take action on failure in SolveLp
   std::string solver;
   lpsolver.getOptionValue("solver", solver);
+  // Options that selection changes, which other solves of lpsolver, such as
+  // after removing cuts, must see unchanged
   const HighsInt ipm_iteration_limit =
       lpsolver.getOptions().ipm_iteration_limit;
+  const HighsInt solver_select_strategy =
+      lpsolver.getOptions().solver_select_strategy;
+  const bool solver_select_require_basis =
+      lpsolver.getOptions().solver_select_require_basis;
   std::string use_solver;
   if (valid_basis) {
     use_solver = kSimplexString;
@@ -1256,12 +1262,10 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                 int(info.simplex_iteration_count));
   // Revert the value of lpsolver.options_.solver
   lpsolver.setOptionValue("solver", solver);
-  // Other solves of lpsolver, such as after removing cuts, must not select
   if (use_choose) {
-    lpsolver.setOptionValue(
-        "solver_select_strategy",
-        static_cast<HighsInt>(SolverSelectStrategy::kSimplexOnly));
-    lpsolver.setOptionValue("solver_select_require_basis", false);
+    lpsolver.setOptionValue("solver_select_strategy", solver_select_strategy);
+    lpsolver.setOptionValue("solver_select_require_basis",
+                            solver_select_require_basis);
     lpsolver.setOptionValue("ipm_iteration_limit", ipm_iteration_limit);
   }
   if (mipsolver.profiling_->mip_ && !mipsolver.submip &&

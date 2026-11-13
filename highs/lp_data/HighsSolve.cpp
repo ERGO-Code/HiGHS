@@ -47,25 +47,17 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
                                         const std::string& message) {
   HighsOptions& options = solver_object.options_;
   // Highs::run skips presolve if there is a basis, on the basis that
-  // solver = "choose" will use it, so simplex must be used
+  // solver = "choose" will use it, so simplex must be used. If a basis is
+  // required, IPM only yields one via crossover
+  const bool use_simplex = solver_object.basis_.useful ||
+                           (options.solver_select_require_basis &&
+                            options.run_crossover == kHighsOffString);
   const HighsSolverSelect selected_solver =
-      solver_object.basis_.useful
-          ? HighsSolverSelect::kDualSimplex
-          : selectSolver(solver_object.lp_,
-                         static_cast<SolverSelectStrategy>(
-                             options.solver_select_strategy));
+      use_simplex ? HighsSolverSelect::kDualSimplex
+                  : selectSolver(solver_object.lp_,
+                                 static_cast<SolverSelectStrategy>(
+                                     options.solver_select_strategy));
   const bool selected_ipm = selected_solver != HighsSolverSelect::kDualSimplex;
-
-  // If a basis is required, IPM only yields one via crossover
-  if (options.solver_select_require_basis && selected_ipm &&
-      options.run_crossover == kHighsOffString) {
-    highsLogUser(options.log_options, HighsLogType::kError,
-                 "Solver selection (strategy %d) chose IPM but a basis is "
-                 "required and run_crossover is off\n",
-                 int(options.solver_select_strategy));
-    solver_object.model_status_ = HighsModelStatus::kSolveError;
-    return HighsStatus::kError;
-  }
 
   // Restore the user's options however this returns, even by an exception
   struct RestoreOptions {
