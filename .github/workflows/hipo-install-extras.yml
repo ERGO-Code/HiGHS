@@ -1,7 +1,6 @@
 name: hipo-install-extras
 
 on:
-  push:
   pull_request:
 
 concurrency:
