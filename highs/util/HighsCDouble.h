@@ -16,14 +16,6 @@
 #include <cmath>
 #include <cstdint>
 
-// use a fused multiply-add for exact products if the target has one. the
-// results are the same as with Dekker's algorithm with Veltkamp's splitting,
-// which is used otherwise.
-#if defined(__FMA__) || defined(__ARM_FEATURE_FMA) || \
-    (defined(_MSC_VER) && defined(__AVX2__))
-#define HIGHS_CDOUBLE_HAVE_FMA
-#endif
-
 /// A compensated double number achieving roughly quad precision on the
 /// supported operations
 
@@ -54,20 +46,14 @@ class HighsCDouble {
   }
 
   /// performs an exact transformation such that x + y = a * b
-  /// and x = double(a * b). With a fused multiply-add the operation uses 1
-  /// flop for multiplication and 1 fused multiply-add, otherwise (Dekker's
-  /// algorithm) 10 flops for addition/subtraction and 7 flops for
-  /// multiplication.
+  /// and x = double(a * b). The operation uses 10 flops for
+  /// addition/subtraction and 7 flops for multiplication.
   static void two_product(double& x, double& y, double a, double b) {
     x = a * b;
-#ifdef HIGHS_CDOUBLE_HAVE_FMA
-    y = std::fma(a, b, -x);
-#else
     double a1, a2, b1, b2;
     split(a1, a2, a);
     split(b1, b2, b);
     y = a2 * b2 - (((x - a1 * b1) - a2 * b1) - a1 * b2);
-#endif
   }
 
   HighsCDouble(double hi_, double lo_) : hi(hi_), lo(lo_) {}
