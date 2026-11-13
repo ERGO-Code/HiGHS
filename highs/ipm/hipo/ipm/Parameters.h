@@ -15,13 +15,13 @@ const double kResReductionFraction = 0.1;
 const double kResReductionMinAlpha = 1e-3;
 const double kResReductionLargeIncrease = 1e3;
 const double kResReductionNoiseFactor = 1e2;
-const Int kBadResWindow = 10;
+const Int kBadResWindow = 5;
 const Int kBadResMaxIter = 5;
 
 // parameters for progress test
-const double kProgressFactor = 0.9;
-const Int kProgressMaxIter = 10;
-const Int kProgressBestMaxIter = 30;
+const double kProgressFactor = 0.95;
+const Int kProgressMaxIter = 5;
+const Int kProgressBestMaxIter = 20;
 
 // parameters for correctors
 const double kGammaCorrector = 0.1;
