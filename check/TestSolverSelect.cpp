@@ -153,7 +153,7 @@ TEST_CASE("solver-select-require-basis-yields-a-basis", "[solver_select]") {
   highs.setOptionValue("output_flag", dev_run);
   highs.passModel(exampleLp());
   highs.setOptionValue("solver", "choose");
-  highs.setOptionValue("solver_select_strategy", 3);
+  highs.setOptionValue("solver_select_strategy", 5);
   highs.setOptionValue("solver_select_require_basis", true);
 
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -188,8 +188,7 @@ TEST_CASE("solver-select-keeps-warm-start", "[solver_select]") {
   highs.passModel(exampleLp());
   highs.setOptionValue("solver", "choose");
   highs.setOptionValue("presolve", kHighsOffString);
-  // exampleLp() is dense, so strategy 3 chooses IPM
-  highs.setOptionValue("solver_select_strategy", 3);
+  highs.setOptionValue("solver_select_strategy", 5);
 
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getInfo().ipm_iteration_count > 0);
@@ -236,7 +235,7 @@ TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {
   highs.passModel(exampleLp());
   highs.setOptionValue("solver", "choose");
   highs.setOptionValue("presolve", kHighsOffString);
-  highs.setOptionValue("solver_select_strategy", 3);
+  highs.setOptionValue("solver_select_strategy", 5);
   highs.setOptionValue("run_crossover", kHighsOffString);
 
   REQUIRE(highs.run() == HighsStatus::kOk);
@@ -309,15 +308,14 @@ TEST_CASE("solver-select-heuristic", "[solver_select]") {
   REQUIRE(selectSolverByHeuristic(f) == HighsSolverSelect::kIpx);
 }
 
-// Strategy 3 chooses IPM for the root LP of these MIPs, as strategy 6
-// always does, so this runs IPM + crossover and then the whole tree from
-// that basis, including the sub-MIPs, which make their own selections.
-// ctest solves these and other MIPs with each strategy that selects
+// Strategies 5 and 6 choose IPM for the root LP of these MIPs, so this runs
+// IPM + crossover and then the whole tree from that basis, including the
+// sub-MIPs, which make their own selections
 TEST_CASE("solver-select-mip-tree", "[solver_select]") {
   const std::vector<std::pair<std::string, double>> mips = {
       {"flugpl", 1201500}, {"egout", 568.1007}, {"bell5", 8966406.49}};
   for (const auto& mip : mips) {
-    for (const HighsInt strategy : {3, 6}) {
+    for (const HighsInt strategy : {5, 6}) {
       INFO(mip.first << ", strategy " << strategy);
       const std::string model_file =
           std::string(HIGHS_DIR) + "/check/instances/" + mip.first + ".mps";
@@ -403,7 +401,7 @@ TEST_CASE("solver-select-ipm-without-crossover-presolve", "[solver_select]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-  highs.setOptionValue("solver_select_strategy", 3);
+  highs.setOptionValue("solver_select_strategy", 5);
   highs.setOptionValue("run_crossover", kHighsOffString);
   REQUIRE(highs.run() == HighsStatus::kOk);
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
@@ -420,8 +418,7 @@ TEST_CASE("solver-select-basis-without-crossover", "[solver_select]") {
     Highs highs;
     highs.setOptionValue("output_flag", dev_run);
     REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-    highs.setOptionValue("solver_select_strategy", 3);
-    // etamacro is dense enough for strategy 3 to choose IPM
+    highs.setOptionValue("solver_select_strategy", 5);
     highs.setOptionValue("run_crossover", kHighsChooseString);
     highs.setOptionValue("solver_select_require_basis", require_basis);
     REQUIRE(highs.run() != HighsStatus::kError);
