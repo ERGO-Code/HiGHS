@@ -58,12 +58,15 @@ struct StagnationTests {
   // were changed
   Int free_bounds_changed_iter{};
 
-  // data for progress test, for pinf, dinf, pdgap and infeas_drop:
+  // data for progress test, for pinf, dinf, absolute gap and infeas_drop:
   // - values in the last kProgressMaxIter + 1 iterations in which the quantity
   //   was available, oldest first;
+  // - whether the quantity was above its tolerance in the same iterations (for
+  //   the gap, this uses the relative gap);
   // - best value and the iteration at which it was set.
   static constexpr Int kNumProgressQuantities = 4;
   std::vector<double> progress_history[kNumProgressQuantities];
+  std::vector<HighsBool> above_tol_history[kNumProgressQuantities];
   double progress_ref[kNumProgressQuantities]{kHighsInf, kHighsInf, kHighsInf,
                                               kHighsInf};
   Int progress_iter[kNumProgressQuantities]{};
@@ -108,14 +111,17 @@ struct StagnationTests {
                              std::stringstream& log_stream) const;
 
   // ===================================================================================
-  // Check progress of pinf, dinf, pdgap and infeas_drop. The test fails if:
+  // Check progress of pinf, dinf, absolute gap |pobj - dobj| and infeas_drop.
+  // The relative gap pdgap is used only to decide if the gap is above its
+  // tolerance. The test fails if:
   // - none of the quantities, at any point in the last kProgressMaxIter
   //   iterations, was smaller by a factor kProgressFactor than
   //   kProgressMaxIter iterations ago, or
   // - none of the quantities improved its best value by a factor
   //   kProgressFactor in the last kProgressBestMaxIter iterations (this
   //   detects quantities that oscillate).
-  // Only the quantities above their tolerance are tracked. If all quantities
+  // Only the quantities above their tolerance, or that were above their
+  // tolerance at the start of the window, are tracked. If all quantities
   // are below their tolerance, but the ipm is still iterating (e.g. because
   // the kkt check failed), all quantities are tracked.
   // History and best values are recorded for all quantities, tracked or not,

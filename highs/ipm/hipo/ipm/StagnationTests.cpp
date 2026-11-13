@@ -1,6 +1,7 @@
 #include "StagnationTests.h"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 #include "Iterate.h"
@@ -156,9 +157,15 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
                                    StagnationReport& report,
                                    std::stringstream& log_stream) {
   const Int num = kNumProgressQuantities;
-  const double value[num] = {it.pinf, it.dinf, it.pdgap, it.infeas_drop};
+  // The progress of the gap is measured with the absolute gap, because the
+  // relative gap saturates at 2 when one objective is much larger than the
+  // other, and then does not show any progress. Whether the gap is above its
+  // tolerance is decided with the relative gap instead.
+  const double value[num] = {it.pinf, it.dinf, std::abs(it.pobj - it.dobj),
+                             it.infeas_drop};
+  const double tol_value[num] = {it.pinf, it.dinf, it.pdgap, it.infeas_drop};
   const double tol[num] = {feas_tol, feas_tol, opt_tol, crossover_tol};
-  const char* name[num] = {"pinf", "dinf", "pdgap", "drop"};
+  const char* name[num] = {"pinf", "dinf", "absgap", "drop"};
 
   // infeas_drop is computed only in some cases, otherwise it is zero
   const bool available[num] = {true, true, true, it.infeas_drop > 0.0};
@@ -171,9 +178,13 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
     if (!available[k]) continue;
 
     std::vector<double>& history = progress_history[k];
+    std::vector<HighsBool>& above = above_tol_history[k];
     history.push_back(value[k]);
-    if (static_cast<Int>(history.size()) > kProgressMaxIter + 1)
+    above.push_back(tol_value[k] > tol[k]);
+    if (static_cast<Int>(history.size()) > kProgressMaxIter + 1) {
       history.erase(history.begin());
+      above.erase(above.begin());
+    }
 
     if (value[k] < kProgressFactor * progress_ref[k]) {
       progress_ref[k] = value[k];
@@ -181,11 +192,16 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
     }
   }
 
-  // a quantity is tracked only if it is above its tolerance
+  // A quantity is tracked only if it is above its tolerance, or if it was above
+  // its tolerance at the start of the window. Otherwise, a quantity that has
+  // just reached its tolerance would be ignored, even though it made progress
+  // in the window.
   bool tracked[num];
   bool any_tracked = false;
   for (Int k = 0; k < num; ++k) {
-    tracked[k] = available[k] && value[k] > tol[k];
+    const std::vector<HighsBool>& above = above_tol_history[k];
+    const bool was_above = !above.empty() && above.front();
+    tracked[k] = available[k] && (tol_value[k] > tol[k] || was_above);
     if (tracked[k]) any_tracked = true;
   }
 
@@ -256,6 +272,7 @@ void StagnationTests::clear(Int iter) {
 
   for (Int k = 0; k < kNumProgressQuantities; ++k) {
     progress_history[k].clear();
+    above_tol_history[k].clear();
     progress_ref[k] = kHighsInf;
     progress_iter[k] = iter;
   }
