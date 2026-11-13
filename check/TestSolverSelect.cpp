@@ -161,6 +161,25 @@ TEST_CASE("solver-select-require-basis-yields-a-basis", "[solver_select]") {
   REQUIRE(highs.getBasis().valid);
 }
 
+// In the MIP solver, IPM's iteration limit is a budget, after which simplex
+// must continue rather than the LP end at the limit
+TEST_CASE("solver-select-ipm-iteration-limit", "[solver_select]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.readModel(std::string(HIGHS_DIR) +
+                          "/check/instances/adlittle.mps") ==
+          HighsStatus::kOk);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("solver_select_strategy", 5);
+  highs.setOptionValue("solver_select_require_basis", true);
+  highs.setOptionValue("ipm_iteration_limit", 1);
+
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs.getBasis().valid);
+  REQUIRE(highs.getInfo().simplex_iteration_count > 0);
+}
+
 // Highs::run skips presolve when there is a basis because it assumes
 // that solver="choose" will use it, so selection must not discard it
 TEST_CASE("solver-select-keeps-warm-start", "[solver_select]") {

@@ -1409,9 +1409,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
 
       return Status::kError;
     case HighsModelStatus::kIterationLimit: {
-      // Selected IPM has already used its budget, so don't repeat it
-      const bool selected_ipm = use_choose && info.ipm_iteration_count > 0;
-      if (!mipsolver.submip && resolve_on_error && !selected_ipm) {
+      if (!mipsolver.submip && resolve_on_error) {
         // Highs instantiation
         Highs ipm;
         ipm.setProfiling(mipsolver.profiling_);
