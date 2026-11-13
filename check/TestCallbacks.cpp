@@ -407,12 +407,12 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
 }
 
 // An exception that reaches Highs::optimizeModelTryCatch must not stop
-// later solves of the same Highs instance. Presolve and the solvers catch
-// their own exceptions, so throw from a log line between them
+// later solves of the same Highs instance, or leave the options changed.
+// Presolve and the solvers catch their own exceptions, so throw from a log
+// line between them, which solver selection (strategy 5) has passed
 TEST_CASE("highs-exception-then-solve-again", "[highs_callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  bool throw_exception = true;
   HighsCallbackFunctionType throwingLogCallback =
       [](int callback_type, const std::string& message,
          const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
@@ -421,18 +421,26 @@ TEST_CASE("highs-exception-then-solve-again", "[highs_callback]") {
             message.find("Solving the presolved LP") != std::string::npos)
           throw std::runtime_error("test exception");
       };
-  Highs highs;
-  // The logging callback is only called when output_flag is true
-  highs.setOptionValue("log_to_console", dev_run);
-  highs.setCallback(throwingLogCallback, &throw_exception);
-  highs.startCallback(kCallbackLogging);
-  highs.readModel(filename);
-  REQUIRE(highs.run() == HighsStatus::kError);
-  throw_exception = false;
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  for (const HighsInt strategy : {0, 5}) {
+    INFO("solver_select_strategy " << strategy);
+    bool throw_exception = true;
+    Highs highs;
+    // The logging callback is only called when output_flag is true
+    highs.setOptionValue("log_to_console", dev_run);
+    highs.setOptionValue("solver_select_strategy", strategy);
+    highs.setCallback(throwingLogCallback, &throw_exception);
+    highs.startCallback(kCallbackLogging);
+    highs.readModel(filename);
+    REQUIRE(highs.run() == HighsStatus::kError);
+    REQUIRE(highs.getOptions().solver == kHighsChooseString);
+    throw_exception = false;
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    const bool ipm_ran = highs.getInfo().ipm_iteration_count > 0;
+    REQUIRE(ipm_ran == (strategy == 5));
 
-  highs.resetThreadScheduler(true);
+    highs.resetThreadScheduler(true);
+  }
 }
 
 TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {

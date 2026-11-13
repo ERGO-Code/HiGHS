@@ -67,8 +67,16 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
     return HighsStatus::kError;
   }
 
+  // Restore the user's options however this returns, even by an exception
+  struct RestoreOptions {
+    HighsOptions& options;
+    const bool hipo_stop_if_no_memory;
+    ~RestoreOptions() {
+      options.solver = kHighsChooseString;
+      options.hipo_stop_if_no_memory = hipo_stop_if_no_memory;
+    }
+  } restore{options, options.hipo_stop_if_no_memory};
   // With IPX to fall back on, HiPO shouldn't try what won't fit in memory
-  const bool hipo_stop_if_no_memory = options.hipo_stop_if_no_memory;
   options.hipo_stop_if_no_memory = true;
   auto solveWith = [&](const std::string& solver) {
     options.solver = solver;
@@ -121,8 +129,6 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
         "Selected IPM yielded no result with a basis, so use simplex\n");
     status = solveWith(kSimplexString);
   }
-  options.solver = kHighsChooseString;
-  options.hipo_stop_if_no_memory = hipo_stop_if_no_memory;
   return status;
 }
 
