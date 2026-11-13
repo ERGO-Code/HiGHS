@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Package version (e.g. 1.16.1-preview.1)'
+        description: 'Package version (e.g. 1.16.0-preview.1)'
         required: true
-        default: '1.16.1-preview.1'
+        default: '1.16.0-preview.1'
       push_package:
         description: 'Push package to NuGet.org'
         type: boolean
@@ -234,7 +234,7 @@ jobs:
 
       - name: Dotnet pack
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.16.1' }}
+        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.16.0' }}
 
       - uses: actions/upload-artifact@v7
         with:
