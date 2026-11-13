@@ -1254,35 +1254,42 @@ shouldTerminate Solver::checkTermination() {
                   it_->dinf < options_.feasibility_tol;
   bool optimal = it_->pdgap < options_.optimality_tol;
 
-  bool terminate = false;
+  // The HiGHS kkt check decides optimality, so it is attempted as soon as the
+  // iterate is close to satisfying HiPO's criteria, rather than waiting for
+  // them to be met (or for stagnation to be detected).
+  if (getStatus1() != kStatusOptimal) {
+    const double near_feas_tol = kKktCheckFactor * options_.feasibility_tol;
+    const double near_opt_tol = kKktCheckFactor * options_.optimality_tol;
+    bool near_optimal = it_->pinf < near_feas_tol &&
+                        it_->dinf < near_feas_tol && it_->pdgap < near_opt_tol;
 
-  if (feasible && optimal) {
-    if (crossoverIsOn()) {
-      if (getStatus1() != kStatusOptimal) {
-        logger_.print("=== Primal-dual feasible point found\n");
-        setStatus1(kStatusOptimal);
-      }
-      bool ready_for_crossover = it_->infeas_drop < options_.crossover_tol;
-      if (ready_for_crossover) {
-        logger_.print("=== Ready for crossover\n");
-        terminate = true;
-      }
-
-    } else {
-      terminate = checkTerminationKkt();
-      if (terminate) {
-        logger_.print("=== Primal-dual feasible point found\n");
-        setStatus1(kStatusOptimal);
-      }
+    if (near_optimal && checkTerminationKkt()) {
+      if (!(feasible && optimal))
+        logger_.printDetailed(
+            "HiPO criteria not met yet but HiGHS considers the solution "
+            "acceptable\n");
+      logger_.print("=== Primal-dual feasible point found\n");
+      setStatus1(kStatusOptimal);
     }
   }
 
-  return terminate;
+  if (getStatus1() != kStatusOptimal) return false;
+
+  // Without crossover, terminate as soon as the point is optimal.
+  if (!crossoverIsOn()) return true;
+
+  // With crossover, keep iterating until the point is ready for crossover.
+  bool ready_for_crossover =
+      feasible && optimal && it_->infeas_drop < options_.crossover_tol;
+  if (ready_for_crossover) {
+    logger_.print("=== Ready for crossover\n");
+    return true;
+  }
+
+  return false;
 }
 
 isSuccess Solver::checkTerminationKkt() {
-  logger_.printInfo("Solution may be optimal, perform kktCheck\n");
-
   if (!model_.lpOrig()) return false;
   if (model_.qp() && !model_.QOrig()) return false;
 
@@ -1307,8 +1314,8 @@ isSuccess Solver::checkTerminationKkt() {
     // HiGHS does not check the primal-dual gap for QP, so HiPO's own gap
     // criterion is also required, otherwise any feasible point would pass.
     if (it_->pdgap >= options_.optimality_tol) {
-      logger_.printInfo("QP kktCheck: gap %.2e too large\n", it_->pdgap);
-      logger_.printInfo("Check failed\n");
+      logger_.printDetailed("QP kktCheck: gap %.2e too large\n", it_->pdgap);
+      logger_.printInfo("kktCheck failed\n");
       return false;
     }
 
@@ -1323,7 +1330,7 @@ isSuccess Solver::checkTerminationKkt() {
               highs_info.num_semi_infeasibilities <= 0;
 
     if (!success)
-      logger_.printInfo(
+      logger_.printDetailed(
           "QP kktCheck: num/max primal infeas %d / %.2e, num/max dual infeas "
           "%d / %.2e\n",
           (int)highs_info.num_primal_infeasibilities,
@@ -1338,9 +1345,9 @@ isSuccess Solver::checkTerminationKkt() {
   }
 
   if (success)
-    logger_.printInfo("Check successful\n");
+    logger_.printInfo("kktCheck successful\n");
   else
-    logger_.printInfo("Check failed\n");
+    logger_.printInfo("kktCheck failed\n");
 
   return success;
 }
