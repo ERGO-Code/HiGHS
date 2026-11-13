@@ -201,6 +201,33 @@ TEST_CASE("solver-select-keeps-warm-start", "[solver_select]") {
   REQUIRE(highs.getInfo().simplex_iteration_count == 0);
 }
 
+// The solve after postsolve starts from the postsolved basis, which may be
+// valid but not marked useful, as when the user builds it, so selection
+// must keep simplex
+TEST_CASE("solver-select-postsolve-keeps-basis", "[solver_select]") {
+  const std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  Highs highs0;
+  highs0.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs0.readModel(model_file) == HighsStatus::kOk);
+  highs0.setOptionValue("solver_select_strategy", 5);
+  REQUIRE(highs0.presolve() == HighsStatus::kOk);
+
+  Highs highs1;
+  highs1.setOptionValue("output_flag", dev_run);
+  highs1.passModel(highs0.getPresolvedLp());
+  REQUIRE(highs1.run() == HighsStatus::kOk);
+  REQUIRE(highs1.getBasis().valid);
+
+  HighsBasis basis = highs1.getBasis();
+  basis.useful = false;
+  REQUIRE(highs0.postsolve(highs1.getSolution(), basis) == HighsStatus::kOk);
+  REQUIRE(highs0.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(highs0.getInfo().ipm_iteration_count <= 0);
+
+  highs1.resetThreadScheduler(true);
+}
+
 // IPM only yields a basis via crossover, so if one is required and
 // crossover is off, selection uses simplex
 TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {

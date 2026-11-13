@@ -49,7 +49,8 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   // Highs::run skips presolve if there is a basis, on the basis that
   // solver = "choose" will use it, so simplex must be used. If a basis is
   // required, IPM only yields one via crossover
-  const bool use_simplex = solver_object.basis_.useful ||
+  const bool use_simplex = solver_object.basis_.valid ||
+                           solver_object.basis_.useful ||
                            (options.solver_select_require_basis &&
                             options.run_crossover == kHighsOffString);
   const HighsSolverSelect selected_solver =
