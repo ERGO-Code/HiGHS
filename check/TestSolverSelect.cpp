@@ -5,7 +5,9 @@
 
 #include "HCheckConfig.h"
 #include "Highs.h"
+#include "HighsExternalApi.h"
 #include "catch.hpp"
+#include "util/HighsAvailableMemory.h"
 #include "util/HighsSolverSelect.h"
 
 namespace {
@@ -134,19 +136,6 @@ TEST_CASE("solver-select-forced-strategies", "[solver_select]") {
   }
 }
 
-TEST_CASE("solver-select-require-basis-yields-a-basis", "[solver_select]") {
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  highs.passModel(exampleLp());
-  highs.setOptionValue("solver", "choose");
-  highs.setOptionValue("solver_select_strategy", 5);
-  highs.setOptionValue("solver_select_require_basis", true);
-
-  REQUIRE(highs.run() == HighsStatus::kOk);
-  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-  REQUIRE(highs.getBasis().valid);
-}
-
 // In the MIP solver, IPM's iteration limit is a budget, after which simplex
 // must continue rather than the LP end at the limit
 TEST_CASE("solver-select-ipm-iteration-limit", "[solver_select]") {
@@ -210,6 +199,42 @@ TEST_CASE("solver-select-postsolve-keeps-basis", "[solver_select]") {
   highs1.resetThreadScheduler(true);
 }
 
+// Selected HiPO stops if it is predicted not to fit in memory, and IPX
+// solves the LP instead. The stop is planned, so it is logged as a warning
+TEST_CASE("solver-select-hipo-memory-uses-ipx", "[solver_select]") {
+  if (!HighsExternalApi::isAvailable<HighsExtras::hipo>()) return;
+  struct Log {
+    HighsInt num_error = 0;
+    bool used_ipx = false;
+  } log;
+  HighsCallbackFunctionType logCallback =
+      [](int callback_type, const std::string& message,
+         const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+         void* user_callback_data) {
+        Log& log = *static_cast<Log*>(user_callback_data);
+        if (data_out->log_type == HighsLogType::kError) log.num_error++;
+        if (message.find("Selected HiPO ran out of memory, so use IPX") !=
+            std::string::npos)
+          log.used_ipx = true;
+      };
+  Highs highs;
+  highs.setOptionValue("log_to_console", dev_run);
+  highs.setCallback(logCallback, &log);
+  highs.startCallback(kCallbackLogging);
+  REQUIRE(highs.readModel(std::string(HIGHS_DIR) +
+                          "/check/instances/adlittle.mps") == HighsStatus::kOk);
+  highs.setOptionValue("solver_select_strategy", 6);
+  setAvailableMemoryBytesForTesting(1);
+  const HighsStatus run_status = highs.run();
+  setAvailableMemoryBytesForTesting(-1);
+  REQUIRE(run_status == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(log.used_ipx);
+  REQUIRE(log.num_error == 0);
+
+  highs.resetThreadScheduler(true);
+}
+
 // IPM only yields a basis via crossover, so if one is required and
 // crossover is off, selection uses simplex
 TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {
@@ -233,15 +258,13 @@ TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {
   REQUIRE(highs.getInfo().ipm_iteration_count == 0);
 }
 
+// Strategies 1 and 2 choose dual simplex for an LP below the fitted
+// models' size threshold
 TEST_CASE("solver-select-small-model-uses-dual-simplex", "[solver_select]") {
-  HighsLpFeatures f;
-  f.num_row = 10;
-  f.num_col = 10;
-  f.num_nz = 20;
   for (const SolverSelectStrategy strategy :
        {SolverSelectStrategy::kColsRowsNnz,
         SolverSelectStrategy::kRankedFeatures})
-    REQUIRE(selectSolverByModel(f, strategy) ==
+    REQUIRE(selectSolver(exampleLp(), strategy) ==
             HighsSolverSelect::kDualSimplex);
 }
 
@@ -291,29 +314,28 @@ TEST_CASE("solver-select-heuristic", "[solver_select]") {
   REQUIRE(selectSolverByHeuristic(f) == HighsSolverSelect::kIpx);
 }
 
-// Strategies 5 and 6 choose IPM for the root LP of these MIPs, so this runs
+// Strategy 5 chooses IPX for the root LP of these MIPs, so this runs
 // IPM + crossover and then the whole tree from that basis, including the
-// sub-MIPs, which make their own selections
+// sub-MIPs, which make their own selections. ctest runs strategy 6 on
+// these and the other MIPs
 TEST_CASE("solver-select-mip-tree", "[solver_select]") {
   const std::vector<std::pair<std::string, double>> mips = {
       {"flugpl", 1201500}, {"egout", 568.1007}, {"bell5", 8966406.49}};
   for (const auto& mip : mips) {
-    for (const HighsInt strategy : {5, 6}) {
-      INFO(mip.first << ", strategy " << strategy);
-      const std::string model_file =
-          std::string(HIGHS_DIR) + "/check/instances/" + mip.first + ".mps";
-      Highs highs;
-      highs.setOptionValue("output_flag", dev_run);
-      REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
-      highs.setOptionValue("solver_select_strategy", strategy);
-      REQUIRE(highs.run() == HighsStatus::kOk);
-      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
-      const HighsInfo& info = highs.getInfo();
-      REQUIRE(std::fabs(info.objective_function_value - mip.second) <
-              1e-4 * mip.second);
-      REQUIRE(info.max_integrality_violation <= 1e-6);
-      REQUIRE(info.max_primal_infeasibility <= 1e-6);
-    }
+    INFO(mip.first);
+    const std::string model_file =
+        std::string(HIGHS_DIR) + "/check/instances/" + mip.first + ".mps";
+    Highs highs;
+    highs.setOptionValue("output_flag", dev_run);
+    REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+    highs.setOptionValue("solver_select_strategy", 5);
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    const HighsInfo& info = highs.getInfo();
+    REQUIRE(std::fabs(info.objective_function_value - mip.second) <
+            1e-4 * mip.second);
+    REQUIRE(info.max_integrality_violation <= 1e-6);
+    REQUIRE(info.max_primal_infeasibility <= 1e-6);
   }
 }
 

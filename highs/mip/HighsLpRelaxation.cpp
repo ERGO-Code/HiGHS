@@ -1163,8 +1163,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     const std::string mip_lp_solver = mipsolver.options_mip_->mip_lp_solver;
     if (useIpm(mip_lp_solver)) {
       bool use_hipo = mip_lp_solver == kHipoString;
-      // Later still, pass mip_lp_solver and take action on failure in
-      // solveLp
       use_solver = use_hipo ? kHipoString : kIpxString;
     } else if (mip_lp_solver == kHighsChooseString &&
                useSolverSelection(

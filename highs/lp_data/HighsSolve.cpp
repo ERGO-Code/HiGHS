@@ -88,6 +88,8 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
                  "Solver selection (strategy %d) chose \"%s\"\n",
                  int(options.solver_select_strategy),
                  selected_solver_string.c_str());
+  const HighsInt simplex_iteration_count =
+      solver_object.highs_info_.simplex_iteration_count;
   HighsStatus status = solveWith(selected_solver_string);
 
   // IPX needs far less memory than HiPO, whose factorisation can fill in
@@ -105,10 +107,13 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   // node could be pruned with no proof. Presolve assumed that crossover would
   // yield a basis if it's on, so duals from IPM alone can't be trusted either.
   // Without crossover, IPM may not tell unbounded from infeasible, which
-  // Highs::run only permits when the user chose IPM
+  // Highs::run only permits when the user chose IPM. An imprecise IPM
+  // result, which solveLp only cleans up when crossover is allowed, is
+  // also no answer
   const HighsModelStatus model_status = solver_object.model_status_;
   const bool undecided =
-      model_status == HighsModelStatus::kUnboundedOrInfeasible;
+      model_status == HighsModelStatus::kUnboundedOrInfeasible ||
+      model_status == HighsModelStatus::kUnknown;
   const bool claim_needs_basis =
       options.solver_select_require_basis &&
       (model_status == HighsModelStatus::kOptimal ||
@@ -125,8 +130,12 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   const bool used_ipm_budget =
       options.solver_select_require_basis &&
       model_status == HighsModelStatus::kIterationLimit;
-  if (selected_ipm && (status == HighsStatus::kError || solved_without_basis ||
-                       used_ipm_budget)) {
+  // If solveLp has already cleaned up with simplex, its result stands
+  const bool simplex_ran = solver_object.highs_info_.simplex_iteration_count >
+                           simplex_iteration_count;
+  if (selected_ipm && !simplex_ran &&
+      (status == HighsStatus::kError || solved_without_basis ||
+       used_ipm_budget)) {
     highsLogUser(
         options.log_options, HighsLogType::kWarning,
         "Selected IPM ended with model status \"%s\" and %s basis, so use "

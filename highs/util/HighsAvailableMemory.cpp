@@ -101,7 +101,15 @@ static double cgroupAvailableBytes() {
 }
 #endif
 
+static double available_memory_bytes_for_testing = -1;
+
+void setAvailableMemoryBytesForTesting(const double bytes) {
+  available_memory_bytes_for_testing = bytes;
+}
+
 double availableMemoryBytes() {
+  if (available_memory_bytes_for_testing >= 0)
+    return available_memory_bytes_for_testing;
 #if defined(_WIN32)
   MEMORYSTATUSEX status;
   status.dwLength = sizeof(status);

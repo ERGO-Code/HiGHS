@@ -34,7 +34,6 @@
 #include <utility>
 #include <vector>
 
-#include "lp_data/HConst.h"
 #include "util/HighsInt.h"
 
 class HighsLp;
@@ -50,8 +49,8 @@ enum class HighsSolverSelect { kDualSimplex, kIpx, kHipo };
 // * LP (solveLp): when solver is "choose", the strategy is positive and
 //   run_centring is false. Any other value of solver is used as given. The
 //   choice is made for the LP after presolve. If there is a useful basis,
-//   or the LP has no constraints, then dual simplex is used, whatever the
-//   strategy
+//   or the LP has no constraints or no nonzeros, then dual simplex is used,
+//   whatever the strategy
 //
 // * MIP (HighsLpRelaxation::run): solver plays no part. An LP with a valid
 //   basis is solved by simplex. Otherwise mip_lp_solver "simplex", "ipm",
@@ -162,20 +161,9 @@ std::vector<std::pair<std::string, double>> highsLpFeatureVector(
     const HighsLpFeatures& features);
 std::vector<std::string> highsLpFeatureNames();
 
-// kSimplexOnly => dual simplex; kColsRowsNnz => boosted trees
-// on num_col, num_row and num_nz; kRankedFeatures => boosted trees
-// on the ranked features chosen when fitting (see the top of this file);
-// kHeuristic => provisional hand-written heuristic; kDualSimplex, kIpx
-// and kHipo => that solver; kIpxIfLarge and kHipoIfLarge => that solver,
-// but dual simplex below the fitted models' min_num_nz
+// The solver that the strategy chooses for the LP
 HighsSolverSelect selectSolver(const HighsLp& lp,
                                const SolverSelectStrategy strategy);
-
-// kColsRowsNnz and kRankedFeatures: evaluate the gradient boosted
-// trees in HighsSolverSelectModels.h, fitted offline as described at the
-// top of this file
-HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
-                                      const SolverSelectStrategy strategy);
 
 // kHeuristic: the provisional hand-written heuristic
 HighsSolverSelect selectSolverByHeuristic(const HighsLpFeatures& features);

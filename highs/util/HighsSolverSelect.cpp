@@ -11,7 +11,6 @@
 #include "util/HighsSolverSelect.h"
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 
 #include "lp_data/HConst.h"
@@ -393,15 +392,6 @@ static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
   return best_solver;
 }
 
-HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
-                                      const SolverSelectStrategy strategy) {
-  assert(strategy == SolverSelectStrategy::kColsRowsNnz ||
-         strategy == SolverSelectStrategy::kRankedFeatures);
-  return evaluateModel(
-      strategy == SolverSelectStrategy::kColsRowsNnz ? kS1Model : kS2Model,
-      features);
-}
-
 HighsSolverSelect selectSolver(const HighsLp& lp,
                                const SolverSelectStrategy strategy) {
   switch (strategy) {
@@ -413,14 +403,14 @@ HighsSolverSelect selectSolver(const HighsLp& lp,
       f.num_row = lp.num_row_;
       f.num_col = lp.num_col_;
       f.num_nz = lp.a_matrix_.numNz();
-      return selectSolverByModel(f, strategy);
+      return evaluateModel(kS1Model, f);
     }
     case SolverSelectStrategy::kRankedFeatures:
       // The model chooses dual simplex below min_num_nz, so don't pay for
       // the features
       if (lp.a_matrix_.numNz() < kS2Model.min_num_nz)
         return HighsSolverSelect::kDualSimplex;
-      return selectSolverByModel(computeLpFeatures(lp), strategy);
+      return evaluateModel(kS2Model, computeLpFeatures(lp));
     case SolverSelectStrategy::kHeuristic:
       return selectSolverByHeuristic(computeLpFeatures(lp));
     case SolverSelectStrategy::kDualSimplex:
