@@ -141,13 +141,13 @@ choice is made for the LP after presolve, as follows
 | 1 | A model fitted to the numbers of columns, rows and nonzeros |
 | 2 | A model fitted to further features of the LP |
 
-Larger values are for development and testing.
+Larger values are for development and testing. Strategies 1 and 2 use
+dual simplex for small LPs.
 
 The following rules apply, whatever the strategy
 
 * If __solver__ is not "choose", the solver that it names is used.
 * If an LP has an advanced basis, the simplex solver is used.
-* Strategies 1 and 2 use dual simplex for small LPs.
 * If HiPO is selected but is not available in the build, IPX is used.
 * If HiPO is selected and runs out of memory, IPX is used.
 * If the selected IPM solver fails, cannot distinguish an unbounded LP

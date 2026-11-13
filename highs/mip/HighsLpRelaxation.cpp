@@ -1144,11 +1144,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                  "MIP-Timing: %11.2g - start first LP solve (with%s basis)\n",
                  mipsolver.timer_.read(), valid_basis ? "" : "out");
   }
-  // Determine the solver
-  //
-  // Currently use simplex by default, unless IPM is requested
-  // explicitly and there is no basis. Later pass mip_lp_solver and
-  // take action on failure in SolveLp
+  // Determine the solver: simplex if there is a basis, otherwise
+  // mip_lp_solver, or solver selection if that is "choose"
   std::string solver;
   lpsolver.getOptionValue("solver", solver);
   // Options that selection changes, which other solves of lpsolver, such as

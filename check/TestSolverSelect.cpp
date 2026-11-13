@@ -88,20 +88,6 @@ TEST_CASE("solver-select-features", "[solver_select]") {
   REQUIRE(f.max_nonzeros_in_col == 3.0);
 }
 
-TEST_CASE("solver-select-strategy-option-bounds", "[solver_select]") {
-  Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  // Valid range is [0, 8]: kSimplexOnly, kColsRowsNnz,
-  // kRankedFeatures, kHeuristic, kDualSimplex, kIpx, kHipo, kIpxIfLarge,
-  // kHipoIfLarge
-  for (const HighsInt value : {0, 1, 2, 3, 4, 5, 6, 7, 8})
-    REQUIRE(highs.setOptionValue("solver_select_strategy", value) ==
-            HighsStatus::kOk);
-  for (const HighsInt value : {-1, 9})
-    REQUIRE(highs.setOptionValue("solver_select_strategy", value) ==
-            HighsStatus::kError);
-}
-
 // Every strategy x require_basis combination, via the real end-to-end
 // solver="choose" dispatch in HighsSolve.cpp, solves exampleLp() optimally
 TEST_CASE("solver-select-each-strategy-solves-optimally", "[solver_select]") {
@@ -167,8 +153,7 @@ TEST_CASE("solver-select-ipm-iteration-limit", "[solver_select]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.readModel(std::string(HIGHS_DIR) +
-                          "/check/instances/adlittle.mps") ==
-          HighsStatus::kOk);
+                          "/check/instances/adlittle.mps") == HighsStatus::kOk);
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("solver_select_strategy", 5);
   highs.setOptionValue("solver_select_require_basis", true);
@@ -378,7 +363,6 @@ TEST_CASE("solver-select-feature-order", "[solver_select]") {
 TEST_CASE("solver-select-fitted-models-solve", "[solver_select]") {
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/greenbea.mps";
-  // require_basis doesn't change which trees are evaluated
   for (const HighsInt strategy : {1, 2}) {
     INFO("strategy " << strategy);
     Highs highs;

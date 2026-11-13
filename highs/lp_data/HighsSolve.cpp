@@ -120,8 +120,9 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   const bool solved_without_basis =
       undecided || (!solver_object.basis_.valid &&
                     (claim_needs_basis || optimal_needs_basis));
-  // In the MIP solver, IPM's iteration limit is a budget, after which
-  // simplex continues within the LP's own limit
+  // With solver_select_require_basis, as in the MIP solver, IPM's
+  // iteration limit is a budget, after which simplex continues within the
+  // LP's own limit
   const bool used_ipm_budget =
       options.solver_select_require_basis &&
       model_status == HighsModelStatus::kIterationLimit;
@@ -129,7 +130,10 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
                        used_ipm_budget)) {
     highsLogUser(
         options.log_options, HighsLogType::kWarning,
-        "Selected IPM yielded no result with a basis, so use simplex\n");
+        "Selected IPM ended with model status \"%s\" and %s basis, so use "
+        "simplex\n",
+        utilModelStatusToString(model_status).c_str(),
+        solver_object.basis_.valid ? "a" : "no");
     status = solveWith(kSimplexString);
   }
   return status;

@@ -237,7 +237,7 @@ void FactorHighsSolver::checkMemory() const {
                  required / bytes_per_GB, available / bytes_per_GB);
   // Allocation can succeed and the process still be killed when the memory is
   // used, so stop now. The caller handles this like any failed allocation
-  if (options_.stop_if_no_memory) throw std::bad_alloc();
+  if (options_.stop_if_no_memory) throw HighsPredictedOutOfMemory();
 }
 
 Int FactorHighsSolver::chooseNla() {

@@ -933,7 +933,7 @@ class HighsOptions : public HighsOptionsStruct {
         new OptionRecordBool("solver_select_require_basis",
                              "Require a basis from automatic solver selection: "
                              "simplex is used if the selected IPM solver "
-                             "doesn't yield one",
+                             "doesn't yield one or reaches its iteration limit",
                              now_advanced, &solver_select_require_basis, false);
     records.push_back(record_bool);
 
@@ -1408,7 +1408,7 @@ class HighsOptions : public HighsOptionsStruct {
     record_bool = new OptionRecordBool(
         "hipo_stop_if_no_memory",
         "Stop HiPO if its predicted memory use exceeds what is available",
-        advanced, &hipo_stop_if_no_memory, false);
+        now_advanced, &hipo_stop_if_no_memory, false);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
