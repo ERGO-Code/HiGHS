@@ -1137,9 +1137,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.setOptionValue("time_limit", this_time_limit);
   // lpsolver.setOptionValue("output_flag", true);
   const bool valid_basis = lpsolver.getBasis().valid;
+  const bool root_lp = !mipsolver.submip && !solved_first_lp;
 
-  if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
-      !this->solved_first_lp) {
+  if (mipsolver.profiling_->mip_ && root_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - start first LP solve (with%s basis)\n",
                  mipsolver.timer_.read(), valid_basis ? "" : "out");
@@ -1153,6 +1153,8 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
   lpsolver.getOptionValue("solver", solver);
   const HighsInt ipm_iteration_limit =
       lpsolver.getOptions().ipm_iteration_limit;
+  const HighsInt hipo_parallel_forbid =
+      lpsolver.getOptions().hipo_parallel_forbid;
   std::string use_solver;
   if (valid_basis) {
     use_solver = kSimplexString;
@@ -1185,6 +1187,15 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
           lpsolver.getOptions().simplex_iteration_limit < kHighsIInf
               ? kSelectedIpmIterationLimit
               : kHighsIInf);
+      // Except for the root LP, HiPO mustn't compete with the MIP solver
+      // for threads
+      if (mipsolver.options_mip_->solver_select_strategy ==
+              static_cast<HighsInt>(
+                  SolverSelectStrategy::kRankedFeaturesSerialHipoOffRoot) &&
+          !root_lp)
+        lpsolver.setOptionValue(
+            "hipo_parallel_forbid",
+            static_cast<HighsInt>(hipo::ParallelTechnique::kMaxSum));
     } else {
       use_solver = kSimplexString;
     }
@@ -1263,9 +1274,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         static_cast<HighsInt>(SolverSelectStrategy::kSimplexOnly));
     lpsolver.setOptionValue("solver_select_require_basis", false);
     lpsolver.setOptionValue("ipm_iteration_limit", ipm_iteration_limit);
+    lpsolver.setOptionValue("hipo_parallel_forbid", hipo_parallel_forbid);
   }
-  if (mipsolver.profiling_->mip_ && !mipsolver.submip &&
-      !this->solved_first_lp) {
+  if (mipsolver.profiling_->mip_ && root_lp) {
     highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - finish first LP solve\n",
                  mipsolver.timer_.read());

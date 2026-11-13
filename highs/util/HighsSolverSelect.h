@@ -50,6 +50,11 @@ enum class SolverSelectStrategy {
   kDualSimplex = 4,
   kIpx = 5,
   kHipo = 6,
+  // The kRankedFeatures trees, choosing only dual simplex or IPX
+  kRankedFeaturesNoHipo = 7,
+  // The kRankedFeatures trees. In the MIP solver, HiPO is serial except
+  // for the root LP
+  kRankedFeaturesSerialHipoOffRoot = 8,
 };
 
 // Whether LPs go through solver selection with this strategy
@@ -121,11 +126,14 @@ std::vector<std::string> highsLpFeatureNames();
 // on num_col, num_row and num_nz; kRankedFeatures => boosted trees
 // on the ranked features chosen when fitting (see the top of this file);
 // kHeuristic => provisional hand-written heuristic; kDualSimplex, kIpx
-// and kHipo => that solver
+// and kHipo => that solver; kRankedFeaturesNoHipo => the kRankedFeatures
+// trees without HiPO; kRankedFeaturesSerialHipoOffRoot => the kRankedFeatures
+// trees (threading is set by the MIP solver)
 HighsSolverSelect selectSolver(const HighsLp& lp,
                                const SolverSelectStrategy strategy);
 
-// kColsRowsNnz and kRankedFeatures: evaluate the gradient boosted
+// kColsRowsNnz, kRankedFeatures, kRankedFeaturesNoHipo and
+// kRankedFeaturesSerialHipoOffRoot: evaluate the gradient boosted
 // trees in HighsSolverSelectModels.h, fitted offline as described at the
 // top of this file
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,

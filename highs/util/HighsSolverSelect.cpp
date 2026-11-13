@@ -348,13 +348,15 @@ HighsSolverSelect selectSolverByHeuristic(const HighsLpFeatures& f) {
 
 // Each solver's trees predict its regret, and the smallest is selected
 static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
-                                       const HighsLpFeatures& f) {
+                                       const HighsLpFeatures& f,
+                                       const bool allow_hipo) {
   if (f.num_nz < model.min_num_nz) return HighsSolverSelect::kDualSimplex;
   const std::vector<std::pair<std::string, double>> feature =
       highsLpFeatureVector(f);
   HighsSolverSelect best_solver = HighsSolverSelect::kDualSimplex;
   double best_regret = kHighsInf;
   for (HighsInt s = 0; s < model.num_solver; s++) {
+    if (!allow_hipo && model.solver[s] == HighsSolverSelect::kHipo) continue;
     double sum = 0;
     for (HighsInt t = 0; t < model.num_tree; t++) {
       HighsInt node = model.root[s * model.num_tree + t];
@@ -380,10 +382,12 @@ static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
 HighsSolverSelect selectSolverByModel(const HighsLpFeatures& features,
                                       const SolverSelectStrategy strategy) {
   assert(strategy == SolverSelectStrategy::kColsRowsNnz ||
-         strategy == SolverSelectStrategy::kRankedFeatures);
+         strategy == SolverSelectStrategy::kRankedFeatures ||
+         strategy == SolverSelectStrategy::kRankedFeaturesNoHipo ||
+         strategy == SolverSelectStrategy::kRankedFeaturesSerialHipoOffRoot);
   return evaluateModel(
       strategy == SolverSelectStrategy::kColsRowsNnz ? kS1Model : kS2Model,
-      features);
+      features, strategy != SolverSelectStrategy::kRankedFeaturesNoHipo);
 }
 
 HighsSolverSelect selectSolver(const HighsLp& lp,
@@ -400,6 +404,8 @@ HighsSolverSelect selectSolver(const HighsLp& lp,
       return selectSolverByModel(f, strategy);
     }
     case SolverSelectStrategy::kRankedFeatures:
+    case SolverSelectStrategy::kRankedFeaturesNoHipo:
+    case SolverSelectStrategy::kRankedFeaturesSerialHipoOffRoot:
       // The model chooses dual simplex below min_num_nz, so don't pay for
       // the features
       if (lp.a_matrix_.numNz() < kS2Model.min_num_nz)

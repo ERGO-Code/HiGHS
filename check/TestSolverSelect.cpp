@@ -91,12 +91,13 @@ TEST_CASE("solver-select-features", "[solver_select]") {
 TEST_CASE("solver-select-strategy-option-bounds", "[solver_select]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  // Valid range is [0, 6]: kSimplexOnly, kColsRowsNnz,
-  // kRankedFeatures, kHeuristic, kDualSimplex, kIpx, kHipo
-  for (const HighsInt value : {0, 1, 2, 3, 4, 5, 6})
+  // Valid range is [0, 8]: kSimplexOnly, kColsRowsNnz,
+  // kRankedFeatures, kHeuristic, kDualSimplex, kIpx, kHipo,
+  // kRankedFeaturesNoHipo, kRankedFeaturesSerialHipoOffRoot
+  for (const HighsInt value : {0, 1, 2, 3, 4, 5, 6, 7, 8})
     REQUIRE(highs.setOptionValue("solver_select_strategy", value) ==
             HighsStatus::kOk);
-  for (const HighsInt value : {-1, 7})
+  for (const HighsInt value : {-1, 9})
     REQUIRE(highs.setOptionValue("solver_select_strategy", value) ==
             HighsStatus::kError);
 }
@@ -104,7 +105,7 @@ TEST_CASE("solver-select-strategy-option-bounds", "[solver_select]") {
 // Every strategy x require_basis combination, via the real end-to-end
 // solver="choose" dispatch in HighsSolve.cpp, solves exampleLp() optimally
 TEST_CASE("solver-select-each-strategy-solves-optimally", "[solver_select]") {
-  for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6}) {
+  for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6, 7, 8}) {
     for (const bool require_basis : {false, true}) {
       INFO("strategy " << strategy << ", require_basis " << require_basis);
       Highs highs;
@@ -212,6 +213,80 @@ TEST_CASE("solver-select-small-model-uses-dual-simplex", "[solver_select]") {
             HighsSolverSelect::kDualSimplex);
 }
 
+// Strategy 7 restricts the strategy 2 trees to dual simplex and IPX, and
+// strategy 8 makes the same choice as strategy 2
+TEST_CASE("solver-select-ranked-feature-variants", "[solver_select]") {
+  HighsInt num_hipo = 0;
+  for (const HighsInt num_row : {1000, 10000, 100000, 1000000})
+    for (const HighsInt num_col : {1000, 10000, 100000, 1000000})
+      for (const HighsInt nz_per_col : {2, 5, 20, 100}) {
+        HighsLpFeatures f;
+        f.num_row = num_row;
+        f.num_col = num_col;
+        f.num_nz = num_col * nz_per_col;
+        f.avg_nonzeros_per_col = nz_per_col;
+        f.avg_nonzeros_per_row = double(f.num_nz) / num_row;
+        f.matrix_nonzero_density = double(f.num_nz) / (double(num_row) * num_col);
+        f.max_nonzeros_in_row = 10 * f.avg_nonzeros_per_row;
+        f.max_nonzeros_in_col = 10 * nz_per_col;
+        f.relative_num_equalities = 0.5;
+        f.relative_num_inequalities = 0.5;
+        f.relative_num_boxed_cols = 0.5;
+        f.relative_num_singly_bounded_cols = 0.5;
+        const HighsSolverSelect s2 =
+            selectSolverByModel(f, SolverSelectStrategy::kRankedFeatures);
+        const HighsSolverSelect s7 = selectSolverByModel(
+            f, SolverSelectStrategy::kRankedFeaturesNoHipo);
+        const HighsSolverSelect s8 = selectSolverByModel(
+            f, SolverSelectStrategy::kRankedFeaturesSerialHipoOffRoot);
+        if (s2 == HighsSolverSelect::kHipo) num_hipo++;
+        REQUIRE(s7 != HighsSolverSelect::kHipo);
+        if (s2 != HighsSolverSelect::kHipo) REQUIRE(s7 == s2);
+        REQUIRE(s8 == s2);
+      }
+  // Otherwise the restriction of strategy 7 isn't tested
+  REQUIRE(num_hipo > 0);
+}
+
+// An explicit mip_lp_solver overrides solver_select_strategy, whatever its
+// value: LPs in the MIP solver don't go through selection
+TEST_CASE("solver-select-mip-lp-solver-overrides", "[solver_select]") {
+  // flugpl has no sub-MIPs, which print profiling lines to stdout when
+  // log_dev_level is set. HiPO is left out since it is an optional build
+  const std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  for (const std::string mip_lp_solver : {"choose", "simplex", "ipm", "ipx"}) {
+    for (HighsInt strategy = 0; strategy <= 8; strategy++) {
+      INFO("mip_lp_solver " << mip_lp_solver << ", strategy " << strategy);
+      Highs highs;
+      highs.setOptionValue("log_to_console", false);
+      // Count the dev log line that every LP going through selection writes
+      HighsInt num_selected = 0;
+      highs.setCallback(
+          [&num_selected](int callback_type, const std::string& message,
+                          const HighsCallbackOutput*, HighsCallbackInput*,
+                          void*) {
+            if (callback_type == kCallbackLogging &&
+                message.find("HighsLpRelaxation::run Solver selection:") !=
+                    std::string::npos)
+              num_selected++;
+          },
+          nullptr);
+      highs.startCallback(kCallbackLogging);
+      highs.setOptionValue("log_dev_level", kHighsLogDevLevelInfo);
+      REQUIRE(highs.readModel(model_file) == HighsStatus::kOk);
+      highs.setOptionValue("mip_lp_solver", mip_lp_solver);
+      highs.setOptionValue("solver_select_strategy", strategy);
+      REQUIRE(highs.run() == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+      if (mip_lp_solver == "choose" && strategy > 0)
+        REQUIRE(num_selected > 0);
+      else
+        REQUIRE(num_selected == 0);
+    }
+  }
+}
+
 TEST_CASE("solver-select-heuristic", "[solver_select]") {
   HighsLpFeatures f;
   // Empty
@@ -305,7 +380,7 @@ TEST_CASE("solver-select-fitted-models-solve", "[solver_select]") {
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/greenbea.mps";
   // require_basis doesn't change which trees are evaluated
-  for (const HighsInt strategy : {1, 2}) {
+  for (const HighsInt strategy : {1, 2, 7, 8}) {
     INFO("strategy " << strategy);
     Highs highs;
     highs.setOptionValue("output_flag", dev_run);

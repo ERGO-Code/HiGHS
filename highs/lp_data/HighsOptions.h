@@ -920,8 +920,10 @@ class HighsOptions : public HighsOptionsStruct {
         "Strategy for automatic solver selection 0 => Simplex only; 1 => "
         "Fitted model on columns, rows and nonzeros; 2 => Fitted model on "
         "ranked features; 3 => Heuristic (provisional); 4, 5, 6 => Always "
-        "dual simplex, IPX, HiPO (for testing)",
-        advanced, &solver_select_strategy, 0, 0, 6);
+        "dual simplex, IPX, HiPO (for testing); 7 => As 2, but only dual "
+        "simplex or IPX; 8 => As 2, but in the MIP solver HiPO is serial "
+        "except for the root LP",
+        advanced, &solver_select_strategy, 0, 0, 8);
     records.push_back(record_int);
 
     record_bool =
