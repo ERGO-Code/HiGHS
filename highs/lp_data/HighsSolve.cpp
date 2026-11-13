@@ -51,8 +51,7 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   // solver = "choose" will use it, so simplex must be used. If a basis is
   // required, IPM only yields one via crossover. An LP without constraints
   // is solved directly. In these cases there's nothing to select
-  const bool use_simplex = solver_object.basis_.valid ||
-                           solver_object.basis_.useful ||
+  const bool use_simplex = solver_object.basis_.useful ||
                            (options.solver_select_require_basis &&
                             options.run_crossover == kHighsOffString) ||
                            !lp.num_row_ || lp.numNz() == 0;

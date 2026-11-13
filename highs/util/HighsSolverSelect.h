@@ -49,9 +49,9 @@ enum class HighsSolverSelect { kDualSimplex, kIpx, kHipo };
 //
 // * LP (solveLp): when solver is "choose", the strategy is positive and
 //   run_centring is false. Any other value of solver is used as given. The
-//   choice is made for the LP after presolve. If there is a valid or useful
-//   basis, or the LP has no constraints, then dual simplex is used, whatever
-//   the strategy
+//   choice is made for the LP after presolve. If there is a useful basis,
+//   or the LP has no constraints, then dual simplex is used, whatever the
+//   strategy
 //
 // * MIP (HighsLpRelaxation::run): solver plays no part. An LP with a valid
 //   basis is solved by simplex. Otherwise mip_lp_solver "simplex", "ipm",
