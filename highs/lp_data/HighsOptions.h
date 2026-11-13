@@ -372,6 +372,7 @@ struct HighsOptionsStruct {
   HighsInt user_bound_scale;
   HighsInt highs_debug_level;
   HighsInt highs_analysis_level;
+
   HighsInt solver_select_strategy;
   bool solver_select_require_basis;
   HighsInt simplex_strategy;
@@ -915,19 +916,25 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
+    // Strategies 3 to 8 are for development, so aren't in the description.
+    // They can still be set, as can advanced options. See
+    // util/HighsSolverSelect.h
     record_int = new OptionRecordInt(
         "solver_select_strategy",
-        "Strategy for automatic solver selection 0 => Simplex only; 1 => "
+        "Strategy for automatic LP solver selection when solver is "
+        "\"choose\" and, for LPs without a basis in the MIP solver, when "
+        "mip_lp_solver is \"choose\": 0 => Simplex only; 1 => "
         "Fitted model on columns, rows and nonzeros; 2 => Fitted model on "
-        "ranked features; 3 => Heuristic (provisional); 4, 5, 6 => Always "
-        "dual simplex, IPX, HiPO (for testing)",
-        advanced, &solver_select_strategy, 0, 0, 6);
+        "ranked features",
+        advanced, &solver_select_strategy, 0, 0, 8);
     records.push_back(record_int);
 
     record_bool =
         new OptionRecordBool("solver_select_require_basis",
-                             "Require a basis from automatic solver selection",
-                             advanced, &solver_select_require_basis, false);
+                             "Require a basis from automatic solver selection: "
+                             "simplex is used if the selected IPM solver "
+                             "doesn't yield one",
+                             now_advanced, &solver_select_require_basis, false);
     records.push_back(record_bool);
 
     record_int = new OptionRecordInt(
@@ -1327,7 +1334,9 @@ class HighsOptions : public HighsOptionsStruct {
     record_string =
         new OptionRecordString(kMipLpSolverString,
                                "MIP LP solver: \"choose\", \"simplex\", "
-                               "\"ipm\", \"ipx\" or \"hipo\"",
+                               "\"ipm\", \"ipx\" or \"hipo\". Only "
+                               "\"choose\" allows solver_select_strategy to "
+                               "act",
                                advanced, &mip_lp_solver, kHighsChooseString);
     records.push_back(record_string);
 

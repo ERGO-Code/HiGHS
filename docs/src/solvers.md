@@ -122,9 +122,39 @@ solver terminates without determining optimality.
 The PDLP solver does not generate a basic solution. Currently it has
 no crossover procedure to obtain one.
 
-When modifications have been made to an LP problem, the simplex solver
-(only) can solve the modified problem from the optimal basis of the
-original LP, a process known as ["hot starting"](@ref hot-start-lp).
+### [Automatic solver selection](@id solvers-lp-selection)
+
+When the option [__solver__](@ref option-solver) is "choose", HiGHS
+solves an LP with the dual simplex solver by default. Setting the
+option [__solver\_select\_strategy__](@ref
+option-solver-select-strategy) to a positive value allows HiGHS to
+choose between the dual simplex, IPX and HiPO solvers instead. The
+choice is made for the LP after presolve, as follows
+
+| Value | Choice |
+| :---- | :----- |
+| 0 | Dual simplex (default) |
+| 1 | A model fitted to the numbers of columns, rows and nonzeros |
+| 2 | A model fitted to further features of the LP |
+
+Larger values are for development and testing.
+
+The following rules apply, whatever the strategy
+
+* If __solver__ is not "choose", the solver that it names is used.
+* If an LP has an advanced basis, the simplex solver is used.
+* Strategies 1 and 2 use dual simplex for small LPs.
+* If HiPO is selected but is not available in the build, IPX is used.
+* If HiPO is selected and runs out of memory, IPX is used.
+* If the selected IPM solver fails, cannot distinguish an unbounded LP
+  from an infeasible one, or does not yield a basic solution when one
+  is needed, the simplex solver is used.
+
+A basic solution is needed for an optimal solution when
+[run\_crossover](@ref option-run-crossover) is "on".
+
+For the effect of solver selection on LPs in the MIP solver, see
+[below](@ref solvers-mip).
 
 ## QP
 
@@ -154,7 +184,7 @@ feasible region) it is not possible to offer a simple and robust test
 of QP convexity. However, in a future version of HiGHS we expect to
 add a test of Hessian convexity.
 
-## MIP
+## [MIP](@id solvers-mip)
 
 MIPs are solved using a sophisticated branch-and-cut solver that exploits 
 multi-threading (see [here](@ref parallel-mip)).
@@ -165,7 +195,13 @@ Users can choose the solver for LP sub-problems as follows
   other times in the MIP solution process. By default the simplex
   solver is used, but the [__mip\_lp\_solver__](@ref
   option-mip-lp-solver) option allows the user to determine whether
-  one of the IPM solvers is used.
+  one of the IPM solvers is used. If __mip\_lp\_solver__ is "choose"
+  and [__solver\_select\_strategy__](@ref
+  option-solver-select-strategy) is positive, the solver for each of
+  these LPs is chosen by [automatic solver selection](@ref
+  solvers-lp-selection), and a basic solution is always required. Any
+  other value of __mip\_lp\_solver__ takes precedence over
+  __solver\_select\_strategy__.
 
 * LPs where an interior point solver must be used. This is generally
   when computing the analytic centre of the constraints for the
@@ -186,7 +222,7 @@ The option [__solver__](@ref option-solver) can be set to:
 * "pdlp", which selects the cuPDLP-C solver.
 * "hipdlp", which selects the HiPDLP solver.
 * "qpasm", which selects the QP active-set method.
-* "choose", which selects the default solver for the given problem ("simplex" for LP, "qpasm" for QP).
+* "choose", which selects the default solver for the given problem ("simplex" for LP, "qpasm" for QP). For LP, a positive value of [__solver\_select\_strategy__](@ref option-solver-select-strategy) allows [automatic solver selection](@ref solvers-lp-selection) instead.
 
 The option [__solver__](@ref option-solver) is ignored and the default solver is used if:
 * The problem is an LP and __solver__ is set to "qpasm".

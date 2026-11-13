@@ -91,12 +91,13 @@ TEST_CASE("solver-select-features", "[solver_select]") {
 TEST_CASE("solver-select-strategy-option-bounds", "[solver_select]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  // Valid range is [0, 6]: kSimplexOnly, kColsRowsNnz,
-  // kRankedFeatures, kHeuristic, kDualSimplex, kIpx, kHipo
-  for (const HighsInt value : {0, 1, 2, 3, 4, 5, 6})
+  // Valid range is [0, 8]: kSimplexOnly, kColsRowsNnz,
+  // kRankedFeatures, kHeuristic, kDualSimplex, kIpx, kHipo, kIpxIfLarge,
+  // kHipoIfLarge
+  for (const HighsInt value : {0, 1, 2, 3, 4, 5, 6, 7, 8})
     REQUIRE(highs.setOptionValue("solver_select_strategy", value) ==
             HighsStatus::kOk);
-  for (const HighsInt value : {-1, 7})
+  for (const HighsInt value : {-1, 9})
     REQUIRE(highs.setOptionValue("solver_select_strategy", value) ==
             HighsStatus::kError);
 }
@@ -104,7 +105,7 @@ TEST_CASE("solver-select-strategy-option-bounds", "[solver_select]") {
 // Every strategy x require_basis combination, via the real end-to-end
 // solver="choose" dispatch in HighsSolve.cpp, solves exampleLp() optimally
 TEST_CASE("solver-select-each-strategy-solves-optimally", "[solver_select]") {
-  for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6}) {
+  for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6, 7, 8}) {
     for (const bool require_basis : {false, true}) {
       INFO("strategy " << strategy << ", require_basis " << require_basis);
       Highs highs;
@@ -210,6 +211,31 @@ TEST_CASE("solver-select-small-model-uses-dual-simplex", "[solver_select]") {
         SolverSelectStrategy::kRankedFeatures})
     REQUIRE(selectSolverByModel(f, strategy) ==
             HighsSolverSelect::kDualSimplex);
+}
+
+// Strategies 7 and 8 choose dual simplex for a small LP. Without presolve,
+// greenbea is above the size threshold, so gets their IPM solver
+TEST_CASE("solver-select-ipm-if-large", "[solver_select]") {
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.readModel(std::string(HIGHS_DIR) +
+                          "/check/instances/greenbea.mps") == HighsStatus::kOk);
+  const std::vector<std::pair<SolverSelectStrategy, HighsSolverSelect>> large =
+      {{SolverSelectStrategy::kIpxIfLarge, HighsSolverSelect::kIpx},
+       {SolverSelectStrategy::kHipoIfLarge, HighsSolverSelect::kHipo}};
+  for (const auto& strategy_solver : large) {
+    REQUIRE(selectSolver(exampleLp(), strategy_solver.first) ==
+            HighsSolverSelect::kDualSimplex);
+    REQUIRE(selectSolver(highs.getLp(), strategy_solver.first) ==
+            strategy_solver.second);
+    highs.setOptionValue("presolve", kHighsOffString);
+    highs.setOptionValue("solver_select_strategy",
+                         static_cast<HighsInt>(strategy_solver.first));
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    REQUIRE(highs.getInfo().ipm_iteration_count > 0);
+    highs.clearSolver();
+  }
 }
 
 TEST_CASE("solver-select-heuristic", "[solver_select]") {

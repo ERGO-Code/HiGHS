@@ -41,6 +41,44 @@ class HighsLp;
 
 enum class HighsSolverSelect { kDualSimplex, kIpx, kHipo };
 
+// Effect of the options solver_select_strategy and
+// solver_select_require_basis
+//
+// solver_select_strategy is a SolverSelectStrategy. It only acts where the
+// user has left the choice of LP solver open:
+//
+// * LP (solveLp): when solver is "choose", the strategy is positive and
+//   run_centring is false. Any other value of solver is used as given. The
+//   choice is made for the LP after presolve. If there is a useful basis
+//   then dual simplex is used, whatever the strategy
+//
+// * MIP (HighsLpRelaxation::run): solver plays no part. An LP with a valid
+//   basis is solved by simplex. Otherwise mip_lp_solver "simplex", "ipm",
+//   "ipx" or "hipo" is used as given, whatever the strategy. Only
+//   mip_lp_solver "choose" defers to a positive strategy, and not when
+//   simplex_strategy is primal. LPs solved using mip_ipm_solver are
+//   unaffected
+//
+// If HiPO is selected but isn't available in the build, IPX is used
+//
+// A selected IPM solver has fallbacks that an explicit one doesn't
+// (solveLpWithSelection): IPX if HiPO runs out of memory, and simplex if
+// IPM fails, can't tell unbounded from infeasible, or yields no basis when
+// one is needed. In the MIP solver, IPM is limited to 200 iterations for
+// LPs with a simplex iteration limit
+//
+// Presolve precedes selection, so if the strategy may choose IPM then
+// presolve allows for dual postsolve, as it does for solver "ipm"
+//
+// solver_select_require_basis makes a basis part of the result: a claim
+// of optimality, infeasibility or unboundedness by a selected IPM solver
+// without a basis is replaced by a simplex solve, and it is an error for
+// IPM to be selected if run_crossover is "off". The MIP solver sets it,
+// since it needs a basis. When false, a basis is only needed for an
+// optimal solution when run_crossover is "on"
+//
+// Only strategies 0, 1 and 2 are documented for users. The rest are for
+// development, but can still be set
 enum class SolverSelectStrategy {
   kSimplexOnly = 0,
   kColsRowsNnz = 1,
@@ -50,6 +88,10 @@ enum class SolverSelectStrategy {
   kDualSimplex = 4,
   kIpx = 5,
   kHipo = 6,
+  // Dual simplex below the fitted models' min_num_nz, otherwise always
+  // one IPM solver
+  kIpxIfLarge = 7,
+  kHipoIfLarge = 8,
 };
 
 // Whether LPs go through solver selection with this strategy
@@ -121,7 +163,8 @@ std::vector<std::string> highsLpFeatureNames();
 // on num_col, num_row and num_nz; kRankedFeatures => boosted trees
 // on the ranked features chosen when fitting (see the top of this file);
 // kHeuristic => provisional hand-written heuristic; kDualSimplex, kIpx
-// and kHipo => that solver
+// and kHipo => that solver; kIpxIfLarge and kHipoIfLarge => that solver,
+// but dual simplex below the fitted models' min_num_nz
 HighsSolverSelect selectSolver(const HighsLp& lp,
                                const SolverSelectStrategy strategy);
 

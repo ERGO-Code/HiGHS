@@ -127,6 +127,12 @@
 - Range: {-2147483647, 2147483647}
 - Default: 0
 
+## [solver\_select\_strategy](@id option-solver-select-strategy)
+- Strategy for automatic LP solver selection when solver is "choose" and, for LPs without a basis in the MIP solver, when mip\_lp\_solver is "choose": 0 => Simplex only; 1 => Fitted model on columns, rows and nonzeros; 2 => Fitted model on ranked features
+- Type: integer
+- Range: {0, 8}
+- Default: 0
+
 ## [simplex\_strategy](@id option-simplex-strategy)
 - Strategy for simplex solver 0 => Choose; 1 => Dual (serial); 2 => Dual (SIP); 3 => Dual (PAMI); 4 => Primal
 - Type: integer
@@ -414,7 +420,7 @@
 - Default: 5
 
 ## [mip\_lp\_solver](@id option-mip-lp-solver)
-- MIP LP solver: "choose", "simplex", "ipm", "ipx" or "hipo"
+- MIP LP solver: "choose", "simplex", "ipm", "ipx" or "hipo". Only "choose" allows solver\_select\_strategy to act
 - Type: string
 - Default: "choose"
 

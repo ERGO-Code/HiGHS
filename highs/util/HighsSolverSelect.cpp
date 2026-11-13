@@ -413,6 +413,13 @@ HighsSolverSelect selectSolver(const HighsLp& lp,
       return HighsSolverSelect::kIpx;
     case SolverSelectStrategy::kHipo:
       return HighsSolverSelect::kHipo;
+    case SolverSelectStrategy::kIpxIfLarge:
+    case SolverSelectStrategy::kHipoIfLarge:
+      if (lp.a_matrix_.numNz() < kS2Model.min_num_nz)
+        return HighsSolverSelect::kDualSimplex;
+      return strategy == SolverSelectStrategy::kIpxIfLarge
+                 ? HighsSolverSelect::kIpx
+                 : HighsSolverSelect::kHipo;
   }
   return HighsSolverSelect::kDualSimplex;
 }
