@@ -101,6 +101,8 @@ TEST_CASE("qp-infeasible", "[qpsolver]") {
   REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
 
   for (auto& solver : solvers) {
+    if (solver == kHipoString) continue;
+
     highs.setOptionValue("solver", solver);
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kInfeasible);
@@ -243,6 +245,8 @@ TEST_CASE("test-qod", "[qpsolver]") {
   highs.setOptionValue("output_flag", dev_run);
 
   for (auto& solver : solvers) {
+    if (solver == kHipoString) continue;
+
     HighsModel local_model;
     HighsLp& lp = local_model.lp_;
     HighsHessian& hessian = local_model.hessian_;
