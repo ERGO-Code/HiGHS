@@ -46,18 +46,23 @@
 static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
                                         const std::string& message) {
   HighsOptions& options = solver_object.options_;
+  const HighsLp& lp = solver_object.lp_;
   // Highs::run skips presolve if there is a basis, on the basis that
   // solver = "choose" will use it, so simplex must be used. If a basis is
-  // required, IPM only yields one via crossover
+  // required, IPM only yields one via crossover. An LP without constraints
+  // is solved directly. In these cases there's nothing to select
   const bool use_simplex = solver_object.basis_.valid ||
                            solver_object.basis_.useful ||
                            (options.solver_select_require_basis &&
-                            options.run_crossover == kHighsOffString);
-  const HighsSolverSelect selected_solver =
+                            options.run_crossover == kHighsOffString) ||
+                           !lp.num_row_ || lp.numNz() == 0;
+  HighsSolverSelect selected_solver =
       use_simplex ? HighsSolverSelect::kDualSimplex
-                  : selectSolver(solver_object.lp_,
-                                 static_cast<SolverSelectStrategy>(
-                                     options.solver_select_strategy));
+                  : selectSolver(lp, static_cast<SolverSelectStrategy>(
+                                         options.solver_select_strategy));
+  if (selected_solver == HighsSolverSelect::kHipo &&
+      !HighsExternalApi::isAvailable<HighsExtras::hipo>())
+    selected_solver = HighsSolverSelect::kIpx;
   const bool selected_ipm = selected_solver != HighsSolverSelect::kDualSimplex;
 
   // Restore the user's options however this returns, even by an exception
@@ -79,16 +84,15 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
       selected_solver == HighsSolverSelect::kIpx    ? kIpxString
       : selected_solver == HighsSolverSelect::kHipo ? kHipoString
                                                     : kSimplexString;
-  highsLogUser(options.log_options, HighsLogType::kInfo,
-               "Solver selection (strategy %d) chose \"%s\"\n",
-               int(options.solver_select_strategy),
-               selected_solver_string.c_str());
+  if (!use_simplex)
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Solver selection (strategy %d) chose \"%s\"\n",
+                 int(options.solver_select_strategy),
+                 selected_solver_string.c_str());
   HighsStatus status = solveWith(selected_solver_string);
 
-  // IPX needs far less memory than HiPO, whose factorisation can fill in.
-  // Without HiPO, IPX has already run
+  // IPX needs far less memory than HiPO, whose factorisation can fill in
   if (selected_solver == HighsSolverSelect::kHipo &&
-      HighsExternalApi::isAvailable<HighsExtras::hipo>() &&
       solver_object.model_status_ == HighsModelStatus::kMemoryLimit) {
     highsLogUser(options.log_options, HighsLogType::kWarning,
                  "Selected HiPO ran out of memory, so use IPX\n");

@@ -106,12 +106,13 @@ inline bool solverSelectionMayChooseIpm(const HighsInt strategy) {
          strategy != static_cast<HighsInt>(SolverSelectStrategy::kDualSimplex);
 }
 
+// All features are doubles, since that's how the fitted models read them
 struct HighsLpFeatures {
   // --- Raw size ---
-  HighsInt num_row = 0;
-  HighsInt num_col = 0;
-  HighsInt num_nz = 0;
-  HighsInt num_integer_col = 0;  // Set only by offline feature extraction
+  double num_row = 0;
+  double num_col = 0;
+  double num_nz = 0;
+  double num_integer_col = 0;  // Set only by offline feature extraction
 
   // --- How constrained is the problem? (barrier likes an interior) ---
   double relative_num_equalities = 0.0;           // equality rows / #rows

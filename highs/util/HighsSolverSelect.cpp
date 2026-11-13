@@ -269,55 +269,73 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp) {
   return f;
 }
 
+namespace {
+
+// Name and member of each feature, in the order that the fitted models
+// index
+const std::pair<const char*, double HighsLpFeatures::*> kLpFeatures[] = {
+    {"num_row", &HighsLpFeatures::num_row},
+    {"num_col", &HighsLpFeatures::num_col},
+    {"num_nz", &HighsLpFeatures::num_nz},
+    {"num_integer_col", &HighsLpFeatures::num_integer_col},
+
+    {"relative_num_equalities", &HighsLpFeatures::relative_num_equalities},
+    {"relative_num_inequalities", &HighsLpFeatures::relative_num_inequalities},
+    {"relative_num_ranged_rows", &HighsLpFeatures::relative_num_ranged_rows},
+    {"relative_num_free_rows", &HighsLpFeatures::relative_num_free_rows},
+    {"relative_num_cols_without_upper",
+     &HighsLpFeatures::relative_num_cols_without_upper},
+    {"relative_num_cols_without_lower",
+     &HighsLpFeatures::relative_num_cols_without_lower},
+    {"relative_num_free_cols", &HighsLpFeatures::relative_num_free_cols},
+    {"relative_num_boxed_cols", &HighsLpFeatures::relative_num_boxed_cols},
+    {"relative_num_singly_bounded_cols",
+     &HighsLpFeatures::relative_num_singly_bounded_cols},
+    {"relative_num_fixed_cols", &HighsLpFeatures::relative_num_fixed_cols},
+
+    {"relative_num_almost_identical_nonzeros",
+     &HighsLpFeatures::relative_num_almost_identical_nonzeros},
+    {"relative_num_identical_obj_values",
+     &HighsLpFeatures::relative_num_identical_obj_values},
+    {"relative_num_identical_rhs_values",
+     &HighsLpFeatures::relative_num_identical_rhs_values},
+
+    {"relative_max_matrix_coefficient",
+     &HighsLpFeatures::relative_max_matrix_coefficient},
+    {"relative_max_obj_coefficient",
+     &HighsLpFeatures::relative_max_obj_coefficient},
+    {"relative_max_rhs_value", &HighsLpFeatures::relative_max_rhs_value},
+    {"max_abs_matrix_coefficient",
+     &HighsLpFeatures::max_abs_matrix_coefficient},
+    {"min_abs_matrix_coefficient",
+     &HighsLpFeatures::min_abs_matrix_coefficient},
+    {"max_abs_obj_coefficient", &HighsLpFeatures::max_abs_obj_coefficient},
+    {"min_abs_obj_coefficient", &HighsLpFeatures::min_abs_obj_coefficient},
+    {"max_abs_rhs_value", &HighsLpFeatures::max_abs_rhs_value},
+    {"min_abs_rhs_value", &HighsLpFeatures::min_abs_rhs_value},
+
+    {"matrix_nonzero_density", &HighsLpFeatures::matrix_nonzero_density},
+    {"avg_nonzeros_per_col", &HighsLpFeatures::avg_nonzeros_per_col},
+    {"avg_nonzeros_per_row", &HighsLpFeatures::avg_nonzeros_per_row},
+    {"relative_num_dense_rows", &HighsLpFeatures::relative_num_dense_rows},
+    {"max_nonzeros_in_row", &HighsLpFeatures::max_nonzeros_in_row},
+    {"max_nonzeros_in_col", &HighsLpFeatures::max_nonzeros_in_col},
+};
+
+}  // namespace
+
 std::vector<std::pair<std::string, double>> highsLpFeatureVector(
     const HighsLpFeatures& f) {
-  return {
-      {"num_row", static_cast<double>(f.num_row)},
-      {"num_col", static_cast<double>(f.num_col)},
-      {"num_nz", static_cast<double>(f.num_nz)},
-      {"num_integer_col", static_cast<double>(f.num_integer_col)},
-
-      {"relative_num_equalities", f.relative_num_equalities},
-      {"relative_num_inequalities", f.relative_num_inequalities},
-      {"relative_num_ranged_rows", f.relative_num_ranged_rows},
-      {"relative_num_free_rows", f.relative_num_free_rows},
-      {"relative_num_cols_without_upper", f.relative_num_cols_without_upper},
-      {"relative_num_cols_without_lower", f.relative_num_cols_without_lower},
-      {"relative_num_free_cols", f.relative_num_free_cols},
-      {"relative_num_boxed_cols", f.relative_num_boxed_cols},
-      {"relative_num_singly_bounded_cols", f.relative_num_singly_bounded_cols},
-      {"relative_num_fixed_cols", f.relative_num_fixed_cols},
-
-      {"relative_num_almost_identical_nonzeros",
-       f.relative_num_almost_identical_nonzeros},
-      {"relative_num_identical_obj_values",
-       f.relative_num_identical_obj_values},
-      {"relative_num_identical_rhs_values",
-       f.relative_num_identical_rhs_values},
-
-      {"relative_max_matrix_coefficient", f.relative_max_matrix_coefficient},
-      {"relative_max_obj_coefficient", f.relative_max_obj_coefficient},
-      {"relative_max_rhs_value", f.relative_max_rhs_value},
-      {"max_abs_matrix_coefficient", f.max_abs_matrix_coefficient},
-      {"min_abs_matrix_coefficient", f.min_abs_matrix_coefficient},
-      {"max_abs_obj_coefficient", f.max_abs_obj_coefficient},
-      {"min_abs_obj_coefficient", f.min_abs_obj_coefficient},
-      {"max_abs_rhs_value", f.max_abs_rhs_value},
-      {"min_abs_rhs_value", f.min_abs_rhs_value},
-
-      {"matrix_nonzero_density", f.matrix_nonzero_density},
-      {"avg_nonzeros_per_col", f.avg_nonzeros_per_col},
-      {"avg_nonzeros_per_row", f.avg_nonzeros_per_row},
-      {"relative_num_dense_rows", f.relative_num_dense_rows},
-      {"max_nonzeros_in_row", f.max_nonzeros_in_row},
-      {"max_nonzeros_in_col", f.max_nonzeros_in_col},
-  };
+  std::vector<std::pair<std::string, double>> feature;
+  for (const auto& name_member : kLpFeatures)
+    feature.emplace_back(name_member.first, f.*name_member.second);
+  return feature;
 }
 
 std::vector<std::string> highsLpFeatureNames() {
   std::vector<std::string> names;
-  for (const auto& name_value : highsLpFeatureVector(HighsLpFeatures()))
-    names.push_back(name_value.first);
+  for (const auto& name_member : kLpFeatures)
+    names.push_back(name_member.first);
   return names;
 }
 
@@ -350,8 +368,6 @@ HighsSolverSelect selectSolverByHeuristic(const HighsLpFeatures& f) {
 static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
                                        const HighsLpFeatures& f) {
   if (f.num_nz < model.min_num_nz) return HighsSolverSelect::kDualSimplex;
-  const std::vector<std::pair<std::string, double>> feature =
-      highsLpFeatureVector(f);
   HighsSolverSelect best_solver = HighsSolverSelect::kDualSimplex;
   double best_regret = kHighsInf;
   for (HighsInt s = 0; s < model.num_solver; s++) {
@@ -362,7 +378,7 @@ static HighsSolverSelect evaluateModel(const HighsSolverSelectModel& model,
         // The trees were fitted by scikit-learn, which compares in single
         // precision
         const float value =
-            static_cast<float>(feature[model.feature[node]].second);
+            static_cast<float>(f.*kLpFeatures[model.feature[node]].second);
         node = value <= model.threshold[node] ? model.left[node]
                                               : model.right[node];
       }

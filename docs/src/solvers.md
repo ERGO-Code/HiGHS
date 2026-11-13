@@ -122,6 +122,10 @@ solver terminates without determining optimality.
 The PDLP solver does not generate a basic solution. Currently it has
 no crossover procedure to obtain one.
 
+When modifications have been made to an LP problem, the simplex solver
+(only) can solve the modified problem from the optimal basis of the
+original LP, a process known as ["hot starting"](@ref hot-start-lp).
+
 ### [Automatic solver selection](@id solvers-lp-selection)
 
 When the option [__solver__](@ref option-solver) is "choose", HiGHS
