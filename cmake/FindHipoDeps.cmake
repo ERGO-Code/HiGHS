@@ -377,15 +377,6 @@ function(highs_configure_blas)
         set(NO_DOUBLE_COMPLEX ON CACHE BOOL "" FORCE)
         set(NO_SINGLE ON CACHE BOOL "" FORCE)
 
-        if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|armv8|arm")
-            if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-                message(FATAL_ERROR "The HiGHS build with OpenBLAS does not yet support 32-bit ARM architectures. \
-                        You could try to compile OpenBLAS separately on your machine, see https://github.com/OpenMathLib/OpenBLAS. \
-                        Then link with HiGHS by passing the path to the OpenBLAS installation via BLAS_ROOT. \
-                        Please don't hesitate to get in touch with us with details about your related issues.")
-            endif()
-        endif()
-
         if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
             # OpenBLAS' DYNAMIC_ARCH kernel objects (and some of its generic,
             # non-per-arch fallback kernels, e.g. kernel/x86_64/dscal.c and
@@ -401,6 +392,12 @@ function(highs_configure_blas)
             message(STATUS "MSVC detected: building OpenBLAS as a single portable GENERIC target (no DYNAMIC_ARCH) since MSVC cannot compile OpenBLAS's GNU-inline-asm kernel objects.")
             set(DYNAMIC_ARCH OFF CACHE BOOL "" FORCE)
             set(TARGET GENERIC CACHE STRING "" FORCE)
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm" AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+            # DYNAMIC_ARCH has no 32-bit ARM support, so build the ARMv7 (VFPv3 +
+            # NEON) kernels, which every 32-bit ARM target of .NET and Debian armhf has
+            message(STATUS "32-bit ARM: building OpenBLAS for TARGET=ARMV7 (no DYNAMIC_ARCH).")
+            set(DYNAMIC_ARCH OFF CACHE BOOL "" FORCE)
+            set(TARGET ARMV7 CACHE STRING "" FORCE)
         else()
             message(STATUS "Enabling DYNAMIC_ARCH for runtime CPU detection.")
             set(DYNAMIC_ARCH ON CACHE BOOL "" FORCE)
@@ -500,6 +497,11 @@ function(highs_configure_blas)
                 GIT_SHALLOW TRUE
                 UPDATE_COMMAND git reset --hard
         )
+        if(BUILD_DOTNET)
+            # Highs.Native.Extras ships highs_extras alone, so link OpenBLAS into it
+            # rather than following the BUILD_SHARED_LIBS=ON that CSHARP sets
+            set(BUILD_SHARED_LIBS OFF)
+        endif()
         FetchContent_MakeAvailable(openblas)
         get_property(all_targets DIRECTORY ${openblas_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
         message(STATUS "OpenBLAS targets: ${all_targets}")
