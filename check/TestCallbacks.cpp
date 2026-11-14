@@ -434,6 +434,7 @@ TEST_CASE("highs-exception-then-solve-again", "[highs_callback]") {
     // run() fixes a column with infinite cost, and must undo this
     highs.changeColCost(0, kHighsInf);
     REQUIRE(highs.run() == HighsStatus::kError);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
     REQUIRE(highs.getOptions().solver == kHighsChooseString);
     REQUIRE(highs.getLp().col_cost_[0] == kHighsInf);
     throw_exception = false;
@@ -444,6 +445,24 @@ TEST_CASE("highs-exception-then-solve-again", "[highs_callback]") {
 
     highs.resetThreadScheduler(true);
   }
+  // An LP copied from a model solved by an outer run(), as in the MIP
+  // solver, carries its changes in mods_, which mustn't be undone here
+  bool throw_exception = true;
+  Highs highs;
+  highs.setOptionValue("log_to_console", dev_run);
+  highs.setCallback(throwingLogCallback, &throw_exception);
+  highs.startCallback(kCallbackLogging);
+  highs.readModel(filename);
+  HighsLp lp = highs.getLp();
+  lp.mods_.save_inf_cost_variable_index = {0};
+  lp.mods_.save_inf_cost_variable_cost = {kHighsInf};
+  lp.mods_.save_inf_cost_variable_lower = {-5};
+  lp.mods_.save_inf_cost_variable_upper = {kHighsInf};
+  highs.passModel(lp);
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(highs.getLp().col_cost_[0] == lp.col_cost_[0]);
+  REQUIRE(highs.getLp().col_lower_[0] == lp.col_lower_[0]);
+  highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
