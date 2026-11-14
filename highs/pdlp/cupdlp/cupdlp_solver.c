@@ -338,7 +338,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
   // primal constraints [Ax, min(Gx, 0)]
   cupdlp_dual_infeasibility_kernel_constr_cuda(work->buffer2, ax,
                                               work->rowScale, 1.0 / pScale,
-                                              scaling->ifScaled,
+                                              0,
                                               problem->nEqs,
                                               problem->data->nRows);
   cupdlp_twoNormSquared(work, problem->data->nRows, work->buffer2,
@@ -349,7 +349,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
   cupdlp_dual_infeasibility_kernel_lb_cuda(work->buffer2, x,
                                            problem->hasLower,
                                            work->colScale,
-                                           1.0 / pScale, scaling->ifScaled,
+                                           1.0 / pScale, 0,
                                            problem->data->nCols);
   cupdlp_twoNormSquared(work, problem->data->nCols, work->buffer2,
                         &pBoundLbResSq);
@@ -357,7 +357,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
   cupdlp_dual_infeasibility_kernel_ub_cuda(work->buffer2, x,
                                            problem->hasUpper,
                                            work->colScale,
-                                           1.0 / pScale, scaling->ifScaled,
+                                           1.0 / pScale, 0,
                                            problem->data->nCols);
   cupdlp_twoNormSquared(work, problem->data->nCols, work->buffer2,
                         &pBoundUbResSq);
@@ -389,10 +389,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
                      problem->data->nRows);
   cupdlp_projNeg(resobj->primalInfeasConstr + problem->nEqs,
                  problem->data->nRows - problem->nEqs);
-  if (scaling->ifScaled) {
-    cupdlp_edot(resobj->primalInfeasConstr, work->rowScale,
-                problem->data->nRows);
-  }
+  
   cupdlp_twoNormSquared(work, problem->data->nRows, resobj->primalInfeasConstr,
                         &pConstrResSq);
 
@@ -403,10 +400,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
   cupdlp_projNeg(resobj->primalInfeasBound, problem->data->nCols);
   cupdlp_edot(resobj->primalInfeasBound, problem->hasLower,
               problem->data->nCols);
-  if (scaling->ifScaled) {
-    cupdlp_ediv(resobj->primalInfeasBound, work->colScale,
-                problem->data->nCols);
-  }
+
   cupdlp_twoNormSquared(work, problem->data->nCols, resobj->primalInfeasBound,
                         &pBoundLbResSq);
   // ub
@@ -415,10 +409,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
   cupdlp_projPos(resobj->primalInfeasBound, problem->data->nCols);
   cupdlp_edot(resobj->primalInfeasBound, problem->hasUpper,
               problem->data->nCols);
-  if (scaling->ifScaled) {
-    cupdlp_ediv(resobj->primalInfeasBound, work->colScale,
-                problem->data->nCols);
-  }
+
   cupdlp_twoNormSquared(work, problem->data->nCols, resobj->primalInfeasBound,
                         &pBoundUbResSq);
 
