@@ -351,4 +351,28 @@ TEST_CASE("pdlp-small-row-coefficient", "[pdlp]") {
   REQUIRE(highs.getModelStatus() != HighsModelStatus::kUnboundedOrInfeasible);
 
   highs.resetThreadScheduler(true);
+
+  // Mirror image: min x s.t. 1e-8 x >= 1, x >= 0 has optimal value 1e8.
+  // PDLP used to report that the LP is infeasible/unbounded after a few
+  // iterations
+  Highs mirror;
+  mirror.setOptionValue("output_flag", dev_run);
+  mirror.setOptionValue("solver", kPdlpString);
+  mirror.setOptionValue("presolve", kHighsOffString);
+  mirror.setOptionValue("kkt_tolerance", kkt_tolerance);
+  REQUIRE(mirror.addCols(1, &cost, &lower, &upper, 0, nullptr, nullptr,
+                         nullptr) == HighsStatus::kOk);
+  double mirror_row_lower = 1.0;
+  double mirror_row_upper = inf;
+  HighsInt mirror_start = 0;
+  HighsInt mirror_index = 0;
+  double mirror_value = 1e-8;
+  REQUIRE(mirror.addRows(1, &mirror_row_lower, &mirror_row_upper, 1,
+                         &mirror_start, &mirror_index,
+                         &mirror_value) == HighsStatus::kOk);
+  REQUIRE(mirror.run() == HighsStatus::kOk);
+  REQUIRE(mirror.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(std::abs(mirror.getInfo().objective_function_value - 1e8) <=
+          1e-6 * 1e8);
+  mirror.resetThreadScheduler(true);
 }

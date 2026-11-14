@@ -244,7 +244,7 @@ void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
 
   cupdlp_primal_infeasibility_kernel_cuda(work->buffer2, aty, dSlackPos,
                                           dSlackNeg, work->colScale, 1.0 / dScale,
-                                          scaling->ifScaled, problem->data->nCols);
+                                          0, problem->data->nCols);
 
   // cupdlp_twoNormSquared(work, problem->data->nCols, resobj->dualInfeasConstr,
   //                       &dConstrResSq);
@@ -295,9 +295,6 @@ void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
   alpha = -1.0;
   cupdlp_axpy(work, problem->data->nCols, &alpha, resobj->dualInfeasUbRay,
               resobj->dualInfeasConstr);
-  if (scaling->ifScaled) {
-    cupdlp_edot(resobj->dualInfeasConstr, work->colScale, problem->data->nCols);
-  }
   // cupdlp_twoNormSquared(work, problem->data->nCols, resobj->dualInfeasConstr,
   //                       &dConstrResSq);
   cupdlp_twoNorm(work, problem->data->nCols, resobj->dualInfeasConstr,
