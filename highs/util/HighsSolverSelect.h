@@ -63,8 +63,10 @@ enum class HighsSolverSelect { kDualSimplex, kIpx, kHipo };
 //
 // A selected IPM solver has fallbacks that an explicit one doesn't
 // (solveLpWithSelection): IPX if HiPO runs out of memory, and simplex if
-// IPM fails, can't tell unbounded from infeasible, or yields no basis when
-// one is needed. In the MIP solver, IPM is limited to 200 iterations for
+// IPM fails, returns an imprecise result, can't tell unbounded from
+// infeasible (unless allow_unbounded_or_infeasible), or yields no basis
+// when one is needed. Simplex isn't run again if solveLp has already used
+// it to clean up. In the MIP solver, IPM is limited to 200 iterations for
 // LPs with a simplex iteration limit
 //
 // Presolve precedes selection, so if the strategy may choose IPM then
@@ -164,8 +166,5 @@ std::vector<std::string> highsLpFeatureNames();
 // The solver that the strategy chooses for the LP
 HighsSolverSelect selectSolver(const HighsLp& lp,
                                const SolverSelectStrategy strategy);
-
-// kHeuristic: the provisional hand-written heuristic
-HighsSolverSelect selectSolverByHeuristic(const HighsLpFeatures& features);
 
 #endif /* UTIL_HIGHS_SOLVER_SELECT_H_ */

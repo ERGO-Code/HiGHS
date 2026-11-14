@@ -1319,6 +1319,10 @@ HighsStatus Highs::optimizeModelTryCatch() {
       if (timer_.running(i)) timer_.stop(i);
     // Clear all solver data, since there may be nothing useful
     this->clearSolver();
+    // ... and undoing any changes to the model made for solving it
+    HighsStatus restore_status = HighsStatus::kOk;
+    this->restoreInfCost(restore_status);
+    this->model_.lp_.unapplyMods();
     status = HighsStatus::kError;
   };
   try {

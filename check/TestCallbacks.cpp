@@ -431,8 +431,11 @@ TEST_CASE("highs-exception-then-solve-again", "[highs_callback]") {
     highs.setCallback(throwingLogCallback, &throw_exception);
     highs.startCallback(kCallbackLogging);
     highs.readModel(filename);
+    // run() fixes a column with infinite cost, and must undo this
+    highs.changeColCost(0, kHighsInf);
     REQUIRE(highs.run() == HighsStatus::kError);
     REQUIRE(highs.getOptions().solver == kHighsChooseString);
+    REQUIRE(highs.getLp().col_cost_[0] == kHighsInf);
     throw_exception = false;
     REQUIRE(highs.run() == HighsStatus::kOk);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);

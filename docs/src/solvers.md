@@ -150,9 +150,12 @@ The following rules apply, whatever the strategy
 * If an LP has an advanced basis, the simplex solver is used.
 * If HiPO is selected but is not available in the build, IPX is used.
 * If HiPO is selected and runs out of memory, IPX is used.
-* If the selected IPM solver fails, cannot distinguish an unbounded LP
-  from an infeasible one, or does not yield a basic solution when one
-  is needed, the simplex solver is used.
+* If the selected IPM solver fails, returns an imprecise result, cannot
+  distinguish an unbounded LP from an infeasible one, or does not yield
+  a basic solution when one is needed, the simplex solver is used,
+  unless it has already been run to clean up the IPM solution. An LP
+  that is unbounded or infeasible is accepted if
+  __allow\_unbounded\_or\_infeasible__ is true.
 
 A basic solution is needed for an optimal solution when
 [run\_crossover](@ref option-run-crossover) is "on".

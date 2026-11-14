@@ -27,10 +27,6 @@ const double kAlmostIdenticalTol = 1e-9;
 const double kDenseRowFactor = 10.0;
 const double kDenseRowMinCount = 10.0;
 
-bool isFinite(const double value) {
-  return value > -kHighsInf && value < kHighsInf;
-}
-
 // Fraction of `values` that lie in a cluster of size >= 2, where
 // neighbouring sorted values join a cluster when they differ by at most
 // tol * max(1, |value|). `values` is sorted in place.
@@ -154,9 +150,8 @@ HighsLpFeatures computeLpFeatures(const HighsLp& lp) {
 
     for (int k = 0; k < 2; k++) {
       const double bound = k == 0 ? lower : upper;
-      if (!isFinite(bound)) continue;
       const double abs_bound = std::fabs(bound);
-      if (abs_bound > 0.0) {
+      if (abs_bound > 0.0 && abs_bound < kHighsInf) {
         max_abs_rhs = std::max(max_abs_rhs, abs_bound);
         min_abs_rhs = std::min(min_abs_rhs, abs_bound);
       }
@@ -338,7 +333,7 @@ std::vector<std::string> highsLpFeatureNames() {
   return names;
 }
 
-HighsSolverSelect selectSolverByHeuristic(const HighsLpFeatures& f) {
+static HighsSolverSelect selectSolverByHeuristic(const HighsLpFeatures& f) {
   // NOTE: provisional heuristic
   if (f.num_nz == 0 || f.num_row == 0 || f.num_col == 0)
     return HighsSolverSelect::kDualSimplex;

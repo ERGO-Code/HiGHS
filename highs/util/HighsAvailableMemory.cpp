@@ -11,6 +11,7 @@
 #include "util/HighsAvailableMemory.h"
 
 #include <algorithm>
+#include <atomic>
 #include <fstream>
 #include <limits>
 #include <string>
@@ -101,7 +102,8 @@ static double cgroupAvailableBytes() {
 }
 #endif
 
-static double available_memory_bytes_for_testing = -1;
+// Atomic, since HiPO may check memory on other threads
+static std::atomic<double> available_memory_bytes_for_testing{-1};
 
 void setAvailableMemoryBytesForTesting(const double bytes) {
   available_memory_bytes_for_testing = bytes;

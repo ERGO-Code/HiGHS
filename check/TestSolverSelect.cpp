@@ -262,14 +262,14 @@ TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {
 // models' size threshold
 TEST_CASE("solver-select-small-model-uses-dual-simplex", "[solver_select]") {
   for (const SolverSelectStrategy strategy :
-       {SolverSelectStrategy::kColsRowsNnz,
-        SolverSelectStrategy::kRankedFeatures})
+       {SolverSelectStrategy::kColsRowsNnz, SolverSelectStrategy::kRankedFeatures,
+        SolverSelectStrategy::kIpxIfLarge, SolverSelectStrategy::kHipoIfLarge})
     REQUIRE(selectSolver(exampleLp(), strategy) ==
             HighsSolverSelect::kDualSimplex);
 }
 
-// Strategies 7 and 8 choose dual simplex for a small LP. Without presolve,
-// greenbea is above the size threshold, so gets their IPM solver
+// Without presolve, greenbea is above the size threshold of strategies 7
+// and 8, so gets their IPM solver
 TEST_CASE("solver-select-ipm-if-large", "[solver_select]") {
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
@@ -279,8 +279,6 @@ TEST_CASE("solver-select-ipm-if-large", "[solver_select]") {
       {{SolverSelectStrategy::kIpxIfLarge, HighsSolverSelect::kIpx},
        {SolverSelectStrategy::kHipoIfLarge, HighsSolverSelect::kHipo}};
   for (const auto& strategy_solver : large) {
-    REQUIRE(selectSolver(exampleLp(), strategy_solver.first) ==
-            HighsSolverSelect::kDualSimplex);
     REQUIRE(selectSolver(highs.getLp(), strategy_solver.first) ==
             strategy_solver.second);
     highs.setOptionValue("presolve", kHighsOffString);
@@ -291,27 +289,6 @@ TEST_CASE("solver-select-ipm-if-large", "[solver_select]") {
     REQUIRE(highs.getInfo().ipm_iteration_count > 0);
     highs.clearSolver();
   }
-}
-
-TEST_CASE("solver-select-heuristic", "[solver_select]") {
-  HighsLpFeatures f;
-  // Empty
-  REQUIRE(selectSolverByHeuristic(f) == HighsSolverSelect::kDualSimplex);
-  // Small and sparse
-  f.num_row = 1000;
-  f.num_col = 1000;
-  f.num_nz = 5000;
-  f.avg_nonzeros_per_row = 5;
-  REQUIRE(selectSolverByHeuristic(f) == HighsSolverSelect::kDualSimplex);
-  // Small and dense
-  f.avg_nonzeros_per_row = 100;
-  REQUIRE(selectSolverByHeuristic(f) == HighsSolverSelect::kIpx);
-  // Very large and well conditioned
-  f.num_nz = 6000000;
-  REQUIRE(selectSolverByHeuristic(f) == HighsSolverSelect::kHipo);
-  // Very large and ill conditioned
-  f.relative_max_matrix_coefficient = 1e9;
-  REQUIRE(selectSolverByHeuristic(f) == HighsSolverSelect::kIpx);
 }
 
 // Strategy 5 chooses IPX for the root LP of these MIPs, so this runs

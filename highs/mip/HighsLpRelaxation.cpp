@@ -1164,7 +1164,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
     if (useIpm(mip_lp_solver)) {
       bool use_hipo = mip_lp_solver == kHipoString;
       use_solver = use_hipo ? kHipoString : kIpxString;
-    } else if (mip_lp_solver == kHighsChooseString &&
+    } else if (mip_lp_solver == kHighsChooseString && !retrying_after_error &&
                useSolverSelection(
                    mipsolver.options_mip_->solver_select_strategy) &&
                lpsolver.getOptions().simplex_strategy !=
@@ -1299,7 +1299,9 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
       // still an error: now try to solve with presolve from scratch
       lpsolver.setOptionValue("simplex_strategy", kSimplexStrategyDual);
       lpsolver.setOptionValue("presolve", kHighsOnString);
+      retrying_after_error = true;
       auto retval = run(false);
+      retrying_after_error = false;
       lpsolver.setOptionValue("presolve", kHighsOffString);
 
       return retval;
