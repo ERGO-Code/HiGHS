@@ -107,18 +107,20 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   // node could be pruned with no proof. Presolve assumed that crossover would
   // yield a basis if it's on, so duals from IPM alone can't be trusted either.
   // Without crossover, IPM may not tell unbounded from infeasible, which
-  // Highs::run only permits when the user chose IPM. An imprecise IPM
-  // result, which solveLp only cleans up when crossover is allowed, is
-  // also no answer
+  // is only an answer if allow_unbounded_or_infeasible is set. An imprecise
+  // IPM result, which solveLp only cleans up when crossover is allowed, is
+  // no answer
   const HighsModelStatus model_status = solver_object.model_status_;
   const bool undecided =
-      model_status == HighsModelStatus::kUnboundedOrInfeasible ||
+      (model_status == HighsModelStatus::kUnboundedOrInfeasible &&
+       !options.allow_unbounded_or_infeasible) ||
       model_status == HighsModelStatus::kUnknown;
   const bool claim_needs_basis =
       options.solver_select_require_basis &&
       (model_status == HighsModelStatus::kOptimal ||
        model_status == HighsModelStatus::kInfeasible ||
-       model_status == HighsModelStatus::kUnbounded);
+       model_status == HighsModelStatus::kUnbounded ||
+       model_status == HighsModelStatus::kUnboundedOrInfeasible);
   const bool optimal_needs_basis = options.run_crossover == kHighsOnString &&
                                    model_status == HighsModelStatus::kOptimal;
   const bool solved_without_basis =
@@ -130,7 +132,8 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   const bool used_ipm_budget =
       options.solver_select_require_basis &&
       model_status == HighsModelStatus::kIterationLimit;
-  // If solveLp has already cleaned up with simplex, its result stands
+  // If solveLp has already cleaned up with simplex, its result stands,
+  // rather than run simplex a second time
   const bool simplex_ran = solver_object.highs_info_.simplex_iteration_count >
                            simplex_iteration_count;
   if (selected_ipm && !simplex_ran &&

@@ -428,6 +428,14 @@ TEST_CASE("solver-select-ipm-infeasible-or-unbounded", "[solver_select]") {
       highs.setOptionValue("solver_select_strategy", strategy);
       REQUIRE(highs.run() != HighsStatus::kError);
       REQUIRE(highs.getModelStatus() == model.second);
+      // IPM can't tell that gas11 is unbounded, which is then accepted
+      if (model.first != "gas11") continue;
+      highs.setOptionValue("allow_unbounded_or_infeasible", true);
+      highs.clearSolver();
+      REQUIRE(highs.run() == HighsStatus::kOk);
+      REQUIRE(highs.getModelStatus() ==
+              HighsModelStatus::kUnboundedOrInfeasible);
+      REQUIRE(highs.getInfo().simplex_iteration_count == 0);
     }
   }
 }
