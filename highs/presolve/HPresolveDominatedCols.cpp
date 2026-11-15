@@ -58,9 +58,10 @@ HPresolve::Result HPresolve::dominatedColumns(
   std::vector<HighsInt> check_rowpositions;
   std::vector<HighsInt> collect_rowpositions;
 
-  // the rows for which the current candidates were collected (-1 if they have
-  // to be collected again, e.g. after fixing variables, since this modifies the
-  // matrix)
+  // the rows for which the current candidates were collected: the shortest
+  // required row (-1 if the candidates have to be collected again, e.g. after
+  // fixing variables, since this modifies the matrix) and the second shortest
+  // required row they were filtered by (-1 if they were not filtered)
   HighsInt candidatesRow = -1;
   HighsInt candidatesFilterRow = -1;
 
