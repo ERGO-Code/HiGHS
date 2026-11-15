@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -142,6 +144,18 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h.versionMajor(), 1)
         self.assertEqual(h.versionMinor(), 16)
         self.assertEqual(h.versionPatch(), 0)
+
+    def test_constructor_writes_nothing(self):
+        # Creating a Highs instance writes nothing to stdout, since no
+        # option can be set before the constructor runs. A process of
+        # its own, so that no earlier instance can have logged
+        result = subprocess.run(
+            [sys.executable, "-c", "import highspy; highspy.Highs()"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.assertEqual(result.stdout, "")
 
     def test_basics(self):
         h = self.get_basic_model()
