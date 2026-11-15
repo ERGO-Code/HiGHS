@@ -2825,7 +2825,6 @@ HighsStatus Highs::setSolution(const HighsInt num_entries,
 
 HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
                                void* user_callback_data) {
-  this->logHeader();
   this->callback_.clear();
   this->callback_.user_callback = std::move(user_callback);
   this->callback_.user_callback_data = user_callback_data;
@@ -2859,7 +2858,6 @@ HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
 }
 
 HighsStatus Highs::startCallback(const int callback_type) {
-  this->logHeader();
   const bool callback_type_ok =
       callback_type >= kCallbackMin && callback_type <= kCallbackMax;
   assert(callback_type_ok);
@@ -2878,7 +2876,6 @@ HighsStatus Highs::startCallback(const int callback_type) {
 }
 
 HighsStatus Highs::startCallback(const HighsCallbackType callback_type) {
-  this->logHeader();
   const bool callback_type_ok =
       callback_type >= kCallbackMin && callback_type <= kCallbackMax;
   assert(callback_type_ok);
