@@ -450,7 +450,7 @@ HPresolve::Result HPresolve::dominatedColumns(
     return rows;
   };
 
-  // check whether two columns to check share their two shortest required rows
+  // check whether two columns share their two shortest required rows
   auto haveSameRows = [&](size_t i1, size_t i2) {
     return colsToCheck[i1].shortestRow == colsToCheck[i2].shortestRow &&
            colsToCheck[i1].secondShortestRow ==
@@ -496,7 +496,7 @@ HPresolve::Result HPresolve::dominatedColumns(
             {rows.shortestRow, rows.secondShortestRow, j, direction});
     }
   }
-  // sort the columns to check by their two shortest required rows, so that
+  // sort the columns by their two shortest required rows, so that
   // columns sharing these rows are processed consecutively and their candidates
   // only have to be collected once
   pdqsort(colsToCheck.begin(), colsToCheck.end(),
@@ -511,15 +511,15 @@ HPresolve::Result HPresolve::dominatedColumns(
 
   for (size_t groupStart = 0;
        groupStart < colsToCheck.size() && !workLimitReached();) {
-    // find the columns to check sharing the two shortest required rows
+    // find the columns sharing the two shortest required rows
     size_t groupEnd = groupStart + 1;
     while (groupEnd < colsToCheck.size() && haveSameRows(groupStart, groupEnd))
       ++groupEnd;
-    HighsInt groupRow = colsToCheck[groupStart].shortestRow;
-    HighsInt groupSecondRow = colsToCheck[groupStart].secondShortestRow;
-    // filter the candidates by the second shortest row only if they are used
-    // for more than one column to check
-    HighsInt groupFilterRow = groupEnd - groupStart > 1 ? groupSecondRow : -1;
+    // the columns of a group share their candidates, so these are collected
+    // only once. they are filtered by the second shortest required row only if
+    // the group has more than one column: checkRow checks this row for each
+    // candidate anyway, but only after the cheaper signature test
+    bool filterCandidates = groupEnd - groupStart > 1;
 
     for (size_t i = groupStart; i < groupEnd; ++i) {
       // check the time limit regularly
@@ -547,19 +547,23 @@ HPresolve::Result HPresolve::dominatedColumns(
       // columns that only appear in equality rows, the dominations are also
       // found from the other column)
       if (dominationRows.hasPositiveCoef) {
-        // use the candidates of the group, or of the column if its rows have
-        // been changed by reductions
-        bool useGroupRows = dominationRows.shortestRow == groupRow &&
-                            dominationRows.secondShortestRow == groupSecondRow;
-        HighsInt row = useGroupRows ? groupRow : dominationRows.shortestRow;
-        // the candidates of a single column are used only once, so filtering
-        // them by the second shortest row would not pay off
-        HighsInt filterRow = useGroupRows ? groupFilterRow : -1;
+        // a column whose required rows have been changed by reductions no
+        // longer belongs to the group, so its candidates are used by this
+        // column only and are not filtered
+        HighsInt filterRow =
+            filterCandidates &&
+                    dominationRows.shortestRow ==
+                        colsToCheck[groupStart].shortestRow &&
+                    dominationRows.secondShortestRow ==
+                        colsToCheck[groupStart].secondShortestRow
+                ? dominationRows.secondShortestRow
+                : -1;
         // the candidates only have to be collected if they were collected for
         // different rows or have become invalid
-        if (row != candidatesRow || filterRow != candidatesFilterRow) {
-          collectCandidates(row, filterRow);
-          candidatesRow = row;
+        if (dominationRows.shortestRow != candidatesRow ||
+            filterRow != candidatesFilterRow) {
+          collectCandidates(dominationRows.shortestRow, filterRow);
+          candidatesRow = dominationRows.shortestRow;
           candidatesFilterRow = filterRow;
         }
         HPRESOLVE_CHECKED_CALL(
