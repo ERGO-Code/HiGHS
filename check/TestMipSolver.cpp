@@ -2801,8 +2801,82 @@ TEST_CASE("issue-3510", "[highs_test_mip_solver]") {
     REQUIRE(h.run() == HighsStatus::kOk);
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
     REQUIRE(h.getObjectiveValue() == 0);
+    // The solution returned must be the one whose objective is reported
+    REQUIRE(h.getLp().objectiveValue(h.getSolution().col_value) == 0);
     lp.col_cost_[5] = 1.0;
   }
+
+  h.resetGlobalScheduler(true);
+}
+
+// Solve the model with the start solution, presolve on, and check
+// that the solver reaches the optimal objective value, and that this
+// is the objective value of the solution returned
+static void testStartSolution(Highs& h, const double optimal_objective) {
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const double objective = h.getObjectiveValue();
+  REQUIRE(std::fabs(objective - optimal_objective) <=
+          1e-6 * (1 + std::fabs(optimal_objective)));
+  REQUIRE(std::fabs(h.getLp().objectiveValue(h.getSolution().col_value) -
+                    objective) <= 1e-6 * (1 + std::fabs(objective)));
+}
+
+TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
+  // The image of the start solution in the reduced space is feasible,
+  // and better than the start solution. The solution returned must
+  // be the postsolved image, not the start solution
+  const std::string model =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3634.mps";
+  std::vector<double> start(96, 0);
+  for (HighsInt iCol : {0, 1, 3, 4, 6, 7, 8, 9, 11, 12, 13, 14, 18, 63, 93})
+    start[iCol] = 1;
+  start[16] = 19;
+  start[17] = 23;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("mip_rel_gap", 0);
+  // Prevent the optimal solution from being found other than via the
+  // image of the start solution
+  h.setOptionValue("mip_heuristic_run_feasibility_jump", false);
+  h.setOptionValue("mip_max_nodes", 0);
+  REQUIRE(h.readModel(model) == HighsStatus::kOk);
+  HighsSolution solution;
+  solution.col_value = start;
+  solution.value_valid = true;
+  REQUIRE(h.setSolution(solution) == HighsStatus::kOk);
+  testStartSolution(h, 6400000.258333333);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
+  // Model and start solution by DoumarCharles, from ERGO-Code/HiGHS
+  // issue 3643. Column x6 is parallel to x2 with a higher cost,
+  // so presolve removes it, and tightens r0 to -x2 + x3 + x4 <= 1. The
+  // start has x6 = 1 and x2 = 0, so its image in the reduced space
+  // violates r0, with objective value -5, below the optimum -1
+  HighsLp lp;
+  lp.num_col_ = 6;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {3, 4, 0, -5, 4.5, 7.25};
+  lp.col_lower_.assign(6, 0);
+  lp.col_upper_.assign(6, 1);
+  lp.integrality_.assign(6, HighsVarType::kInteger);
+  lp.row_lower_ = {-inf, 1, -inf};
+  lp.row_upper_ = {25, 1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 4, 7, 9};
+  lp.a_matrix_.index_ = {1, 2, 3, 5, 0, 2, 4, 0, 3};
+  lp.a_matrix_.value_ = {-5, 17, 13, -5, 1, 1, 1, 1, 1};
+  HighsSolution start;
+  start.col_value = {0, 0, 1, 1, 0, 1};
+  start.value_valid = true;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.setSolution(start) == HighsStatus::kOk);
+  testStartSolution(h, -1);
 
   h.resetGlobalScheduler(true);
 }
