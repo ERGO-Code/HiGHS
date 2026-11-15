@@ -2872,11 +2872,32 @@ TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
   HighsSolution start;
   start.col_value = {0, 0, 1, 1, 0, 1};
   start.value_valid = true;
+  // The MIP solution callback reports the start itself, rather than
+  // its image in the reduced space, as the first feasible solution
+  struct Reported {
+    std::vector<std::vector<double>> solution;
+    std::vector<double> objective;
+    std::vector<std::string> message;
+  } reported;
   Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   REQUIRE(h.setSolution(start) == HighsStatus::kOk);
+  h.setCallback(
+      [](int, const std::string& message, const HighsCallbackOutput* data_out,
+         HighsCallbackInput*, void* user_data) {
+        auto& reported = *static_cast<Reported*>(user_data);
+        reported.solution.push_back(data_out->mip_solution);
+        reported.objective.push_back(data_out->objective_function_value);
+        reported.message.push_back(message);
+      },
+      &reported);
+  h.startCallback(kCallbackMipSolution);
   testStartSolution(h, -1);
+  REQUIRE(!reported.solution.empty());
+  REQUIRE(reported.message[0] == "Feasible solution");
+  REQUIRE(reported.objective[0] == 2.25);
+  REQUIRE(reported.solution[0] == start.col_value);
 
   h.resetGlobalScheduler(true);
 }
