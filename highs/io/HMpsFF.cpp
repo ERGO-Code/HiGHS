@@ -621,8 +621,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(std::istream& file) {
       highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read ROWS    OK\n");
       if (!hasobj) {
-        warning_issued_ = true;
-        highsLogUser(log_options_, HighsLogType::kWarning,
+        highsLogUser(log_options_, HighsLogType::kInfo,
                      "No objective row found\n");
         rowname2idx.emplace("artificial_empty_objective", HighsInt{-1});
       };
