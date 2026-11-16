@@ -65,12 +65,12 @@ HPresolve::Result HPresolve::dominatedColumns(
   HighsInt candidatesRow = -1;
   HighsInt candidatesFilterRow = -1;
 
-  // count overall number of domination checks
-  size_t numDomChecks = 0;
-
   // count number of fixed columns and modified bounds
   HighsInt numFixedCols = 0;
   HighsInt numModifiedBnds = 0;
+
+  // check for timeout according to this frequency (number of columns)
+  const size_t checkTimeFrequency = 100;
 
   // work limit: the work (candidates scanned, positions collected and
   // nonzeros looked up) may not exceed a base, which is proportional to the
@@ -139,9 +139,6 @@ HPresolve::Result HPresolve::dominatedColumns(
 
   auto checkDomination = [&](HighsInt scalj, HighsInt j, HighsInt scalk,
                              HighsInt k) {
-    // increment counter
-    numDomChecks++;
-
     // rule out domination from integers to continuous variables
     if (model->integrality_[j] == HighsVarType::kInteger &&
         model->integrality_[k] == HighsVarType::kContinuous)
@@ -523,8 +520,8 @@ HPresolve::Result HPresolve::dominatedColumns(
     bool filterCandidates = groupEnd - groupStart > 1;
 
     for (size_t i = groupStart; i < groupEnd; ++i) {
-      // check the time limit regularly
-      if ((i & 1023u) == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
+      // check for timeout according to frequency
+      if (i % checkTimeFrequency == 0) HPRESOLVE_CHECKED_CALL(checkTimeLimit());
 
       // stop if the work limit is reached
       if (workLimitReached()) break;
