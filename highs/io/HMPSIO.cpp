@@ -519,22 +519,40 @@ bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
     return true;
   }
 
+  char return_character[1];
   // try to read some to the line
   for (;;) {
     // Line input
     *line = '\0';
     file.get(line, lmax);
-    printf("line = %s, strlen(line) - 1 = %d, file.good() = %s, file.eof() = %s\n",
-	   line, int(strlen(line) - 1), file.good() ? "T" : "F", file.eof() ? "T" : "F");
-    if (*line == '\0' && file.eof())  // nothing read and EOF
-      return false;
-
+    // A null character ('\0') is automatically appended to the
+    // written sequence, even if an empty string is extracted, so the
+    // following tests for nothing being read
+    const bool nothing_read = *line == '\0';
+    printf("*line == \'\\0\' = %s, file.eof() = %s; strlen(line) - 1 = %2d, line = \"%-40s\"\n",
+	   nothing_read ? "T" : "F",
+	   file.eof() ? "T" : "F",
+	   int(strlen(line) - 1), line);
+    if (nothing_read) {
+      if (file.eof()) return false;
+      // The failbit is set, so subsequent reads (including getline)
+      // immediately fail unless you call clear()
+      file.clear();
+    }
     // Line trim   -- to delete tailing white spaces
     HighsInt lcnt = strlen(line) - 1;
     // if file.get() did not stop because it reached the lmax-1 limit,
     // then because it reached a newline char (or eof); lets consume this
     // newline (or do nothing if eof)
-    if (lcnt + 1 < lmax - 1) file.get();
+    //
+    //    if (lcnt + 1 < lmax - 1) file.get();
+    //
+    // Have to use getline, since that discards the delimiting character
+    if (lcnt + 1 < lmax - 1) {
+      file.getline(return_character, 1);
+      if (file.gcount() != 1)
+      std::cout << "return_character = \"" << return_character << "\" has " << file.gcount() << " characters\n";
+    }
     while (lcnt >= 0 && isspace(line[lcnt])) lcnt--;
     if (lcnt <= 0 || line[0] == '*') continue;
 
@@ -547,6 +565,7 @@ bool load_mpsLine(std::istream& file, HighsVarType& integerVar, HighsInt lmax,
     // Done with section symbol
     if (line[0] != ' ') {
       flag[0] = line[0];
+      printf("flag[0] = \"%s\": line = %-40s\n", flag, line);
       return false;
     }
 
