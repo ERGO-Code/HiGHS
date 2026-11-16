@@ -797,6 +797,18 @@ TEST_CASE("issue-3650", "[highs_filereader]") {
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
+  highsPrintStringAsHeading("No NAME then illegal one-line OBJSENSE");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "OBJSENSE MX\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("Illegal one-line OBJSENSE");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nOBJSENSE MX\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
   highsPrintStringAsHeading("Unfinished OBJSENSE");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s", "NAME\nOBJSENSE\n");
@@ -818,6 +830,43 @@ TEST_CASE("issue-3650", "[highs_filereader]") {
   highsPrintStringAsHeading("No keyword after COLUMNS");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after RHS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nRHS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after BOUNDS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nBOUNDS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after RANGES");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nRANGES\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after QUADOBJ");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nQUADOBJ\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after CSECTION");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N  COST\nCOLUMNS\nCSECTION CONE 1.0 QUAD\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after SOS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nSOS\n");
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 

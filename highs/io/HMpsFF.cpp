@@ -549,7 +549,7 @@ HMpsFF::Parsekey HMpsFF::parseDefault(std::istream& file) {
 
     return key;
   }
-  return HMpsFF::Parsekey::kFail;
+  return failureInSection("NAME/OBJSENSE");
 }
 
 double getWallTime() {
@@ -591,7 +591,7 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(std::istream& file) {
       return key;
     }
   }
-  return HMpsFF::Parsekey::kFail;
+  return failureInSection("OBJSENSE");
 }
 
 HMpsFF::Parsekey HMpsFF::parseRows(std::istream& file) {
@@ -1035,7 +1035,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
     }
   }
 
-  return Parsekey::kFail;
+  return failureInSection("COLUMNS");
 }
 
 HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
@@ -1249,8 +1249,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
       }
     }
   }
-
-  return Parsekey::kFail;
+  return failureInSection("RHS");
 }
 
 HMpsFF::Parsekey HMpsFF::parseBounds(std::istream& file) {
@@ -1530,7 +1529,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(std::istream& file) {
     // Column is not binary by default
     col_binary[colidx] = false;
   }
-  return Parsekey::kFail;
+  return failureInSection("BOUNDS");
 }
 
 HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
@@ -1723,7 +1722,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
     }
   }
 
-  return HMpsFF::Parsekey::kFail;
+  return failureInSection("RANGES");
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseHessian(std::istream& file,
@@ -1779,7 +1778,8 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
         return key;
       }
     }
-    return Parsekey::kFail;  // unexpected end of file
+    return failureInSection(
+        "QMATRIX/QCMATRIX/QUADOBJ/QSECTION");  // unexpected end of file
   }
   rowidx = mit->second;
   assert(rowidx >= -1);
@@ -1877,7 +1877,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadMatrix(
     }
   }
 
-  return HMpsFF::Parsekey::kFail;
+  return failureInSection("QMATRIX/QCMATRIX/QUADOBJ/QSECTION");
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseCones(std::istream& file) {
@@ -1969,7 +1969,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(std::istream& file) {
     cone_entries.back().push_back(colidx);
   }
 
-  return HMpsFF::Parsekey::kFail;
+  return failureInSection("CONES");
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseSos(std::istream& file,
@@ -2066,7 +2066,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(std::istream& file,
     sos_entries.back().push_back(std::make_pair(colidx, weight));
   }
 
-  return HMpsFF::Parsekey::kFail;
+  return failureInSection("SOS");
 }
 
 bool HMpsFF::allZeroed(const std::vector<double>& value) {
