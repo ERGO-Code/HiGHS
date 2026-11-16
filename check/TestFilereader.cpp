@@ -782,7 +782,7 @@ TEST_CASE("issue-3649", "[highs_filereader]") {
 TEST_CASE("issue-3650", "[highs_filereader]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename = test_name + ".mps";
- 
+
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   highsPrintStringAsHeading("Empty file");
@@ -821,8 +821,5 @@ TEST_CASE("issue-3650", "[highs_filereader]") {
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
-
   std::remove(filename.c_str());
-
 }
-

@@ -18,15 +18,14 @@ namespace free_format_parser {
 
 const bool kNoClockCalls = false;
 
-FreeFormatParserReturnCode HMpsFF::loadProblem(
-     const std::string& filename,
-    HighsModel& model) {
+FreeFormatParserReturnCode HMpsFF::loadProblem(const std::string& filename,
+                                               HighsModel& model) {
   // Keep track of any warnings that are issued so that
   // Highs::readModel can return HighsStatus::kWarning
   warning_issued_ = false;
   HighsLp& lp = model.lp_;
   HighsHessian& hessian = model.hessian_;
-  FreeFormatParserReturnCode result = parse( filename);
+  FreeFormatParserReturnCode result = parse(filename);
   if (result != FreeFormatParserReturnCode::kSuccess) return result;
 
   if (!qrows_entries.empty()) {
@@ -243,8 +242,7 @@ bool HMpsFF::getMpsLine(std::istream& file, std::string& strline, bool& skip) {
   return true;
 }
 
-FreeFormatParserReturnCode HMpsFF::parse(
-                                         const std::string& filename) {
+FreeFormatParserReturnCode HMpsFF::parse(const std::string& filename) {
   HMpsFF::Parsekey keyword = HMpsFF::Parsekey::kNone;
 
   highsLogDev(log_options_, HighsLogType::kInfo,
@@ -254,7 +252,7 @@ FreeFormatParserReturnCode HMpsFF::parse(
   try {
     f.open(filename.c_str(), std::ios::in);
   } catch (const strict_fstream::Exception& e) {
-    highsLogDev(log_options_,  HighsLogType::kInfo, e.what());
+    highsLogDev(log_options_, HighsLogType::kInfo, e.what());
     return FreeFormatParserReturnCode::kFileNotFound;
   }
 #else
@@ -274,43 +272,43 @@ FreeFormatParserReturnCode HMpsFF::parse(
     while (keyword != HMpsFF::Parsekey::kFail &&
            keyword != HMpsFF::Parsekey::kEnd &&
            keyword != HMpsFF::Parsekey::kTimeout) {
-      if (cannotParseSection( keyword)) {
+      if (cannotParseSection(keyword)) {
         f.close();
         return FreeFormatParserReturnCode::kParserError;
       }
       switch (keyword) {
         case HMpsFF::Parsekey::kObjsense:
-          keyword = parseObjsense( f);
+          keyword = parseObjsense(f);
           break;
         case HMpsFF::Parsekey::kRows:
-          keyword = parseRows( f);
+          keyword = parseRows(f);
           break;
         case HMpsFF::Parsekey::kCols:
-          keyword = parseCols( f);
+          keyword = parseCols(f);
           break;
         case HMpsFF::Parsekey::kRhs:
-          keyword = parseRhs( f);
+          keyword = parseRhs(f);
           break;
         case HMpsFF::Parsekey::kBounds:
-          keyword = parseBounds( f);
+          keyword = parseBounds(f);
           break;
         case HMpsFF::Parsekey::kRanges:
-          keyword = parseRanges( f);
+          keyword = parseRanges(f);
           break;
         case HMpsFF::Parsekey::kQmatrix:
         case HMpsFF::Parsekey::kQuadobj:
-          keyword = parseHessian( f, keyword);
+          keyword = parseHessian(f, keyword);
           break;
         case HMpsFF::Parsekey::kQsection:
         case HMpsFF::Parsekey::kQcmatrix:
-          keyword = parseQuadRows( f, keyword);
+          keyword = parseQuadRows(f, keyword);
           break;
         case HMpsFF::Parsekey::kCsection:
-          keyword = parseCones( f);
+          keyword = parseCones(f);
           break;
         case HMpsFF::Parsekey::kSets:
         case HMpsFF::Parsekey::kSos:
-          keyword = parseSos( f, keyword);
+          keyword = parseSos(f, keyword);
           break;
         case HMpsFF::Parsekey::kFail:
           f.close();
@@ -319,7 +317,7 @@ FreeFormatParserReturnCode HMpsFF::parse(
           f.close();
           return FreeFormatParserReturnCode::kFixedFormat;
         default:
-          keyword = parseDefault( f);
+          keyword = parseDefault(f);
           break;
       }
     }
@@ -337,7 +335,7 @@ FreeFormatParserReturnCode HMpsFF::parse(
       return FreeFormatParserReturnCode::kParserError;
     }
   } else {
-    highsLogDev(log_options_,  HighsLogType::kInfo,
+    highsLogDev(log_options_, HighsLogType::kInfo,
                 "readMPS: Not opened file OK\n");
     f.close();
     return FreeFormatParserReturnCode::kFileNotFound;
@@ -353,8 +351,7 @@ FreeFormatParserReturnCode HMpsFF::parse(
   return FreeFormatParserReturnCode::kSuccess;
 }
 
-bool HMpsFF::cannotParseSection(
-                                const HMpsFF::Parsekey keyword) const {
+bool HMpsFF::cannotParseSection(const HMpsFF::Parsekey keyword) const {
   switch (keyword) {
       // Identify the sections that cannot be parsed
     case HMpsFF::Parsekey::kDelayedrows:
@@ -397,7 +394,8 @@ bool HMpsFF::cannotParseSection(
 
 HMpsFF::Parsekey HMpsFF::failureInSection(const std::string& section) const {
   highsLogUser(log_options_, HighsLogType::kError,
-               "Anomalous exit when parsing %s section of MPS file\n", section.c_str());
+               "Anomalous exit when parsing %s section of MPS file\n",
+               section.c_str());
   return HMpsFF::Parsekey::kFail;
 }
 
@@ -511,8 +509,7 @@ HighsInt HMpsFF::getColIdx(const std::string& colname, const bool add_if_new) {
   return num_col - 1;
 }
 
-HMpsFF::Parsekey HMpsFF::parseDefault(
-                                      std::istream& file) {
+HMpsFF::Parsekey HMpsFF::parseDefault(std::istream& file) {
   std::string strline, word;
   bool skip;
   if (getMpsLine(file, strline, skip)) {
@@ -526,7 +523,7 @@ HMpsFF::Parsekey HMpsFF::parseDefault(
       if (e < strline.length()) {
         mps_name = first_word(strline, e);
       }
-      highsLogDev(log_options_,  HighsLogType::kInfo,
+      highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read NAME    OK\n");
       return HMpsFF::Parsekey::kNone;
     }
@@ -565,8 +562,7 @@ double getWallTime() {
   return wall_time;
 }
 
-HMpsFF::Parsekey HMpsFF::parseObjsense(
-                                       std::istream& file) {
+HMpsFF::Parsekey HMpsFF::parseObjsense(std::istream& file) {
   std::string strline, word;
 
   bool skip;
@@ -588,7 +584,7 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(
       obj_sense = ObjSense::kMinimize;
       continue;
     }
-    highsLogDev(log_options_,  HighsLogType::kInfo,
+    highsLogDev(log_options_, HighsLogType::kInfo,
                 "readMPS: Read OBJSENSE OK\n");
     // start of new section?
     if (key != HMpsFF::Parsekey::kNone) {
@@ -598,8 +594,7 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(
   return HMpsFF::Parsekey::kFail;
 }
 
-HMpsFF::Parsekey HMpsFF::parseRows(
-                                   std::istream& file) {
+HMpsFF::Parsekey HMpsFF::parseRows(std::istream& file) {
   std::string strline, word;
   bool hasobj = false;
   // Assign a default objective name
@@ -623,7 +618,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(
 
     // start of new section?
     if (key != HMpsFF::Parsekey::kNone) {
-      highsLogDev(log_options_,  HighsLogType::kInfo,
+      highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read ROWS    OK\n");
       if (!hasobj) {
         warning_issued_ = true;
@@ -715,8 +710,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(
   return failureInSection("ROWS");
 }
 
-typename HMpsFF::Parsekey HMpsFF::parseCols(
-                                            std::istream& file) {
+typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
   std::string colname = "";
   std::string strline, word;
   HighsInt rowidx;
@@ -783,7 +777,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(
                      int(num_ignored_row_name),
                      int(num_ignored_duplicate_cost_nz),
                      int(num_ignored_duplicate_matrix_nz));
-      highsLogDev(log_options_,  HighsLogType::kInfo,
+      highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read COLUMNS OK\n");
       return key;
     }
@@ -1044,8 +1038,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(
   return Parsekey::kFail;
 }
 
-HMpsFF::Parsekey HMpsFF::parseRhs(
-                                  std::istream& file) {
+HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
   std::string strline;
 
   auto parseName = [this](const std::string& name, HighsInt& rowidx,
@@ -1114,7 +1107,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(
             log_options_, HighsLogType::kWarning,
             "RHS section: ignored %d undefined rows and %d duplicate values\n",
             int(num_ignored_row_name), int(num_ignored_duplicate_rhs));
-      highsLogDev(log_options_,  HighsLogType::kInfo,
+      highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read RHS     OK\n");
       return key;
     }
@@ -1260,8 +1253,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(
   return Parsekey::kFail;
 }
 
-HMpsFF::Parsekey HMpsFF::parseBounds(
-                                     std::istream& file) {
+HMpsFF::Parsekey HMpsFF::parseBounds(std::istream& file) {
   std::string strline, word;
 
   HighsInt num_mi = 0;
@@ -1336,7 +1328,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(
                      "fractional integer bounds\n",
                      int(num_ignored_duplicate_bound),
                      int(num_fractional_integer_bound));
-      highsLogDev(log_options_,  HighsLogType::kInfo,
+      highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read BOUNDS  OK\n");
       return key;
     }
@@ -1541,8 +1533,7 @@ HMpsFF::Parsekey HMpsFF::parseBounds(
   return Parsekey::kFail;
 }
 
-HMpsFF::Parsekey HMpsFF::parseRanges(
-                                     std::istream& file) {
+HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
   std::string strline, word;
 
   auto parseName = [this](const std::string& name, HighsInt& rowidx) {
@@ -1592,7 +1583,7 @@ HMpsFF::Parsekey HMpsFF::parseRanges(
                      "duplicate values\n",
                      int(num_ignored_row_name),
                      int(num_ignored_duplicate_range));
-      highsLogDev(log_options_,  HighsLogType::kInfo,
+      highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read RANGES  OK\n");
       return key;
     }
@@ -1735,19 +1726,17 @@ HMpsFF::Parsekey HMpsFF::parseRanges(
   return HMpsFF::Parsekey::kFail;
 }
 
-typename HMpsFF::Parsekey HMpsFF::parseHessian(
-     std::istream& file,
-    const HMpsFF::Parsekey keyword) {
+typename HMpsFF::Parsekey HMpsFF::parseHessian(std::istream& file,
+                                               const HMpsFF::Parsekey keyword) {
   assert(keyword == HMpsFF::Parsekey::kQuadobj ||
          keyword == HMpsFF::Parsekey::kQmatrix);
   const std::string section_name =
       keyword == HMpsFF::Parsekey::kQuadobj ? "QUADOBJ" : "QMATRIX";
-  return parseQuadMatrix( file, section_name, q_entries);
+  return parseQuadMatrix(file, section_name, q_entries);
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
-     std::istream& file,
-    const HMpsFF::Parsekey keyword) {
+    std::istream& file, const HMpsFF::Parsekey keyword) {
   assert(keyword == HMpsFF::Parsekey::kQsection ||
          keyword == HMpsFF::Parsekey::kQcmatrix);
   const std::string section_name =
@@ -1785,7 +1774,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
 
       // start of new section?
       if (key != Parsekey::kNone) {
-        highsLogDev(log_options_,  HighsLogType::kInfo, "readMPS: Read %s  OK\n",
+        highsLogDev(log_options_, HighsLogType::kInfo, "readMPS: Read %s  OK\n",
                     section_name.c_str());
         return key;
       }
@@ -1800,12 +1789,12 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadRows(
   assert(rowidx == -1 || qrows_entries.size() == static_cast<size_t>(num_row));
 
   auto& qentries = (rowidx == -1 ? q_entries : qrows_entries[rowidx]);
-  return parseQuadMatrix( file, section_name, qentries);
+  return parseQuadMatrix(file, section_name, qentries);
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseQuadMatrix(
-     std::istream& file,
-    const std::string& section_name, std::vector<Triplet>& q_entries) {
+    std::istream& file, const std::string& section_name,
+    std::vector<Triplet>& q_entries) {
   // Store all nonzeros in the section. QMATRIX/QCMATRIX should have
   // all entries, whereas every off-diagonal QUADOBJ/QSECTION entry
   // also defines its entry in the opposite triangle, so add this
@@ -1831,7 +1820,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadMatrix(
 
     // start of new section?
     if (key != Parsekey::kNone) {
-      highsLogDev(log_options_,  HighsLogType::kInfo, "readMPS: Read %s OK\n",
+      highsLogDev(log_options_, HighsLogType::kInfo, "readMPS: Read %s OK\n",
                   section_name.c_str());
       return key;
     }
@@ -1891,8 +1880,7 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadMatrix(
   return HMpsFF::Parsekey::kFail;
 }
 
-typename HMpsFF::Parsekey HMpsFF::parseCones(
-                                             std::istream& file) {
+typename HMpsFF::Parsekey HMpsFF::parseCones(std::istream& file) {
   size_t end = 0;
 
   // first argument should be cone name
@@ -1968,7 +1956,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(
     HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, colname);
 
     if (key != Parsekey::kNone) {
-      highsLogDev(log_options_,  HighsLogType::kInfo,
+      highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read CSECTION OK\n");
       return key;
     }
@@ -1984,8 +1972,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCones(
   return HMpsFF::Parsekey::kFail;
 }
 
-typename HMpsFF::Parsekey HMpsFF::parseSos(
-                                           std::istream& file,
+typename HMpsFF::Parsekey HMpsFF::parseSos(std::istream& file,
                                            const HMpsFF::Parsekey keyword) {
   std::string strline, word;
 
@@ -1999,7 +1986,7 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(
     HMpsFF::Parsekey key = checkFirstWord(strline, begin, end, word);
 
     if (key != Parsekey::kNone) {
-      highsLogDev(log_options_,  HighsLogType::kInfo,
+      highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read SETS    OK\n");
       return key;
     }

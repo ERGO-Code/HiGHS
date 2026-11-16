@@ -56,8 +56,7 @@ double getWallTime();
 class HMpsFF {
  public:
   HMpsFF(const HighsLogOptions& log_options) : log_options_(log_options) {}
-  FreeFormatParserReturnCode loadProblem(
-                                         const std::string& filename,
+  FreeFormatParserReturnCode loadProblem(const std::string& filename,
                                          HighsModel& model);
 
   double time_limit_ = kHighsInf;
@@ -195,8 +194,7 @@ class HMpsFF {
   bool timeout();
   bool getMpsLine(std::istream& file, std::string& strline, bool& skip);
 
-  FreeFormatParserReturnCode parse(
-                                   const std::string& filename);
+  FreeFormatParserReturnCode parse(const std::string& filename);
   // Checks first word of strline and wraps it by it_begin and it_end
   HMpsFF::Parsekey checkFirstWord(std::string& strline, size_t& start,
                                   size_t& end, std::string& word) const;
@@ -205,38 +203,25 @@ class HMpsFF {
   // if no index is found
   HighsInt getColIdx(const std::string& colname, const bool add_if_new = true);
 
-  HMpsFF::Parsekey parseDefault(
-                                std::istream& file);
-  HMpsFF::Parsekey parseObjsense(
-                                 std::istream& file);
-  HMpsFF::Parsekey parseRows(
-                             std::istream& file);
-  HMpsFF::Parsekey parseCols(
-                             std::istream& file);
-  HMpsFF::Parsekey parseRhs(
-                            std::istream& file);
-  HMpsFF::Parsekey parseRanges(
-                               std::istream& file);
-  HMpsFF::Parsekey parseBounds(
-                               std::istream& file);
-  HMpsFF::Parsekey parseHessian(
-                                std::istream& file,
+  HMpsFF::Parsekey parseDefault(std::istream& file);
+  HMpsFF::Parsekey parseObjsense(std::istream& file);
+  HMpsFF::Parsekey parseRows(std::istream& file);
+  HMpsFF::Parsekey parseCols(std::istream& file);
+  HMpsFF::Parsekey parseRhs(std::istream& file);
+  HMpsFF::Parsekey parseRanges(std::istream& file);
+  HMpsFF::Parsekey parseBounds(std::istream& file);
+  HMpsFF::Parsekey parseHessian(std::istream& file,
                                 const HMpsFF::Parsekey keyword);
-  HMpsFF::Parsekey parseQuadRows(
-                                 std::istream& file,
+  HMpsFF::Parsekey parseQuadRows(std::istream& file,
                                  const HMpsFF::Parsekey keyword);
-  HMpsFF::Parsekey parseQuadMatrix(
-                                   std::istream& file,
+  HMpsFF::Parsekey parseQuadMatrix(std::istream& file,
                                    const std::string& section_name,
                                    std::vector<Triplet>& q_entries);
 
-  HMpsFF::Parsekey parseCones(
-                              std::istream& file);
-  HMpsFF::Parsekey parseSos(
-                            std::istream& file, const HMpsFF::Parsekey keyword);
+  HMpsFF::Parsekey parseCones(std::istream& file);
+  HMpsFF::Parsekey parseSos(std::istream& file, const HMpsFF::Parsekey keyword);
 
-  bool cannotParseSection(
-                          const HMpsFF::Parsekey keyword) const;
+  bool cannotParseSection(const HMpsFF::Parsekey keyword) const;
   HMpsFF::Parsekey failureInSection(const std::string& section) const;
   bool allZeroed(const std::vector<double>& value);
   double getValue(const std::string& word, bool& is_nan,
