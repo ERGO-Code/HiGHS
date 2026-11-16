@@ -1,7 +1,6 @@
 name: blas-override
 
 on:
-  push:
   pull_request:
 
 concurrency:

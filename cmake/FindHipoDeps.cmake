@@ -784,3 +784,17 @@ function(highs_export_blas_dependency)
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/highs"
         COMPONENT Devel)
 endfunction()
+
+# A macro so that PARENT_SCOPE reaches the top level, which configures highs.pc
+macro(highs_export_blas_pkgconfig)
+    if(NOT BUILD_SHARED_EXTRAS_LIB AND NOT BUILD_SHARED_LIBS)
+        # shortcut: BLAS entry only for Accelerate and a system OpenBLAS, add others when someone links them through pkg-config
+        if(HIGHS_BLAS_VENDOR STREQUAL "Apple Accelerate")
+            set(HIGHS_PC_LIBS_PRIVATE "${HIGHS_PC_LIBS_PRIVATE} -framework Accelerate" PARENT_SCOPE)
+        # Only library paths set with -D are visible here, and may have no openblas.pc
+        elseif(HIGHS_BLAS_VENDOR STREQUAL "OpenBLAS" AND NOT BUILD_OPENBLAS
+                AND NOT OPENBLAS_LIB AND NOT DEFINED CACHE{BLAS_LIBRARIES})
+            set(HIGHS_PC_REQUIRES_PRIVATE "${HIGHS_PC_REQUIRES_PRIVATE} openblas" PARENT_SCOPE)
+        endif()
+    endif()
+endmacro()

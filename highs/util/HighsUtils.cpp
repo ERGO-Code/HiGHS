@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <sstream>
 #include <vector>
 
 #include "util/HighsSort.h"
@@ -404,13 +405,16 @@ void analyseVectorValues(const HighsLogOptions* log_options,
   // If there are no nonzeros, min_abs_value retains its starting
   // value of inf
   if (!nNz) min_abs_value = 0;
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << message << " of dimension " << vecDim;
+  if (nNz < vecDim)
+    ss << message << " with " << nNz << " nonzeros ("
+       << int(1e2 * double(nNz) / double(vecDim)) << "%%)";
   highsReportDevInfo(
       log_options,
-      highsFormatToString(
-          "%s of dimension %" HIGHSINT_FORMAT " with %" HIGHSINT_FORMAT
-          " nonzeros (%3d%%) in [%11.4g, %11.4g]\n",
-          message.c_str(), vecDim, nNz, int(1e2 * double(nNz) / double(vecDim)),
-          min_abs_value, max_abs_value));
+      highsFormatToString("%s: values in [%.2g, %.2g]\n", ss.str().c_str(),
+                          min_abs_value, max_abs_value));
   if (nNegInfV > 0)
     highsReportDevInfo(
         log_options, highsFormatToString(

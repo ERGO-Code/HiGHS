@@ -27,9 +27,7 @@ HighsPresolveStatus PresolveComponent::run() {
                     options_->presolve_reduction_limit, timer);
   presolve.run(data_.postSolveStack);
   presolve_status_ = presolve.getPresolveStatus();
-  if (presolve_status_ != HighsPresolveStatus::kOutOfMemory &&
-      presolve_status_ != HighsPresolveStatus::kException)
-    data_.presolve_log_ = presolve.getPresolveLog();
+  if (!presolve.failed()) data_.presolve_log_ = presolve.getPresolveLog();
   return presolve_status_;
 }
 

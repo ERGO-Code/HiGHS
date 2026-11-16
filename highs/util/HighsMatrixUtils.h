@@ -19,6 +19,7 @@
 
 using std::vector;
 
+// Entry point for HighsHessian
 HighsStatus assessMatrix(
     const HighsLogOptions& log_options, const std::string& class_name,
     const std::string& matrix_name, const HighsInt vec_dim,
@@ -28,16 +29,7 @@ HighsStatus assessMatrix(
     const bool sum_duplicates, const std::string* col_names = nullptr,
     const std::string* row_names = nullptr);
 
-HighsStatus assessMatrix(
-    const HighsLogOptions& log_options, const std::string& class_name,
-    const std::string& matrix_name, const HighsInt vec_dim,
-    const HighsInt num_vec, vector<HighsInt>& matrix_start,
-    vector<HighsInt>& matrix_p_end, vector<HighsInt>& matrix_index,
-    vector<double>& matrix_value, const double small_matrix_value,
-    const double large_matrix_value, const bool sum_duplicates,
-    const std::string* col_names = nullptr,
-    const std::string* row_names = nullptr);
-
+// Entry point for HighsSparseMatrix
 HighsStatus assessMatrix(
     const HighsLogOptions& log_options, const std::string& class_name,
     const std::string& matrix_name, const HighsInt vec_dim,

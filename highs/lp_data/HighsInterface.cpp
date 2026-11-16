@@ -3812,7 +3812,7 @@ bool Highs::processedBoundsFindsInfeasibility() {
           log_options, HighsLogType::kInfo,
           "%s %d bounds [%g, %g] have excessive infeasibility = %g%s\n",
           type.c_str(), int(iX), lower, upper, range,
-          performed_inward_integer_rounding ? " due to inward integer rounding"
+          performed_inward_integer_rounding ? " after inward integer rounding"
                                             : "");
     return false;
   };
@@ -3833,8 +3833,8 @@ bool Highs::processedBoundsFindsInfeasibility() {
         double feastol = this->options_.mip_feasibility_tolerance;
         double integer_lower = std::ceil(lower - feastol);
         double integer_upper = std::floor(upper + feastol);
-        assert(integer_lower >= lower);
-        assert(integer_upper <= upper);
+        assert(integer_lower >= lower - feastol);
+        assert(integer_upper <= upper + feastol);
         performed_inward_integer_rounding =
             integer_lower > lower || integer_upper < upper;
         lower = integer_lower;

@@ -292,6 +292,202 @@ TEST_CASE("test-implied-bound-aggregation-vub", "[highs_test_presolve_rules]") {
   HighsTaskExecutor::shutdown(true);
 }
 
+TEST_CASE("test-implied-bound-aggregation-vlb-floor",
+          "[highs_test_presolve_rules]") {
+  // issue 3544: the VLB z >= 15*x1 + 5 has minimum 5 above the lower bound 0
+  // of z. aggregation standardized it relative to the lower bound and replaced
+  // its row, which lost z >= 5 when all literals are zero (possible due to the
+  // set packing row). the minimum of every VLB is a valid lower bound, so the
+  // standardization has to use lb = 5
+  //
+  // min z
+  // x0 + x1 + x2 <= 1
+  // z >= 10*x0      (stored as -z + 10*x0 <= 0)
+  // z >= 15*x1 + 5  (stored as -z + 15*x1 <= -5)
+  // z >= 30*x2      (stored as -z + 30*x2 <= 0)
+  // 0 <= z <= 1000, x0,x1,x2 binary
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1, 0, 0, 0};
+  lp.col_lower_ = {0, 0, 0, 0};
+  lp.col_upper_ = {1000, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {1, 0, -5, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 4;
+  lp.a_matrix_.num_row_ = 4;
+  lp.a_matrix_.start_ = {0, 3, 5, 7, 9};
+  lp.a_matrix_.index_ = {1, 2, 3, 0, 1, 0, 2, 0, 3};
+  lp.a_matrix_.value_ = {-1, -1, -1, 1, 10, 1, 15, 1, 30};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleProbing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  // populate VLBs: z >= 10*x0 (row 1), z >= 15*x1 + 5 (row 2), z >= 30*x2 (row
+  // 3)
+  HighsImplications& implications = mipsolver.mipdata_->implications;
+  implications.addVLB(0, 1, 10.0, 0.0, 1);
+  implications.addVLB(0, 2, 15.0, 5.0, 2);
+  implications.addVLB(0, 3, 30.0, 0.0, 3);
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status == HighsModelStatus::kNotset);
+
+  // the three VLBs form a clique, so aggregation merges them into one row:
+  // z - 5*x0 - 15*x1 - 25*x2 >= 5
+  const HighsLp& presolved = *mipsolver.model_;
+  HighsInt agg_row = -1;
+  for (HighsInt i = 0; i < mipsolver.numRow(); i++) {
+    if (postsolve_stack.getOrigRowIndex(i) == 0) continue;
+    REQUIRE(agg_row == -1);
+    agg_row = i;
+  }
+  REQUIRE(agg_row >= 0);
+  REQUIRE(presolved.row_lower_[agg_row] == 5.0);
+  REQUIRE(presolved.row_upper_[agg_row] == kHighsInf);
+
+  std::vector<double> coeffs(4, 0.0);
+  for (HighsInt j = 0; j < presolved.num_col_; j++) {
+    for (HighsInt p = presolved.a_matrix_.start_[j];
+         p < presolved.a_matrix_.start_[j + 1]; p++) {
+      if (presolved.a_matrix_.index_[p] != agg_row) continue;
+      coeffs[postsolve_stack.getOrigColIndex(j)] =
+          presolved.a_matrix_.value_[p];
+    }
+  }
+  REQUIRE(coeffs[0] == 1.0);
+  REQUIRE(coeffs[1] == -5.0);
+  REQUIRE(coeffs[2] == -15.0);
+  REQUIRE(coeffs[3] == -25.0);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
+TEST_CASE("test-implied-bound-aggregation-vub-ceiling",
+          "[highs_test_presolve_rules]") {
+  // mirror of test-implied-bound-aggregation-vlb-floor: the VUB
+  // w <= -15*x1 - 5 has maximum -5 below the upper bound 0 of w, so the
+  // standardization has to use ub = -5
+  //
+  // max w
+  // x0 + x1 + x2 <= 1
+  // w <= -10*x0      (stored as w + 10*x0 <= 0)
+  // w <= -15*x1 - 5  (stored as w + 15*x1 <= -5)
+  // w <= -30*x2      (stored as w + 30*x2 <= 0)
+  // -1000 <= w <= 0, x0,x1,x2 binary
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 4;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {1, 0, 0, 0};
+  lp.col_lower_ = {-1000, 0, 0, 0};
+  lp.col_upper_ = {0, 1, 1, 1};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kInteger, HighsVarType::kInteger};
+  lp.row_lower_ = {-kHighsInf, -kHighsInf, -kHighsInf, -kHighsInf};
+  lp.row_upper_ = {1, 0, -5, 0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 4;
+  lp.a_matrix_.num_row_ = 4;
+  lp.a_matrix_.start_ = {0, 3, 5, 7, 9};
+  lp.a_matrix_.index_ = {1, 2, 3, 0, 1, 0, 2, 0, 3};
+  lp.a_matrix_.value_ = {1, 1, 1, 1, 10, 1, 15, 1, 30};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleProbing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  // populate VUBs: w <= -10*x0 (row 1), w <= -15*x1 - 5 (row 2),
+  // w <= -30*x2 (row 3)
+  HighsImplications& implications = mipsolver.mipdata_->implications;
+  implications.addVUB(0, 1, -10.0, 0.0, 1);
+  implications.addVUB(0, 2, -15.0, -5.0, 2);
+  implications.addVUB(0, 3, -30.0, 0.0, 3);
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status == HighsModelStatus::kNotset);
+
+  // the three VUBs form a clique, so aggregation merges them into one row:
+  // w + 5*x0 + 15*x1 + 25*x2 <= -5
+  const HighsLp& presolved = *mipsolver.model_;
+  HighsInt agg_row = -1;
+  for (HighsInt i = 0; i < mipsolver.numRow(); i++) {
+    if (postsolve_stack.getOrigRowIndex(i) == 0) continue;
+    REQUIRE(agg_row == -1);
+    agg_row = i;
+  }
+  REQUIRE(agg_row >= 0);
+  REQUIRE(presolved.row_lower_[agg_row] == -kHighsInf);
+  REQUIRE(presolved.row_upper_[agg_row] == -5.0);
+
+  std::vector<double> coeffs(4, 0.0);
+  for (HighsInt j = 0; j < presolved.num_col_; j++) {
+    for (HighsInt p = presolved.a_matrix_.start_[j];
+         p < presolved.a_matrix_.start_[j + 1]; p++) {
+      if (presolved.a_matrix_.index_[p] != agg_row) continue;
+      coeffs[postsolve_stack.getOrigColIndex(j)] =
+          presolved.a_matrix_.value_[p];
+    }
+  }
+  REQUIRE(coeffs[0] == 1.0);
+  REQUIRE(coeffs[1] == 5.0);
+  REQUIRE(coeffs[2] == 15.0);
+  REQUIRE(coeffs[3] == 25.0);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
 /*
 TEST_CASE("test-weakly-dominated-col-upper", "[highs_test_presolve_rules]") {
   Highs h;

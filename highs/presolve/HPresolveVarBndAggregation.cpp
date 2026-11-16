@@ -155,10 +155,38 @@ void HPresolve::aggregateVarBounds() {
     double lb = model->col_lower_[col];
     double ub = model->col_upper_[col];
 
+    // the minimum (maximum) of every VLB (VUB) is a valid lower (upper) bound,
+    // so tighten lb (ub) such that the standardized forms below imply the VLBs
+    // (VUBs) exactly; the column bounds in the model are not changed
+    implications.getVlbs(col).for_each(
+        [&](HighsInt binaryCol, const HighsImplications::VarBound& vlb) {
+          if (!colDeleted[binaryCol]) lb = std::max(lb, vlb.minValue());
+        });
+    implications.getVubs(col).for_each(
+        [&](HighsInt binaryCol, const HighsImplications::VarBound& vub) {
+          if (!colDeleted[binaryCol]) ub = std::min(ub, vub.maxValue());
+        });
+
+    if (model->integrality_[col] != HighsVarType::kContinuous) {
+      lb = std::ceil(lb - mipsolver->mipdata_->feastol);
+      ub = std::floor(ub + mipsolver->mipdata_->feastol);
+    }
+
+    // nothing to aggregate if the column has no VLBs and VUBs
+    if (lb <= -kHighsInf && ub >= kHighsInf) continue;
+
+    // nothing to aggregate if the tightened bounds fix the column or cross; the
+    // latter indicates infeasibility, which is left to other reductions
+    if (lb >= ub) continue;
+
     // compute range
     double range = kHighsInf;
     if (lb > -kHighsInf && ub < kHighsInf)
       range = static_cast<double>(static_cast<HighsCDouble>(ub) - lb);
+
+    // number of VLBs (VUBs) whose origin row could be rewritten
+    HighsInt numVlbOrigins = 0;
+    HighsInt numVubOrigins = 0;
 
     // collect VLBs: y >= coef * x + constant
     // standardized form: y >= a * x + lb, where a > 0
@@ -181,6 +209,7 @@ void HPresolve::aggregateVarBounds() {
                         colImpliedBounds{v, HighsImplications::VarBound{
                                                 static_cast<double>(newCoef),
                                                 lb, v.origin}});
+            if (v.origin >= 0) numVlbOrigins++;
           });
     }
     // collect VUBs: y <= coef * x + constant
@@ -204,20 +233,27 @@ void HPresolve::aggregateVarBounds() {
                         colImpliedBounds{v, HighsImplications::VarBound{
                                                 static_cast<double>(newCoef),
                                                 ub, v.origin}});
+            if (v.origin >= 0) numVubOrigins++;
           });
     }
 
-    // set up cliques
-    vlbs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
-      HighsInt val = bounds.originalBound.coef > 0 ? 1 : 0;
-      vlbsClique.emplace_back(binaryCol, val);
-    });
-    vubs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
-      HighsInt val = bounds.originalBound.coef < 0 ? 1 : 0;
-      vubsClique.emplace_back(binaryCol, val);
-    });
+    // only bounds with an origin row can be merged, so there is nothing to do
+    // if no VLB and no VUB has one
+    if (numVlbOrigins == 0 && numVubOrigins == 0) continue;
 
-    // clique cover
+    // set up cliques for the sides with an origin row
+    if (numVlbOrigins > 0)
+      vlbs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
+        HighsInt val = bounds.originalBound.coef > 0 ? 1 : 0;
+        vlbsClique.emplace_back(binaryCol, val);
+      });
+    if (numVubOrigins > 0)
+      vubs.for_each([&](HighsInt binaryCol, colImpliedBounds& bounds) {
+        HighsInt val = bounds.originalBound.coef < 0 ? 1 : 0;
+        vubsClique.emplace_back(binaryCol, val);
+      });
+
+    // clique cover (clears the covers, which stay empty without cliques)
     cliquetable.cliqueCover(vlbsClique, vlbsCover);
     cliquetable.cliqueCover(vubsClique, vubsCover);
 
