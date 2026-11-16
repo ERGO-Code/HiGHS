@@ -1717,6 +1717,87 @@ TEST_CASE("test-transform-column-clique-table", "[highs_test_presolve_rules]") {
   HighsTaskExecutor::shutdown(true);
 }
 
+TEST_CASE("test-probing-inherited-clique-table",
+          "[highs_test_presolve_rules]") {
+  // see issue #3707: a sub-MIP starts with the clique table of its parent.
+  // normalising the clique rows fixes x0 = 0 (its coefficient in row 0
+  // exceeds the right-hand side) and deletes it. if the inherited clique
+  // table is not updated, clique merging extends row 1 (x3 + x4 <= 1) by the
+  // deleted x0 through the inherited cliques (x0, x3) and (x0, x4)
+  //   2 x0 + x1 + x2 <= 1
+  //          x3 + x4 <= 1
+  //   x0, ..., x4 binary
+  HighsLp lp;
+  lp.num_col_ = 5;
+  lp.num_row_ = 2;
+  lp.col_cost_ = {-1.0, -1.0, -1.0, -1.0, -1.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0, 0.0, 0.0};
+  lp.col_upper_ = {1.0, 1.0, 1.0, 1.0, 1.0};
+  lp.integrality_.assign(5, HighsVarType::kInteger);
+  lp.row_lower_ = {-kHighsInf, -kHighsInf};
+  lp.row_upper_ = {1.0, 1.0};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 5;
+  lp.a_matrix_.num_row_ = 2;
+  lp.a_matrix_.start_ = {0, 1, 2, 3, 4, 5};
+  lp.a_matrix_.index_ = {0, 0, 0, 1, 1};
+  lp.a_matrix_.value_ = {2.0, 1.0, 1.0, 1.0, 1.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleProbing);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  // a sub-MIP (dual-fixing probing is not used in sub-MIPs)
+  HighsMipSolver mipsolver(callback, options, lp, solution, true, 1);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+
+  // the inherited cliques, added before the domain propagation would fix
+  // x0 = 0; the cliques of the sub-MIP are not extracted yet
+  for (HighsInt col : {3, 4}) {
+    std::vector<HighsCliqueTable::CliqueVar> clique = {
+        HighsCliqueTable::CliqueVar(0, 1), HighsCliqueTable::CliqueVar(col, 1)};
+    mipsolver.mipdata_->cliquetable.addClique(mipsolver, clique.data(), 2);
+  }
+  REQUIRE(mipsolver.mipdata_->cliquetable.numCliques() == 2);
+  REQUIRE(!mipsolver.mipdata_->cliquesExtracted);
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status == HighsModelStatus::kNotset);
+
+  // x0 has been deleted, and no row of the reduced model contains it
+  const HighsLp& presolved = *mipsolver.model_;
+  for (HighsInt j = 0; j < presolved.num_col_; j++)
+    REQUIRE(postsolve_stack.getOrigColIndex(j) != 0);
+  REQUIRE(presolved.a_matrix_.start_[presolved.num_col_] ==
+          static_cast<HighsInt>(presolved.a_matrix_.index_.size()));
+  for (HighsInt i : presolved.a_matrix_.index_) {
+    REQUIRE(i >= 0);
+    REQUIRE(i < presolved.num_row_);
+  }
+
+  HighsTaskExecutor::shutdown(true);
+}
+
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
                    const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,

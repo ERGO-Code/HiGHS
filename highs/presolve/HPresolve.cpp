@@ -4946,7 +4946,11 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
 }
 
 bool HPresolve::cliqueTableActive() const {
-  return mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted;
+  // the clique table has to be kept up to date as soon as it contains
+  // cliques, e.g. in a sub-MIP that starts with the clique table of its parent
+  // before its cliques are extracted (see issue #3707)
+  return mipsolver != nullptr &&
+         mipsolver->mipdata_->cliquetable.numCliques() != 0;
 }
 
 void HPresolve::recordCliqueTableFixedCol(const HighsInt col,
