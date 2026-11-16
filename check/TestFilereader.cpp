@@ -785,6 +785,7 @@ TEST_CASE("issue-3650", "[highs_filereader]") {
 
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("log_dev_level", 1);
   highsPrintStringAsHeading("Empty file");
   FILE* file = fopen(filename.c_str(), "w");
   fprintf(file, "%s", "\n");
@@ -869,6 +870,41 @@ TEST_CASE("issue-3650", "[highs_filereader]") {
   fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nSOS\n");
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  h.setOptionValue("mps_parser_type_free", false);
+
+  highsPrintStringAsHeading("Fixed format file has no objective or ENDATA");
+   file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n G  R1\nCOLUMNS\n    C1        R1           -1.0\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+ 
+  highsPrintStringAsHeading("Fixed format file has no objective");
+   file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n G  R1\nCOLUMNS\n    C1        R1           -1.0\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kWarning);
+ 
+  /*
+  highsPrintStringAsHeading("Fixed format file ends in ROWS");
+   file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+  */
+
+  highsPrintStringAsHeading("Fixed format file ends in COLUMNS");
+   file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\nCOLUMNS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+ 
+  highsPrintStringAsHeading("Blank line in fixed format file");
+   file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+ 
 
   std::remove(filename.c_str());
 }
