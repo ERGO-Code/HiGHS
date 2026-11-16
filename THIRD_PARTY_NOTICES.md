@@ -32,7 +32,9 @@ The upstream source code is available at:
 
 ## cli
 
-The source code in `/extern/CLI11.hpp` is distributed under a license stated in the source code. Although the license is not named, the text appears to correspond to the [BSD-3 license](https://opensource.org/license/bsd-3-clause).
+The source code in `/extern/cli11/CLI11.hpp` is distributed under the
+[BSD-3-Clause license](https://opensource.org/license/bsd-3-clause), whose full
+text and copyright notice are included in the header.
 
 The upstream source code is available at:
 
