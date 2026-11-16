@@ -26,7 +26,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
   // if free format parser
   // Parse file and return status.
   if (options.mps_parser_type_free) {
-    HMpsFF parser{};
+    HMpsFF parser(options.log_options);
     if (options.time_limit < kHighsInf && options.time_limit > 0)
       parser.time_limit_ = options.time_limit;
 

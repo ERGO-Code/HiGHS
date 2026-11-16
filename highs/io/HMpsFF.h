@@ -55,7 +55,7 @@ double getWallTime();
 
 class HMpsFF {
  public:
-  HMpsFF() {}
+  HMpsFF(const HighsLogOptions& log_options) : log_options_(log_options) {}
   FreeFormatParserReturnCode loadProblem(const HighsLogOptions& log_options,
                                          const std::string& filename,
                                          HighsModel& model);
@@ -64,6 +64,7 @@ class HMpsFF {
   bool warning_issued_ = false;
 
  private:
+  const HighsLogOptions log_options_;
   double start_time;
 
   HighsInt num_row;
@@ -236,7 +237,7 @@ class HMpsFF {
 
   bool cannotParseSection(const HighsLogOptions& log_options,
                           const HMpsFF::Parsekey keyword) const;
-  HMpsFF::Parsekey failureInSection(const HighsLogOptions& log_options, const std::string& section) const;
+  HMpsFF::Parsekey failureInSection(const std::string& section) const;
   bool allZeroed(const std::vector<double>& value);
   double getValue(const std::string& word, bool& is_nan,
                   const HighsInt id = -1) const;

@@ -395,8 +395,8 @@ bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
   return true;
 }
 
-HMpsFF::Parsekey HMpsFF::failureInSection(const HighsLogOptions& log_options, const std::string& section) const {
-  highsLogUser(log_options, HighsLogType::kError,
+HMpsFF::Parsekey HMpsFF::failureInSection(const std::string& section) const {
+  highsLogUser(log_options_, HighsLogType::kError,
                "Anomalous exit when parsing %s section of MPS file\n", section.c_str());
   return HMpsFF::Parsekey::kFail;
 }
@@ -712,9 +712,7 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
   // Update num_row in case there are free rows. They won't be added to the
   // constraint matrix.
   num_row = row_lower.size();
-  highsLogUser(log_options, HighsLogType::kError,
-               "Anomalous exit when parsing ROWS section of MPS file\n");
-  return HMpsFF::Parsekey::kFail;
+  return failureInSection("ROWS");
 }
 
 typename HMpsFF::Parsekey HMpsFF::parseCols(const HighsLogOptions& log_options,
