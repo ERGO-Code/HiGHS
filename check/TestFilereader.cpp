@@ -934,6 +934,9 @@ TEST_CASE("issue-3657", "[highs_filereader]") {
   testWord("3.142E2", 0);
   testWord(" 3.142E2", 0);
   testWord("3.142E2 ", 0);
+  testWord("-3.142E-2", 0);
+  testWord("-3.142E-02", 0);
+  testWord("-3.142E+02", 0);
   testWord("3.142E2_1", kDoubleStatusIllegal);
   testWord("3.142d2", kDoubleStatusFinite);
   testWord(" 3.142d2", kDoubleStatusFinite);
@@ -944,25 +947,23 @@ TEST_CASE("issue-3657", "[highs_filereader]") {
   testWord("Inf", kDoubleStatusInfinite);
   testWord("Infinity", kDoubleStatusInfinite);
   testWord("infty", kDoubleStatusIllegal);
+  testWord("nan", kDoubleStatusNan);
   testWord("NaN", kDoubleStatusNan);
   testWord("NaNaN", kDoubleStatusIllegal);
   testWord("abc", kDoubleStatusIllegal);
 
-  /*
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename = test_name + ".mps";
 
   FILE* file;
- file = fopen(filename.c_str(), "w");
-  fprintf(file, "%s", "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 R1
- abc\nRHS\nENDATA\n"); fclose(file);
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 R1 abc\nRHS\nENDATA\n"); fclose(file);
 
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
   std::remove(filename.c_str());
-  */
 }
 
 TEST_CASE("issue-3659", "[highs_filereader]") {
