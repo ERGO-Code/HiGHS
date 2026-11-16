@@ -1052,8 +1052,7 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
     if (rowidx > -1) {
       has_entry = has_row_entry_[rowidx];
     } else {
-      assert(rowidx == -1);
-      has_entry = has_obj_entry_;
+      has_entry = rowidx == -1 && has_obj_entry_;
     }
   };
 
@@ -1070,9 +1069,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
         row_lower[rowidx] = val;
       }
       has_row_entry_[rowidx] = true;
-    } else {
+    } else if (rowidx == -1) {
       // objective shift
-      assert(rowidx == -1);
       obj_offset = -val;
       has_obj_entry_ = true;
     }
