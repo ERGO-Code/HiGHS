@@ -100,7 +100,9 @@ if(BUILD_SHARED_EXTRAS_LIB)
       INSTALL_RPATH "${highs_extras_rpath}"
       INSTALL_RPATH_USE_LINK_PATH TRUE)
   else()
+    # no "lib" prefix with MinGW: the loader looks for highs_extras.dll
     set_target_properties(highs_extras PROPERTIES
+      PREFIX ""
       WINDOWS_EXPORT_ALL_SYMBOLS OFF)
   endif()
 endif()

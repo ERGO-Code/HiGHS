@@ -125,9 +125,19 @@ When `BLAS_LIBRARIES` is used, HiGHS can only tell which vendor provides BLAS fr
 
 By default, the dependencies of HiPO are built into a separate shared library, `highs_extras`, which HiGHS loads when it runs. This applies even if HiGHS itself is a static library, so linking `highs.lib` or `libhighs.a` is not enough to make HiPO available: your application must also be able to find the shared library. If it cannot, setting `solver=hipo` fails with an error that gives the reason, and the `solver` option is left unchanged.
 
-On Windows, `cmake --install` places `highs_extras.dll` in the `bin` folder of the install directory. Copy it next to your application's `.exe`, or add its folder to `PATH`, and distribute it with your application. Any DLL that `highs_extras.dll` depends on, such as `openblas.dll`, must also be found. If one is missing, the error says that the module could not be found, even when `highs_extras.dll` is present.
+To choose the folder that `highs_extras` is loaded from, call
+```cpp
+Highs::initializeExtras("<folder containing highs_extras>", false);
+```
+or, from C, `Highs_initializeExtras("<folder containing highs_extras>", 0)`, once, before HiPO is first used. If the folder is empty and the second argument is true, the default locations described below are searched; if the second argument is false, nothing is loaded. Only the first call attempts to load the library: later calls return its result, whatever their arguments. These methods do nothing when the extras are linked statically.
+
+If neither method is called, HiGHS searches the default locations when HiPO is first used.
+
+On Windows, `cmake --install` places `highs_extras.dll` in the `bin` folder of the install directory. Copy it next to your application's `.exe` and distribute it with your application. For security, `PATH` and the current folder are not searched: by default only the folder of the application's `.exe` and the Windows system folder are searched. Any DLL that `highs_extras.dll` depends on, such as `openblas.dll`, must also be in one of these folders or, if `Highs::initializeExtras` is given a folder, in that folder. If one is missing, the error says that the module could not be found, even when `highs_extras.dll` is present.
 
 On Linux, `libhighs_extras.so` must be next to `libhighs.so`, as it is after `cmake --install`, or on the runtime library search path, for example through `LD_LIBRARY_PATH`. On MacOS, `libhighs_extras.dylib` must be in the same folder as the binary that contains HiGHS.
+
+The Python package `highspy` loads `highs_extras` only from the installed `highspy-extras` package, so no call to `initializeExtras` is needed.
 
 To link everything into your application instead, so that no shared library is needed, build with
 ```

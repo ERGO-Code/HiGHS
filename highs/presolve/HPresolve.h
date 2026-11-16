@@ -585,6 +585,12 @@ class HPresolve {
 
   HighsPresolveStatus getPresolveStatus() const { return presolve_status_; }
 
+  bool failed() const {
+    return presolve_status_ == HighsPresolveStatus::kOutOfMemory ||
+           presolve_status_ == HighsPresolveStatus::kException ||
+           presolve_status_ == HighsPresolveStatus::kMatrixValueError;
+  }
+
   bool zeroRowActivityFeasible() const;
 
   HighsInt debugGetCheckCol() const;

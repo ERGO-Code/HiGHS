@@ -4671,6 +4671,31 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
+    const bool kCheckReducedMatrix = false;
+    if (kCheckReducedMatrix) {
+      // Although presolve can yield small nonzero values in the matrix,
+      // they may play a meaningful role in postsolve so they are
+      // retained. However, they offer some risk to the simplex solver,
+      // so HighsSparseMatrix::assessExtremeValues logs a warning and
+      // returns HighsStatus::kWarning.
+      //
+      // Presolve should never generate explicit zeros or large values
+      // in the matrix, and these cannot be permitted in the simplex
+      // solver, so HighsSparseMatrix::assessExtremeValues logs an error
+      // in either case, and returns HighsStatus::kError, triggering a
+      // presolve error
+      if (model->a_matrix_.assessExtremeValues(
+              "of presolved problem ", *(options)) == HighsStatus::kError) {
+        presolve_status_ = HighsPresolveStatus::kMatrixValueError;
+      } else {
+        // The reduced LP constraint matrix is set up in presolve, so
+        // should be valid structurally, so assert this now - AFTER
+        // assessing extreme values, since explicit zeros are removed
+        // silently in HighsSparseMatrix::assessStructure
+        assert(model->a_matrix_.assessStructure(*(options)) ==
+               HighsStatus::kOk);
+      }
+    }
   } else {
     // No reductions performed
     presolve_status_ = HighsPresolveStatus::kNotReduced;

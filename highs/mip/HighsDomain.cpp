@@ -735,8 +735,7 @@ void HighsDomain::DualFixProbingPropagation::updateRhsRedundant(HighsInt row) {
       mipsolver->model_->row_upper_[row] == kHighsInf)
     return;
 
-  if (domain->getMaxActivity(row) <=
-      mipsolver->model_->row_upper_[row] + mipsolver->mipdata_->feastol) {
+  if (domain->isRowUpperRedundant(row)) {
     redundantRowInds_.push_back(idx);
     redundantRowFlags_[idx] = 1;
     if (!isEnabled()) ++numGlobalRedundantRows_;
@@ -749,8 +748,7 @@ void HighsDomain::DualFixProbingPropagation::updateLhsRedundant(HighsInt row) {
       mipsolver->model_->row_lower_[row] == -kHighsInf)
     return;
 
-  if (domain->getMinActivity(row) >=
-      mipsolver->model_->row_lower_[row] - mipsolver->mipdata_->feastol) {
+  if (domain->isRowLowerRedundant(row)) {
     redundantRowInds_.push_back(idx);
     redundantRowFlags_[idx] = 1;
     if (!isEnabled()) ++numGlobalRedundantRows_;
@@ -1829,11 +1827,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         continue;
       }
 
-      if (mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
-          activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
-          activitymin_[mip->a_matrix_.index_[i]] -
-                  mip->row_upper_[mip->a_matrix_.index_[i]] >
-              feastol()) {
+      if (isRowUpperInfeasible(mip->a_matrix_.index_[i])) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
         infeasible_pos = domchgstack_.size();
@@ -1881,11 +1875,7 @@ void HighsDomain::updateActivityLbChange(HighsInt col, double oldbound,
         continue;
       }
 
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
-          activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
-          mip->row_lower_[mip->a_matrix_.index_[i]] -
-                  activitymax_[mip->a_matrix_.index_[i]] >
-              feastol()) {
+      if (isRowLowerInfeasible(mip->a_matrix_.index_[i])) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
         infeasible_pos = domchgstack_.size();
@@ -2004,11 +1994,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         continue;
       }
 
-      if (mip->row_lower_[mip->a_matrix_.index_[i]] != -kHighsInf &&
-          activitymaxinf_[mip->a_matrix_.index_[i]] == 0 &&
-          mip->row_lower_[mip->a_matrix_.index_[i]] -
-                  activitymax_[mip->a_matrix_.index_[i]] >
-              feastol()) {
+      if (isRowLowerInfeasible(mip->a_matrix_.index_[i])) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
         infeasible_pos = domchgstack_.size();
@@ -2059,11 +2045,7 @@ void HighsDomain::updateActivityUbChange(HighsInt col, double oldbound,
         continue;
       }
 
-      if (mip->row_upper_[mip->a_matrix_.index_[i]] != kHighsInf &&
-          activitymininf_[mip->a_matrix_.index_[i]] == 0 &&
-          activitymin_[mip->a_matrix_.index_[i]] -
-                  mip->row_upper_[mip->a_matrix_.index_[i]] >
-              feastol()) {
+      if (isRowUpperInfeasible(mip->a_matrix_.index_[i])) {
         mipsolver->mipdata_->debugSolution.nodePruned(*this);
         infeasible_ = true;
         infeasible_pos = domchgstack_.size();
@@ -2174,8 +2156,7 @@ double HighsDomain::getRedundantRowValue(HighsInt row) const {
 }
 
 bool HighsDomain::isRedundantRow(HighsInt row) const {
-  return (getMinActivity(row) >= mipsolver->rowLower(row) - feastol() &&
-          getMaxActivity(row) <= mipsolver->rowUpper(row) + feastol());
+  return isRowLowerRedundant(row) && isRowUpperRedundant(row);
 }
 
 void HighsDomain::markPropagateCut(Reason reason) {
@@ -2203,20 +2184,14 @@ void HighsDomain::markPropagateCut(Reason reason) {
 
 void HighsDomain::markPropagate(HighsInt row) {
   if (!propagateflags_[row]) {
-    bool proplower =
-        mipsolver->rowLower(row) != -kHighsInf &&
-        (activitymininf_[row] != 0 ||
-         activitymin_[row] < mipsolver->rowLower(row) - feastol()) &&
-        (activitymaxinf_[row] == 1 ||
-         activitymax_[row] - mipsolver->rowLower(row) <=
-             capacityThreshold_[row]);
-    bool propupper =
-        mipsolver->rowUpper(row) != kHighsInf &&
-        (activitymaxinf_[row] != 0 ||
-         activitymax_[row] > mipsolver->rowUpper(row) + feastol()) &&
-        (activitymininf_[row] == 1 ||
-         mipsolver->rowUpper(row) - activitymin_[row] <=
-             capacityThreshold_[row]);
+    bool proplower = !isRowLowerRedundant(row) &&
+                     (activitymaxinf_[row] == 1 ||
+                      activitymax_[row] - mipsolver->rowLower(row) <=
+                          capacityThreshold_[row]);
+    bool propupper = !isRowUpperRedundant(row) &&
+                     (activitymininf_[row] == 1 ||
+                      mipsolver->rowUpper(row) - activitymin_[row] <=
+                          capacityThreshold_[row]);
 
     if (proplower || propupper) {
       propagateinds_.push_back(row);
@@ -2705,9 +2680,7 @@ bool HighsDomain::propagate() {
           const double* Rvalue = mipsolver->mipdata_->ARvalue_.data() + start;
           bool recomputeCapThreshold = false;
 
-          if (mipsolver->rowUpper(i) != kHighsInf &&
-              (activitymaxinf_[i] != 0 ||
-               activitymax_[i] > mipsolver->rowUpper(i) + feastol())) {
+          if (!isRowUpperRedundant(i)) {
             // computeMinActivity(start, end, mipsolver->ARstart_.data(),
             // mipsolver->ARvalue_.data(), activitymininf_[i],
             //           activitymin_[i]);
@@ -2719,9 +2692,7 @@ bool HighsDomain::propagate() {
             recomputeCapThreshold = true;
           }
 
-          if (mipsolver->rowLower(i) != -kHighsInf &&
-              (activitymininf_[i] != 0 ||
-               activitymin_[i] < mipsolver->rowLower(i) - feastol())) {
+          if (!isRowLowerRedundant(i)) {
             // computeMaxActivity(start, end, mipsolver->ARstart_.data(),
             // mipsolver->ARvalue_.data(), activitymaxinf_[i],
             //           activitymax_[i]);

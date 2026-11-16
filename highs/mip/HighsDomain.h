@@ -810,6 +810,33 @@ class HighsDomain {
                                      : kHighsInf;
   }
 
+  // the differences between activities and row sides are computed in full
+  // precision before comparing with the tolerance, since comparing a
+  // HighsCDouble with a double rounds it first; this keeps the redundancy and
+  // infeasibility checks consistent at the tolerance boundary
+  bool isRowLowerRedundant(HighsInt row) const {
+    return mipsolver->rowLower(row) == -kHighsInf ||
+           (activitymininf_[row] == 0 &&
+            mipsolver->rowLower(row) - activitymin_[row] <= feastol());
+  }
+
+  bool isRowUpperRedundant(HighsInt row) const {
+    return mipsolver->rowUpper(row) == kHighsInf ||
+           (activitymaxinf_[row] == 0 &&
+            activitymax_[row] - mipsolver->rowUpper(row) <= feastol());
+  }
+
+  bool isRowLowerInfeasible(HighsInt row) const {
+    return mipsolver->rowLower(row) != -kHighsInf &&
+           activitymaxinf_[row] == 0 &&
+           mipsolver->rowLower(row) - activitymax_[row] > feastol();
+  }
+
+  bool isRowUpperInfeasible(HighsInt row) const {
+    return mipsolver->rowUpper(row) != kHighsInf && activitymininf_[row] == 0 &&
+           activitymin_[row] - mipsolver->rowUpper(row) > feastol();
+  }
+
   double getMinCutActivity(const HighsCutPool& cutpool, HighsInt cut) const;
 
   bool isBinary(HighsInt col) const {
