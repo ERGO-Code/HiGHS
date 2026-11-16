@@ -354,7 +354,7 @@ FreeFormatParserReturnCode HMpsFF::parse(const HighsLogOptions& log_options,
 }
 
 bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
-                                const HMpsFF::Parsekey keyword) {
+                                const HMpsFF::Parsekey keyword) const {
   switch (keyword) {
       // Identify the sections that cannot be parsed
     case HMpsFF::Parsekey::kDelayedrows:
@@ -393,6 +393,12 @@ bool HMpsFF::cannotParseSection(const HighsLogOptions& log_options,
       return false;
   }
   return true;
+}
+
+HMpsFF::Parsekey HMpsFF::failureInSection(const HighsLogOptions& log_options, const std::string& section) const {
+  highsLogUser(log_options, HighsLogType::kError,
+               "Anomalous exit when parsing %s section of MPS file\n", section.c_str());
+  return HMpsFF::Parsekey::kFail;
 }
 
 // Assuming string is not empty.
@@ -701,14 +707,13 @@ HMpsFF::Parsekey HMpsFF::parseRows(const HighsLogOptions& log_options,
       }
     }
   }
-
-  // Hard to imagine how the following lines are executed
-  highsLogUser(log_options, HighsLogType::kError,
-               "Anomalous exit when parsing BOUNDS section of MPS file\n");
-  assert(1 == 0);
-  // Update num_row in case there is free rows. They won't be added to the
+  // Reach here if file ends without reaching another keyword
+  //
+  // Update num_row in case there are free rows. They won't be added to the
   // constraint matrix.
   num_row = row_lower.size();
+  highsLogUser(log_options, HighsLogType::kError,
+               "Anomalous exit when parsing ROWS section of MPS file\n");
   return HMpsFF::Parsekey::kFail;
 }
 

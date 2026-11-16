@@ -779,3 +779,50 @@ TEST_CASE("issue-3649", "[highs_filereader]") {
   REQUIRE(extractModelName("a.mps") == "a");
 }
 
+TEST_CASE("issue-3650", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+ 
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  highsPrintStringAsHeading("Empty file");
+  FILE* file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after NAME");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("Unfinished OBJSENSE");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nOBJSENSE\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after OBJSENSE");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nOBJSENSE\n  MAX\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after ROWS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("No keyword after COLUMNS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+
+  std::remove(filename.c_str());
+
+}
+

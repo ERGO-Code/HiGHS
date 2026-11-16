@@ -235,7 +235,8 @@ class HMpsFF {
                             std::istream& file, const HMpsFF::Parsekey keyword);
 
   bool cannotParseSection(const HighsLogOptions& log_options,
-                          const HMpsFF::Parsekey keyword);
+                          const HMpsFF::Parsekey keyword) const;
+  HMpsFF::Parsekey failureInSection(const HighsLogOptions& log_options, const std::string& section) const;
   bool allZeroed(const std::vector<double>& value);
   double getValue(const std::string& word, bool& is_nan,
                   const HighsInt id = -1) const;
