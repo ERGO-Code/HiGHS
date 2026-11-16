@@ -767,3 +767,10 @@ TEST_CASE("issue-3457", "[highs_filereader]") {
   REQUIRE(highs.writeModel(filename) == HighsStatus::kOk);
   std::remove(filename.c_str());
 }
+
+TEST_CASE("issue-3649", "[highs_filereader]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel("gz") == HighsStatus::kError);
+}
+
