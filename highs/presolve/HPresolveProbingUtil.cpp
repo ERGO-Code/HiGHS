@@ -180,8 +180,6 @@ HPresolve::Result HPresolve::prepareProbing(
   HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
-  shrinkProblem(postsolve_stack);
-
   // first call?
   firstCall = !mipsolver->mipdata_->cliquesExtracted;
 
@@ -193,6 +191,11 @@ HPresolve::Result HPresolve::prepareProbing(
     // step, so it has to contain the fixings of the normalisation
     HPRESOLVE_CHECKED_CALL(synchroniseCliqueTable());
   }
+
+  // shrink the problem after the normalisation, so that the columns it deletes
+  // are neither in the domain nor in the clique table that probing and
+  // enumeration use
+  shrinkProblem(postsolve_stack);
 
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
         model->a_matrix_.start_);
@@ -373,7 +376,7 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
     HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
-  cliquetable.getSubstitutions().clear();
+  cliquetable.clearSubstitutions();
 
   return Result::kOk;
 }
