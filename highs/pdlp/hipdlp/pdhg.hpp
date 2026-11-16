@@ -100,7 +100,7 @@ class PDLPSolver {
   bool checkConvergence(const HighsInt iter, const std::vector<double>& x,
                         const std::vector<double>& y,
                         const std::vector<double>& ax_vector,
-                        const std::vector<double>& aty_vector, double epsilon,
+                        const std::vector<double>& aty_vector,
                         SolverResults& results, const char* type,
                         std::vector<double>& dSlackPos,
                         std::vector<double>& dSlackNeg);
@@ -308,10 +308,9 @@ class PDLPSolver {
   void linalgGpuATy(const double* d_y_in, double* d_aty_out);
   bool checkConvergenceGpu(const HighsInt iter, const double* d_x,
                            const double* d_y, const double* d_ax,
-                           const double* d_aty, double epsilon,
-                           SolverResults& results, const char* type,
-                           double* d_slackPos_out, double* d_slackNeg_out,
-                           bool use_halpern_slack);
+                           const double* d_aty, SolverResults& results,
+                           const char* type, double* d_slackPos_out,
+                           double* d_slackNeg_out, bool use_halpern_slack);
   void computeStepSizeRatioGpu(PrimalDualParams& working_params);
   void updateAverageIteratesGpu(HighsInt inner_iter);
   void computeAverageIterateGpu();
