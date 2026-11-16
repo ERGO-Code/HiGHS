@@ -919,6 +919,23 @@ TEST_CASE("issue-3650", "[highs_filereader]") {
   std::remove(filename.c_str());
 }
 
+TEST_CASE("issue-3657", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+
+  FILE* file;
+ file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 R1 abc\nRHS\nENDATA\n");
+  fclose(file);
+
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  std::remove(filename.c_str());
+  
+}
+
 TEST_CASE("issue-3659", "[highs_filereader]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename = test_name + ".mps";
@@ -929,8 +946,7 @@ TEST_CASE("issue-3659", "[highs_filereader]") {
   fclose(file);
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
-  h.setOptionValue("log_dev_level", 1);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
 
   REQUIRE(h.getLp().offset_ == 0);
