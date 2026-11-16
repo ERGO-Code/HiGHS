@@ -38,10 +38,6 @@ struct StagnationReport {
   // progress test
   bool no_window_progress = false;
   bool no_best_progress = false;
-
-  // the bounds of free variables have been changed in the last
-  // kFreeVarsDivergeIter iterations
-  bool free_vars_diverging = false;
 };
 
 struct StagnationTests {
@@ -53,10 +49,6 @@ struct StagnationTests {
   // outcome of the residual reduction test in the last kBadResWindow
   // iterations: bit i is set if the test failed i iterations ago
   Int bad_res_history{};
-
-  // number of consecutive iterations in which the bounds of free variables
-  // were changed
-  Int free_bounds_changed_iter{};
 
   // data for progress test, for pinf, dinf, absolute gap and infeas_drop:
   // - values in the last kProgressMaxIter + 1 iterations in which the quantity

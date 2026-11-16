@@ -10,6 +10,8 @@ const Int kMaxIterDefault = 200;
 const double kIpmTolDefault = 1e-8;
 const double kDivergeTol = 1e3;
 const double kKktCheckFactor = 1e1;
+const double kCertificateTol = 1e-6;
+const double kCertificateMinRadius = 1e3;
 
 // parameters for residual reduction test
 const double kResReductionFraction = 0.1;
@@ -75,7 +77,6 @@ const double kScalingSmallBoundDiff = 1e-3;
 // parameters for free variables
 const double kFreeVarsInitialBound = 1e4;
 const double kFreeVarsCloseRatio = 0.5;
-const Int kFreeVarsDivergeIter = 5;
 
 // parameters for parallel NE
 const Int kParallelNEStructTasks = 50;   // 32 < . <= 64

@@ -133,6 +133,7 @@ void Solver::reset() {
   sigma_ = 0.0;
   regul_ = Regularisation{};
   recovery_ = Recovery{};
+  prev_point_valid_ = false;
 
   LS_.reset();
   it_.reset();
@@ -227,7 +228,7 @@ shouldTerminate Solver::prepareIter() {
   // Termination is checked first, so that an iterate that satisfies the
   // termination criteria is accepted even if stagnation is detected.
   if (checkTermination()) return true;
-  if (checkBadIter()) return true;
+  if (checkInfeasibilityOrStagnation()) return true;
   if (checkInterrupt()) return true;
 
   ++iter_;
@@ -235,9 +236,6 @@ shouldTerminate Solver::prepareIter() {
   if (model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_)) {
     it_->residual1234();
     it_->computeMu();
-    ++it_->tests.free_bounds_changed_iter;
-  } else {
-    it_->tests.free_bounds_changed_iter = 0;
   }
 
   it_->clearDir();
@@ -1163,55 +1161,268 @@ StagnationReport Solver::checkStagnation() {
   return report;
 }
 
-shouldTerminate Solver::checkBadIter() {
-  bool terminate = false;
+shouldTerminate Solver::checkInfeasibilityOrStagnation() {
   const StagnationReport report =
       iter_ > 0 ? checkStagnation() : StagnationReport{};
   const bool stagnation = report.stagnation;
 
-  // check for infeasibility
-  bool mu_is_large =
+  if (handleInfeasible(stagnation)) return true;
+  if (stagnation) return handleStagnation(report);
+  return false;
+}
+
+shouldTerminate Solver::handleInfeasible(bool stagnation) {
+  bool terminate = false;
+
+  // Signs of divergence, which suggest that the problem may be infeasible.
+  // Stagnation is also a possible sign of infeasibility.
+  const bool mu_is_large =
       it_->best_mu > 0.0 ? it_->mu > it_->best_mu * kDivergeTol : false;
-  bool pobj_is_very_large =
+  const bool pobj_is_very_large =
       it_->pobj <
       -std::max(std::abs(it_->dobj) * kDivergeTol * kDivergeTol, 1.0);
-  bool dobj_is_very_large =
+  const bool dobj_is_very_large =
       it_->dobj >
       std::max(std::abs(it_->pobj) * kDivergeTol * kDivergeTol, 1.0);
-  bool clearly_infeasible =
+  const bool clearly_infeasible =
       iter_ > 5 && (pobj_is_very_large || dobj_is_very_large);
+  const bool suspect_infeasible =
+      stagnation || mu_is_large || clearly_infeasible;
 
-  if (stagnation || mu_is_large || clearly_infeasible) {
-    bool pobj_is_larger =
-        it_->pobj < -std::max(std::abs(it_->dobj) * kDivergeTol, 1.0);
-    bool dobj_is_larger =
-        it_->dobj > std::max(std::abs(it_->pobj) * kDivergeTol, 1.0);
+  HighsSolution point;
+  const bool have_point = model_.lpOrig() && (!model_.qp() || model_.QOrig());
+  if (have_point) {
+    Hoptions_.output_flag = logger_.debug(2);
+    getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
+                             model_.m_orig(), model_.rhsOrig(),
+                             model_.constraintsOrig(), *this,
+                             HighsModelStatus::kUnknown, point);
+  }
 
-    // If the iterate is primal feasible and the artificial bounds of free
-    // variables keep being pushed away, the problem is likely to be primal
-    // unbounded. In this case, the dual objective follows the primal one,
-    // because of the artificial bounds, so pobj_is_larger does not detect it.
-    bool free_vars_diverge = stagnation &&
-                             it_->pinf < options_.feasibility_tol &&
-                             it_->dinf > 100 * options_.feasibility_tol &&
-                             report.free_vars_diverging;
-
-    if (pobj_is_larger || free_vars_diverge) {
-      // problem is likely to be primal unbounded, i.e. dual infeasible
+  // The signs of divergence only trigger the search for a certificate. The
+  // status is declared only if the certificate is verified on the original
+  // problem.
+  if (suspect_infeasible && have_point) {
+    if (checkPrimalRay(point)) {
       logger_.print("=== Dual infeasible\n");
       setStatus(kStatusDualInfeasible);
       terminate = true;
-    } else if (dobj_is_larger) {
-      // problem is likely to be dual unbounded, i.e. primal infeasible
+    } else if (checkDualRay(point)) {
       logger_.print("=== Primal infeasible\n");
       setStatus(kStatusPrimalInfeasible);
       terminate = true;
-    } else if (stagnation) {
-      terminate = handleStagnation(report);
     }
   }
 
+  if (have_point) {
+    prev_point_ = std::move(point);
+    prev_point_valid_ = true;
+  }
+
   return terminate;
+}
+
+double Solver::primalRayRadius(const std::vector<double>& ray) const {
+  // Let d be a candidate primal ray. Any dual feasible point (x, y, z) of the
+  // problem, scaled by the sense so that it is a minimisation, satisfies
+  //  c + Q * x = A^T * y + z
+  // with y, z having the signs required by the bounds, so that
+  //  c^T * d = -x^T * Q * d + y^T * (A * d) + z^T * d.
+  // If d is in the recession cone of the column bounds and A * d is in the
+  // recession cone of the row bounds, the last two terms are nonnegative.
+  // Otherwise, they are bounded below by -||(y, z)||_inf * V, with V the sum of
+  // the violations of the recession cones. The first term is bounded below by
+  // -||x||_inf * ||Q * d||_1, which is added to V.
+  // Hence, if c^T * d < 0, any dual feasible point has
+  //  ||(x, y, z)||_inf >= R = -c^T * d / V.
+  // Returns R, which is infinite if d is an exact primal ray, and zero if d is
+  // not a descent direction. R does not depend on the scaling of d.
+  const HighsLp& lp = *model_.lpOrig();
+  const Int n = lp.num_col_;
+  const Int m = lp.num_row_;
+  const double sense = static_cast<double>(static_cast<HighsInt>(lp.sense_));
+
+  double d_norm = 0.0;
+  for (Int j = 0; j < n; ++j) d_norm = std::max(d_norm, std::abs(ray[j]));
+  if (d_norm == 0.0 || !std::isfinite(d_norm)) return 0.0;
+  std::vector<double> d(n);
+  for (Int j = 0; j < n; ++j) d[j] = ray[j] / d_norm;
+
+  // descent, with a guard against cancellation
+  double cd = 0.0;
+  double cd_scale = 0.0;
+  for (Int j = 0; j < n; ++j) {
+    cd += sense * lp.col_cost_[j] * d[j];
+    cd_scale += std::abs(lp.col_cost_[j] * d[j]);
+  }
+  if (!(cd < -kCertificateTol * cd_scale)) return 0.0;
+
+  double viol = 0.0;
+  for (Int j = 0; j < n; ++j) {
+    if (lp.col_lower_[j] > -kHighsInf) viol += std::max(0.0, -d[j]);
+    if (lp.col_upper_[j] < kHighsInf) viol += std::max(0.0, d[j]);
+  }
+
+  std::vector<double> Ad;
+  lp.a_matrix_.product(Ad, d);
+  for (Int i = 0; i < m; ++i) {
+    if (lp.row_lower_[i] > -kHighsInf) viol += std::max(0.0, -Ad[i]);
+    if (lp.row_upper_[i] < kHighsInf) viol += std::max(0.0, Ad[i]);
+  }
+
+  if (model_.qp()) {
+    std::vector<double> Qd;
+    model_.QOrig()->product(d, Qd);
+    for (Int j = 0; j < n; ++j) viol += std::abs(Qd[j]);
+  }
+
+  return viol > 0.0 ? -cd / viol : kHighsInf;
+}
+
+double Solver::dualRayRadius(const std::vector<double>& ray) const {
+  // Let y be a candidate dual ray (Farkas certificate) and w = A^T * y. Any
+  // primal feasible x,
+  // with r = A * x, satisfies y^T * r = w^T * x. Each entry of y (resp w) is
+  // consistent with the bounds if the row (resp column) bound on the side
+  // given by its sign is finite. Then
+  //  y^T * r >= g - sum_{i inconsistent} |y_i| * |r_i|
+  //          >= g - ||x||_inf * sum_{i inconsistent} |y_i| * ||A_i||_1
+  //  w^T * x <= h + ||x||_inf * sum_{j inconsistent} |w_j|
+  // with
+  //  g = sum_{i consistent} y_i * (y_i > 0 ? row_lower_i : row_upper_i)
+  //  h = sum_{j consistent} w_j * (w_j > 0 ? col_upper_j : col_lower_j).
+  // Hence, if g > h, any feasible x has ||x||_inf >= R = (g - h) / V, with V
+  // the sum of the inconsistent terms.
+  // The sign convention of the duals is irrelevant, since any y with g > h is
+  // a certificate, so both y and -y are tried and the largest R is returned.
+  // R is infinite if y is an exact dual ray, and zero if g <= h. R does not
+  // depend on the scaling of y.
+  const HighsLp& lp = *model_.lpOrig();
+  const Int n = lp.num_col_;
+  const Int m = lp.num_row_;
+  if (m == 0) return 0.0;
+
+  double y_norm = 0.0;
+  for (Int i = 0; i < m; ++i) y_norm = std::max(y_norm, std::abs(ray[i]));
+  if (y_norm == 0.0 || !std::isfinite(y_norm)) return 0.0;
+  std::vector<double> y(m);
+  for (Int i = 0; i < m; ++i) y[i] = ray[i] / y_norm;
+
+  std::vector<double> w;
+  lp.a_matrix_.productTranspose(w, y);
+
+  std::vector<double> row_norm(m, 0.0);
+  for (Int j = 0; j < n; ++j)
+    for (Int el = lp.a_matrix_.start_[j]; el < lp.a_matrix_.start_[j + 1]; ++el)
+      row_norm[lp.a_matrix_.index_[el]] += std::abs(lp.a_matrix_.value_[el]);
+
+  // Add the contribution of entry v, using bound lo if v > 0 and bound up if
+  // v < 0, to sum if the bound is finite, or to viol otherwise.
+  auto add = [](double v, double lo, double up, double weight, double& sum,
+                double& scale, double& viol) {
+    if (v == 0.0) return;
+    const double bound = v > 0 ? lo : up;
+    if (std::abs(bound) >= kHighsInf) {
+      viol += std::abs(v) * weight;
+    } else {
+      sum += v * bound;
+      scale += std::abs(v * bound);
+    }
+  };
+
+  double radius = 0.0;
+  for (double sign : {1.0, -1.0}) {
+    double g = 0.0;
+    double h = 0.0;
+    double scale = 0.0;
+    double viol = 0.0;
+    for (Int i = 0; i < m; ++i)
+      add(sign * y[i], lp.row_lower_[i], lp.row_upper_[i], row_norm[i], g,
+          scale, viol);
+    // h is a maximum, so the bounds are swapped
+    for (Int j = 0; j < n; ++j)
+      add(sign * w[j], lp.col_upper_[j], lp.col_lower_[j], 1.0, h, scale, viol);
+
+    // guard against cancellation in g and h
+    if (!(g - h > kCertificateTol * std::max(scale, 1.0))) continue;
+
+    radius = std::max(radius, viol > 0.0 ? (g - h) / viol : kHighsInf);
+  }
+
+  return radius;
+}
+
+isSuccess Solver::checkPrimalRay(const HighsSolution& point) const {
+  // Candidates are the current point and the displacement from the previous
+  // point. If the iterates diverge, both are dominated by the direction of
+  // divergence. The certificate is accepted if any dual feasible point must be
+  // much larger than the problem data.
+  const HighsLp& lp = *model_.lpOrig();
+  if (!lp.a_matrix_.isColwise()) return false;
+  const Int n = lp.num_col_;
+
+  double radius = primalRayRadius(point.col_value);
+  if (prev_point_valid_) {
+    std::vector<double> d(n);
+    for (Int j = 0; j < n; ++j)
+      d[j] = point.col_value[j] - prev_point_.col_value[j];
+    radius = std::max(radius, primalRayRadius(d));
+  }
+
+  double c_norm = 0.0;
+  for (Int j = 0; j < n; ++j)
+    c_norm = std::max(c_norm, std::abs(lp.col_cost_[j]));
+  const double threshold = kCertificateMinRadius * (1.0 + c_norm);
+
+  logger_.printDetailed("Primal ray radius %.2e, threshold %.2e\n", radius,
+                        threshold);
+  if (radius < threshold) return false;
+
+  logger_.printInfo(
+      "Primal ray verified, dual feasible points have norm >= %.2e\n", radius);
+  return true;
+}
+
+isSuccess Solver::checkDualRay(const HighsSolution& point) const {
+  // Candidates are the current row duals and the displacement from the
+  // previous point. If the iterates diverge, both are dominated by the
+  // direction of divergence. The certificate is accepted if any feasible point
+  // must be much larger than the problem data.
+  const HighsLp& lp = *model_.lpOrig();
+  if (!lp.a_matrix_.isColwise()) return false;
+  const Int n = lp.num_col_;
+  const Int m = lp.num_row_;
+
+  double radius = dualRayRadius(point.row_dual);
+  if (prev_point_valid_) {
+    std::vector<double> y(m);
+    for (Int i = 0; i < m; ++i)
+      y[i] = point.row_dual[i] - prev_point_.row_dual[i];
+    radius = std::max(radius, dualRayRadius(y));
+  }
+
+  double bound_norm = 0.0;
+  for (Int j = 0; j < n; ++j) {
+    if (lp.col_lower_[j] > -kHighsInf)
+      bound_norm = std::max(bound_norm, std::abs(lp.col_lower_[j]));
+    if (lp.col_upper_[j] < kHighsInf)
+      bound_norm = std::max(bound_norm, std::abs(lp.col_upper_[j]));
+  }
+  for (Int i = 0; i < m; ++i) {
+    if (lp.row_lower_[i] > -kHighsInf)
+      bound_norm = std::max(bound_norm, std::abs(lp.row_lower_[i]));
+    if (lp.row_upper_[i] < kHighsInf)
+      bound_norm = std::max(bound_norm, std::abs(lp.row_upper_[i]));
+  }
+  const double threshold = kCertificateMinRadius * (1.0 + bound_norm);
+
+  logger_.printDetailed("Dual ray radius %.2e, threshold %.2e\n", radius,
+                        threshold);
+  if (radius < threshold) return false;
+
+  logger_.printInfo("Dual ray verified, feasible points have norm >= %.2e\n",
+                    radius);
+  return true;
 }
 
 shouldTerminate Solver::handleStagnation(const StagnationReport& report) {
@@ -1364,6 +1575,7 @@ shouldTerminate Solver::checkInterrupt() {
 
 void Solver::resetToBestIter(Int iter, bool print) {
   bool did_reset = it_->resetBest(iter);
+  if (did_reset) prev_point_valid_ = false;
   if (did_reset && print) printOutput(true);
 }
 

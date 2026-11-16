@@ -20,6 +20,7 @@
 #include "ipm/hipo/auxiliary/VectorOperations.h"
 #include "ipm/hipo/factorhighs/FactorHighs.h"
 #include "ipm/ipx/lp_solver.h"
+#include "lp_data/HStruct.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
@@ -61,6 +62,12 @@ class Solver {
   // crossover if it is run, in which case ipx status_crossover is converted to
   // hipo status.
   Status status_phase2 = kStatusNotSet;
+
+  // Point of the previous iteration in the original space, used to compute
+  // candidate certificates of infeasibility. Invalidated when the iterate is
+  // reset.
+  HighsSolution prev_point_;
+  bool prev_point_valid_ = false;
 
  public:
   // ===================================================================================
@@ -280,17 +287,46 @@ class Solver {
   shouldTerminate checkIterate();
 
   // ===================================================================================
-  // Stop if detection is detected, or if the problem is primal or dual
-  // infeasible.
+  // Run the stagnation tests and return their outcome.
   // ===================================================================================
   StagnationReport checkStagnation();
-  shouldTerminate checkBadIter();
+
+  // ===================================================================================
+  // Check for reasons to stop other than optimality: a verified certificate of
+  // primal or dual infeasibility (see handleInfeasible), or stagnation that the
+  // recovery actions cannot resolve (see handleStagnation). Return true if the
+  // ipm should terminate.
+  // ===================================================================================
+  shouldTerminate checkInfeasibilityOrStagnation();
+
+  // ===================================================================================
+  // Check if point, or the displacement between point and prev_point_ (in the
+  // original space), is a certificate of dual infeasibility (primal ray) or of
+  // primal infeasibility (dual ray, i.e. Farkas certificate).
+  // An approximate certificate proves that any dual (resp primal) feasible
+  // point has norm at least R, as computed by primalRayRadius (resp
+  // dualRayRadius). The certificate is accepted if R is larger than the norm of
+  // the problem data (costs, resp bounds) times kCertificateMinRadius.
+  // ===================================================================================
+  isSuccess checkPrimalRay(const HighsSolution& point) const;
+  isSuccess checkDualRay(const HighsSolution& point) const;
+  double primalRayRadius(const std::vector<double>& ray) const;
+  double dualRayRadius(const std::vector<double>& ray) const;
 
   // ===================================================================================
   // Take the recovery action chosen by recovery_ for the stagnation described
   // by report. Return true if the ipm should terminate.
   // ===================================================================================
   shouldTerminate handleStagnation(const StagnationReport& report);
+
+  // ===================================================================================
+  // If there are signs of divergence or stagnation, look for a certificate of
+  // primal or dual infeasibility and, if one is verified, set the status.
+  // Return true if the ipm should terminate. Must be called at every
+  // iteration, since it also saves the current point in prev_point_, used to
+  // compute the candidates.
+  // ===================================================================================
+  shouldTerminate handleInfeasible(bool stagnation);
 
   // ===================================================================================
   // Check the termination criterion:

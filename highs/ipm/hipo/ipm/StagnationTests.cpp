@@ -24,7 +24,6 @@ StagnationReport StagnationTests::stagnation(const Iterate& it,
   report.iter = iter;
   report.refinement_error =
       it.data.record.empty() ? 0.0 : it.data.record.back().refinement_error;
-  report.free_vars_diverging = free_bounds_changed_iter >= kFreeVarsDivergeIter;
 
   const bool reduction_ok = residualReductionTest(it, alpha_primal, alpha_dual,
                                                   feas_tol, report, log_stream);
@@ -264,7 +263,6 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
 
 void StagnationTests::clear(Int iter) {
   bad_res_history = 0;
-  free_bounds_changed_iter = 0;
 
   // with zero old norms, the residual reduction test is skipped until the
   // norms are saved again
