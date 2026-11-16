@@ -769,8 +769,13 @@ TEST_CASE("issue-3457", "[highs_filereader]") {
 }
 
 TEST_CASE("issue-3649", "[highs_filereader]") {
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.readModel("gz") == HighsStatus::kError);
+#include "io/Filereader.h"
+  // Ensures that extractModelName doesn't throw an exception (#3649)
+  REQUIRE(extractModelName("gz") == "gz");
+  REQUIRE(extractModelName(".gz") == "");
+  REQUIRE(extractModelName("..gz") == "");
+  REQUIRE(extractModelName("mps.gz") == "mps");
+  REQUIRE(extractModelName("a.mps.gz") == "a");
+  REQUIRE(extractModelName("a.mps") == "a");
 }
 
