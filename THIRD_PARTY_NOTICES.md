@@ -18,6 +18,18 @@ The upstream source code is available at:
 
 To avoid compiling this code into HiGHS, use `-DHIPO=OFF` (the default value).
 
+## catch
+
+The source code in `/extern/catch/catch.hpp` is Catch v2.13.8, distributed under
+the [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt) at
+`/extern/catch/LICENCE_1_0.txt`.
+
+Copyright (c) 2022 Two Blue Cubes Ltd. All rights reserved.
+
+The upstream source code is available at:
+
+ * https://github.com/catchorg/Catch2/tree/v2.13.8
+
 ## cli
 
 The source code in `/extern/CLI11.hpp` is distributed under a license stated in the source code. Although the license is not named, the text appears to correspond to the [BSD-3 license](https://opensource.org/license/bsd-3-clause).
