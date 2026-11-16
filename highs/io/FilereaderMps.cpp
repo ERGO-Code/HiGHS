@@ -30,8 +30,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
     if (options.time_limit < kHighsInf && options.time_limit > 0)
       parser.time_limit_ = options.time_limit;
 
-    FreeFormatParserReturnCode result =
-        parser.loadProblem(options.log_options, filename, model);
+    FreeFormatParserReturnCode result = parser.loadProblem(filename, model);
     switch (result) {
       case FreeFormatParserReturnCode::kSuccess:
         lp.ensureColwise();
