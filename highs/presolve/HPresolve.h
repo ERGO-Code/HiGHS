@@ -43,22 +43,6 @@ class HPresolve {
   HighsTimer* timer;
   HighsMipSolver* mipsolver = nullptr;
   HPresolveCliqueTable presolveCliqueTable;
-
-  // an update of the clique table that is applied when the clique table is
-  // synchronised with presolve
-  struct CliqueTableUpdate {
-    enum class Type : uint8_t { kFixCol, kSubstituteCol, kEliminateCol };
-    Type type;
-    HighsInt col;
-    // fixing (kFixCol) or replacement (kSubstituteCol)
-    HighsCliqueTable::CliqueVar var;
-  };
-
-  // clique table updates recorded since the last synchronisation; reductions
-  // only record them, so that fixings implied by the clique table never
-  // change the problem while a presolve rule is running
-  std::vector<CliqueTableUpdate> cliqueTableUpdates;
-
   double primal_feastol;
   bool may_require_basis_postsolve_;
   bool may_require_dual_postsolve_;
@@ -586,16 +570,10 @@ class HPresolve {
 
   void extractVarBounds(HighsInt row);
 
-  bool cliqueTableActive() const;
+  Result updateCliqueTableFixedCol(HighsInt col, double val);
 
-  void recordCliqueTableFixedCol(HighsInt col, double val);
-
-  void recordCliqueTableSubstituteCol(HighsInt substCol, HighsInt stayCol,
-                                      double offset, double scale);
-
-  void recordCliqueTableEliminatedCol(HighsInt col);
-
-  Result synchroniseCliqueTable();
+  Result updateCliqueTableSubstituteCol(HighsInt substCol, HighsInt stayCol,
+                                        double offset, double scale);
 
   void aggregateVarBounds();
 

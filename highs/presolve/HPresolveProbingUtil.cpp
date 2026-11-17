@@ -185,16 +185,12 @@ HPresolve::Result HPresolve::prepareProbing(
 
   // todo: rows that become setppc after domain propagation (below) are
   // not normalised and thus cannot be deleted by clique merging
-  if (firstCall) {
-    HPRESOLVE_CHECKED_CALL(normaliseCliqueRows(postsolve_stack));
-    // probing and enumeration use the clique table within the same presolve
-    // step, so it has to contain the fixings of the normalisation
-    HPRESOLVE_CHECKED_CALL(synchroniseCliqueTable());
-  }
+  if (firstCall) HPRESOLVE_CHECKED_CALL(normaliseCliqueRows(postsolve_stack));
 
   // shrink the problem after the normalisation, so that the columns it deletes
   // are neither in the domain nor in the clique table that probing and
-  // enumeration use
+  // enumeration use (e.g. a clique table inherited by a sub-MIP, see issue
+  // #3707)
   shrinkProblem(postsolve_stack);
 
   toCSC(model->a_matrix_.value_, model->a_matrix_.index_,

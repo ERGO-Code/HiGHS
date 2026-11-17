@@ -101,7 +101,6 @@ void HPresolve::setInput(HighsMipSolver& mipsolver,
                          const HighsInt presolve_reduction_limit) {
   this->mipsolver = &mipsolver;
   presolveCliqueTable.rebuild(mipsolver.mipdata_->cliquetable);
-  assert(cliqueTableUpdates.empty());
 
   probingContingent = 1000;
   probingNumDelCol = 0;
@@ -1045,8 +1044,6 @@ HighsInt HPresolve::findNonzero(HighsInt row, HighsInt col) {
 }
 
 void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
-  // the clique table updates refer to the old column indices
-  assert(cliqueTableUpdates.empty());
   //  printf("HPresolve::shrinkProblem: numDeletedCols = %d; numDeletedRows =
   //  %d\n",
   //         int(numDeletedCols), int(numDeletedRows));
@@ -1061,6 +1058,18 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   if (!hasPresolveDataStructures()) return;
   assert(colDeleted.size() == static_cast<size_t>(oldNumCol));
   assert(rowDeleted.size() == static_cast<size_t>(oldNumRow));
+#ifndef NDEBUG
+  // the clique table has to be up to date: a column in a clique is a binary
+  // column of the problem, otherwise a reduction that deleted the column or
+  // changed its meaning has not updated the clique table
+  if (presolveCliqueTable.isActive()) {
+    for (HighsInt col = 0; col != oldNumCol; ++col)
+      assert(!presolveCliqueTable.isColInClique(col) ||
+             (!colDeleted[col] &&
+              model->integrality_[col] != HighsVarType::kContinuous &&
+              model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0));
+  }
+#endif
   model->num_col_ = 0;
   model->num_row_ = 0;
   std::vector<HighsInt> newColIndex(oldNumCol);
@@ -1463,7 +1472,7 @@ void HPresolve::markColDeleted(HighsInt col) {
   colDeleted[col] = true;
   ++numDeletedCols;
   if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
-  recordCliqueTableEliminatedCol(col);
+  presolveCliqueTable.eliminateCol(col);
 }
 
 HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
@@ -1486,8 +1495,11 @@ HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
                                      oldUpper);
     markChangedRow(nonzero.index());
   }
-  if (model->col_lower_[col] == model->col_upper_[col])
-    recordCliqueTableFixedCol(col, model->col_lower_[col]);
+  if (mipsolver != nullptr &&
+      model->col_lower_[col] == model->col_upper_[col]) {
+    HPRESOLVE_CHECKED_CALL(
+        updateCliqueTableFixedCol(col, model->col_lower_[col]));
+  }
   return Result::kOk;
 }
 
@@ -1511,8 +1523,11 @@ HPresolve::Result HPresolve::changeColLower(HighsInt col, double newLower) {
                                      oldLower);
     markChangedRow(nonzero.index());
   }
-  if (model->col_lower_[col] == model->col_upper_[col])
-    recordCliqueTableFixedCol(col, model->col_lower_[col]);
+  if (mipsolver != nullptr &&
+      model->col_lower_[col] == model->col_upper_[col]) {
+    HPRESOLVE_CHECKED_CALL(
+        updateCliqueTableFixedCol(col, model->col_lower_[col]));
+  }
   return Result::kOk;
 }
 
@@ -1989,9 +2004,9 @@ HPresolve::Result HPresolve::transformColumn(
   if (mipsolver != nullptr)
     mipsolver->mipdata_->implications.columnTransformed(col, scale, constant);
 
-  // a binary x may be in the clique table, whose entries then refer to x and
-  // not to x'
-  if (isBinary(col)) recordCliqueTableEliminatedCol(col);
+  // entries of a binary x in the clique table would refer to x, not to x'. a
+  // non-binary x is kept, since x' may be binary (colPresolve shift)
+  if (isBinary(col)) presolveCliqueTable.eliminateCol(col);
 
   postsolve_stack.linearTransform(col, scale, constant);
 
@@ -2748,7 +2763,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
             // Use eliminateCol rather than substituteCol to avoid
             // cascading clique fixings that could corrupt this loop
-            recordCliqueTableEliminatedCol(col);
+            presolveCliqueTable.eliminateCol(col);
 
             // get column lower and upper bounds used to compute bounds on row
             // activities
@@ -3894,20 +3909,20 @@ HPresolve::Result HPresolve::fastPresolveLoop(
   do {
     storeCurrentProblemSize();
 
-    HPRESOLVE_TIMED_STEP(kPresolveClockFastLoopRowSingletons,
-                         removeRowSingletons(postsolve_stack));
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopRowSingletons,
+                                 removeRowSingletons(postsolve_stack));
 
-    HPRESOLVE_TIMED_STEP(kPresolveClockFastLoopChangedRows,
-                         presolveChangedRows(postsolve_stack));
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopChangedRows,
+                                 presolveChangedRows(postsolve_stack));
 
-    HPRESOLVE_TIMED_STEP(kPresolveClockFastLoopDoubletonEquations,
-                         removeDoubletonEquations(postsolve_stack));
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopDoubletonEquations,
+                                 removeDoubletonEquations(postsolve_stack));
 
-    HPRESOLVE_TIMED_STEP(kPresolveClockFastLoopColSingletons,
-                         presolveColSingletons(postsolve_stack));
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopColSingletons,
+                                 presolveColSingletons(postsolve_stack));
 
-    HPRESOLVE_TIMED_STEP(kPresolveClockFastLoopChangedCols,
-                         presolveChangedCols(postsolve_stack));
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoopChangedCols,
+                                 presolveChangedCols(postsolve_stack));
 
   } while (problemSizeReduction() > 0.01);
 
@@ -4049,12 +4064,12 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
 
     // Possibly just perform a bespoke presolve rule test
     if (options->presolve_rule_test) {
-      HPRESOLVE_STEP(presolveRuleTest(postsolve_stack));
+      HPRESOLVE_CHECKED_CALL(presolveRuleTest(postsolve_stack));
       return presolveReturn();
     }
 
-    HPRESOLVE_TIMED_STEP(kPresolveClockInitial,
-                         initialRowAndColPresolve(postsolve_stack));
+    HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockInitial,
+                                 initialRowAndColPresolve(postsolve_stack));
 
     HighsInt numParallelRowColCalls = 0;
     // ReductionType::kEqualityRowAddition(s) has no basis postsolve,
@@ -4086,8 +4101,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         }
       }
 
-      HPRESOLVE_TIMED_STEP(kPresolveClockFastLoop,
-                           fastPresolveLoop(postsolve_stack));
+      HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoop,
+                                   fastPresolveLoop(postsolve_stack));
 
       storeCurrentProblemSize();
 
@@ -4096,13 +4111,13 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       // running the aggregator as they might lose validity otherwise
       if (mipsolver != nullptr) {
         HighsInt numDelCol = 0;
-        HPRESOLVE_STEP(
+        HPRESOLVE_CHECKED_CALL(
             applyConflictGraphSubstitutions(postsolve_stack, numDelCol));
       }
 
       HighsInt numColsEliminatedFourierMotzkin = 0;
       if (tryFourierMotzkin && this->allow_rule_[kPresolveRuleFourierMotzkin]) {
-        HPRESOLVE_STEP(
+        HPRESOLVE_CHECKED_CALL(
             fourierMotzkin(postsolve_stack, numColsEliminatedFourierMotzkin));
         tryFourierMotzkin = false;
       }
@@ -4110,15 +4125,16 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       if (reducedToEmpty()) break;
 
       if (this->allow_rule_[kPresolveRuleAggregator]) {
-        HPRESOLVE_TIMED_STEP(kPresolveClockAggregator,
-                             aggregator(postsolve_stack));
+        HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockAggregator,
+                                     aggregator(postsolve_stack));
       }
 
       if (problemSizeReduction() > 0.05) continue;
 
       if (trySparsify && this->allow_rule_[kPresolveRuleSparsify]) {
         HighsInt numNz = numNonzeros();
-        HPRESOLVE_TIMED_STEP(kPresolveClockSparsify, sparsify(postsolve_stack));
+        HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockSparsify,
+                                     sparsify(postsolve_stack));
         double nzReduction =
             100.0 * (1.0 - (numNonzeros() / static_cast<double>(numNz)));
 
@@ -4126,8 +4142,8 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           highsLogDev(options->log_options, HighsLogType::kInfo,
                       "Sparsify removed %.1f%% of nonzeros\n", nzReduction);
 
-          HPRESOLVE_TIMED_STEP(kPresolveClockFastLoop,
-                               fastPresolveLoop(postsolve_stack));
+          HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoop,
+                                       fastPresolveLoop(postsolve_stack));
         }
         trySparsify = false;
       }
@@ -4146,20 +4162,21 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                     model->a_matrix_.start_);
         }
         storeCurrentProblemSize();
-        HPRESOLVE_TIMED_STEP(kPresolveClockParallelRowsAndCols,
-                             detectParallelRowsAndCols(postsolve_stack));
+        HPRESOLVE_TIMED_CHECKED_CALL(
+            kPresolveClockParallelRowsAndCols,
+            detectParallelRowsAndCols(postsolve_stack));
         ++numParallelRowColCalls;
         if (problemSizeReduction() > 0.05) continue;
       }
 
       if (postsolve_stack.numReductions() == 35039) {
       }
-      HPRESOLVE_TIMED_STEP(kPresolveClockFastLoop,
-                           fastPresolveLoop(postsolve_stack));
+      HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoop,
+                                   fastPresolveLoop(postsolve_stack));
 
       if (mipsolver != nullptr) {
         HighsInt num_strengthened = -1;
-        HPRESOLVE_STEP(
+        HPRESOLVE_CHECKED_CALL(
             strengthenInequalities(postsolve_stack, num_strengthened));
         assert(num_strengthened >= 0);
         if (num_strengthened > 0)
@@ -4168,34 +4185,34 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
                       num_strengthened);
       }
 
-      HPRESOLVE_TIMED_STEP(kPresolveClockFastLoop,
-                           fastPresolveLoop(postsolve_stack));
+      HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockFastLoop,
+                                   fastPresolveLoop(postsolve_stack));
 
       if (mipsolver != nullptr && numCliquesBeforeProbing == -1) {
         numCliquesBeforeProbing = mipsolver->mipdata_->cliquetable.numCliques();
         storeCurrentProblemSize();
-        HPRESOLVE_STEP(dominatedColumns(postsolve_stack));
+        HPRESOLVE_CHECKED_CALL(dominatedColumns(postsolve_stack));
         if (problemSizeReduction() > 0.0)
-          HPRESOLVE_STEP(fastPresolveLoop(postsolve_stack));
+          HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
       }
 
       // enumerate solutions
       if (mipsolver != nullptr && this->allow_rule_[kPresolveRuleEnumeration]) {
         storeCurrentProblemSize();
-        HPRESOLVE_STEP(enumerateSolutions(postsolve_stack));
+        HPRESOLVE_CHECKED_CALL(enumerateSolutions(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
       }
 
       if (tryProbing && this->allow_rule_[kPresolveRuleProbing]) {
-        HPRESOLVE_STEP(detectImpliedIntegers());
+        HPRESOLVE_CHECKED_CALL(detectImpliedIntegers());
         storeCurrentProblemSize();
-        HPRESOLVE_STEP(runProbing(postsolve_stack));
+        HPRESOLVE_CHECKED_CALL(runProbing(postsolve_stack));
         tryProbing = probingContingent > numProbed &&
                      (problemSizeReduction() > 1.0 || probingEarlyAbort);
         trySparsify = true;
         if (problemSizeReduction() > 0.05 || tryProbing) continue;
-        HPRESOLVE_STEP(fastPresolveLoop(postsolve_stack));
+        HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
       }
 
       if (!dependentEquationsCalled) {
@@ -4212,13 +4229,15 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         }
         storeCurrentProblemSize();
         if (this->allow_rule_[kPresolveRuleDependentEquations]) {
-          HPRESOLVE_TIMED_STEP(kPresolveClockDependentEquations,
-                               removeDependentEquations(postsolve_stack));
+          HPRESOLVE_TIMED_CHECKED_CALL(
+              kPresolveClockDependentEquations,
+              removeDependentEquations(postsolve_stack));
           dependentEquationsCalled = true;
         }
         if (this->allow_rule_[kPresolveRuleDependentFreeCols]) {
-          HPRESOLVE_TIMED_STEP(kPresolveClockDependentFreeCol,
-                               removeDependentFreeCols(postsolve_stack));
+          HPRESOLVE_TIMED_CHECKED_CALL(
+              kPresolveClockDependentFreeCol,
+              removeDependentFreeCols(postsolve_stack));
         }
         if (problemSizeReduction() > 0.05) continue;
       }
@@ -4229,9 +4248,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
           !domcolAfterProbingCalled) {
         domcolAfterProbingCalled = true;
         storeCurrentProblemSize();
-        HPRESOLVE_STEP(dominatedColumns(postsolve_stack));
+        HPRESOLVE_CHECKED_CALL(dominatedColumns(postsolve_stack));
         if (problemSizeReduction() > 0.0)
-          HPRESOLVE_STEP(fastPresolveLoop(postsolve_stack));
+          HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
       }
 
@@ -4576,20 +4595,9 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
     this->analysis_.reportPresolveTimer();
   };
 
-  // presolve may stop within a step, before the clique table updates of the
-  // step have been applied
-  auto presolveAndSynchronise = [&]() {
-    Result result = presolve(postsolve_stack);
-    if (result == Result::kStopped) {
-      Result synchronised = synchroniseCliqueTable();
-      if (synchronised != Result::kOk) return synchronised;
-    }
-    return result;
-  };
-
   Result result;
   try {
-    result = presolveAndSynchronise();
+    result = presolve(postsolve_stack);
   } catch (const std::exception& exception) {
     highsLogDev(options->log_options, HighsLogType::kError,
                 "Exception %s in Presolve::presolve\n", exception.what());
@@ -4712,7 +4720,8 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
 HPresolve::Result HPresolve::substitute(HighsInt substcol, HighsInt staycol,
                                         double offset, double scale,
                                         HighsInt row) {
-  recordCliqueTableSubstituteCol(substcol, staycol, offset, scale);
+  HPRESOLVE_CHECKED_CALL(
+      updateCliqueTableSubstituteCol(substcol, staycol, offset, scale));
   markColDeleted(substcol);
   if (row != -1) removeRow(row);
 
@@ -4841,7 +4850,7 @@ HPresolve::Result HPresolve::removeFixedCol(HighsInt col) {
 }
 
 HPresolve::Result HPresolve::removeFixedCol(HighsInt col, double fixval) {
-  recordCliqueTableFixedCol(col, fixval);
+  HPRESOLVE_CHECKED_CALL(updateCliqueTableFixedCol(col, fixval));
   // mark the column as deleted first so that it is not registered as singleton
   // column upon removing its non-zeros
   markColDeleted(col);
@@ -4945,85 +4954,61 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
   return Result::kOk;
 }
 
-bool HPresolve::cliqueTableActive() const {
-  // the clique table has to be kept up to date as soon as it contains
-  // cliques, e.g. in a sub-MIP that starts with the clique table of its parent
-  // before its cliques are extracted (see issue #3707)
-  return mipsolver != nullptr &&
-         mipsolver->mipdata_->cliquetable.numCliques() != 0;
-}
-
-void HPresolve::recordCliqueTableFixedCol(const HighsInt col,
-                                          const double val) {
-  if (!cliqueTableActive() ||
+HPresolve::Result HPresolve::updateCliqueTableFixedCol(const HighsInt col,
+                                                       const double val) {
+  if (!presolveCliqueTable.isActive() ||
       model->integrality_[col] == HighsVarType::kContinuous ||
-      (val != 0.0 && val != 1.0))
-    return;
-  cliqueTableUpdates.push_back(
-      {CliqueTableUpdate::Type::kFixCol, col,
-       HighsCliqueTable::CliqueVar(col, val == 1.0 ? 1 : 0)});
+      (val != 0.0 && val != 1.0)) {
+    return Result::kOk;
+  }
+  std::vector<HighsCliqueTable::CliqueVar> impliedFixings;
+  if (!presolveCliqueTable.fixCol(col, static_cast<bool>(val),
+                                  impliedFixings)) {
+    return Result::kPrimalInfeasible;
+  }
+
+  for (const HighsCliqueTable::CliqueVar& fixing : impliedFixings) {
+    if (colDeleted[fixing.col]) continue;
+    if (fixing.val < model->col_lower_[fixing.col] - primal_feastol ||
+        fixing.val > model->col_upper_[fixing.col] + primal_feastol) {
+      return Result::kPrimalInfeasible;
+    }
+    HPRESOLVE_CHECKED_CALL(changeColBounds(fixing.col, fixing.val, fixing.val));
+  }
+  return Result::kOk;
 }
 
-void HPresolve::recordCliqueTableSubstituteCol(const HighsInt substCol,
-                                               const HighsInt stayCol,
-                                               const double offset,
-                                               const double scale) {
-  if (!cliqueTableActive()) return;
-  // the columns are checked now, since their bounds may change before the
-  // clique table is synchronised
+HPresolve::Result HPresolve::updateCliqueTableSubstituteCol(
+    const HighsInt substCol, const HighsInt stayCol, const double offset,
+    const double scale) {
+  if (!presolveCliqueTable.isActive()) {
+    return Result::kOk;
+  }
   bool isBinary =
       model->integrality_[substCol] != HighsVarType::kContinuous &&
       model->integrality_[stayCol] != HighsVarType::kContinuous &&
       model->col_lower_[substCol] == 0.0 && model->col_lower_[stayCol] == 0.0 &&
       model->col_upper_[substCol] == 1.0 && model->col_upper_[stayCol] == 1.0 &&
       ((offset == 0.0 && scale == 1.0) || (offset == 1.0 && scale == -1.0));
-  if (!isBinary) return;
-  cliqueTableUpdates.push_back(
-      {CliqueTableUpdate::Type::kSubstituteCol, substCol,
-       HighsCliqueTable::CliqueVar(stayCol, scale == 1.0 ? 1 : 0)});
-}
 
-void HPresolve::recordCliqueTableEliminatedCol(const HighsInt col) {
-  if (!cliqueTableActive()) return;
-  cliqueTableUpdates.push_back({CliqueTableUpdate::Type::kEliminateCol, col,
-                                HighsCliqueTable::CliqueVar(col, 0)});
-}
+  if (!isBinary) return Result::kOk;
 
-HPresolve::Result HPresolve::synchroniseCliqueTable() {
+  HighsCliqueTable::CliqueVar replacement(
+      stayCol, scale == 1.0 ? HighsInt{1} : HighsInt{0});
   std::vector<HighsCliqueTable::CliqueVar> impliedFixings;
-  // applying implied fixings records further updates, so the vector may grow
-  // while it is processed
-  for (size_t i = 0; i < cliqueTableUpdates.size(); i++) {
-    // copy, since recording may reallocate the vector
-    auto update = cliqueTableUpdates[i];
-    impliedFixings.clear();
-    switch (update.type) {
-      case CliqueTableUpdate::Type::kFixCol:
-        if (!presolveCliqueTable.fixCol(
-                update.col, static_cast<bool>(update.var.val), impliedFixings))
-          return Result::kPrimalInfeasible;
-        break;
-      case CliqueTableUpdate::Type::kSubstituteCol:
-        if (!presolveCliqueTable.substituteCol(update.col, update.var,
-                                               impliedFixings))
-          return Result::kPrimalInfeasible;
-        break;
-      case CliqueTableUpdate::Type::kEliminateCol:
-        presolveCliqueTable.eliminateCol(update.col);
-        break;
+  if (!presolveCliqueTable.substituteCol(substCol, replacement, impliedFixings))
+    return Result::kPrimalInfeasible;
+
+  for (HighsCliqueTable::CliqueVar& v : impliedFixings) {
+    HighsInt col = static_cast<HighsInt>(v.col);
+    double val = static_cast<double>(v.val);
+    if (colDeleted[col]) continue;
+    if (val < model->col_lower_[col] - primal_feastol ||
+        val > model->col_upper_[col] + primal_feastol) {
+      return Result::kPrimalInfeasible;
     }
-    for (const HighsCliqueTable::CliqueVar& fixing : impliedFixings) {
-      // a column deleted since the update gets its value from the reduction
-      // that deleted it
-      if (colDeleted[fixing.col]) continue;
-      if (fixing.val < model->col_lower_[fixing.col] - primal_feastol ||
-          fixing.val > model->col_upper_[fixing.col] + primal_feastol)
-        return Result::kPrimalInfeasible;
-      HPRESOLVE_CHECKED_CALL(
-          changeColBounds(fixing.col, fixing.val, fixing.val));
-    }
+    HPRESOLVE_CHECKED_CALL(changeColBounds(col, val, val));
   }
-  cliqueTableUpdates.clear();
   return Result::kOk;
 }
 
