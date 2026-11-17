@@ -1114,6 +1114,52 @@ TEST_CASE("issue-3657", "[highs_filereader]") {
   std::remove(filename.c_str());
 }
 
+TEST_CASE("issue-3658", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+
+  FILE* file;
+  Highs h;
+  //  h.setOptionValue("output_flag", dev_run);
+
+  highsPrintStringAsHeading(
+      "Extra data in ROWS line: interpreted as name with spaces, but file is "
+      "free format so fixed format reader fails: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ L R0\n G R1\n G R2\nCOLUMNS\n C1 R1 1 R2 "
+          "2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading(
+      "Extra data in ROWS line: interpreted as name \"OBJECTIVE_ROW L R0\" "
+      "with spaces of length greater than 8: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJECTIVE_ROW L R0\n G R1\n G R2\nCOLUMNS\n C1 R1 1 "
+          "R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("Extra data in COLUMNS line ignored: warning");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n G R2\nCOLUMNS\n C1 R1 1 R2 2 R1 "
+          "3\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kWarning);
+
+  highsPrintStringAsHeading("Short names in COLUMNS line: OK");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  std::remove(filename.c_str());
+}
+
 TEST_CASE("issue-3659", "[highs_filereader]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename = test_name + ".mps";

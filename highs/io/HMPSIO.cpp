@@ -204,6 +204,10 @@ FilereaderRetcode readMps(
             "%s\n",
             name.c_str(), line);
       }
+    } else {
+      highsLogUser(log_options, HighsLogType::kError,
+                   "COLUMNS section line contains no row name\n");
+      return failureInSection(log_options, "COLUMNS");
     }
     save_flag1 = flag[1];
   }

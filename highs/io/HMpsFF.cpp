@@ -664,10 +664,19 @@ HMpsFF::Parsekey HMpsFF::parseRows(std::istream& file) {
     if (!is_end(strline, rowname_end)) {
       std::string name = strline.substr(start + 1);
       name = trim(name);
-      if (name.size() > 8)
+      if (name.size() > 8) {
+        highsLogUser(log_options_, HighsLogType::kError,
+                     "Line \"%s\" of ROWS section contains name \"%s\" with "
+                     "spaces that exceeds fixed format name length of 8\n",
+                     strline.c_str(), name.c_str());
         return HMpsFF::Parsekey::kFail;
-      else
-        return HMpsFF::Parsekey::kFixedFormat;
+      }
+      highsLogUser(log_options_, HighsLogType::kWarning,
+                   "Line \"%s\" of ROWS section interpreted as name \"%s\" "
+                   "with spaces\n",
+                   strline.c_str(), name.c_str());
+      warning_issued_ = true;
+      return HMpsFF::Parsekey::kFixedFormat;
     }
 
     // Do not add to matrix if row is free.
@@ -699,6 +708,13 @@ HMpsFF::Parsekey HMpsFF::parseRows(std::istream& file) {
         duplicate_row_name_index0_ = mit->second;
         duplicate_row_name_index1_ = num_row - 1;
       }
+    }
+    // Check for spurious data
+    if (!is_end(strline, rowname_end)) {
+      highsLogUser(log_options_, HighsLogType::kWarning,
+                   "Ignored \"%s\" in line \"%s\" of ROWS section\n",
+                   strline.substr(rowname_end).c_str(), strline.c_str());
+      warning_issued_ = true;
     }
   }
   // Reach here if file ends without reaching another keyword
@@ -766,10 +782,10 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
         col_count = 0;
       }
 
-      warning_issued_ = num_ignored_row_name > 0 ||
-                        num_ignored_duplicate_cost_nz > 0 ||
-                        num_ignored_duplicate_matrix_nz > 0;
-      if (warning_issued_)
+      const bool unlogged_warning = num_ignored_row_name > 0 ||
+                                    num_ignored_duplicate_cost_nz > 0 ||
+                                    num_ignored_duplicate_matrix_nz > 0;
+      if (unlogged_warning)
         highsLogUser(log_options_, HighsLogType::kWarning,
                      "COLUMNS section: ignored %d undefined rows %d duplicate "
                      "cost values and %d duplicate matrix values\n",
@@ -778,6 +794,7 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
                      int(num_ignored_duplicate_matrix_nz));
       highsLogDev(log_options_, HighsLogType::kInfo,
                   "readMPS: Read COLUMNS OK\n");
+      warning_issued_ = warning_issued_ || unlogged_warning;
       return key;
     }
 
@@ -820,17 +837,18 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
         // Delete trailing spaces
         name = trim(name);
         if (name.size() > 8) {
-          highsLogUser(log_options_, HighsLogType::kError,
-                       "Row name \"%s\" with spaces exceeds fixed format name "
-                       "length of 8\n",
-                       name.c_str());
+          highsLogUser(
+              log_options_, HighsLogType::kError,
+              "Line \"%s\" of COLUMNS section contains name \"%s\" with spaces "
+              "that exceeds fixed format name length of 8\n",
+              strline.c_str(), name.c_str());
           return HMpsFF::Parsekey::kFail;
         } else {
-          warning_issued_ = true;
           highsLogUser(log_options_, HighsLogType::kWarning,
-                       "Row name \"%s\" with spaces has length %d, so assume "
-                       "fixed format\n",
-                       name.c_str(), (int)name.size());
+                       "Line \"%s\" of COLUMNS section interprets \"%s\" as "
+                       "row with spaces\n",
+                       strline.c_str(), name.c_str());
+          warning_issued_ = true;
           return HMpsFF::Parsekey::kFixedFormat;
         }
       }
@@ -974,7 +992,12 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
       word = first_word(strline, end_marker);
       end = first_word_end(strline, end_marker);
 
-      assert(is_end(strline, end));
+      if (!is_end(strline, end)) {
+        highsLogUser(log_options_, HighsLogType::kWarning,
+                     "Ignored \"%s\" in line \"%s\" of COLUMNS section\n",
+                     strline.substr(end).c_str(), strline.c_str());
+        warning_issued_ = true;
+      }
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
