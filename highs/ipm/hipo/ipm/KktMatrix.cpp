@@ -132,7 +132,7 @@ Int KktMatrix::buildNEstructure() {
   rowsNE.clear();
 
   std::vector<Int> work(m);
-  std::atomic<Int> current_nz{0};
+  std::atomic<Int64> current_nz{0};
   std::atomic<bool> overflow{false};
 
   auto process_row = [&](Int row, std::vector<char>& is_nz,
@@ -168,12 +168,12 @@ Int KktMatrix::buildNEstructure() {
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error.
-    if (current_nz.load(std::memory_order_relaxed) + nz_in_col >=
-        NE_nz_limit.load(std::memory_order_relaxed)) {
+    Int64 new_nz =
+        current_nz.fetch_add(nz_in_col, std::memory_order_relaxed) + nz_in_col;
+    if (new_nz >= NE_nz_limit.load(std::memory_order_relaxed)) {
       overflow.store(true, std::memory_order_relaxed);
       return;
     }
-    current_nz.fetch_add(nz_in_col, std::memory_order_relaxed);
 
     // keep track of column counts
     work[row] = nz_in_col;
