@@ -348,14 +348,12 @@ void Analyse::relaxSnNetOps(double& flops, double& spops) {
       // how many artificial nonzeros would the merged supernode have
       const Int64 total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
 
+      const double rf = rows_filled;
+      const double sc = sn_size[child];
+      const double cc = clique_size[child];
       const double flops_added =
-          rows_filled * rows_filled * sn_size[child] +
-          2 * rows_filled *
-              (sn_size[child] * (sn_size[child] + clique_size[child]) -
-               sn_size[child] * (sn_size[child] + 1) / 2);
-
-      const double spops_removed =
-          clique_size[child] * (clique_size[child] + 1) / 2;
+          rf * rf * sc + 2 * rf * (sc * (sc + cc) - sc * (sc + 1) / 2);
+      const double spops_removed = cc * (cc + 1) / 2;
 
       const double net_ops = flops_added - kSpopsWeightSn * spops_removed;
 
