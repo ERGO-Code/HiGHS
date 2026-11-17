@@ -37,11 +37,14 @@ normal issues):
   solves are NP-hard, so this is expected behaviour)
 - crashes, hangs or wrong results caused by misuse of the API or invalid option
   values from a caller who already controls the process
+- crashes or memory-safety issues in the solvers, presolve or other library
+  code, including when solving a model that was read from a file
 
 The following **are** in scope:
 
 - memory-safety issues (e.g. buffer overflows, out-of-bounds reads/writes)
-  triggered by reading or solving a crafted model file (MPS, LP, etc.)
+  triggered while reading a crafted model file (MPS, LP, etc.) with the HiGHS
+  file readers
 - compromise of official release artifacts or the build/release pipeline
   (e.g. PyPI wheels, GitHub release binaries)
 
