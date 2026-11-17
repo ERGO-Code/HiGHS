@@ -2,6 +2,8 @@
 
 This directory contains files from [cuPDLP-C v0.3.0](https://github.com/COPT-Public/cuPDLP-C/tree/v0.3.0). Below are some issues experienced when integrating them into HiGHS. In March 2025 it was updated to https://github.com/COPT-Public/cuPDLP-C/commit/7b94c41efca42fa176a129a935b59718e1455fad. 
 
+`cupdlp_cs.c` and `cupdlp_cs.h` have been removed: they were derived from CSparse, which is LGPL-2.1-or-later ([#3712](https://github.com/ERGO-Code/HiGHS/issues/3712)). Their only use, the CSC to CSR transpose, is now done by `HighsSparseMatrix` in `CupdlpWrapper.cpp`.
+
 ## Termination of cuPDLP-C
 
 cuPDLP-C terminates when either the current or averaged iterates satisfy primal/dual feasibility, using a 2-norm measure relative to the size of the RHS/costs, and after scaling the LP. 
