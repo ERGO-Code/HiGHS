@@ -4,6 +4,7 @@
 #include "DataCollector.h"
 #include "Factorise.h"
 #include "HighsExternalApi.h"
+#include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 
@@ -103,9 +104,9 @@ void FHsolver::iperm(const Symbolic& S, Int* ip) const {
   }
 }
 
-static void getFull(Int n, Int nz, const Int* rows, const Int* ptr,
-                    bool one_indexing, std::vector<Int>& full_ptr_v,
-                    std::vector<Int>& full_rows_v) {
+static Int getFull(Int n, Int nz, const Int* rows, const Int* ptr,
+                   bool one_indexing, std::vector<Int>& full_ptr_v,
+                   std::vector<Int>& full_rows_v) {
   std::vector<Int> rows_tmp(nz);
   std::vector<Int> ptr_tmp(n + 1);
   for (Int i = 0; i < nz; ++i) rows_tmp[i] = rows[i];
@@ -118,8 +119,8 @@ static void getFull(Int n, Int nz, const Int* rows, const Int* ptr,
 
   // metis, amd, rcm require a full copy of the matrix, without diagonal
   // entries
-  fullFromLower(n, nz, ptr_tmp.data(), rows_tmp.data(), full_ptr_v,
-                full_rows_v);
+  return fullFromLower(n, nz, ptr_tmp.data(), rows_tmp.data(), full_ptr_v,
+                       full_rows_v);
 }
 
 Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
@@ -130,7 +131,9 @@ Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
     full_ptr = ptr;
     full_rows = rows;
   } else {
-    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    if (getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v,
+                full_rows_v))
+      return kRetIntOverflow;
     full_ptr = full_ptr_v.data();
     full_rows = full_rows_v.data();
   }
@@ -163,7 +166,9 @@ Int FHsolver::reorderAmd(Int n, Int nz, const Int* rows, const Int* ptr,
     full_ptr = ptr;
     full_rows = rows;
   } else {
-    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    if (getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v,
+                full_rows_v))
+      return kRetIntOverflow;
     full_ptr = full_ptr_v.data();
     full_rows = full_rows_v.data();
   }
@@ -175,10 +180,13 @@ Int FHsolver::reorderAmd(Int n, Int nz, const Int* rows, const Int* ptr,
   Int status =
       HighsExtras::amd::order(n, full_ptr, full_rows, perm, control, info);
 
+  // Accept AMD_OK_BUT_JUMBLED as success
+  if (status < 0) return status;
+
   if (options_.one_indexing)
     for (Int i = 0; i < n; ++i) perm[i]++;
 
-  return status != AMD_OK;
+  return 0;
 }
 
 Int FHsolver::reorderRcm(Int n, Int nz, const Int* rows, const Int* ptr,
@@ -189,7 +197,9 @@ Int FHsolver::reorderRcm(Int n, Int nz, const Int* rows, const Int* ptr,
     full_ptr = ptr;
     full_rows = rows;
   } else {
-    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    if (getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v,
+                full_rows_v))
+      return kRetIntOverflow;
     full_ptr = full_ptr_v.data();
     full_rows = full_rows_v.data();
   }

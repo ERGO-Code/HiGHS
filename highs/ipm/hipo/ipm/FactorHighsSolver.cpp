@@ -387,8 +387,11 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
 
   // compute full-format matrix without diagonal entries
   std::vector<Int> full_ptr, full_rows;
-  fullFromLower(ptr.size() - 1, rows.size(), ptr.data(), rows.data(), full_ptr,
-                full_rows);
+  if (fullFromLower(ptr.size() - 1, rows.size(), ptr.data(), rows.data(),
+                    full_ptr, full_rows)) {
+    logger_.printInfo("Integer overflow forming full %s matrix\n", nla.c_str());
+    return kErrorOverflow;
+  }
   Int n = full_ptr.size() - 1;
   std::vector<Int> perm(n), iperm(n);
 
