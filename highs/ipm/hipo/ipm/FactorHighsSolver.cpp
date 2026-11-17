@@ -247,6 +247,7 @@ Int FactorHighsSolver::chooseNla() {
     if (failure_NE) return;
     Int NE_status = analyseNE(symb_NE);
     if (NE_status) failure_NE = true;
+    if (NE_status == kErrorOverflow) overflow_NE = true;
   };
 
   auto run_analyse_AS = [&]() {
