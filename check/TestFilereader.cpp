@@ -1142,13 +1142,13 @@ TEST_CASE("issue-3658", "[highs_filereader]") {
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
-  highsPrintStringAsHeading("Extra data in COLUMNS line ignored: warning");
+  highsPrintStringAsHeading("Extra data in COLUMNS line: error");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s",
           "NAME\nROWS\n N OBJ\n G R1\n G R2\nCOLUMNS\n C1 R1 1 R2 2 R1 "
           "3\nENDATA\n");
   fclose(file);
-  REQUIRE(h.readModel(filename) == HighsStatus::kWarning);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
   highsPrintStringAsHeading("Short names in COLUMNS line: OK");
   file = fopen(filename.c_str(), "w");
@@ -1157,7 +1157,35 @@ TEST_CASE("issue-3658", "[highs_filereader]") {
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
 
-  std::remove(filename.c_str());
+  highsPrintStringAsHeading("No objective name: OK");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n G R\n G S\nCOLUMNS\n C R 1 S 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  highsPrintStringAsHeading("Extra data in RHS line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S 1\nRHS\n RHS1 OBJ 1 R 1 S 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("Extra data in RANGES line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S 1\nRANGES\n RANGES1 R 1 S 1 R 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  highsPrintStringAsHeading("Extra data in BOUNDS line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S 1\nBOUNDS\n UP C 1 D 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  //  std::remove(filename.c_str());
 }
 
 TEST_CASE("issue-3659", "[highs_filereader]") {

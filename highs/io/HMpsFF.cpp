@@ -597,8 +597,6 @@ HMpsFF::Parsekey HMpsFF::parseObjsense(std::istream& file) {
 HMpsFF::Parsekey HMpsFF::parseRows(std::istream& file) {
   std::string strline, word;
   bool hasobj = false;
-  // Assign a default objective name
-  objective_name = "Objective";
 
   assert(num_row == 0);
   assert(row_lower.size() == 0);
@@ -711,10 +709,10 @@ HMpsFF::Parsekey HMpsFF::parseRows(std::istream& file) {
     }
     // Check for spurious data
     if (!is_end(strline, rowname_end)) {
-      highsLogUser(log_options_, HighsLogType::kWarning,
-                   "Ignored \"%s\" in line \"%s\" of ROWS section\n",
+      highsLogUser(log_options_, HighsLogType::kError,
+                   "Ignored \"%s\" at the end of line \"%s\" in the ROWS section\n",
                    strline.substr(rowname_end).c_str(), strline.c_str());
-      warning_issued_ = true;
+      return Parsekey::kFail;
     }
   }
   // Reach here if file ends without reaching another keyword
@@ -993,10 +991,10 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
       end = first_word_end(strline, end_marker);
 
       if (!is_end(strline, end)) {
-        highsLogUser(log_options_, HighsLogType::kWarning,
-                     "Ignored \"%s\" in line \"%s\" of COLUMNS section\n",
+        highsLogUser(log_options_, HighsLogType::kError,
+                     "Ignored \"%s\" at the end of line \"%s\" in the COLUMNS section\n",
                      strline.substr(end).c_str(), strline.c_str());
-        warning_issued_ = true;
+        return Parsekey::kFail;
       }
 
       auto mit = rowname2idx.find(marker);
@@ -1236,7 +1234,13 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
       word = first_word(strline, end_marker);
       end = first_word_end(strline, end_marker);
 
-      assert(is_end(strline, end));
+      // Check for spurious data
+      if (!is_end(strline, end)) {
+	highsLogUser(log_options_, HighsLogType::kError,
+		     "Ignored \"%s\" at the end of line \"%s\" in the RHS section\n",
+		     strline.substr(end).c_str(), strline.c_str());
+	return Parsekey::kFail;
+      }
 
       auto mit = rowname2idx.find(marker);
       if (mit == rowname2idx.end()) {
@@ -1547,6 +1551,13 @@ HMpsFF::Parsekey HMpsFF::parseBounds(std::istream& file) {
       // Bound marker SC defines the column as semi-continuous
       col_integrality[colidx] = HighsVarType::kSemiContinuous;
     }
+    // Check for spurious data
+    if (!is_end(strline, end)) {
+      highsLogUser(log_options_, HighsLogType::kError,
+		   "Ignored \"%s\" at the end of line \"%s\" in the BOUNDS section\n",
+		   strline.substr(end).c_str(), strline.c_str());
+      return Parsekey::kFail;
+    }
     // Assign the bounds that have been read
     if (is_lb) {
       col_lower[colidx] = value;
@@ -1745,13 +1756,12 @@ HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
           }
         }
       }
-
+      // Check for spurious data
       if (!is_end(strline, end)) {
-        trim(marker);
-        highsLogUser(log_options_, HighsLogType::kError,
-                     "Unknown specifiers in RANGES section for row \"%s\"\n",
-                     marker.c_str());
-        return HMpsFF::Parsekey::kFail;
+	highsLogUser(log_options_, HighsLogType::kError,
+		     "Ignored \"%s\" at the end of line \"%s\" in the RANGES section\n",
+		     strline.substr(end).c_str(), strline.c_str());
+	return Parsekey::kFail;
       }
     }
   }
