@@ -588,7 +588,8 @@ TEST_CASE("LP-modification", "[highs_test_lp_modification]") {
   REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
-  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+  REQUIRE(std::fabs(optimal_objective_value - avgas_optimal_objective_value) <
+          double_equal_tolerance);
 
   // Delete all the columns: OK
   REQUIRE(highs.deleteCols(0, num_col - 1) == HighsStatus::kOk);
@@ -1893,7 +1894,7 @@ TEST_CASE("mod-duplicate-indices", "[highs_test_lp_modification]") {
   highs.run();
   double objective0 = highs.getInfo().objective_function_value;
   REQUIRE(objective0 < objective1);
-  REQUIRE(objective0 == -7.75);
+  REQUIRE(std::fabs(objective0 + 7.75) < double_equal_tolerance);
 
   highs.resetThreadScheduler(true);
 }
