@@ -710,7 +710,8 @@ HMpsFF::Parsekey HMpsFF::parseRows(std::istream& file) {
     // Check for spurious data
     if (!is_end(strline, rowname_end)) {
       highsLogUser(log_options_, HighsLogType::kError,
-                   "Ignored \"%s\" at the end of line \"%s\" in the ROWS section\n",
+                   "Spurious data \"%s\" at the end of line \"%s\" in the ROWS "
+                   "section\n",
                    strline.substr(rowname_end).c_str(), strline.c_str());
       return Parsekey::kFail;
     }
@@ -992,7 +993,8 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
 
       if (!is_end(strline, end)) {
         highsLogUser(log_options_, HighsLogType::kError,
-                     "Ignored \"%s\" at the end of line \"%s\" in the COLUMNS section\n",
+                     "Spurious data \"%s\" at the end of line \"%s\" in the "
+                     "COLUMNS section\n",
                      strline.substr(end).c_str(), strline.c_str());
         return Parsekey::kFail;
       }
@@ -1236,10 +1238,11 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
 
       // Check for spurious data
       if (!is_end(strline, end)) {
-	highsLogUser(log_options_, HighsLogType::kError,
-		     "Ignored \"%s\" at the end of line \"%s\" in the RHS section\n",
-		     strline.substr(end).c_str(), strline.c_str());
-	return Parsekey::kFail;
+        highsLogUser(log_options_, HighsLogType::kError,
+                     "Spurious data \"%s\" at the end of line \"%s\" in the "
+                     "RHS section\n",
+                     strline.substr(end).c_str(), strline.c_str());
+        return Parsekey::kFail;
       }
 
       auto mit = rowname2idx.find(marker);
@@ -1554,8 +1557,9 @@ HMpsFF::Parsekey HMpsFF::parseBounds(std::istream& file) {
     // Check for spurious data
     if (!is_end(strline, end)) {
       highsLogUser(log_options_, HighsLogType::kError,
-		   "Ignored \"%s\" at the end of line \"%s\" in the BOUNDS section\n",
-		   strline.substr(end).c_str(), strline.c_str());
+                   "Spurious data \"%s\" at the end of line \"%s\" in the "
+                   "BOUNDS section\n",
+                   strline.substr(end).c_str(), strline.c_str());
       return Parsekey::kFail;
     }
     // Assign the bounds that have been read
@@ -1758,10 +1762,11 @@ HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
       }
       // Check for spurious data
       if (!is_end(strline, end)) {
-	highsLogUser(log_options_, HighsLogType::kError,
-		     "Ignored \"%s\" at the end of line \"%s\" in the RANGES section\n",
-		     strline.substr(end).c_str(), strline.c_str());
-	return Parsekey::kFail;
+        highsLogUser(log_options_, HighsLogType::kError,
+                     "Spurious data \"%s\" at the end of line \"%s\" in the "
+                     "RANGES section\n",
+                     strline.substr(end).c_str(), strline.c_str());
+        return Parsekey::kFail;
       }
     }
   }
@@ -1918,6 +1923,15 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadMatrix(
       end = end_coeff_name;
       // Don't read more if end of line reached
       if (end == strline.length()) break;
+      if (entry == 1) {
+        assert(end < strline.length());
+        // Finished entry 1, and end of line not reached, so error
+        highsLogUser(log_options_, HighsLogType::kError,
+                     "Spurious data \"%s\" at the end of line \"%s\" in the "
+                     "QMATRIX/QCMATRIX/QUADOBJ/QSECTION section\n",
+                     strline.substr(end).c_str(), strline.c_str());
+        return Parsekey::kFail;
+      }
     }
   }
 

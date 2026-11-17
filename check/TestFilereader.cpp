@@ -1120,11 +1120,12 @@ TEST_CASE("issue-3658", "[highs_filereader]") {
 
   FILE* file;
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
 
-  highsPrintStringAsHeading(
-      "Extra data in ROWS line: interpreted as name with spaces, but file is "
-      "free format so fixed format reader fails: error");
+  if (dev_run)
+    highsPrintStringAsHeading(
+        "Extra data in ROWS line: interpreted as name with spaces, but file is "
+        "free format so fixed format reader fails: error");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s",
           "NAME\nROWS\n N OBJ L R0\n G R1\n G R2\nCOLUMNS\n C1 R1 1 R2 "
@@ -1132,9 +1133,10 @@ TEST_CASE("issue-3658", "[highs_filereader]") {
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
-  highsPrintStringAsHeading(
-      "Extra data in ROWS line: interpreted as name \"OBJECTIVE_ROW L R0\" "
-      "with spaces of length greater than 8: error");
+  if (dev_run)
+    highsPrintStringAsHeading(
+        "Extra data in ROWS line: interpreted as name \"OBJECTIVE_ROW L R0\" "
+        "with spaces of length greater than 8: error");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s",
           "NAME\nROWS\n N OBJECTIVE_ROW L R0\n G R1\n G R2\nCOLUMNS\n C1 R1 1 "
@@ -1142,7 +1144,7 @@ TEST_CASE("issue-3658", "[highs_filereader]") {
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
-  highsPrintStringAsHeading("Extra data in COLUMNS line: error");
+  if (dev_run) highsPrintStringAsHeading("Extra data in COLUMNS line: error");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s",
           "NAME\nROWS\n N OBJ\n G R1\n G R2\nCOLUMNS\n C1 R1 1 R2 2 R1 "
@@ -1150,42 +1152,62 @@ TEST_CASE("issue-3658", "[highs_filereader]") {
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
-  highsPrintStringAsHeading("Short names in COLUMNS line: OK");
+  if (dev_run) highsPrintStringAsHeading("Short names in COLUMNS line: OK");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s",
           "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\nENDATA\n");
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
 
-  highsPrintStringAsHeading("No objective name: OK");
+  if (dev_run) highsPrintStringAsHeading("No objective name: OK");
   file = fopen(filename.c_str(), "w");
-  fprintf(file, "%s",
-          "NAME\nROWS\n G R\n G S\nCOLUMNS\n C R 1 S 2\nENDATA\n");
+  fprintf(file, "%s", "NAME\nROWS\n G R\n G S\nCOLUMNS\n C R 1 S 2\nENDATA\n");
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kOk);
 
-  highsPrintStringAsHeading("Extra data in RHS line: error");
+  if (dev_run) highsPrintStringAsHeading("Extra data in RHS line: error");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s",
-          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S 1\nRHS\n RHS1 OBJ 1 R 1 S 1\nENDATA\n");
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nRHS\n RHS1 OBJ 1 R 1 S 1\nENDATA\n");
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
-  highsPrintStringAsHeading("Extra data in RANGES line: error");
+  if (dev_run) highsPrintStringAsHeading("Extra data in RANGES line: error");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s",
-          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S 1\nRANGES\n RANGES1 R 1 S 1 R 2\nENDATA\n");
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nRANGES\n RANGES1 R 1 S 1 R 2\nENDATA\n");
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
-  highsPrintStringAsHeading("Extra data in BOUNDS line: error");
+  if (dev_run) highsPrintStringAsHeading("Extra data in BOUNDS line: error");
   file = fopen(filename.c_str(), "w");
   fprintf(file, "%s",
-          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S 1\nBOUNDS\n UP C 1 D 1\nENDATA\n");
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nBOUNDS\n UP C 1 D 1\nENDATA\n");
   fclose(file);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
-  //  std::remove(filename.c_str());
+  if (dev_run) highsPrintStringAsHeading("Extra data in Hessian line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nQSECTION "
+          "OBJ\n C C 1 D 1 D 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Extra space in Hessian line: OK");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nQSECTION "
+          "OBJ\n C C 1 D 1 \nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  std::remove(filename.c_str());
 }
 
 TEST_CASE("issue-3659", "[highs_filereader]") {
