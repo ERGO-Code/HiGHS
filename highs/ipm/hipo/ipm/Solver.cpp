@@ -1172,8 +1172,6 @@ shouldTerminate Solver::checkInfeasibilityOrStagnation() {
 }
 
 shouldTerminate Solver::handleInfeasible(bool stagnation) {
-  bool terminate = false;
-
   // Signs of divergence, which suggest that the problem may be infeasible.
   // Stagnation is also a possible sign of infeasibility.
   const bool mu_is_large =
@@ -1189,35 +1187,33 @@ shouldTerminate Solver::handleInfeasible(bool stagnation) {
   const bool suspect_infeasible =
       stagnation || mu_is_large || clearly_infeasible;
 
-  HighsSolution point;
-  const bool have_point = model_.lpOrig() && (!model_.qp() || model_.QOrig());
-  if (have_point) {
-    Hoptions_.output_flag = logger_.debug(2);
-    getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
-                             model_.m_orig(), model_.rhsOrig(),
-                             model_.constraintsOrig(), *this,
-                             HighsModelStatus::kUnknown, point);
-  }
-
   // The signs of divergence only trigger the search for a certificate. The
   // status is declared only if the certificate is verified on the original
-  // problem.
-  if (suspect_infeasible && have_point) {
-    if (checkPrimalRay(point)) {
-      logger_.print("=== Dual infeasible\n");
-      setStatus(kStatusDualInfeasible);
-      terminate = true;
-    } else if (checkDualRay(point)) {
-      logger_.print("=== Primal infeasible\n");
-      setStatus(kStatusPrimalInfeasible);
-      terminate = true;
-    }
+  // problem. The point is computed and saved only when infeasibility is
+  // suspected, so prev_point_ is the point of the last suspicious iteration.
+  const bool have_point = model_.lpOrig() && (!model_.qp() || model_.QOrig());
+  if (!suspect_infeasible || !have_point) return false;
+
+  HighsSolution point;
+  Hoptions_.output_flag = logger_.debug(2);
+  getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
+                           model_.m_orig(), model_.rhsOrig(),
+                           model_.constraintsOrig(), *this,
+                           HighsModelStatus::kUnknown, point);
+
+  bool terminate = false;
+  if (checkPrimalRay(point)) {
+    logger_.print("=== Dual infeasible\n");
+    setStatus(kStatusDualInfeasible);
+    terminate = true;
+  } else if (checkDualRay(point)) {
+    logger_.print("=== Primal infeasible\n");
+    setStatus(kStatusPrimalInfeasible);
+    terminate = true;
   }
 
-  if (have_point) {
-    prev_point_ = std::move(point);
-    prev_point_valid_ = true;
-  }
+  prev_point_ = std::move(point);
+  prev_point_valid_ = true;
 
   return terminate;
 }

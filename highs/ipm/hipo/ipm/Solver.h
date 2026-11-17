@@ -63,9 +63,9 @@ class Solver {
   // hipo status.
   Status status_phase2 = kStatusNotSet;
 
-  // Point of the previous iteration in the original space, used to compute
-  // candidate certificates of infeasibility. Invalidated when the iterate is
-  // reset.
+  // Point of the last iteration in which infeasibility was suspected, in the
+  // original space, used to compute candidate certificates of infeasibility.
+  // Invalidated when the iterate is reset.
   HighsSolution prev_point_;
   bool prev_point_valid_ = false;
 
@@ -322,9 +322,9 @@ class Solver {
   // ===================================================================================
   // If there are signs of divergence or stagnation, look for a certificate of
   // primal or dual infeasibility and, if one is verified, set the status.
-  // Return true if the ipm should terminate. Must be called at every
-  // iteration, since it also saves the current point in prev_point_, used to
-  // compute the candidates.
+  // Return true if the ipm should terminate. When infeasibility is suspected,
+  // the current point is saved in prev_point_, used to compute the candidates
+  // at the next suspicious iteration.
   // ===================================================================================
   shouldTerminate handleInfeasible(bool stagnation);
 
