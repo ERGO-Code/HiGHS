@@ -280,20 +280,165 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   REQUIRE(are_the_same);
 }
 
-/*
 TEST_CASE("filereader-nan", "[highs_filereader]") {
-  // Check that if
-  std::string model_file;
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
-  model_file = std::string(HIGHS_DIR) + "/check/instances/nan0.mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
-  model_file = std::string(HIGHS_DIR) + "/check/instances/nan1.mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
-  model_file = std::string(HIGHS_DIR) + "/check/instances/nan2.mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
+  //  highs.setOptionValue("output_flag", dev_run);
+
+  FILE* file;
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nRHS\n RHS1 "
+          "R1 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  // Testing nan cost
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ nan\n C1 R1 1\nRHS\n "
+          "RHS1 R1 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing nan and inf matrix coeff in first field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 nan\nRHS\n "
+          "RHS1 R1 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 inf\nRHS\n "
+          "RHS1 R1 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing nan and inf matrix coeff in second field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1 R1 nan\nRHS\n RHS1 R1 "
+          "1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1 R1 inf\nRHS\n RHS1 R1 "
+          "1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf RHS (OK) and nan RHS in first field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\nCOLUMNS\n C1 OBJ 1 R1 1\n C1 R2 "
+          "1\nRHS\n RHS1 R1 -inf R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\nCOLUMNS\n C1 OBJ 1 R1 1\n C1 R2 "
+          "1\nRHS\n RHS1 R1 nan R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf RHS (OK) and nan RHS in second field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\nCOLUMNS\n C1 OBJ 1 R1 1\n C1 R2 "
+          "1\nRHS\n RHS1 R1 1 R2 inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\nCOLUMNS\n C1 OBJ 1 R1 1\n C1 R2 "
+          "1\nRHS\n RHS1 R1 1 R2 nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf bounds (OK) and nan bounds
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nBOUNDS\n "
+          "UP BOUND1 C1 inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nBOUNDS\n "
+          "LO BOUND1 C1 -inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nBOUNDS\n "
+          "UP BOUND1 C1 nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nBOUNDS\n "
+          "LO BOUND1 C1 -nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf RANGE (OK) and nan RANGE in first field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\n\nCOLUMNS\n C1 OBJ 1\n C1 R1 "
+          "1\nRANGES\n RANGE1 R1 inf R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\n\nCOLUMNS\n C1 OBJ 1\n C1 R1 "
+          "1\nRANGES\n RANGE1 R1 nan R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf RANGE (OK) and nan RANGE in second field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\n\nCOLUMNS\n C1 OBJ 1\n C1 R1 "
+          "1\nRANGES\n RANGE1 R1 1 R2 inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\n\nCOLUMNS\n C1 OBJ 1\n C1 R1 "
+          "1\nRANGES\n RANGE1 R1 1 R2 nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf and nan Hessian value
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nQSECTION "
+          "OBJ\n C1 C1 inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nQSECTION "
+          "OBJ\n C1 C1 nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  //  std::remove(filename.c_str());
 }
-*/
 
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   double objective_value;
@@ -919,7 +1064,7 @@ TEST_CASE("issue-3650", "[highs_filereader]") {
   std::remove(filename.c_str());
 }
 
-TEST_CASE("issue-3657", "[highs_filereader]") {
+TEST_CASE("word-is-finite-double", "[highs_filereader]") {
   auto testWord = [&](std::string word, HighsInt require_status) {
     double value;
     HighsInt status = wordIsFiniteDouble(word, value);
@@ -928,7 +1073,6 @@ TEST_CASE("issue-3657", "[highs_filereader]") {
              int(status));
     REQUIRE(status == require_status);
   };
-
   testWord("3.142", 0);
   testWord("3.142e2", 0);
   testWord("3.142E2", 0);
@@ -951,16 +1095,20 @@ TEST_CASE("issue-3657", "[highs_filereader]") {
   testWord("NaN", kDoubleStatusNan);
   testWord("NaNaN", kDoubleStatusIllegal);
   testWord("abc", kDoubleStatusIllegal);
+}
 
+TEST_CASE("issue-3657", "[highs_filereader]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string filename = test_name + ".mps";
 
   FILE* file;
   file = fopen(filename.c_str(), "w");
-  fprintf(file, "%s", "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 R1 abc\nRHS\nENDATA\n"); fclose(file);
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 R1 abc\nRHS\nENDATA\n");
+  fclose(file);
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(filename) == HighsStatus::kError);
 
   std::remove(filename.c_str());

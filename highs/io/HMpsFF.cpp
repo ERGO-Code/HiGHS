@@ -907,11 +907,13 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
         report_ignored_row_name_frequency *= 2;
       }
     } else {
-      bool is_nan = false;
-      double value = getValue(word, is_nan);  // atof(word.c_str());
-      if (is_nan) {
-        highsLogUser(log_options_, HighsLogType::kError,
-                     "Coefficient for column \"%s\" is NaN\n", marker.c_str());
+      double value;
+      HighsInt value_status = wordIsFiniteDouble(word, value);
+      if (value_status) {
+        highsLogUser(
+            log_options_, HighsLogType::kError,
+            "Illegal coefficient (%s) for row \"%s\" in column \"%s\"\n",
+            word.c_str(), marker.c_str(), colname.c_str());
         return HMpsFF::Parsekey::kFail;
       }
       if (value) {
@@ -986,11 +988,13 @@ typename HMpsFF::Parsekey HMpsFF::parseCols(std::istream& file) {
         }
         continue;
       };
-      bool is_nan = false;
-      double value = getValue(word, is_nan);  // atof(word.c_str());
-      if (is_nan) {
-        highsLogUser(log_options_, HighsLogType::kError,
-                     "Coefficient for column \"%s\" is NaN\n", marker.c_str());
+      double value;
+      HighsInt value_status = wordIsFiniteDouble(word, value);
+      if (value_status) {
+        highsLogUser(
+            log_options_, HighsLogType::kError,
+            "Illegal coefficient (%s) for row \"%s\" in column \"%s\"\n",
+            word.c_str(), marker.c_str(), colname.c_str());
         return HMpsFF::Parsekey::kFail;
       }
       if (value) {
@@ -1165,8 +1169,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
         report_ignored_row_name_frequency *= 2;
       }
     } else {
-      bool is_nan = false;
-      double value = getValue(word, is_nan);  // atof(word.c_str());
+      double value;
+      HighsInt value_status = wordIsFiniteDouble(word, value);
       parseName(marker, rowidx, has_entry);
       if (has_entry) {
         num_ignored_duplicate_rhs++;
@@ -1180,9 +1184,11 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
           report_ignored_duplicate_rhs_frequency *= 2;
         }
       } else {
-        if (is_nan) {
+        if (value_status == kDoubleStatusNan ||
+            value_status == kDoubleStatusIllegal) {
           highsLogUser(log_options_, HighsLogType::kError,
-                       "RHS for row \"%s\" is NaN\n", marker.c_str());
+                       "Illegal RHS (%s) for row \"%s\"\n", word.c_str(),
+                       marker.c_str());
           return HMpsFF::Parsekey::kFail;
         }
         addRhs(value, rowidx);
@@ -1223,8 +1229,8 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
       };
 
       parseName(marker, rowidx, has_entry);
-      bool is_nan = false;
-      double value = getValue(word, is_nan);  // atof(word.c_str());
+      double value;
+      HighsInt value_status = wordIsFiniteDouble(word, value);
       if (has_entry) {
         num_ignored_duplicate_rhs++;
         if (num_ignored_duplicate_rhs %
@@ -1237,9 +1243,11 @@ HMpsFF::Parsekey HMpsFF::parseRhs(std::istream& file) {
           report_ignored_duplicate_rhs_frequency *= 2;
         }
       } else {
-        if (is_nan) {
+        if (value_status == kDoubleStatusNan ||
+            value_status == kDoubleStatusIllegal) {
           highsLogUser(log_options_, HighsLogType::kError,
-                       "RHS for row \"%s\" is NaN\n", marker.c_str());
+                       "Illegal RHS (%s) for row \"%s\"\n", word.c_str(),
+                       marker.c_str());
           return HMpsFF::Parsekey::kFail;
         }
         addRhs(value, rowidx);
@@ -1480,11 +1488,13 @@ HMpsFF::Parsekey HMpsFF::parseBounds(std::istream& file) {
                    marker.c_str());
       return HMpsFF::Parsekey::kFail;
     }
-    bool is_nan = false;
-    double value = getValue(word, is_nan);  // atof(word.c_str());
-    if (is_nan) {
+    double value;
+    HighsInt value_status = wordIsFiniteDouble(word, value);
+    if (value_status == kDoubleStatusNan ||
+        value_status == kDoubleStatusIllegal) {
       highsLogUser(log_options_, HighsLogType::kError,
-                   "Bound for column \"%s\" is NaN\n", marker.c_str());
+                   "Illegal coefficient (%s) for bound on column \"%s\"\n",
+                   word.c_str(), marker.c_str());
       return HMpsFF::Parsekey::kFail;
     }
     if (is_integral) {
@@ -1623,8 +1633,8 @@ HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
           report_ignored_row_name_frequency *= 2;
         }
       } else {
-        bool is_nan = false;
-        double value = getValue(word, is_nan);  // atof(word.c_str());
+        double value;
+        HighsInt value_status = wordIsFiniteDouble(word, value);
         if (has_row_entry_[rowidx]) {
           num_ignored_duplicate_range++;
           if (num_ignored_duplicate_range %
@@ -1637,9 +1647,11 @@ HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
             report_ignored_duplicate_range_frequency *= 2;
           }
         } else {
-          if (is_nan) {
+          if (value_status == kDoubleStatusNan ||
+              value_status == kDoubleStatusIllegal) {
             highsLogUser(log_options_, HighsLogType::kError,
-                         "Range for row \"%s\" is NaN\n", marker.c_str());
+                         "Illegal range (%s) for row \"%s\"\n", word.c_str(),
+                         marker.c_str());
             return HMpsFF::Parsekey::kFail;
           }
           addRhs(value, rowidx);
@@ -1685,8 +1697,8 @@ HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
             report_ignored_row_name_frequency *= 2;
           }
         } else {
-          bool is_nan = false;
-          double value = getValue(word, is_nan);  // atof(word.c_str());
+          double value;
+          HighsInt value_status = wordIsFiniteDouble(word, value);
           if (has_row_entry_[rowidx]) {
             num_ignored_duplicate_range++;
             if (num_ignored_duplicate_range %
@@ -1699,9 +1711,11 @@ HMpsFF::Parsekey HMpsFF::parseRanges(std::istream& file) {
               report_ignored_duplicate_range_frequency *= 2;
             }
           } else {
-            if (is_nan) {
+            if (value_status == kDoubleStatusNan ||
+                value_status == kDoubleStatusIllegal) {
               highsLogUser(log_options_, HighsLogType::kError,
-                           "Range for row \"%s\" is NaN\n", marker.c_str());
+                           "Illegal range (%s) for row \"%s\"\n", word.c_str(),
+                           marker.c_str());
               return HMpsFF::Parsekey::kFail;
             }
             addRhs(value, rowidx);
@@ -1852,13 +1866,13 @@ typename HMpsFF::Parsekey HMpsFF::parseQuadMatrix(
       rowidx = getColIdx(row_name);
       assert(rowidx >= 0 && rowidx < num_col);
 
-      bool is_nan = false;
-      double coeff = getValue(coeff_name, is_nan);  // atof(word.c_str());
-      if (is_nan) {
-        highsLogUser(
-            log_options_, HighsLogType::kError,
-            "Hessian coefficient for entry \"%s\" in column \"%s\" is NaN\n",
-            row_name.c_str(), col_name.c_str());
+      double coeff;
+      HighsInt value_status = wordIsFiniteDouble(coeff_name, coeff);
+      if (value_status) {
+        highsLogUser(log_options_, HighsLogType::kError,
+                     "Illegal coefficient (%s) for entry \"%s\" in column "
+                     "\"%s\" of Hessian\n",
+                     coeff_name.c_str(), row_name.c_str(), col_name.c_str());
         return HMpsFF::Parsekey::kFail;
       }
       if (coeff) {
@@ -2051,11 +2065,11 @@ typename HMpsFF::Parsekey HMpsFF::parseSos(std::istream& file,
     double weight = 0.0;
     if (!is_end(strline, end)) {
       word = first_word(strline, end);
-      bool is_nan = false;
-      weight = getValue(word, is_nan);  // atof(word.c_str());
-      if (is_nan) {
+      HighsInt value_status = wordIsFiniteDouble(word, weight);
+      if (value_status) {
         highsLogUser(log_options_, HighsLogType::kError,
-                     "Weight for column \"%s\" is NaN\n", colname.c_str());
+                     "Illegal SOS weight (%s) for column \"%s\"\n",
+                     word.c_str(), colname.c_str());
         return HMpsFF::Parsekey::kFail;
       }
     }
@@ -2072,29 +2086,4 @@ bool HMpsFF::allZeroed(const std::vector<double>& value) {
   return true;
 }
 
-double HMpsFF::getValue(const std::string& word, bool& is_nan,
-                        const HighsInt id) const {
-  // Lambda to replace any d or D by E
-  auto dD2e = [&](std::string& word) {
-    size_t ix = word.find('D');
-    if (ix != std::string::npos) {
-      word.replace(ix, 1, "E");
-    } else {
-      ix = word.find('d');
-      if (ix != std::string::npos) word.replace(ix, 1, "E");
-    }
-  };
-
-  std::string local_word = word;
-  dD2e(local_word);
-  const double value = atof(local_word.c_str());
-  is_nan = false;
-  //  printf("value(%d) = %g\n", int(id), value);
-  //  if (std::isnan(value)) return true;
-  //  // atof('nan') yields 0 with some Windows compilers, so try a string
-  //  // comparison
-  //  std::string lower_word = word;
-  //  if (str_tolower(lower_word) == "nan") return true;
-  return value;
-}
 }  // namespace free_format_parser
