@@ -285,7 +285,7 @@ TEST_CASE("filereader-nan", "[highs_filereader]") {
   std::string filename = test_name + ".mps";
 
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
 
   FILE* file;
   file = fopen(filename.c_str(), "w");
