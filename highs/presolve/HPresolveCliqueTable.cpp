@@ -94,7 +94,7 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
         const ColState otherState = colStates[v2.col];
         if (otherState.isFixedTo(v2.val)) return false;
         if (otherState.isActive()) {
-          fixingQueue.emplace_back(static_cast<HighsUInt>(v2.col), 1 - v2.val);
+          fixingQueue.emplace_back(static_cast<HighsInt>(v2.col), 1 - v2.val);
         }
       }
       table->removeClique(cliqueId);
