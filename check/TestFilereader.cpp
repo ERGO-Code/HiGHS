@@ -437,7 +437,7 @@ TEST_CASE("filereader-nan", "[highs_filereader]") {
   fclose(file);
   REQUIRE(highs.readModel(filename) == HighsStatus::kError);
 
-  //  std::remove(filename.c_str());
+  std::remove(filename.c_str());
 }
 
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
