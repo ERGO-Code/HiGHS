@@ -156,15 +156,17 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
                                    StagnationReport& report,
                                    std::stringstream& log_stream) {
   const Int num = kNumProgressQuantities;
-  // The progress of the gap is measured with the absolute gap, because the
-  // relative gap saturates at 2 when one objective is much larger than the
-  // other, and then does not show any progress. Whether the gap is above its
+  // The progress of the gap is measured with mu. The relative gap saturates at
+  // 2 when one objective is much larger than the other, and then does not show
+  // any progress. The absolute gap |pobj - dobj| can pass close to zero when
+  // the objectives cross, which happens at infeasible points, and this gives a
+  // best value that later iterates cannot improve. mu is non-negative, does not
+  // saturate, and its ratios are scale-invariant. Whether the gap is above its
   // tolerance is decided with the relative gap instead.
-  const double value[num] = {it.pinf, it.dinf, std::abs(it.pobj - it.dobj),
-                             it.infeas_drop};
+  const double value[num] = {it.pinf, it.dinf, it.mu, it.infeas_drop};
   const double tol_value[num] = {it.pinf, it.dinf, it.pdgap, it.infeas_drop};
   const double tol[num] = {feas_tol, feas_tol, opt_tol, crossover_tol};
-  const char* name[num] = {"pinf", "dinf", "absgap", "drop"};
+  const char* name[num] = {"pinf", "dinf", "mu", "drop"};
 
   // infeas_drop is computed only in some cases, otherwise it is zero
   const bool available[num] = {true, true, true, it.infeas_drop > 0.0};

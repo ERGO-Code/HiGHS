@@ -103,7 +103,7 @@ struct StagnationTests {
                              std::stringstream& log_stream) const;
 
   // ===================================================================================
-  // Check progress of pinf, dinf, absolute gap |pobj - dobj| and infeas_drop.
+  // Check progress of pinf, dinf, mu (measuring the gap) and infeas_drop.
   // The relative gap pdgap is used only to decide if the gap is above its
   // tolerance. The test fails if:
   // - none of the quantities, at any point in the last kProgressMaxIter

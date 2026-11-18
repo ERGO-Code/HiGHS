@@ -46,6 +46,10 @@ struct Iterate {
   NewtonDir delta;
   double pobj, dobj, pinf, dinf, pdgap;
   double mu;
+
+  double compl_sum = 0.0;
+  double compl_gap = 0.0;
+
   std::vector<double> scaling;
   double best_mu;
   const Regularisation& regul;
@@ -86,7 +90,8 @@ struct Iterate {
 
   // ===================================================================================
   // Compute:
-  //  mu = \sum xl(i) * zl(i) + \sum xu(j) * zu(j)
+  //  compl_sum = \sum xl(i) * zl(i) + \sum xu(j) * zu(j)
+  //  mu = compl_sum / (number of finite bounds)
   // for variables: i with a finite lower bound
   //                j with a finite upper bound
   // ===================================================================================
@@ -102,7 +107,8 @@ struct Iterate {
 
   // ===================================================================================
   // Compute convergence indicators
-  // - primal and dual objectives, and primal-dual relative gap
+  // - primal and dual objectives, primal-dual relative gap and relative
+  //   complementarity gap
   // - primal and dual infeasibilities (either scaled or unscaled)
   // - complementairy products
   // ===================================================================================

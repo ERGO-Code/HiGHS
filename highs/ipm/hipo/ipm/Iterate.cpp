@@ -66,19 +66,19 @@ bool Iterate::isDirInf(const NewtonDir& d) const {
 }
 
 void Iterate::computeMu() {
-  mu = 0.0;
+  compl_sum = 0.0;
   Int number_finite_bounds{};
   for (Int i = 0; i < model.n(); ++i) {
     if (model.hasLb(i)) {
-      mu += xl[i] * zl[i];
+      compl_sum += xl[i] * zl[i];
       ++number_finite_bounds;
     }
     if (model.hasUb(i)) {
-      mu += xu[i] * zu[i];
+      compl_sum += xu[i] * zu[i];
       ++number_finite_bounds;
     }
   }
-  mu /= number_finite_bounds;
+  mu = compl_sum / number_finite_bounds;
 
   if (best_mu > 0.0)
     best_mu = std::min(best_mu, mu);
@@ -164,8 +164,10 @@ void Iterate::pdGap() {
   // much earlier than it should.
   // If offset ~ -p, -d, then |pobj+dobj| ~ 0, so the gap gets small much later
   // than it should.
-  pdgap = std::abs(pobj - dobj) /
-          (1.0 + 0.5 * std::abs(pobj + dobj - 2 * model.offset()));
+  const double denom = 1.0 + 0.5 * std::abs(pobj + dobj - 2 * model.offset());
+  pdgap = std::abs(pobj - dobj) / denom;
+
+  compl_gap = compl_sum / denom;
 }
 
 void Iterate::primalInfeas() {
@@ -685,7 +687,11 @@ void Iterate::makeStep(double alpha_primal, double alpha_dual) {
 void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
   const double primal_violation = pinf / feas_tol;
   const double dual_violation = dinf / feas_tol;
-  const double gap_violation = pdgap / opt_tol;
+  // pdgap alone is not reliable: at an infeasible point, pobj - dobj can
+  // change sign and pass close to zero while the point is far from optimal.
+  // Such a point would be saved as best, even if later iterates are much
+  // better. compl_gap is used as well, because it cannot have false minima.
+  const double gap_violation = std::max(pdgap, compl_gap) / opt_tol;
 
   double violation = std::max(primal_violation, dual_violation);
   violation = std::max(violation, gap_violation);
