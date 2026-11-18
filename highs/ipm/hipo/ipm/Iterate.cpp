@@ -1,5 +1,7 @@
 #include "Iterate.h"
 
+#include <cmath>
+
 #include "Parameters.h"
 #include "ipm/IpxWrapper.h"
 #include "ipm/hipo/factorhighs/FactorHighsSettings.h"
@@ -696,7 +698,16 @@ void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
   double violation = std::max(primal_violation, dual_violation);
   violation = std::max(violation, gap_violation);
 
-  if (violation < best_violation) {
+  // Rank by the orders of magnitude of violation. Ties are broken by the
+  // largest violation.
+  const double violation_magnitude =
+      std::log10(std::max(primal_violation, 1.0)) +
+      std::log10(std::max(dual_violation, 1.0)) +
+      std::log10(std::max(gap_violation, 1.0));
+
+  if (violation_magnitude < best_violation_magnitude ||
+      (violation_magnitude == best_violation_magnitude &&
+       violation < best_violation)) {
     best_x = x;
     best_xl = xl;
     best_xu = xu;
@@ -704,6 +715,7 @@ void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
     best_zl = zl;
     best_zu = zu;
     best_violation = violation;
+    best_violation_magnitude = violation_magnitude;
     best_iter = iter;
     model.saveBounds();
   }

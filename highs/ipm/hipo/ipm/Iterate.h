@@ -66,6 +66,7 @@ struct Iterate {
   StagnationTests tests;
 
   double best_violation = kHighsInf;
+  double best_violation_magnitude = kHighsInf;
   Int best_iter = -1;
   std::vector<double> best_x, best_xl, best_xu, best_y, best_zl, best_zu;
 
