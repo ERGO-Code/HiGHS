@@ -150,6 +150,11 @@ void Solver::doSolve() {
     return;
   }
 
+  if (!HighsTaskExecutor::isRunning()) {
+    info_.error = kErrorScheduler;
+    return;
+  }
+
   reset();
 
   // iterate object needs to be initialised before potentially interrupting

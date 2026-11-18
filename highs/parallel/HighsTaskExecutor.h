@@ -153,6 +153,8 @@ class HighsTaskExecutor {
     return threadLocalWorkerDeque();
   }
 
+  static bool isRunning() { return threadLocalExecutorHandle().ptr != nullptr; }
+
   static int getNumWorkerThreads() {
     return threadLocalWorkerDeque()->getNumWorkers();
   }
