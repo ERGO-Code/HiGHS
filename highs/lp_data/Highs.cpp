@@ -3141,6 +3141,12 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
 
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
   this->logHeader();
+  if (sense != ObjSense::kMinimize ||
+      sense != ObjSense::kMaximize) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "changeObjectiveSense: sense is not minimize or maximize\n");
+    return HighsStatus::kError;
+  }
   if ((sense == ObjSense::kMinimize) !=
       (model_.lp_.sense_ == ObjSense::kMinimize)) {
     model_.lp_.sense_ = sense;

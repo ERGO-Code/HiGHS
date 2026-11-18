@@ -2716,3 +2716,16 @@ TEST_CASE("issue-3671", "[highs_data]") {
   HighsInt* m = nullptr;
   REQUIRE(h.deleteCols(m) == HighsStatus::kError);
 }
+
+TEST_CASE("issue-3672", "[highs_data]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  double c = 1.0;
+  double lb = 0.0;
+  double ub = 10.0;
+  h.addCols(1, &c, &lb, &ub, 0, nullptr, nullptr, nullptr);
+  HighsInt* m = nullptr;
+  REQUIRE(h.changeObjectiveSense(ObjSense(42)) == HighsStatus::kError);
+}
+
