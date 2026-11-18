@@ -186,13 +186,13 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                         RESOURCE_LOCK unittestbin)
 
     # create a binary running all the tests in the executable
-    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    add_test(NAME unit_tests_all COMMAND unit_tests)
     set_tests_properties(unit_tests_all
                         PROPERTIES
                         DEPENDS unit-test-build)
     set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
   else()
-    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    add_test(NAME unit_tests_all COMMAND unit_tests)
     set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
   endif()
 
