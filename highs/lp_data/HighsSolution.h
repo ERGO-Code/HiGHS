@@ -88,14 +88,22 @@ void getVariableKktFailures(const double primal_feasibility_tolerance,
                             double& semi_infeasibility, uint8_t& at_status,
                             uint8_t& mid_status, const HighsInt index = 0);
 
+// Largest violation of the tolerances, relative to the tolerances, for which
+// a solution is still considered optimal by lpKktCheck
+const double kKktMaxAllowedRelativeViolation = 1e2;
+
 void lpNoBasisKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                        const HighsLp& lp, const HighsSolution& solution,
-                       const HighsOptions& options, const std::string& message);
+                       const HighsOptions& options, const std::string& message,
+                       const double max_allowed_tolerance_relative_violation =
+                           kKktMaxAllowedRelativeViolation);
 
 void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                 const HighsLp& lp, const HighsSolution& solution,
                 const HighsBasis& basis, const HighsOptions& options,
-                const std::string& message);
+                const std::string& message,
+                const double max_allowed_tolerance_relative_violation =
+                    kKktMaxAllowedRelativeViolation);
 
 std::vector<double> getEffectiveCosts(const HighsLp& lp,
                                       const HighsOptions& options);
