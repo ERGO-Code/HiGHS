@@ -246,6 +246,17 @@ if (CUPDLP_GPU OR HIPDLP_GPU)
     endif()
 
     enable_language(HIP)
+
+    # Clang adds the ROCm include directory with -idirafter, i.e. after
+    # /usr/include, so a system HIP package in /usr/include/hip would shadow
+    # the headers of the ROCm install matching the compiler. CMake drops it
+    # from -I since it is an implicit include directory, so force it first.
+    if (CMAKE_HIP_COMPILER_ROCM_ROOT AND
+        EXISTS "${CMAKE_HIP_COMPILER_ROCM_ROOT}/include/hip/hip_runtime.h")
+      set(CMAKE_HIP_FLAGS
+        "-isystem ${CMAKE_HIP_COMPILER_ROCM_ROOT}/include ${CMAKE_HIP_FLAGS}")
+    endif()
+
     find_package(hipblas REQUIRED)
     find_package(hipsparse REQUIRED)
 
@@ -289,6 +300,14 @@ else()
   set(CUPDLP_CPU ON)
   set(CUDA_LIBRARY-NOTFOUND true)
   set(HIPDLP_GPU OFF)
+endif()
+
+# Link HiGHS statically into the highspy extension module by default. A
+# separate libhighs in the wheel shares its SONAME / install name with any other
+# libhighs in the process, e.g. the one bundled by OR-Tools, so the dynamic
+# loader can give one package the other's copy. GPU wheels still need libhighs.
+if (HIPO_PYTHON AND NOT DEFINED BUILD_SHARED_LIBS AND NOT (CUPDLP_GPU OR HIPDLP_GPU))
+  set(BUILD_SHARED_LIBS OFF)
 endif()
 
 if(BUILD_STATIC_EXE)
@@ -657,6 +676,24 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
+# Private dependencies of a static highs for highs.pc. Shared builds list none
+# because a missing Requires.private module makes every pkg-config query fail.
+# For the same reason macOS uses -lz: its SDK has zlib but may have no zlib.pc
+set(HIGHS_PC_LIBS_PRIVATE "")
+set(HIGHS_PC_REQUIRES_PRIVATE "")
+if(NOT BUILD_SHARED_LIBS)
+  if(FAST_BUILD AND NOT BUILD_SHARED_EXTRAS_LIB)
+    set(HIGHS_PC_LIBS_PRIVATE "-lhighs_extras")
+  endif()
+  if(ZLIB AND ZLIB_FOUND)
+    if(APPLE)
+      string(APPEND HIGHS_PC_LIBS_PRIVATE " -lz")
+    else()
+      set(HIGHS_PC_REQUIRES_PRIVATE "zlib")
+    endif()
+  endif()
+endif()
+
 if (NOT CMAKE_INSTALL_DOCDIR STREQUAL "" AND BUILD_CXX)
   install(FILES
       README.md
@@ -1011,6 +1048,14 @@ if (HIPO_PYTHON)
   add_subdirectory(highspy)
 else()
   add_subdirectory(extern)
+  if(FAST_BUILD AND BUILD_CXX)
+    # After extern, which adds the private dependencies of a static highs_extras
+    configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
+      "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+  endif()
 endif()
 
 # Prevent nested directory structure in the archive

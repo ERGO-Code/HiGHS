@@ -7,6 +7,7 @@ Description: Linear Optimization Software
 URL: https://github.com/ERGO-Code/HiGHS
 Version: @HIGHS_VERSION_MAJOR@.@HIGHS_VERSION_MINOR@.@HIGHS_VERSION_PATCH@
 Libs: -L${libdir} -lhighs
-#TODO Libs.private (when HiGHS lib is build as static lib)
+Libs.private: @HIGHS_PC_LIBS_PRIVATE@
 Cflags: -I${includedir}
 Requires:
+Requires.private: @HIGHS_PC_REQUIRES_PRIVATE@

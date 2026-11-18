@@ -422,14 +422,14 @@ void HSimplexNla::reportPackValue(const std::string& message,
 }
 
 HighsDebugStatus HSimplexNla::debugCheckData(const std::string& message) const {
+  if (options_->highs_debug_level < kHighsDebugLevelCheap)
+    return HighsDebugStatus::kOk;
   std::string scale_status;
   if (scale_ == NULL) {
     scale_status = "NULL";
   } else {
     scale_status = "non-NULL";
   }
-  //  if (options_->highs_debug_level < kHighsDebugLevelCheap) return
-  //  HighsDebugStatus::kOk;
   HighsLp check_lp = *lp_;
   bool error0_found = false;
   bool error1_found = false;

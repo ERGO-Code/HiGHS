@@ -67,10 +67,7 @@ void Solver::chooseAllowedParallelism(const HighsOptions& Hoptions) {
 }
 
 void Solver::setOptions(const HighsOptions& highs_options) {
-  options_.display = true;
-  if (!highs_options.output_flag | !highs_options.log_to_console)
-    options_.display = false;
-
+  options_.display = highs_options.output_flag;
   options_.log_options = &highs_options.log_options;
 
   // Debug option is already considered through log_options.log_dev_level in

@@ -12,9 +12,9 @@ project(_core LANGUAGES CXX)
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(pybind11 CONFIG)
 
-# static link to libhighs
+# libhighs is configured before this directory is added, so whether it is linked
+# statically is decided by BUILD_SHARED_LIBS in the top-level CMakeLists.txt
 set(BUILD_SHARED_EXTRAS_LIB ON)
-set(BUILD_SHARED_LIBS OFF)
 set(BUILD_CXX ON)
 set(BUILD_TESTING OFF)
 set(BUILD_SAMPLES OFF)

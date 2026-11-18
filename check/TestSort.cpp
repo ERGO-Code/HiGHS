@@ -111,7 +111,7 @@ void checkDecreasingSort(const HighsInt num_sorted,
   REQUIRE(error1 == false);
 }
 
-TEST_CASE("HiGHS_sort", "[highs_data]") {
+TEST_CASE("HiGHS_sort", "[highs_test_sort]") {
   HighsInt num_values = 10;
   vector<HighsInt> indices;
   vector<HighsInt> int_values;

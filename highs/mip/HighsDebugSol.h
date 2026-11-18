@@ -54,7 +54,7 @@ struct HighsDebugSol {
 
   void resetDomain(const HighsDomain& domain);
 
-  void nodePruned(const HighsDomain& localdomain);
+  void nodePruned(const HighsDomain& localdomain, double cutoff = kHighsInf);
 
   void checkCut(const HighsInt* Rindex, const double* Rvalue, HighsInt Rlen,
                 double rhs);
@@ -103,7 +103,7 @@ struct HighsDebugSol {
 
   void resetDomain(const HighsDomain&) const {}
 
-  void nodePruned(const HighsDomain&) const {}
+  void nodePruned(const HighsDomain&, double = kHighsInf) const {}
 
   void checkCut(const HighsInt*, const double*, HighsInt, double) const {}
 

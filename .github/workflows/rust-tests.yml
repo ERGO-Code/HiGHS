@@ -1,0 +1,50 @@
+name: rust-tests
+
+# Builds and tests the Rust bindings (https://github.com/rust-or/highs-sys)
+# against this commit of HiGHS, in place of highs-sys's HiGHS submodule.
+
+on:
+  push:
+    branches: [ latest, master ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  highs-sys:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+    steps:
+      - name: Install LLVM and Clang (needed by bindgen)
+        if: runner.os == 'Windows'
+        uses: KyleMayes/install-llvm-action@v1.9.0
+        with:
+          version: "17"
+          directory: ${{ runner.temp }}/llvm
+
+      - name: Set LIBCLANG_PATH
+        if: runner.os == 'Windows'
+        run: echo "LIBCLANG_PATH=$((gcm clang).source -replace "clang.exe")" >> $env:GITHUB_ENV
+
+      - name: Checkout highs-sys
+        uses: actions/checkout@v6
+        with:
+          repository: rust-or/highs-sys
+          path: highs-sys
+
+      # Put this HiGHS commit where highs-sys expects its submodule.
+      - name: Checkout HiGHS
+        uses: actions/checkout@v6
+        with:
+          path: highs-sys/HiGHS
+
+      - name: Test
+        working-directory: highs-sys
+        run: cargo test

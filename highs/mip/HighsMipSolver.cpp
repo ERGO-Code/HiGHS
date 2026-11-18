@@ -58,8 +58,13 @@ HighsMipSolver::HighsMipSolver(HighsCallback& callback,
                            integral, feasible);
     assert(valid);
 #endif
-    // Initial solution can be infeasible, but need to set values for violation
-    // and objective
+    // Original comment: "Initial solution can be infeasible, but need
+    // to set values for violation and objective"
+    //
+    // The initial solution shouldn't be infeasible in the original
+    // space, since it's tested externally, but logging of
+    // infeasibility has been added to
+    // HighsMipSolverData::checkAddSolution()
     MipViolation violation;
     HighsCDouble quad_solution_objective_;
     solutionFeasible(orig_model_, solution.col_value, &solution.row_value,
@@ -128,11 +133,27 @@ void HighsMipSolver::run() {
   if (profiling_->mip_ && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed presolve\n", timer_.read());
-  // Identify whether time limit has been reached (in presolve)
-  if (modelstatus_ == HighsModelStatus::kNotset &&
-      timer_.read() >= options_mip_->time_limit)
-    modelstatus_ = HighsModelStatus::kTimeLimit;
-
+  if (modelstatus_ == HighsModelStatus::kNotset) {
+    // Time limit has been reached (in presolve)
+    if (mipdata_->presolve_status == HighsPresolveStatus::kTimeout
+        // I think this is a legacy timeout check dataing from before there was
+        // a timeout in presolve
+        //
+        // || timer_.read() >= options_mip_->time_limit
+    ) {
+      modelstatus_ = HighsModelStatus::kTimeLimit;
+    } else if (mipdata_->presolve_status == HighsPresolveStatus::kOutOfMemory ||
+               mipdata_->presolve_status == HighsPresolveStatus::kException ||
+               mipdata_->presolve_status ==
+                   HighsPresolveStatus::kMatrixValueError) {
+      // Handle failures in presolve
+      if (mipdata_->presolve_status == HighsPresolveStatus::kOutOfMemory) {
+        modelstatus_ = HighsModelStatus::kMemoryLimit;
+      } else {
+        modelstatus_ = HighsModelStatus::kPresolveError;
+      }
+    }
+  }
   if (modelstatus_ != HighsModelStatus::kNotset) {
     HighsModelStatus presolveStatus = modelstatus_;
     if (presolveStatus == HighsModelStatus::kInfeasible &&
@@ -1300,7 +1321,9 @@ void HighsMipSolver::solvingReport(const std::string& solutionstatus) const {
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                "  Status            %s\n",
                utilModelStatusToString(modelstatus_).c_str());
-  if (modelstatus_ != HighsModelStatus::kSolveError) {
+  if (modelstatus_ != HighsModelStatus::kSolveError &&
+      modelstatus_ != HighsModelStatus::kMemoryLimit &&
+      modelstatus_ != HighsModelStatus::kPresolveError) {
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "  Primal bound      %.12g\n"
                  "  Dual bound        %.12g\n"
@@ -1308,7 +1331,7 @@ void HighsMipSolver::solvingReport(const std::string& solutionstatus) const {
                  primal_bound_, dual_bound_, gapString.data());
     if (!timeless_log)
       highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
-                   "  P-D integral      %.12g\n",
+                   "  P-D integral      %.2f\n",
                    mipdata_->primal_dual_integral.value);
   }
   highsLogUser(options_mip_->log_options, HighsLogType::kInfo,

@@ -64,6 +64,37 @@ TEST_CASE("HighsCDouble-ceil", "[util]") {
   }
 }
 
+TEST_CASE("HighsCDouble-division", "[util]") {
+  // see issue #3604: the division did not normalize its operands, so that the
+  // gap between the high and the low part grew with each division until all
+  // precision was lost
+
+  // returns a HighsCDouble with the given value (|value| < 1) whose high part
+  // is zero, i.e. that is not normalized. this happens with the lazily
+  // normalized addition and subtraction.
+  auto unnormalized = [](double value) {
+    HighsCDouble x = 1e16;
+    // value is smaller than half an ulp of 1e16 and ends up in the low part
+    x += value;
+    x -= 1e16;
+    return x;
+  };
+
+  // repeated division of an unnormalized number by a double
+  const double value = 0.9167;
+  HighsCDouble x = unnormalized(value);
+  REQUIRE(double(x) == value);
+  for (HighsInt k = 0; k < 60; k++) {
+    x /= 1.0;
+    REQUIRE(std::abs(double(x) - value) <= 1e-15);
+  }
+
+  // division of an unnormalized number by an unnormalized number
+  const double dividend = 0.375;
+  HighsCDouble y = unnormalized(dividend) / unnormalized(value);
+  REQUIRE(std::abs(double(y) - dividend / value) <= 1e-15);
+}
+
 TEST_CASE("HighsCDouble-floor", "[util]") {
   HighsCDouble x;
 

@@ -65,12 +65,14 @@ void IPM::Driver(KKTSolver* kkt, Iterate* iterate, Info* info) {
             bool dualized = iterate_->model().dualized();
             double pobjective = iterate_->pobjective_after_postproc();
             double dobjective = iterate_->dobjective_after_postproc();
-            if (dobjective > std::max(10.0 * std::abs(pobjective), 1.0)) {
+            if (iterate_->presidual() > iterate_->feasibility_tol() * (1.0 + model.norm_bounds()) &&
+		dobjective > std::max(10.0 * std::abs(pobjective), 1.0)) {
                 // Dual objective tends to positive infinity. Looks like the
                 // model is dual unbounded, i.e. primal infeasible.
                 info->status_ipm = dualized ?
                     IPX_STATUS_dual_infeas : IPX_STATUS_primal_infeas;
-            } else if (pobjective < -std::max(10.0 * std::abs(dobjective), 1.0)) {
+            } else if (iterate_->dresidual() > iterate_->feasibility_tol() * (1.0 + model.norm_c()) &&
+		       pobjective < -std::max(10.0 * std::abs(dobjective), 1.0)) {
                 // Primal objective tends to negative infinity. Looks like the
                 // model is primal unbounded, i.e. dual infeasible.
                 info->status_ipm = dualized ?

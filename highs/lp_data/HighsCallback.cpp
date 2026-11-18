@@ -171,77 +171,28 @@ HighsCallbackInput HighsCallbackInput::operator=(
   return *this;
 }
 
+// User provides a full solution
 HighsStatus HighsCallbackInput::setSolution(HighsInt num_entries,
                                             const double* value) {
-  if (num_entries <= highs->getNumCol()) {
-    for (int i = 0; i < num_entries; ++i) {
-      user_solution[i] = value[i];
-    }
-
-    user_has_solution = true;
-    return HighsStatus::kOk;
-  } else {
-    highsLogUser(highs->getOptions().log_options, HighsLogType::kError,
-                 "setSolution: num_entries %d is larger than num_col %d",
-                 int(num_entries), int(highs->getNumCol()));
-
-    return HighsStatus::kError;
-  }
+  return this->setSolution(num_entries, nullptr, value);
 }
 
-// User provides a partial solution
+// User provides a partial solution which, in a special case could -
+// via the call from setSolution(num_entries, value), or by a user -
+// be a full solution with/without index being nullptr
 HighsStatus HighsCallbackInput::setSolution(HighsInt num_entries,
                                             const HighsInt* index,
                                             const double* value) {
-  if (num_entries == 0) {
-    // No solution provided, so nothing to do
-    return HighsStatus::kOk;
-  }
-
-  const auto& options = highs->getOptions();
   const auto& lp = highs->getLp();
+  const auto& options = highs->getOptions();
 
-  // Warn about duplicates in index
   assert(user_solution.size() == static_cast<size_t>(lp.num_col_));
 
-  HighsStatus return_status = HighsStatus::kOk;
-  HighsInt num_duplicates = 0;
-  std::vector<HighsBool> is_set(lp.num_col_, false);
+  HighsStatus return_status =
+      assessUserColValues(lp, options, num_entries, index, value);
+  if (return_status != HighsStatus::kOk) return return_status;
 
-  for (HighsInt iX = 0; iX < num_entries; iX++) {
-    HighsInt iCol = index[iX];
-    if (iCol < 0 || iCol > lp.num_col_) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "setSolution: User solution index %d has value %d out of "
-                   "range [0, %d)",
-                   int(iX), int(iCol), int(lp.num_col_));
-      return HighsStatus::kError;
-    } else if (value[iX] != kHighsUndefined &&
-               (value[iX] < lp.col_lower_[iCol] -
-                                options.primal_feasibility_tolerance ||
-                lp.col_upper_[iCol] + options.primal_feasibility_tolerance <
-                    value[iX])) {
-      highsLogUser(options.log_options, HighsLogType::kError,
-                   "setSolution: User solution value %d of %g is infeasible "
-                   "for bounds [%g, %g]",
-                   int(iX), value[iX], lp.col_lower_[iCol],
-                   lp.col_upper_[iCol]);
-      return HighsStatus::kError;
-    }
-    if (is_set[iCol]) num_duplicates++;
-    is_set[iCol] = true;
-  }
-  if (num_duplicates > 0) {
-    highsLogUser(options.log_options, HighsLogType::kWarning,
-                 "setSolution: User set of indices has %d duplicate%s: last "
-                 "value used\n",
-                 int(num_duplicates), num_duplicates > 1 ? "s" : "");
-    return_status = HighsStatus::kWarning;
-  }
-  // assign solution values to user_solution
-  for (HighsInt i = 0; i < num_entries; i++) {
-    user_solution[index[i]] = value[i];
-  }
+  assignUserColValues(lp.num_col_, user_solution, num_entries, index, value);
 
   user_has_solution = true;
   return HighsStatus::kOk;

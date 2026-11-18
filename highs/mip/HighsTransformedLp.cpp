@@ -376,8 +376,7 @@ bool HighsTransformedLp::transform(const std::vector<HighsInt>& inds,
 
     double maxError = 0.0;
     auto IsZero = [&](HighsInt col, double val) {
-      if (HighsDomain::termIsZero(val, getLb(col), getUb(col),
-                                  mip.mipdata_->epsilon))
+      if (termIsZero(val, getLb(col), getUb(col), mip.mipdata_->epsilon))
         return true;
       return false;
     };
@@ -591,9 +590,8 @@ bool HighsTransformedLp::untransform(Row& row, bool integral) {
     bool abort = false;
     auto IsZero = [&](HighsInt col, double val) {
       assert(col < mip.numCol());
-      if (HighsDomain::termIsZero(val, globaldom_.col_lower_[col],
-                                  globaldom_.col_upper_[col],
-                                  mip.mipdata_->epsilon))
+      if (termIsZero(val, globaldom_.col_lower_[col],
+                     globaldom_.col_upper_[col], mip.mipdata_->epsilon))
         return true;
       double absval = std::abs(val);
 

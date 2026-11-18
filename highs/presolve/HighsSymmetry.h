@@ -22,6 +22,8 @@
 #include "util/HighsHash.h"
 #include "util/HighsType.h"
 
+class HighsTimer;
+
 /// class that is responsible for assigning distinct colors for each distinct
 /// double value
 class HighsMatrixColoring {
@@ -197,7 +199,7 @@ class HighsSymmetryDetection {
   std::vector<HighsInt> firstLeavePartition;
   std::vector<HighsInt> bestLeavePartition;
 
-  HighsHashTable<HighsInt, u32> vertexHash;
+  HighsHashTable<HighsInt, u64> vertexHash;
   HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>> firstLeaveGraph;
   HighsHashTable<std::tuple<HighsInt, HighsInt, HighsUInt>> bestLeaveGraph;
 
@@ -245,7 +247,7 @@ class HighsSymmetryDetection {
   bool isomorphicToFirstLeave();
   bool partitionRefinement();
   bool checkStoredAutomorphism(HighsInt vertex) const;
-  u32 getVertexHash(HighsInt vertex);
+  u64 getVertexHash(HighsInt vertex);
   HighsInt selectTargetCell() const;
 
   bool updateCellMembership(HighsInt vertex, HighsInt cell,
@@ -307,7 +309,8 @@ class HighsSymmetryDetection {
 
   bool initializeDetection();
 
-  void run(HighsSymmetries& symmetries);
+  void run(HighsSymmetries& symmetries, const HighsTimer* timer = nullptr,
+           double timeLimit = kHighsInf);
 };
 
 #endif

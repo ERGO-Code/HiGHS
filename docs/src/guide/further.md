@@ -8,12 +8,18 @@ cases, the time saved by solving the reduced model is very much
 greater than the time taken to perform presolve. Once the presolved
 model is solved, a postsolve procedure (of minimal computational cost)
 deduces the optimal solution to the original model. Hence presolve is
-performed by default. The only exception occus when there is a valid
+performed by default. The only exception occurs when there is a valid
 basis for an LP and the simplex solver is used. In this case the
 original LP is solved, starting from this basis. In cases where the
 use of presolve is found not to be advantageous, its use can be
 switched off by setting the [presolve](@ref option-presolve) option to
 "off".
+
+HiGHS has four presolve modes for LPs, selected by setting the value of the [presolve\_mode](@ref option-presolve-mode) option
+* Default (`presolve_mode=0`): HiGHS chooses the appropriate presolve rules for the problem to be solved
+* Initial sweep (`presolve_mode=1`): This mode removes variables that are fixed or have no coefficients in the constraint matrix, and constraints that have no coefficients in the constraint matrix, a single coefficient in the constraint matrix, or are satisfied by virtue of bounds on the constraint activity corresponding to bounds on the variables.
+* Light (`presolve_mode=2`): This mode applies the "cheap" presolve rules
+* Full (`presolve_mode=3`): This mode applies all presolve rules
 
 HiGHS has a method [presolve](@ref Presolve/postsolve) that performs presolve on
 the incumbent model, allowing the presolved model to be extracted or

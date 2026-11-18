@@ -9,10 +9,15 @@ using BinaryBuilder, Pkg
 name = "HiGHS"
 version = VersionNumber(ENV["HIGHS_RELEASE"])
 
-sources = [GitSource(ENV["HIGHS_URL"], ENV["HIGHS_COMMIT"])]
+sources = [
+    GitSource(ENV["HIGHS_URL"], ENV["HIGHS_COMMIT"]),
+    DirectorySource(joinpath(@__DIR__, "bundled")),
+]
 
 script = raw"""
 cd $WORKSPACE/srcdir/HiGHS
+
+atomic_patch -p1 ${WORKSPACE}/srcdir/patches/fix-cli11.patch
 
 # Remove system CMake to use the jll version
 apk del cmake
@@ -29,7 +34,7 @@ fi
 cmake -S . -B build \
     -DCMAKE_INSTALL_PREFIX=${prefix} \
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TARGET_TOOLCHAIN} \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_SHARED_LIBS=ON \
     -DHIPO=ON \
     -DBUILD_SHARED_EXTRAS_LIB=OFF \
@@ -39,9 +44,9 @@ if [[ "${target}" == *-linux-* ]]; then
     make -C build -j ${nproc}
 else
     if [[ "${target}" == *-mingw* ]]; then
-        cmake --build build --config Release
+        cmake --build build --config Debug
     else
-        cmake --build build --config Release --parallel
+        cmake --build build --config Debug --parallel
     fi
 fi
 cmake --install build

@@ -876,9 +876,8 @@ bool HighsLpRelaxation::computeDualProof(const HighsDomain& globaldomain,
 
     double val = static_cast<double>(exactVal);
 
-    if (HighsDomain::termIsZero(val, globaldomain.col_lower_[i],
-                                globaldomain.col_upper_[i],
-                                mipsolver.mipdata_->epsilon))
+    if (termIsZero(val, globaldomain.col_lower_[i], globaldomain.col_upper_[i],
+                   mipsolver.mipdata_->epsilon))
       continue;
 
     bool removeValue = std::fabs(val) <= mipsolver.mipdata_->feastol;
@@ -994,9 +993,8 @@ void HighsLpRelaxation::storeDualInfProof() {
     const HighsCDouble exactVal = row_ap.getValue<HighsCDouble>(i);
     double val = static_cast<double>(exactVal);
 
-    if (HighsDomain::termIsZero(val, globaldomain.col_lower_[i],
-                                globaldomain.col_upper_[i],
-                                mipsolver.mipdata_->epsilon))
+    if (termIsZero(val, globaldomain.col_lower_[i], globaldomain.col_upper_[i],
+                   mipsolver.mipdata_->epsilon))
       continue;
 
     bool removeValue = std::abs(val) <= mipsolver.mipdata_->feastol;

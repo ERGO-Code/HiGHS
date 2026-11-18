@@ -372,7 +372,7 @@ class Highs {
    * Possible to write only deviations from default values.
    */
   HighsStatus writeOptions(const std::string& filename,  //!< The filename
-                           const bool report_only_deviations = false);
+                           const bool report_only_deviations = false) const;
 
   /**
    * @brief Returns the number of user-settable options
@@ -694,7 +694,7 @@ class Highs {
    * @brief Returns true if an invertible representation of the
    * current basis matrix is available
    */
-  bool hasInvert() const;
+  bool hasInvert() const { return ekk_instance_.status_.has_invert; }
 
   /**
    * @brief Gets the basic variables in the order corresponding to
@@ -1365,6 +1365,19 @@ class Highs {
   static void resetThreadScheduler(bool blocking = false);
 
   /**
+   * @brief Initialize optional extras and cache the result.
+   *
+   * An empty directory searches default library directories only when
+   * search_if_empty is true. Statically linked extras ignore both arguments.
+   *
+   * @return HighsStatus::kOk on success, HighsStatus::kError on failure.
+   * Subsequent calls return the cached result without retrying, unless
+   * extras are explicitly unloaded.
+   */
+  static HighsStatus initializeExtras(const std::string& directory,
+                                      bool search_if_empty = true);
+
+  /**
    * @brief If profiling is not nullptr, sets up profiling and copies
    * its pointer to Highs
    */
@@ -1437,7 +1450,10 @@ class Highs {
    * Entries are indices of columns if in [0,num_col), and entries in [num_col,
    * num_col+num_row) are (num_col+row_index).
    */
-  const HighsInt* getBasicVariablesArray() const;
+  const HighsInt* getBasicVariablesArray() const {
+    assert(ekk_instance_.status_.has_invert);
+    return ekk_instance_.basis_.basicIndex_.data();
+  }
 
   /**
    * @brief Form a row of \f$B^{-1}\f$ for basis matrix \f$B\f$,
@@ -1572,7 +1588,7 @@ class Highs {
 
   const HighsModelStatus& getModelStatus(const bool scaled_model) const;
 
-  void logHeader();
+  void logHeader() const;
 
   void deprecationMessage(const std::string& method_name,
                           const std::string& alt_method_name) const;
@@ -1668,8 +1684,6 @@ class Highs {
   // whether Highs::optimizeModel() is called recursively.
   bool called_return_from_optimize_model = true;
   HighsInt debug_optimize_call_num_ = 0;
-
-  bool written_log_header_ = false;
 
   void reportModelStats() const;
 
@@ -1804,8 +1818,8 @@ class Highs {
                         HighsInt& num_nz, HighsInt* start, HighsInt* index,
                         double* value) const;
 
-  void getCoefficientInterface(const HighsInt ext_row, const HighsInt ext_col,
-                               double& value) const;
+  void getCoeffInterface(const HighsInt ext_row, const HighsInt ext_col,
+                         double& value) const;
 
   HighsStatus changeObjectiveSenseInterface(const ObjSense ext_sense);
   HighsStatus changeObjectiveOffsetInterface(const double ext_offset);
@@ -1821,9 +1835,9 @@ class Highs {
   HighsStatus changeRowBoundsInterface(HighsIndexCollection& index_collection,
                                        const double* usr_row_lower,
                                        const double* usr_row_upper);
-  void changeCoefficientInterface(const HighsInt ext_row,
-                                  const HighsInt ext_col,
-                                  const double ext_new_value);
+  HighsStatus changeCoeffInterface(const HighsInt ext_row,
+                                   const HighsInt ext_col,
+                                   const double ext_new_value);
   HighsStatus scaleColInterface(const HighsInt col, const double scale_value);
   HighsStatus scaleRowInterface(const HighsInt row, const double scale_value);
 
@@ -1902,7 +1916,7 @@ class Highs {
                               std::vector<HighsInt>& basic_var,
                               const bool constraint,
                               const double ill_conditioning_bound);
-  bool infeasibleBoundsOk();
+  bool processedBoundsFindsInfeasibility();
   bool validLinearObjective(const HighsLinearObjective& linear_objective,
                             const HighsInt iObj) const;
   bool hasRepeatedLinearObjectivePriorities(

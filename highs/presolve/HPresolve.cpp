@@ -366,42 +366,16 @@ bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
 
 void HPresolve::chooseRules() {
   const bool silent = silentLog();
-  // By default all presolve rules are allowed
-  this->allow_rule_.assign(kPresolveRuleCount, true);
 
-  // All rules can be switched off, although the most fundamental can
-  // only be switched off in initial sweep
-  auto allowedOffInInitialSweep = [&](const HighsInt rule_type) {
-    if (rule_type == kPresolveRuleEmptyRow) return true;
-    if (rule_type == kPresolveRuleSingletonRow) return true;
-    if (rule_type == kPresolveRuleRedundantRow) return true;
-    if (rule_type == kPresolveRuleEmptyCol) return true;
-    if (rule_type == kPresolveRuleFixedCol) return true;
-    return false;
+  auto setRulesForFullMode = [&]() {
+    // All rules on in full mode
+    this->allow_rule_.assign(kPresolveRuleCount, true);
   };
 
-  auto logRule = [&](const HighsInt rule_type) {
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 " %1s Rule %2d (set bit %2d = %7d): %s\n",
-                 allowedOffInInitialSweep(rule_type) ? "*" : " ",
-                 int(rule_type), int(rule_type), int(1 << rule_type),
-                 utilPresolveRuleTypeToString(rule_type).c_str());
-  };
-
-  if (!silent && options->log_dev_level) {
-    // State which rules can be off, and what bit to set
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 "Permitted suppression of presolve rules via "
-                 "presolve_rule_off option:\n");
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++)
-      logRule(rule_type);
-    highsLogUser(options->log_options, HighsLogType::kInfo,
-                 " * Only in initial sweep\n");
-  }
-
-  if (options->presolve_light == kHighsOnString) {
-    // Switch off the rules not used in presolve_light mode
+  auto setRulesForLightMode = [&]() {
+    // All rules on by default
+    setRulesForFullMode();
+    // Switch off the rules not used in presolve light
     allow_rule_[kPresolveRuleDominatedCol] = false;
     allow_rule_[kPresolveRuleDependentEquations] = false;
     allow_rule_[kPresolveRuleDependentFreeCols] = false;
@@ -414,69 +388,141 @@ void HPresolve::chooseRules() {
     allow_rule_[kPresolveRuleZeroCostSingleton] = false;
     allow_rule_[kPresolveRuleColStuffing] = false;
     allow_rule_[kPresolveRuleFourierMotzkin] = false;
+  };
+
+  auto setRulesForInitialSweepMode = [&]() {
+    // All rules off by default
+    allow_rule_.assign(kPresolveRuleCount, false);
+    // Switch on the rules used in initial sweep
+    allow_rule_[kPresolveRuleEmptyRow] = true;
+    allow_rule_[kPresolveRuleSingletonRow] = true;
+    allow_rule_[kPresolveRuleRedundantRow] = true;
+    allow_rule_[kPresolveRuleEmptyCol] = true;
+    allow_rule_[kPresolveRuleFixedCol] = true;
+    // Switch on initial sweep!
+    allow_rule_[kPresolveRuleInitialSweep] = true;
+  };
+
+  // All rules can be switched off, although the most fundamental can
+  // only be switched off in initial sweep
+  auto allowedOffInInitialSweep = [&](const HighsInt rule) {
+    if (rule == kPresolveRuleEmptyRow) return true;
+    if (rule == kPresolveRuleSingletonRow) return true;
+    if (rule == kPresolveRuleRedundantRow) return true;
+    if (rule == kPresolveRuleEmptyCol) return true;
+    if (rule == kPresolveRuleFixedCol) return true;
+    return false;
+  };
+
+  auto logRule = [&](const HighsInt rule) {
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 " %1s Rule %2d (set bit %2d = %7d): %s\n",
+                 allowedOffInInitialSweep(rule) ? "*" : " ", int(rule),
+                 int(rule), int(1 << rule),
+                 utilPresolveRuleTypeToString(rule).c_str());
+  };
+
+  auto ruleOffForPostsolve = [&](const std::string& postsolve_type,
+                                 const HighsInt rule) {
+    // If the rule is already switched off (by user action etc) then
+    // no action is needed
+    if (!allow_rule_[rule]) return;
+    allow_rule_[rule] = false;
+    if (!silent && options->log_dev_level)
+      highsLogUser(options->log_options, HighsLogType::kWarning,
+                   "May require %s postsolve, so switched off \"%s\" rule\n",
+                   postsolve_type.c_str(),
+                   utilPresolveRuleTypeToString(rule).c_str());
+  };
+
+  if (!silent && options->log_dev_level) {
+    // State which rules can be off, and what bit to set
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 "Permitted suppression of presolve rules via "
+                 "presolve_rule_off option:\n");
+    for (HighsInt rule = kPresolveRuleMin; rule < kPresolveRuleCount; rule++)
+      logRule(rule);
+    highsLogUser(options->log_options, HighsLogType::kInfo,
+                 " * Only in initial sweep\n");
   }
 
+  // Set the pre-defined rules on/off according to the mode
+  if (options->presolve_mode == kPresolveModeDefault) {
+    // By default all presolve rules are allowed, but subsets for
+    // specific solvers (esp PDLP) can be set
+    if (usePdlp(options->solver)) {
+      setRulesForLightMode();
+    } else {
+      setRulesForFullMode();
+    }
+  } else if (options->presolve_mode == kPresolveModeInitialSweep) {
+    setRulesForInitialSweepMode();
+  } else if (options->presolve_mode == kPresolveModeLight) {
+    setRulesForLightMode();
+  } else if (options->presolve_mode == kPresolveModeFull) {
+    setRulesForFullMode();
+  } else {
+    highsLogUser(options->log_options, HighsLogType::kError,
+                 "Unrecognised presolve mode %d\n",
+                 int(options->presolve_mode));
+    assert(1 == 0);
+  }
+  // Possibly switch off specific rules defined by the user via
+  // presolve_rule_off
   if (options->presolve_rule_off) {
-    // Some presolve rules are off
-    //
-    // Transform options->presolve_rule_off into logical settings in
+    // Transform presolve_rule_off into logical settings in
     // allow_rule_[*], commenting on the rules switched off
     if (!silent)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    "Presolve rules switched off:\n");
+    // Keep track of whether to add the qualifier "* Only in initial
+    // sweep" to the logging!
     bool off_in_initial_sweep = false;
-    for (HighsInt rule_type = kPresolveRuleMin; rule_type < kPresolveRuleCount;
-         rule_type++) {
-      HighsInt bit = 1 << rule_type;
-      // Identify whether this rule is allowed
+    for (HighsInt rule = kPresolveRuleMin; rule < kPresolveRuleCount; rule++) {
+      HighsInt bit = 1 << rule;
       if (!(options->presolve_rule_off & bit)) continue;
-      if (rule_type != kPresolveRuleDominatedCol) {
-        off_in_initial_sweep =
-            allowedOffInInitialSweep(rule_type) || off_in_initial_sweep;
-        allow_rule_[rule_type] = false;
-        if (!silent) logRule(rule_type);
-      } else {
-        // This is a rule that cannot be switched off so, if an
-        // attempt is made, don't allow it to be off and possibly
-        // comment negatively
-        if (!silent)
-          highsLogUser(options->log_options, HighsLogType::kWarning,
-                       "Cannot disallow rule %2d (bit %2d = %5d): %s\n",
-                       int(rule_type), int(rule_type), int(bit),
-                       utilPresolveRuleTypeToString(rule_type).c_str());
-      }
+      off_in_initial_sweep =
+          allowedOffInInitialSweep(rule) || off_in_initial_sweep;
+      allow_rule_[rule] = false;
+      if (!silent) logRule(rule);
     }
     if (!silent && off_in_initial_sweep)
       highsLogUser(options->log_options, HighsLogType::kInfo,
                    " * Only in initial sweep\n");
   }
 
+  // Finally switch off rules that are incompatible with dual or basis
+  // postsolve
   may_require_basis_postsolve_ = false;
-  may_require_primal_dual_postsolve_ = false;
+  may_require_dual_postsolve_ = false;
+
   if (mipsolver == nullptr) {
-    // Record whether one or both of basis and primal-dual postsolve
-    // may be required, and switch off rules that are correspondingly
+    // Record whether one or both of dual and basis postsolve may be
+    // required, and switch off rules that are correspondingly
     // incompatible
+    if (mayRequireDualPostsolve(options)) {
+      may_require_dual_postsolve_ = true;
+      // Cannot use weakly dominated column rule (see
+      // test-weakly-dominated-column-dual-postsolve)
+      ruleOffForPostsolve("dual", kPresolveRuleWeaklyDominatedCol);
+      // Cannot use kPresolveRuleDualFixing rule (see
+      // test-dual-fixing-dual-postsolve)
+      ruleOffForPostsolve("dual", kPresolveRuleDualFixing);
+      // Cannot use kPresolveRuleZeroCostSingleton (see
+      // hipo-ipx-pdlp-no-crossover)
+      ruleOffForPostsolve("dual", kPresolveRuleZeroCostSingleton);
+    }
     if (mayRequireBasisPostsolve(options)) {
       may_require_basis_postsolve_ = true;
       // Cannot use sparsify or any parallel row rule using
       // EqualityRowAddition(s). Latter are avoided logically in
       // HPresolve::detectParallelRowsAndCols
-      allow_rule_[kPresolveRuleSparsify] = false;
+      ruleOffForPostsolve("basis", kPresolveRuleSparsify);
     }
-    if (mayRequirePrimalDualPostsolve(options)) {
-      may_require_primal_dual_postsolve_ = true;
-      // Cannot use weakly dominated column rule (see
-      // test-weakly-dominated-column-primal-dual-postsolve)
-      allow_rule_[kPresolveRuleWeaklyDominatedCol] = false;
-      // Cannot use kPresolveRuleDualFixing rule (see
-      // test-dual-fixing-primal-dual-postsolve)
-      allow_rule_[kPresolveRuleDualFixing] = false;
-    }
-    if (may_require_basis_postsolve_ || may_require_primal_dual_postsolve_) {
-      // Cannot use dominated column rule for either basis or
-      // primal-dual postsolve (see issue-3342)
-      allow_rule_[kPresolveRuleDominatedCol] = false;
+    if (may_require_dual_postsolve_ || may_require_basis_postsolve_) {
+      // Cannot use dominated column rule for either dual or basis
+      // postsolve (see issue-3342)
+      ruleOffForPostsolve("dual or basis", kPresolveRuleDominatedCol);
     }
   }
   // If dominated column rule is off, weakly dominated column rule
@@ -1012,6 +1058,18 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   if (!hasPresolveDataStructures()) return;
   assert(colDeleted.size() == static_cast<size_t>(oldNumCol));
   assert(rowDeleted.size() == static_cast<size_t>(oldNumRow));
+#ifndef NDEBUG
+  // the clique table has to be up to date: a column in a clique is a binary
+  // column of the problem, otherwise a reduction that deleted the column or
+  // changed its meaning has not updated the clique table
+  if (presolveCliqueTable.isActive()) {
+    for (HighsInt col = 0; col != oldNumCol; ++col)
+      assert(!presolveCliqueTable.isColInClique(col) ||
+             (!colDeleted[col] &&
+              model->integrality_[col] != HighsVarType::kContinuous &&
+              model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0));
+  }
+#endif
   model->num_col_ = 0;
   model->num_row_ = 0;
   std::vector<HighsInt> newColIndex(oldNumCol);
@@ -1414,9 +1472,7 @@ void HPresolve::markColDeleted(HighsInt col) {
   colDeleted[col] = true;
   ++numDeletedCols;
   if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
-  if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-    presolveCliqueTable.eliminateCol(col);
-  }
+  presolveCliqueTable.eliminateCol(col);
 }
 
 HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
@@ -1947,6 +2003,10 @@ HPresolve::Result HPresolve::transformColumn(
   // replace column x by x = scale * x' + constant
   if (mipsolver != nullptr)
     mipsolver->mipdata_->implications.columnTransformed(col, scale, constant);
+
+  // entries of a binary x in the clique table would refer to x, not to x'. a
+  // non-binary x is kept, since x' may be binary (colPresolve shift)
+  if (isBinary(col)) presolveCliqueTable.eliminateCol(col);
 
   postsolve_stack.linearTransform(col, scale, constant);
 
@@ -2703,9 +2763,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
             // Use eliminateCol rather than substituteCol to avoid
             // cascading clique fixings that could corrupt this loop
-            if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-              presolveCliqueTable.eliminateCol(col);
-            }
+            presolveCliqueTable.eliminateCol(col);
 
             // get column lower and upper bounds used to compute bounds on row
             // activities
@@ -4625,6 +4683,31 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
   } else if (postsolve_stack.numReductions() > 0) {
     // Reductions performed
     presolve_status_ = HighsPresolveStatus::kReduced;
+    const bool kCheckReducedMatrix = false;
+    if (kCheckReducedMatrix) {
+      // Although presolve can yield small nonzero values in the matrix,
+      // they may play a meaningful role in postsolve so they are
+      // retained. However, they offer some risk to the simplex solver,
+      // so HighsSparseMatrix::assessExtremeValues logs a warning and
+      // returns HighsStatus::kWarning.
+      //
+      // Presolve should never generate explicit zeros or large values
+      // in the matrix, and these cannot be permitted in the simplex
+      // solver, so HighsSparseMatrix::assessExtremeValues logs an error
+      // in either case, and returns HighsStatus::kError, triggering a
+      // presolve error
+      if (model->a_matrix_.assessExtremeValues(
+              "of presolved problem ", *(options)) == HighsStatus::kError) {
+        presolve_status_ = HighsPresolveStatus::kMatrixValueError;
+      } else {
+        // The reduced LP constraint matrix is set up in presolve, so
+        // should be valid structurally, so assert this now - AFTER
+        // assessing extreme values, since explicit zeros are removed
+        // silently in HighsSparseMatrix::assessStructure
+        assert(model->a_matrix_.assessStructure(*(options)) ==
+               HighsStatus::kOk);
+      }
+    }
   } else {
     // No reductions performed
     presolve_status_ = HighsPresolveStatus::kNotReduced;
@@ -4861,11 +4944,11 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
     assert(eq->first == rowsize[eqrow]);
     assert(isEquation(eqrow));
     if (rowsize[eqrow] > 2) return Result::kOk;
+    // rowPresolve may erase or re-key the entry of eqrow (e.g. removeFixedCol
+    // calls reinsertEquation), so continue from a copy of its key
+    const auto key = *eq;
     HPRESOLVE_CHECKED_CALL(rowPresolve(postsolve_stack, eqrow));
-    if (rowDeleted[eqrow])
-      eq = equations.begin();
-    else
-      ++eq;
+    eq = rowDeleted[eqrow] ? equations.begin() : equations.upper_bound(key);
   }
 
   return Result::kOk;
@@ -4873,7 +4956,7 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
 
 HPresolve::Result HPresolve::updateCliqueTableFixedCol(const HighsInt col,
                                                        const double val) {
-  if (mipsolver == nullptr || !mipsolver->mipdata_->cliquesExtracted ||
+  if (!presolveCliqueTable.isActive() ||
       model->integrality_[col] == HighsVarType::kContinuous ||
       (val != 0.0 && val != 1.0)) {
     return Result::kOk;
@@ -4898,7 +4981,7 @@ HPresolve::Result HPresolve::updateCliqueTableFixedCol(const HighsInt col,
 HPresolve::Result HPresolve::updateCliqueTableSubstituteCol(
     const HighsInt substCol, const HighsInt stayCol, const double offset,
     const double scale) {
-  if (mipsolver == nullptr || !mipsolver->mipdata_->cliquesExtracted) {
+  if (!presolveCliqueTable.isActive()) {
     return Result::kOk;
   }
   bool isBinary =

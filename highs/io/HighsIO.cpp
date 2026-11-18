@@ -296,6 +296,11 @@ void highsReportLogOptions(const HighsLogOptions& log_options_) {
          *log_options_.log_dev_level);
 }
 
+void highsPrintStringAsHeading(const std::string& text) {
+  printf("\n%s\n %s\n%s\n", std::string(text.length() + 2, '=').c_str(),
+         text.c_str(), std::string(text.length() + 2, '=').c_str());
+}
+
 std::string highsFormatToString(const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);

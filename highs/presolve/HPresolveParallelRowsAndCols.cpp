@@ -409,9 +409,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                          colScale * model->col_lower_[duplicateCol];
           }
 
-          if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-            presolveCliqueTable.eliminateCol(col);
-          }
+          presolveCliqueTable.eliminateCol(col);
 
           // change bounds
           HPRESOLVE_CHECKED_CALL(changeColBounds(col, mergeLower, mergeUpper));
@@ -582,7 +580,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           if (newUpper < model->row_lower_[parallelRowCand] - primal_feastol)
             return Result::kPrimalInfeasible;
 
-          if (newUpper <= model->row_lower_[parallelRowCand] + primal_feastol)
+          if (newUpper < model->row_lower_[parallelRowCand])
             newUpper = model->row_lower_[parallelRowCand];
 
           if (newUpper < model->row_upper_[parallelRowCand]) {
@@ -605,7 +603,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
           if (newLower > model->row_upper_[parallelRowCand] + primal_feastol)
             return Result::kPrimalInfeasible;
 
-          if (newLower >= model->row_upper_[parallelRowCand] - primal_feastol)
+          if (newLower > model->row_upper_[parallelRowCand])
             newLower = model->row_upper_[parallelRowCand];
 
           if (newLower > model->row_lower_[parallelRowCand]) {
