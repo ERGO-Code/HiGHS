@@ -1058,6 +1058,18 @@ void HPresolve::shrinkProblem(HighsPostsolveStack& postsolve_stack) {
   if (!hasPresolveDataStructures()) return;
   assert(colDeleted.size() == static_cast<size_t>(oldNumCol));
   assert(rowDeleted.size() == static_cast<size_t>(oldNumRow));
+#ifndef NDEBUG
+  // the clique table has to be up to date: a column in a clique is a binary
+  // column of the problem, otherwise a reduction that deleted the column or
+  // changed its meaning has not updated the clique table
+  if (presolveCliqueTable.isActive()) {
+    for (HighsInt col = 0; col != oldNumCol; ++col)
+      assert(!presolveCliqueTable.isColInClique(col) ||
+             (!colDeleted[col] &&
+              model->integrality_[col] != HighsVarType::kContinuous &&
+              model->col_lower_[col] == 0.0 && model->col_upper_[col] == 1.0));
+  }
+#endif
   model->num_col_ = 0;
   model->num_row_ = 0;
   std::vector<HighsInt> newColIndex(oldNumCol);
@@ -1460,9 +1472,7 @@ void HPresolve::markColDeleted(HighsInt col) {
   colDeleted[col] = true;
   ++numDeletedCols;
   if (col == model->fme_obj_col_) model->fme_obj_col_ = -1;
-  if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-    presolveCliqueTable.eliminateCol(col);
-  }
+  presolveCliqueTable.eliminateCol(col);
 }
 
 HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
@@ -1993,6 +2003,10 @@ HPresolve::Result HPresolve::transformColumn(
   // replace column x by x = scale * x' + constant
   if (mipsolver != nullptr)
     mipsolver->mipdata_->implications.columnTransformed(col, scale, constant);
+
+  // entries of a binary x in the clique table would refer to x, not to x'. a
+  // non-binary x is kept, since x' may be binary (colPresolve shift)
+  if (isBinary(col)) presolveCliqueTable.eliminateCol(col);
 
   postsolve_stack.linearTransform(col, scale, constant);
 
@@ -2749,9 +2763,7 @@ HPresolve::Result HPresolve::rowPresolve(HighsPostsolveStack& postsolve_stack,
 
             // Use eliminateCol rather than substituteCol to avoid
             // cascading clique fixings that could corrupt this loop
-            if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-              presolveCliqueTable.eliminateCol(col);
-            }
+            presolveCliqueTable.eliminateCol(col);
 
             // get column lower and upper bounds used to compute bounds on row
             // activities
@@ -4944,7 +4956,7 @@ HPresolve::Result HPresolve::removeDoubletonEquations(
 
 HPresolve::Result HPresolve::updateCliqueTableFixedCol(const HighsInt col,
                                                        const double val) {
-  if (mipsolver == nullptr || !mipsolver->mipdata_->cliquesExtracted ||
+  if (!presolveCliqueTable.isActive() ||
       model->integrality_[col] == HighsVarType::kContinuous ||
       (val != 0.0 && val != 1.0)) {
     return Result::kOk;
@@ -4969,7 +4981,7 @@ HPresolve::Result HPresolve::updateCliqueTableFixedCol(const HighsInt col,
 HPresolve::Result HPresolve::updateCliqueTableSubstituteCol(
     const HighsInt substCol, const HighsInt stayCol, const double offset,
     const double scale) {
-  if (mipsolver == nullptr || !mipsolver->mipdata_->cliquesExtracted) {
+  if (!presolveCliqueTable.isActive()) {
     return Result::kOk;
   }
   bool isBinary =
