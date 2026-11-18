@@ -679,7 +679,7 @@ void testOracleSolve(const HighsModel& model) {
 
 TEST_CASE("issue-3678", "[highs_data]") {
   Highs h;
-  //  h.setOptionValue("output_flag", false);
+  h.setOptionValue("output_flag", false);
   double c[2] = {0, 0};
   double lb[2] = {0, 0};
   double ub[2] = {10, 10};
@@ -688,6 +688,4 @@ TEST_CASE("issue-3678", "[highs_data]") {
                    const double*, HighsInt*, HighsInt*, double*,
                    void*) { return HighsInt(0); };
   REQUIRE(h.passHessian(5, oracle, nullptr, nullptr) == HighsStatus::kError);
-
 }
-

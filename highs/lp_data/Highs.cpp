@@ -198,7 +198,6 @@ HighsStatus Highs::passOptions(const HighsOptions& options) {
 }
 
 HighsStatus Highs::resetOptions() {
-  this->logHeader();
   resetLocalOptions(options_.records);
   return optionChangeAction();
 }
@@ -773,9 +772,10 @@ HighsStatus Highs::passHessian(const HighsInt dim,
   }
   HighsInt num_col = model_.lp_.num_col_;
   if (dim != num_col) {
-    highsLogUser(options_.log_options, HighsLogType::kError,
-                 "Hessian oracle dimension is %d, but must be HighsLp::num_col_ = %d\n",
-                 int(dim), int(num_col));
+    highsLogUser(
+        options_.log_options, HighsLogType::kError,
+        "Hessian oracle dimension is %d, but must be HighsLp::num_col_ = %d\n",
+        int(dim), int(num_col));
     return HighsStatus::kError;
   }
   HighsHessian test_hessian;
@@ -2848,7 +2848,6 @@ HighsStatus Highs::setCallback(HighsCallbackFunctionType user_callback,
 
 HighsStatus Highs::setCallback(HighsCCallbackType c_callback,
                                void* user_callback_data) {
-  this->logHeader();
   this->callback_.clear();
   this->callback_.user_callback = [c_callback](
                                       int a, const std::string& b,
@@ -3146,8 +3145,7 @@ HighsStatus Highs::addRows(const HighsInt num_new_row,
 
 HighsStatus Highs::changeObjectiveSense(const ObjSense sense) {
   this->logHeader();
-  if (sense != ObjSense::kMinimize ||
-      sense != ObjSense::kMaximize) {
+  if (!(sense == ObjSense::kMinimize || sense == ObjSense::kMaximize)) {
     highsLogUser(options_.log_options, HighsLogType::kError,
                  "changeObjectiveSense: sense is not minimize or maximize\n");
     return HighsStatus::kError;

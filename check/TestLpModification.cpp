@@ -2728,4 +2728,3 @@ TEST_CASE("issue-3672", "[highs_data]") {
   HighsInt* m = nullptr;
   REQUIRE(h.changeObjectiveSense(ObjSense(42)) == HighsStatus::kError);
 }
-
