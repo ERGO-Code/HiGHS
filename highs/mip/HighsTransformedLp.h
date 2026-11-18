@@ -43,10 +43,10 @@ class HighsTransformedLp {
         HighsCDouble rhs_)
         : inds(std::move(inds_)), vals(std::move(vals_)), rhs(rhs_) {}
 
-    // scales the right hand side and all coefficients
-    void scale(double factor) {
-      rhs *= factor;
-      for (double& val : vals) val *= factor;
+    // scales the right hand side and all coefficients by 2^exponent (exact)
+    void scale(int exponent) {
+      rhs = ldexp(rhs, exponent);
+      for (double& val : vals) val = std::ldexp(val, exponent);
     }
 
     // removes zero coefficients
@@ -106,10 +106,10 @@ class HighsTransformedLp {
     std::vector<TransformedVar> vars;
     HighsCDouble rhs;
 
-    // scales the right hand side and all coefficients
-    void scale(double factor) {
-      rhs *= factor;
-      for (TransformedVar& var : vars) var.val *= factor;
+    // scales the right hand side and all coefficients by 2^exponent (exact)
+    void scale(int exponent) {
+      rhs = ldexp(rhs, exponent);
+      for (TransformedVar& var : vars) var.val = std::ldexp(var.val, exponent);
     }
 
     // removes variables with zero coefficients

@@ -212,7 +212,7 @@ void HighsCutGeneration::separateLiftedKnapsackCover() {
     }
   }
 
-  if (halfintegral) cut.scale(2);
+  if (halfintegral) cut.scale(1);
 
   // resulting cut is always integral
   integralSupport = true;
@@ -634,7 +634,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
     efficacy = -kHighsInf;
 
     HighsCDouble scale = 1.0 / static_cast<HighsCDouble>(delta);
-    HighsCDouble downrhs, f0, oneoveroneminusf0;
+    HighsCDouble downrhs;
+    HighsCDouble f0;
+    HighsCDouble oneoveroneminusf0;
     computeRhs(scale, downrhs, f0, oneoveroneminusf0);
     if (f0 < f0min || f0 > f0max || oneoveroneminusf0 > maxCMirScale)
       return false;
@@ -697,7 +699,9 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   }
 
   HighsCDouble scale = 1.0 / static_cast<HighsCDouble>(bestdelta);
-  HighsCDouble downrhs, f0, oneoveroneminusf0;
+  HighsCDouble downrhs;
+  HighsCDouble f0;
+  HighsCDouble oneoveroneminusf0;
   computeRhs(scale, downrhs, f0, oneoveroneminusf0);
 
   cut.rhs = downrhs * bestdelta;
@@ -740,17 +744,15 @@ bool HighsCutGeneration::cmirCutGenerationHeuristic(double minEfficacy,
   return true;
 }
 
-// returns a power of two to scale the inequality with such that the given value
-// is scaled to about one; the scaling is exact
-static double computeScale(double val) {
+// returns the exponent of the power of two to scale the inequality with such
+// that the given value is scaled to about one; the scaling is exact
+static int computeScaleExponent(double val) {
   int expshift = 0;
   std::frexp(val, &expshift);
   expshift = -expshift;
 
   // don't scale the coefficients by more than +1024 (violations can increase)
-  expshift = std::min(10, expshift);
-
-  return std::ldexp(1.0, expshift);
+  return std::min(10, expshift);
 }
 
 bool HighsCutGeneration::postprocessCut(Row& row,
@@ -846,7 +848,9 @@ bool HighsCutGeneration::postprocessCut(Row& row,
           if (ub == kHighsInf) return false;
 
           rhs -= static_cast<HighsCDouble>(delta) * ub;
-        } else {
+        } else if (delta > 0.0) {
+          // an exactly integral coefficient (delta == 0) needs no bound, so a
+          // column without a lower bound must not reject the cut
           double lb = globaldom.col_lower_[inds[i]];
           if (lb == -kHighsInf) return false;
 
@@ -870,12 +874,12 @@ bool HighsCutGeneration::postprocessCut(Row& row,
       // integral scale lead to very large coefficient values. We now shift the
       // exactly integral values down such that the smallest coefficient is
       // around 1
-      row.scale(computeScale(row.minAbsVal() - epsilon));
+      row.scale(computeScaleExponent(row.minAbsVal() - epsilon));
     }
   } else {
     // the support is not integral, scale cut to have the largest coefficient
     // around 1.0
-    row.scale(computeScale(maxAbsValue - epsilon));
+    row.scale(computeScaleExponent(maxAbsValue - epsilon));
   }
 
   return true;
@@ -900,8 +904,14 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
   const HighsInt numVars = static_cast<HighsInt>(cut.vars.size());
   HighsCDouble maxact = -feastol;
-  initialScale = computeScale(cut.maxAbsVal());
-  cut.scale(initialScale);
+  // number of variables with a positive coefficient and an infinite upper
+  // bound in the transformed space (ub - lb); their contributions to the
+  // maximal activity are infinite and cannot be summed in HighsCDouble
+  // (inf - inf gives NaN)
+  HighsInt numInfUpperBnd = 0;
+  const int initialScaleExponent = computeScaleExponent(cut.maxAbsVal());
+  initialScale = std::ldexp(1.0, initialScaleExponent);
+  cut.scale(initialScaleExponent);
 
   for (TransformedVar& var : cut.vars) {
     // we do not want to have integral variables with small coefficients as this
@@ -945,7 +955,12 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
         hasGeneralInts = true;
       }
 
-      if (var.val > 0) maxact += static_cast<HighsCDouble>(var.upper) * var.val;
+      if (var.val > 0) {
+        if (var.upper == kHighsInf)
+          numInfUpperBnd++;
+        else
+          maxact += static_cast<HighsCDouble>(var.upper) * var.val;
+      }
     }
   }
 
@@ -974,8 +989,11 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
       if (var.val < 0) {
         cut.rhs -= static_cast<HighsCDouble>(var.upper) * var.val;
-      } else
+      } else if (var.upper == kHighsInf) {
+        numInfUpperBnd--;
+      } else {
         maxact -= static_cast<HighsCDouble>(var.upper) * var.val;
+      }
 
       var.val = 0.0;
     }
@@ -985,7 +1003,7 @@ bool HighsCutGeneration::preprocessBaseInequality(bool& hasUnboundedInts,
 
   if (numZeros != 0) cut.removeZeros();
 
-  return maxact > cut.rhs;
+  return numInfUpperBnd != 0 || maxact > cut.rhs;
 }
 
 #if 0
@@ -1190,7 +1208,10 @@ bool HighsCutGeneration::postprocessAndAddCut(Row& row,
   // apply cut postprocessing including scaling and removal of small
   // coefficients
   if (!postprocessCut(row, globaldom)) return false;
+  // the cut pool stores the right-hand side as a double, so the violation below
+  // is computed with the right-hand side converted to double
   double rhs = static_cast<double>(row.rhs);
+  row.rhs = rhs;
 
   // check cut again after post-processing
   if (!isConflict)
