@@ -743,15 +743,13 @@ HighsStatus Highs::passHessian(const HighsInt dim, const HighsInt num_nz,
                  "Model has illegal Hessian matrix format\n");
     return HighsStatus::kError;
   }
-  HighsInt num_col = model_.lp_.num_col_;
-  if (dim != num_col) return HighsStatus::kError;
-  hessian.dim_ = num_col;
+  hessian.dim_ = dim;
   hessian.format_ = static_cast<HessianFormat>(format);
   if (dim > 0) {
     assert(start != NULL);
-    hessian.start_.assign(start, start + num_col);
-    hessian.start_.resize(num_col + 1);
-    hessian.start_[num_col] = num_nz;
+    hessian.start_.assign(start, start + dim);
+    hessian.start_.resize(dim + 1);
+    hessian.start_[dim] = num_nz;
   }
   if (num_nz > 0) {
     assert(index != NULL);
@@ -772,6 +770,13 @@ HighsStatus Highs::passHessian(const HighsInt dim,
                  "Ignoring Hessian oracle data since dimension is %d\n",
                  int(dim));
     return HighsStatus::kWarning;
+  }
+  HighsInt num_col = model_.lp_.num_col_;
+  if (dim != num_col) {
+    highsLogUser(options_.log_options, HighsLogType::kError,
+                 "Hessian oracle dimension is %d, but must be HighsLp::num_col_ = %d\n",
+                 int(dim), int(num_col));
+    return HighsStatus::kError;
   }
   HighsHessian test_hessian;
   HessianOracle& oracle = test_hessian.oracle_;
