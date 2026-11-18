@@ -306,10 +306,16 @@ class HighsCliqueTable {
 
   const std::vector<HighsInt>& getDeletedRows() const { return deletedrows; }
 
-  std::vector<Substitution>& getSubstitutions() { return substitutions; }
-
   const std::vector<Substitution>& getSubstitutions() const {
     return substitutions;
+  }
+
+  // remove the substitutions (e.g. after they have been applied to the model)
+  // together with the columns' references to them
+  void clearSubstitutions() {
+    for (const Substitution& subst : substitutions)
+      colsubstituted[subst.substcol] = 0;
+    substitutions.clear();
   }
 
   const Substitution* getSubstitution(HighsInt col) const {
