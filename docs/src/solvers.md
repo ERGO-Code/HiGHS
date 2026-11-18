@@ -34,6 +34,9 @@ J. A. J. Hall, Mathematical Programming Computation, 10 (1), 119-142, 2018
 * The option [__simplex\_strategy__](@ref option-simplex-strategy)
   determines whether the primal solver or one of the parallel solvers is
   to be used.
+* If the option [__objective_bound__](@ref option-objective-bound) is set to a finite value (its default value is +inf) then the dual simplex solver terminates if the dual objective satisfies this bound (for a dual feasible point).
+  * For a minimization the dual objective is maximized, so termination occurs when the dual objective is greater than the bound. Hence, the infinite bound is never exceeded.
+  * For a maximization the dual objective is minimized, so termination occurs when the dual objective is less than the bound. Note that the default objective bound (+inf) is interpreted as -inf when maximizing.
 
 #### [Interior point](@id solvers-lp-ipm)
 
