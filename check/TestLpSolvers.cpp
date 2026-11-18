@@ -61,14 +61,25 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
 
   //  status = highs.setOptionValue("log_dev_level",
   //  kHighsLogDevLevelVerbose);
+  //  highs.setOptionValue("log_dev_level", 3);
+  //  highs.setOptionValue("highs_analysis_level", 4);
 
   double error;
   filename = std::string(HIGHS_DIR) + "/check/instances/e226.mps";
   status = highs.readModel(filename);
   REQUIRE(status == HighsStatus::kOk);
 
+  auto testHeader = [&](const std::string& text,
+                        const double* objective_bound = nullptr) {
+    std::string line =
+        objective_bound
+            ? highsFormatToString("%s %11.4g", text.c_str(), *objective_bound)
+            : text;
+    if (dev_run) highsPrintStringAsHeading(line);
+  };
+
   // Solve vanilla
-  if (dev_run) printf("\nSolving vanilla LP\n");
+  testHeader("Solving vanilla LP");
   status = highs.run();
   REQUIRE(status == HighsStatus::kOk);
 
@@ -88,11 +99,10 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::kOk);
 
   // Solve again
-  if (dev_run)
-    printf(
-        "\nSolving LP with presolve and dual objective value upper bound of "
-        "%g\n",
-        larger_min_objective_bound);
+  testHeader(
+      "Solving LP with presolve, and larger dual objective value upper bound "
+      "of ",
+      &larger_min_objective_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::kOk);
 
@@ -105,11 +115,10 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
 
   // Solve again
   // This larger dual objective value upper bound is satisfied during phase 2
-  if (dev_run)
-    printf(
-        "\nSolving LP without presolve and larger dual objective value upper "
-        "bound of %g\n",
-        larger_min_objective_bound);
+  testHeader(
+      "Solving LP without presolve, and larger dual objective value upper "
+      "bound of ",
+      &larger_min_objective_bound);
   status = highs.clearSolver();
   REQUIRE(status == HighsStatus::kOk);
 
@@ -122,11 +131,10 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   // Solve again
   // This smaller dual objective value upper bound is satisfied at the start of
   // phase 2
-  if (dev_run)
-    printf(
-        "\nSolving LP without presolve and smaller dual objective value upper "
-        "bound of %g\n",
-        smaller_min_objective_bound);
+  testHeader(
+      "Solving LP without presolve, and smaller dual objective value upper "
+      "bound of ",
+      &smaller_min_objective_bound);
   status = highs.setOptionValue("objective_bound", smaller_min_objective_bound);
   REQUIRE(status == HighsStatus::kOk);
 
@@ -140,7 +148,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(model_status == HighsModelStatus::kObjectiveBound);
 
   // Solve as maximization and ensure that the dual objective value upper bound
-  // isn't used
+  // is used
   bool_status =
       highs.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk;
   REQUIRE(bool_status);
@@ -149,12 +157,10 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::kOk);
 
   // Solve again
-  if (dev_run)
-    printf(
-        "\nSolving LP as maximization without presolve and dual objective "
-        "value "
-        "upper bound of %g\n",
-        use_max_objective_bound);
+  testHeader(
+      "Solving LP as maximization without presolve, and dual objective value "
+      "upper bound of ",
+      &use_max_objective_bound);
   status = highs.setBasis();
   REQUIRE(status == HighsStatus::kOk);
 
@@ -162,12 +168,7 @@ TEST_CASE("dual-objective-upper-bound", "[highs_lp_solver]") {
   REQUIRE(status == HighsStatus::kOk);
 
   model_status = highs.getModelStatus();
-  REQUIRE(model_status == HighsModelStatus::kOptimal);
-
-  error = fabs((info.objective_function_value - max_objective_function_value) /
-               max_objective_function_value);
-  if (dev_run) printf("\nOptimal objective value error = %g\n", error);
-  REQUIRE(error < 1e-10);
+  REQUIRE(model_status == HighsModelStatus::kObjectiveBound);
 
   highs.resetThreadScheduler(true);
 }
@@ -638,6 +639,73 @@ TEST_CASE("issue-3564", "[highs_lp_solver]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kUnbounded);
+
+  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3726", "[highs_lp_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s",
+          "Maximize\nobj: 5 x + 4 y + 3 z\nSubject To\nc1: 2 x + 3 y + z <= "
+          "5\nc2: 4 x + y + 2 z <= 11\nc3: 3 x + 4 y + 2 z <= 8\nBounds\n0 <= "
+          "x <= 10\n0 <= y <= 10\n0 <= z <= 10\n"
+          "End\n");
+
+  fclose(file);
+
+  Highs h;
+  std::string text;
+  auto testObjectiveBound = [&](const double objective_bound,
+                                const HighsModelStatus require_model_status) {
+    h.clearSolver();
+    std::string line =
+        highsFormatToString("%s %11.4g", text.c_str(), objective_bound);
+    if (dev_run)
+      highsPrintStringAsHeading(line);
+    h.setOptionValue("objective_bound", objective_bound);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == require_model_status);
+  };
+
+  h.setOptionValue("output_flag", dev_run);
+  //  h.setOptionValue("log_dev_level", 3);
+  //  h.setOptionValue("highs_analysis_level", 4);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  const double optimal_objective_value = h.getObjectiveValue();
+  const double attainable_objective_bound = 20;
+  const double unattainable_objective_bound = 10;
+  REQUIRE(attainable_objective_bound > optimal_objective_value);
+  REQUIRE(unattainable_objective_bound < optimal_objective_value);
+
+  text = "Solving max LP with attainable objective bound of ";
+  testObjectiveBound(attainable_objective_bound,
+                     HighsModelStatus::kObjectiveBound);
+  text = "Solving max LP with unattainable objective bound of ";
+  testObjectiveBound(unattainable_objective_bound, HighsModelStatus::kOptimal);
+
+  // Now solve the problem as a MIP, with objective_bound = -20
+  //
+  // objective_bound is designed for LPs, but (see #3726) solving a
+  // MIP with optimal objective 13 when objective_bound = -20 results
+  // in it being declared infeasible immediately since
+  // HighsMipSolver.cpp:206 mipdata_->getDomain().infeasible() is
+  // true!
+  const double mip_objective_bound = -20;
+  std::vector<HighsVarType> integrality = {
+      HighsVarType::kInteger, HighsVarType::kInteger, HighsVarType::kInteger};
+  REQUIRE(h.changeColsIntegrality(0, 2, integrality.data()) ==
+          HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_file) == HighsStatus::kOk);
+
+  HighsModelStatus require_model_status =
+      HighsModelStatus::kInfeasible;  // HighsModelStatus::kOptimal;
+  text = "Solving max MIP with objective bound of ";
+  testObjectiveBound(mip_objective_bound, require_model_status);
 
   std::remove(model_file.c_str());
 
