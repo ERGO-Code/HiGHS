@@ -7,6 +7,8 @@
 #include "mip/HighsImplications.h"
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
+// TEMPORARY for the large-int-bounds diagnostics
+#include "parallel/HighsParallel.h"
 
 const bool dev_run = false;
 const double double_equal_tolerance = 1e-5;
@@ -2638,13 +2640,28 @@ TEST_CASE("large-int-bounds", "[highs_test_mip_solver]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/large-int-bounds.lp";
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  // TEMPORARY diagnostics for the CI failure in the gcc ThreadSanitizer job
+  // (wrong optimal objective); revert before merging
+  highs.setOptionValue("output_flag", true);
+  highs.setOptionValue("log_dev_level", 1);
   highs.setOptionValue("mip_rel_gap", 0);
   highs.setOptionValue("mip_abs_gap", 0);
   highs.readModel(filename);
-  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   const double optimal_objective = 9;
-  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+  REQUIRE(highs.clearSolver() == HighsStatus::kOk);
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  const HighsInfo& info = highs.getInfo();
+  printf(
+      "large-int-bounds diagnostics: status %s, objective %.17g, dual bound "
+      "%.17g, gap %g, nodes %lld, threads %d\n",
+      highs.modelStatusToString(highs.getModelStatus()).c_str(),
+      info.objective_function_value, info.mip_dual_bound, info.mip_gap,
+      static_cast<long long>(info.mip_node_count),
+      highs::parallel::num_threads());
+  highs.writeSolution("", kSolutionStylePretty);
+  fflush(stdout);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(objectiveOk(info.objective_function_value, optimal_objective, true));
   highs.resetThreadScheduler(true);
 }
 
