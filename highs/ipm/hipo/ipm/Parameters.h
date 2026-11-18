@@ -11,6 +11,7 @@ const double kIpmTolDefault = 1e-8;
 const double kDivergeTol = 1e3;
 const double kCertificateTol = 1e-6;
 const double kCertificateMinRadius = 1e3;
+const double kKktStagnationRelativeViolation = 10.0;
 
 // parameters for residual reduction test
 const double kResReductionFraction = 0.1;

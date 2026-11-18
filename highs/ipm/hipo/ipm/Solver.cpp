@@ -1440,7 +1440,7 @@ shouldTerminate Solver::handleStagnation(const StagnationReport& report) {
     setStatus2(kStatusNoProgress);
     resetToBestIter(iter_);
   } else {
-    if (checkTerminationKkt()) {
+    if (checkTerminationKkt(true)) {
       logger_.printw(
           "HiPO stagnated but HiGHS considers the solution acceptable\n");
       logger_.print("=== Primal-dual feasible point found\n");
@@ -1485,7 +1485,7 @@ shouldTerminate Solver::checkTermination() {
   return terminate;
 }
 
-isSuccess Solver::checkTerminationKkt() {
+isSuccess Solver::checkTerminationKkt(bool stagnation) {
   if (!model_.lpOrig()) return false;
   if (model_.qp() && !model_.QOrig()) return false;
 
@@ -1519,8 +1519,10 @@ isSuccess Solver::checkTerminationKkt() {
     }
 
   } else {
+    const double max_violation = stagnation ? kKktStagnationRelativeViolation
+                                            : kKktMaxAllowedRelativeViolation;
     lpNoBasisKktCheck(model_status, highs_info, lp, highs_solution, Hoptions_,
-                      "During HiPO solve");
+                      "During HiPO solve", max_violation);
     success = model_status == HighsModelStatus::kOptimal;
   }
 

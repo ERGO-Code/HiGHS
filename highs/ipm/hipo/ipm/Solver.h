@@ -339,7 +339,7 @@ class Solver {
   //  - relative dual gap    < tolerance
   // ===================================================================================
   shouldTerminate checkTermination();
-  isSuccess checkTerminationKkt();
+  isSuccess checkTerminationKkt(bool stagnation = false);
 
   // ===================================================================================
   // Check for user interrupt or time limit
