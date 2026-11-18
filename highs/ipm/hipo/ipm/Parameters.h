@@ -9,7 +9,6 @@ namespace hipo {
 const Int kMaxIterDefault = 200;
 const double kIpmTolDefault = 1e-8;
 const double kDivergeTol = 1e3;
-const double kKktCheckFactor = 1e1;
 const double kCertificateTol = 1e-6;
 const double kCertificateMinRadius = 1e3;
 

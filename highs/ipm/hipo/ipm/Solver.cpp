@@ -1461,39 +1461,30 @@ shouldTerminate Solver::checkTermination() {
                   it_->dinf < options_.feasibility_tol;
   bool optimal = it_->pdgap < options_.optimality_tol;
 
-  // The HiGHS kkt check decides optimality, so it is attempted as soon as the
-  // iterate is close to satisfying HiPO's criteria, rather than waiting for
-  // them to be met (or for stagnation to be detected).
-  if (getStatus1() != kStatusOptimal) {
-    const double near_feas_tol = kKktCheckFactor * options_.feasibility_tol;
-    const double near_opt_tol = kKktCheckFactor * options_.optimality_tol;
-    bool near_optimal = it_->pinf < near_feas_tol &&
-                        it_->dinf < near_feas_tol && it_->pdgap < near_opt_tol;
+  bool terminate = false;
 
-    if (near_optimal && checkTerminationKkt()) {
-      if (!(feasible && optimal))
-        logger_.printDetailed(
-            "HiPO criteria not met yet but HiGHS considers the solution "
-            "acceptable\n");
-      logger_.print("=== Primal-dual feasible point found\n");
-      setStatus1(kStatusOptimal);
+  if (feasible && optimal) {
+    if (crossoverIsOn()) {
+      if (getStatus1() != kStatusOptimal) {
+        logger_.print("=== Primal-dual feasible point found\n");
+        setStatus1(kStatusOptimal);
+      }
+      bool ready_for_crossover = it_->infeas_drop < options_.crossover_tol;
+      if (ready_for_crossover) {
+        logger_.print("=== Ready for crossover\n");
+        terminate = true;
+      }
+
+    } else {
+      terminate = checkTerminationKkt();
+      if (terminate) {
+        logger_.print("=== Primal-dual feasible point found\n");
+        setStatus1(kStatusOptimal);
+      }
     }
   }
 
-  if (getStatus1() != kStatusOptimal) return false;
-
-  // Without crossover, terminate as soon as the point is optimal.
-  if (!crossoverIsOn()) return true;
-
-  // With crossover, keep iterating until the point is ready for crossover.
-  bool ready_for_crossover =
-      feasible && optimal && it_->infeas_drop < options_.crossover_tol;
-  if (ready_for_crossover) {
-    logger_.print("=== Ready for crossover\n");
-    return true;
-  }
-
-  return false;
+  return terminate;
 }
 
 isSuccess Solver::checkTerminationKkt() {
@@ -1516,45 +1507,29 @@ isSuccess Solver::checkTerminationKkt() {
   bool success = false;
 
   if (model_.qp()) {
-    // QP check: same measures and acceptance used by HiGHS after the QP solve
-    // (getQpKktFailures followed by checkOptimality in solveQp).
-    // HiGHS does not check the primal-dual gap for QP, so HiPO's own gap
-    // criterion is also required, otherwise any feasible point would pass.
-    if (it_->pdgap >= options_.optimality_tol) {
-      logger_.printDetailed("QP kktCheck: gap %.2e too large\n", it_->pdgap);
-      logger_.printInfo("kktCheck failed\n");
-      return false;
+    // HiGHS QP check does not check the optimality gap
+    if (it_->pdgap < options_.optimality_tol) {
+      std::vector<double> gradient;
+      model_.QOrig()->product(highs_solution.col_value, gradient);
+      for (Int i = 0; i < lp.num_col_; ++i) gradient[i] += lp.col_cost_[i];
+
+      getKktFailures(Hoptions_, true, lp, gradient, highs_solution, highs_info);
+
+      success = highs_info.num_primal_infeasibilities == 0 &&
+                highs_info.num_dual_infeasibilities <= 0 &&
+                highs_info.num_semi_infeasibilities <= 0;
     }
 
-    std::vector<double> gradient;
-    model_.QOrig()->product(highs_solution.col_value, gradient);
-    for (Int i = 0; i < lp.num_col_; ++i) gradient[i] += lp.col_cost_[i];
-
-    getKktFailures(Hoptions_, true, lp, gradient, highs_solution, highs_info);
-
-    success = highs_info.num_primal_infeasibilities == 0 &&
-              highs_info.num_dual_infeasibilities <= 0 &&
-              highs_info.num_semi_infeasibilities <= 0;
-
-    if (!success)
-      logger_.printDetailed(
-          "QP kktCheck: num/max primal infeas %d / %.2e, num/max dual infeas "
-          "%d / %.2e\n",
-          (int)highs_info.num_primal_infeasibilities,
-          highs_info.max_primal_infeasibility,
-          (int)highs_info.num_dual_infeasibilities,
-          highs_info.max_dual_infeasibility);
   } else {
-    // LP check
     lpNoBasisKktCheck(model_status, highs_info, lp, highs_solution, Hoptions_,
                       "During HiPO solve");
     success = model_status == HighsModelStatus::kOptimal;
   }
 
   if (success)
-    logger_.printInfo("kktCheck successful\n");
+    logger_.printInfo("Kkt check successful\n");
   else
-    logger_.printInfo("kktCheck failed\n");
+    logger_.printInfo("Kkt check failed\n");
 
   return success;
 }
