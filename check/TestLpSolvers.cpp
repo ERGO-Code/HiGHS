@@ -653,15 +653,19 @@ TEST_CASE("issue-3726", "[highs_lp_solver]") {
           "Maximize\nobj: 5 x + 4 y + 3 z\nSubject To\nc1: 2 x + 3 y + z <= "
           "5\nc2: 4 x + y + 2 z <= 11\nc3: 3 x + 4 y + 2 z <= 8\nBounds\n0 <= "
           "x <= 10\n0 <= y <= 10\n0 <= z <= 10\n"
-          //	  "General\nx y z\n"
           "End\n");
 
   fclose(file);
 
   Highs h;
+  std::string text;
   auto testObjectiveBound = [&](const double objective_bound,
                                 const HighsModelStatus require_model_status) {
     h.clearSolver();
+    std::string line =
+        highsFormatToString("%s %11.4g", text.c_str(), objective_bound);
+    if (dev_run)
+      highsPrintStringAsHeading(line);
     h.setOptionValue("objective_bound", objective_bound);
     REQUIRE(h.run() == HighsStatus::kOk);
     REQUIRE(h.getModelStatus() == require_model_status);
@@ -673,14 +677,35 @@ TEST_CASE("issue-3726", "[highs_lp_solver]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   const double optimal_objective_value = h.getObjectiveValue();
-
   const double attainable_objective_bound = 20;
   const double unattainable_objective_bound = 10;
   REQUIRE(attainable_objective_bound > optimal_objective_value);
   REQUIRE(unattainable_objective_bound < optimal_objective_value);
+
+  text = "Solving max LP with attainable objective bound of ";
   testObjectiveBound(attainable_objective_bound,
                      HighsModelStatus::kObjectiveBound);
+  text = "Solving max LP with unattainable objective bound of ";
   testObjectiveBound(unattainable_objective_bound, HighsModelStatus::kOptimal);
+
+  // Now solve the problem as a MIP, with objective_bound = -20
+  //
+  // objective_bound is designed for LPs, but (see #3726) solving a
+  // MIP with optimal objective 13 when objective_bound = -20 results
+  // in it being declared infeasible immediately since
+  // HighsMipSolver.cpp:206 mipdata_->getDomain().infeasible() is
+  // true!
+  const double mip_objective_bound = -20;
+  std::vector<HighsVarType> integrality = {
+      HighsVarType::kInteger, HighsVarType::kInteger, HighsVarType::kInteger};
+  REQUIRE(h.changeColsIntegrality(0, 2, integrality.data()) ==
+          HighsStatus::kOk);
+  REQUIRE(h.writeModel(model_file) == HighsStatus::kOk);
+
+  HighsModelStatus require_model_status =
+      HighsModelStatus::kInfeasible;  // HighsModelStatus::kOptimal;
+  text = "Solving max MIP with objective bound of ";
+  testObjectiveBound(mip_objective_bound, require_model_status);
 
   std::remove(model_file.c_str());
 
