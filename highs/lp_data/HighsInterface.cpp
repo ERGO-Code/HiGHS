@@ -402,13 +402,8 @@ HighsStatus Highs::addColsInterface(
   if (ext_num_new_nz < 0) return HighsStatus::kError;
   if (ext_num_new_col == 0) return HighsStatus::kOk;
   if (ext_num_new_col > 0)
-    if (isColDataNull(options.log_options, ext_col_cost, ext_col_lower,
-                      ext_col_upper))
-      return HighsStatus::kError;
-  if (ext_num_new_nz > 0)
-    if (isMatrixDataNull(options.log_options, ext_a_start, ext_a_index,
-                         ext_a_value))
-      return HighsStatus::kError;
+    assert(ext_col_cost && ext_col_lower && ext_col_upper);
+  if (ext_num_new_nz > 0) assert(ext_a_start && ext_a_index && ext_a_value);
 
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
@@ -545,13 +540,8 @@ HighsStatus Highs::addRowsInterface(HighsInt ext_num_new_row,
   if (ext_num_new_row < 0) return HighsStatus::kError;
   if (ext_num_new_nz < 0) return HighsStatus::kError;
   if (ext_num_new_row == 0) return HighsStatus::kOk;
-  if (ext_num_new_row > 0)
-    if (isRowDataNull(options.log_options, ext_row_lower, ext_row_upper))
-      return HighsStatus::kError;
-  if (ext_num_new_nz > 0)
-    if (isMatrixDataNull(options.log_options, ext_ar_start, ext_ar_index,
-                         ext_ar_value))
-      return HighsStatus::kError;
+  if (ext_num_new_row > 0) assert(ext_row_lower && ext_row_upper);
+  if (ext_num_new_nz > 0) assert(ext_ar_start && ext_ar_index && ext_ar_value);
 
   HighsLp& lp = model_.lp_;
   HighsBasis& basis = basis_;
@@ -980,8 +970,8 @@ HighsStatus Highs::changeColBoundsInterface(
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_,
-                col_lower, col_upper, NULL, local_colLower.data(),
-                local_colUpper.data(), NULL);
+                col_lower, col_upper, nullptr, local_colLower.data(),
+                local_colUpper.data(), nullptr);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
       options_.log_options,
@@ -1031,8 +1021,8 @@ HighsStatus Highs::changeRowBoundsInterface(
   // set and data are in ascending order
   if (index_collection.is_set_)
     sortSetData(index_collection.set_num_entries_, index_collection.set_, lower,
-                upper, NULL, local_rowLower.data(), local_rowUpper.data(),
-                NULL);
+                upper, nullptr, local_rowLower.data(), local_rowUpper.data(),
+                nullptr);
   HighsStatus return_status = HighsStatus::kOk;
   return_status = interpretCallStatus(
       options_.log_options,
@@ -1528,7 +1518,7 @@ HighsStatus Highs::basisSolveInterface(const vector<double>& rhs,
     ekk_instance_.ftran(solve_vector, expected_density);
   }
   // Extract the solution
-  if (solution_indices == NULL) {
+  if (solution_indices == nullptr) {
     // Nonzeros in the solution not required
     if (solve_vector.count > num_row) {
       // Solution nonzeros not known
@@ -1600,7 +1590,7 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   bool solve_feasibility_problem = false;
   const bool is_qp = model_.isQp();
 
-  if (dual_ray_value != NULL) {
+  if (dual_ray_value != nullptr) {
     // User wants a dual ray whatever
     if (!has_dual_ray || !has_invert) {
       // No dual ray is known, or no INVERT to compute it
@@ -1678,7 +1668,8 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
         rhs.assign(num_row, 0);
         rhs[iRow] = ekk_instance_.dual_ray_record_.sign;
         HighsInt* dual_ray_num_nz = 0;
-        basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, NULL, true);
+        basisSolveInterface(rhs, dual_ray_value, dual_ray_num_nz, nullptr,
+                            true);
         // Now save the dual ray itself
         ekk_instance_.dual_ray_record_.value.resize(num_row);
         for (HighsInt iRow = 0; iRow < num_row; iRow++)
@@ -1748,7 +1739,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   bool allow_unbounded_or_infeasible;
   bool solve_unboundedness_problem = false;
 
-  if (primal_ray_value != NULL) {
+  if (primal_ray_value != nullptr) {
     // User wants a primal ray whatever
     if (!has_primal_ray || !has_invert) {
       // No primal ray is known, or no INVERT to compute it
@@ -1816,7 +1807,7 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
           rhs[col - num_col] = primal_ray_sign;
         }
         HighsInt* column_num_nz = 0;
-        basisSolveInterface(rhs, column.data(), column_num_nz, NULL, false);
+        basisSolveInterface(rhs, column.data(), column_num_nz, nullptr, false);
         // Now zero primal_ray_value and scatter the column according to
         // the basic variables.
         for (HighsInt iCol = 0; iCol < num_col; iCol++)
@@ -2124,7 +2115,7 @@ HighsStatus Highs::getIisInterface() {
     rhs[iRow] = 1;
     std::vector<double> dual_ray_value(num_row);
     HighsInt* dual_ray_num_nz = 0;
-    basisSolveInterface(rhs, dual_ray_value.data(), dual_ray_num_nz, NULL,
+    basisSolveInterface(rhs, dual_ray_value.data(), dual_ray_num_nz, nullptr,
                         true);
     for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
       if (dual_ray_value[iRow]) this->iis_.row_index_.push_back(iRow);

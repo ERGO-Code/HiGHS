@@ -2,8 +2,8 @@
 #include <iostream>
 #include <vector>
 
-#include "HConfig.h"
 #include "HCheckConfig.h"
+#include "HConfig.h"
 #include "Highs.h"
 #include "HighsExternalApi.h"
 #include "catch.hpp"
@@ -220,7 +220,8 @@ TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   FactorHighs_symbolic_print(FH, S, verbose);
 
   // factorise the matrix
-  HighsInt factorise_status = FactorHighs_factorise(FH, S, n, nz, rows, ptr, vals);
+  HighsInt factorise_status =
+      FactorHighs_factorise(FH, S, n, nz, rows, ptr, vals);
   REQUIRE(factorise_status == 0);
 
   // compute the inertia of the factorisation
