@@ -310,9 +310,10 @@ class Solver {
   // point has norm at least R, as computed by primalRayRadius (resp
   // dualRayRadius). The certificate is accepted if R is larger than the norm of
   // the problem data (costs, resp bounds) times kCertificateMinRadius.
+  // Return R if the certificate is accepted, zero otherwise.
   // ===================================================================================
-  isSuccess checkPrimalRay(const HighsSolution& point) const;
-  isSuccess checkDualRay(const HighsSolution& point) const;
+  double checkPrimalRay(const HighsSolution& point) const;
+  double checkDualRay(const HighsSolution& point) const;
   double primalRayRadius(const std::vector<double>& ray) const;
   double dualRayRadius(const std::vector<double>& ray) const;
 

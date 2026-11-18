@@ -1202,12 +1202,18 @@ shouldTerminate Solver::handleInfeasible(bool stagnation) {
                            HighsModelStatus::kUnknown, point);
 
   bool terminate = false;
-  if (checkPrimalRay(point)) {
+  const double primal_radius = checkPrimalRay(point);
+  const double dual_radius = primal_radius > 0.0 ? 0.0 : checkDualRay(point);
+  if (primal_radius > 0.0) {
     logger_.print("=== Dual infeasible\n");
+    logger_.print("* Certificate: dual feasible points have norm >= %.2e\n",
+                  primal_radius);
     setStatus(kStatusDualInfeasible);
     terminate = true;
-  } else if (checkDualRay(point)) {
+  } else if (dual_radius > 0.0) {
     logger_.print("=== Primal infeasible\n");
+    logger_.print("* Certificate: primal feasible points have norm >= %.2e\n",
+                  dual_radius);
     setStatus(kStatusPrimalInfeasible);
     terminate = true;
   }
@@ -1348,13 +1354,13 @@ double Solver::dualRayRadius(const std::vector<double>& ray) const {
   return radius;
 }
 
-isSuccess Solver::checkPrimalRay(const HighsSolution& point) const {
+double Solver::checkPrimalRay(const HighsSolution& point) const {
   // Candidates are the current point and the displacement from the previous
   // point. If the iterates diverge, both are dominated by the direction of
   // divergence. The certificate is accepted if any dual feasible point must be
   // much larger than the problem data.
   const HighsLp& lp = *model_.lpOrig();
-  if (!lp.a_matrix_.isColwise()) return false;
+  if (!lp.a_matrix_.isColwise()) return 0.0;
   const Int n = lp.num_col_;
 
   double radius = primalRayRadius(point.col_value);
@@ -1372,20 +1378,16 @@ isSuccess Solver::checkPrimalRay(const HighsSolution& point) const {
 
   logger_.printDetailed("Primal ray radius %.2e, threshold %.2e\n", radius,
                         threshold);
-  if (radius < threshold) return false;
-
-  logger_.printInfo(
-      "Primal ray verified, dual feasible points have norm >= %.2e\n", radius);
-  return true;
+  return radius < threshold ? 0.0 : radius;
 }
 
-isSuccess Solver::checkDualRay(const HighsSolution& point) const {
+double Solver::checkDualRay(const HighsSolution& point) const {
   // Candidates are the current row duals and the displacement from the
   // previous point. If the iterates diverge, both are dominated by the
   // direction of divergence. The certificate is accepted if any feasible point
   // must be much larger than the problem data.
   const HighsLp& lp = *model_.lpOrig();
-  if (!lp.a_matrix_.isColwise()) return false;
+  if (!lp.a_matrix_.isColwise()) return 0.0;
   const Int n = lp.num_col_;
   const Int m = lp.num_row_;
 
@@ -1414,11 +1416,7 @@ isSuccess Solver::checkDualRay(const HighsSolution& point) const {
 
   logger_.printDetailed("Dual ray radius %.2e, threshold %.2e\n", radius,
                         threshold);
-  if (radius < threshold) return false;
-
-  logger_.printInfo("Dual ray verified, feasible points have norm >= %.2e\n",
-                    radius);
-  return true;
+  return radius < threshold ? 0.0 : radius;
 }
 
 shouldTerminate Solver::handleStagnation(const StagnationReport& report) {
