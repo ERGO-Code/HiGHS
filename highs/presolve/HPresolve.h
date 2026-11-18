@@ -606,6 +606,9 @@ class HPresolve {
   Result presolveTestTransformColumn(HighsPostsolveStack& postsolve_stack,
                                      HighsInt col, double scale,
                                      double constant);
+  Result presolveTestSubstitute(HighsPostsolveStack& postsolve_stack,
+                                HighsInt substcol, HighsInt staycol,
+                                double offset, double scale);
 
   /*
   // Methods defined and used in HPresolveDebug, and only executed if

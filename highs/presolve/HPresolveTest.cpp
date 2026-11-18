@@ -84,4 +84,16 @@ HPresolve::Result HPresolve::presolveTestTransformColumn(
     double constant) {
   return transformColumn(postsolve_stack, col, scale, constant);
 }
+HPresolve::Result HPresolve::presolveTestSubstitute(
+    HighsPostsolveStack& postsolve_stack, HighsInt substcol, HighsInt staycol,
+    double offset, double scale) {
+  Result result = substitute(substcol, staycol, offset, scale);
+  if (result != Result::kOk) return result;
+  // write the presolved problem to the model as at the end of presolve, so
+  // that it can be inspected
+  shrinkProblem(postsolve_stack);
+  toCSC(model->a_matrix_.value_, model->a_matrix_.index_,
+        model->a_matrix_.start_);
+  return Result::kOk;
+}
 }  // namespace presolve
