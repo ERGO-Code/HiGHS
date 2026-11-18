@@ -174,8 +174,11 @@ class HighsTaskExecutor {
     auto& executorHandle = threadLocalExecutorHandle();
 
     if (executorHandle.ptr != nullptr) {
+      const bool isMain = executorHandle.isMain;
       executorHandle.ptr->stopWorkerThreads(blocking);
       executorHandle.dispose();
+      // Avoid leaving a dangling deque pointer on the main thread
+      if (isMain) threadLocalWorkerDeque() = nullptr;
     }
   }
 
