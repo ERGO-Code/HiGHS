@@ -44,6 +44,10 @@ const double kNearFreeRatio = 1e3;
 const double kInaccurateSolveTol = 1e-6;
 const double kVeryInaccurateSolveTol = 1e-2;
 
+// parameters for centrality detector
+const double kPoorCentralityFraction = 0.01;
+const double kPoorCentralityAlpha = 0.1;
+
 // parameters for choice of AS or NE
 const double kSystemSpopsWeight = 30.0;
 const double kSystemRatioOpsThresh = 10.0;

@@ -22,6 +22,9 @@ enum class IssueType {
   // possible infeasibility
   kDivergence,  // mu or an objective diverging
 
+  // centrality
+  kPoorCentrality,  // many products xj * zj far from mu, with short steps
+
   // numerical trouble in the linear solver
   kInaccurateSolve,      // componentwise backward error after refinement large
   kVeryInaccurateSolve,  // ... so large that the direction is unreliable
@@ -48,6 +51,8 @@ inline char issueCode(IssueType type) {
       return 'O';
     case IssueType::kDivergence:
       return 'D';
+    case IssueType::kPoorCentrality:
+      return 'C';
     case IssueType::kInaccurateSolve:
       return 'i';
     case IssueType::kVeryInaccurateSolve:
@@ -67,10 +72,11 @@ inline char issueCode(IssueType type) {
 // Meaning of the codes, for the log.
 inline const char* issueCodesLegend() {
   return "R bad residual reduction, L large residual increase, N no progress, "
-         "O oscillation, D divergence,\n"
-         "i/I (very) inaccurate solve, W wrong inertia, G dynamic "
-         "regularisation, A absorbed rows,\n"
-         "F many nearly free columns\n";
+         "O oscillation,\n"
+         "D divergence, C poor centrality, i/I (very) inaccurate solve, "
+         "W wrong inertia,\n"
+         "G dynamic regularisation, A absorbed rows, F many nearly free "
+         "columns\n";
 }
 
 // Issues detected at one iteration.

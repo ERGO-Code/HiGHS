@@ -72,6 +72,14 @@ struct Diagnostics {
                  std::stringstream& log_stream) const;
 
   // ===================================================================================
+  // Add kPoorCentrality to report if more than a fraction
+  // kPoorCentralityFraction of the products xj * zj / mu are outside
+  // [kSmallProduct, kLargeProduct] and a stepsize is below kPoorCentralityAlpha.
+  // ===================================================================================
+  void centrality(const Iterate& it, IterationReport& report,
+                  std::stringstream& log_stream) const;
+
+  // ===================================================================================
   // Check that the step reduced the residuals by at least a fraction of what
   // the stepsizes predict:
   //  ||rk_new|| <= max( (1 - eta * alpha) * ||rk_old||, floor )

@@ -114,6 +114,29 @@ void Diagnostics::numerical(const Iterate& it, IterationReport& report,
   }
 }
 
+void Diagnostics::centrality(const Iterate& it, IterationReport& report,
+                             std::stringstream& log_stream) const {
+  const IterationRecord& record = lastRecord(it);
+
+  Int num_finite = 0;
+  for (Int j = 0; j < model.n(); ++j)
+    num_finite += model.hasLb(j) + model.hasUb(j);
+
+  const Int num_outliers = record.num_small_prod + record.num_large_prod;
+  const bool many_outliers = num_outliers > kPoorCentralityFraction * num_finite;
+  const bool short_step = std::min(record.alpha_primal, record.alpha_dual) <
+                          kPoorCentralityAlpha;
+
+  if (many_outliers && short_step) {
+    report.add(IssueType::kPoorCentrality);
+    log_stream << "Poor centrality, " << record.num_small_prod << " small and "
+               << record.num_large_prod << " large products of "
+               << num_finite << ", stepsizes "
+               << sci(record.alpha_primal, 0, 1) << " "
+               << sci(record.alpha_dual, 0, 1) << "\n";
+  }
+}
+
 bool Diagnostics::residualReductionTest(const Iterate& it,
                                         const IterationRecord& record,
                                         double feas_tol, bool& large_increase,

@@ -1252,6 +1252,7 @@ void Solver::runDiagnostics() {
                                 options_.optimality_tol, options_.crossover_tol,
                                 record.report, log_stream);
     it_->diagnostics.numerical(*it_, record.report, log_stream);
+    it_->diagnostics.centrality(*it_, record.report, log_stream);
   }
   it_->diagnostics.divergence(*it_, iter_, record.report);
 
