@@ -224,22 +224,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "standmps\;218\; 1.4060175000\;"
       )
   
-   # GCC >= 15 at -O2 (RelWithDebInfo). Debug and Release (-O3, checked
-   # on GCC 16 MinGW) still match successInstances
-   set(successGcc15Instances
-      "25fv47\;3148\; 5.5018458883\;"
-      "80bau3b\;3705\; 9.8722419241\;"
-      "adlittle\;74\; 2.2549496316\;"
-      "afiro\;22\;-4.6475314286\;"
-      "etamacro\;536\;-7.5571523330\;"
-      "greenbea\;5247\;-7.2555248130\;"
-      "shell\;623\; 1.2088253460\;"
-      "stair\;531\;-2.5126695119\;"
-      "standata\;72\; 1.2576995000\;"
-      "standgub\;68\; 1.2576995000\;"
-      "standmps\;218\; 1.4060175000\;"
-   )
-
    set(successRiscVInstances
       "25fv47\;3103\; 5.5018458\;"
       "80bau3b\;3705\; 9.8722419\;"
@@ -466,13 +450,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
     endif()
   elseif(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64") AND
              NOT IS_32)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-        CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15 AND
-        CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-      add_instancetests(successGcc15Instances "Optimal")
-    else()
-      add_instancetests(successInstances "Optimal")
-    endif()
+    add_instancetests(successInstances "Optimal")
   endif()
 
   add_instancetests(failInstances "Fail")
