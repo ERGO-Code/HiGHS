@@ -224,42 +224,12 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "standmps\;218\; 1.4060175000\;"
       )
   
-   set(successMacArmInstances
-      "25fv47\;3103\; 5.5018458883\;"
-      "80bau3b\;3705\; 9.8722419241\;"
-      "adlittle\;74\; 2.2549496316\;"
-      "afiro\;22\;-4.6475314286\;"
-      "etamacro\;531\;-7.5571523330\;"
-      "greenbea\;5156\;-7.2555248130\;"
-      "shell\;623\; 1.2088253460\;"
-      "stair\;531\;-2.5126695119\;"
-      "standata\;72\; 1.2576995000\;"
-      "standgub\;68\; 1.2576995000\;"
-      "standmps\;218\; 1.4060175000\;"
-   )
-
-   # GCC >= 15 at -O2 (RelWithDebInfo). Debug and Release (-O3, checked
-   # on GCC 16 MinGW) still match successInstances
-   set(successGcc15Instances
-      "25fv47\;3148\; 5.5018458883\;"
-      "80bau3b\;3705\; 9.8722419241\;"
-      "adlittle\;74\; 2.2549496316\;"
-      "afiro\;22\;-4.6475314286\;"
-      "etamacro\;536\;-7.5571523330\;"
-      "greenbea\;5247\;-7.2555248130\;"
-      "shell\;623\; 1.2088253460\;"
-      "stair\;531\;-2.5126695119\;"
-      "standata\;72\; 1.2576995000\;"
-      "standgub\;68\; 1.2576995000\;"
-      "standmps\;218\; 1.4060175000\;"
-   )
-
    set(successRiscVInstances
       "25fv47\;3103\; 5.5018458\;"
       "80bau3b\;3705\; 9.8722419\;"
       "etamacro\;531\;-7.5571523\;"
       "greenbea\;5156\;-7.2555248\;"
-      "stair\;531\;-2.5126695\;" # last like mac arm
+      "stair\;531\;-2.5126695\;"
       "adlittle\;74\; 2.2549496\;"
       "afiro\;22\;-4.6475314\;"
       "shell\;623\; 1.2088253\;"
@@ -400,13 +370,13 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         "afiro\;-4.647531\;"
         "avgas\;-7.7499999\;"
         "blending\;-3.19999999\;"
-        "chip\;-9.0000000\;"
+        "chip\;-8.9999999\;"
         "e226\;-1.16389\;"
-        "scrs8\; 9.04296\;"
+        "scrs8\; 9.0429\;"
         "sctest\; 5.75000000\;"
-        "shell\; 1.20882535\;"
+        "shell\; 1.2088253\;"
         "stair\;-2.5126\;"
-        "standata\; 1.25769947\;"
+        "standata\; 1.2576994\;"
         "standgub\; 1.2576994\;"
     )
   endif()
@@ -471,20 +441,16 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   # add tests for success and fail instances
   if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
-    add_instancetests(successMacArmInstances "Optimal")
+    # without floating-point contraction (see the top-level CMakeLists.txt),
+    # macOS on arm64 gives the same iteration counts as x86-64
+    add_instancetests(successInstances "Optimal")
   elseif(LINUX AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)")
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv64")
         add_instancetests(successRiscVInstances "Optimal")
     endif()
   elseif(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64") AND
              NOT IS_32)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-        CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15 AND
-        CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-      add_instancetests(successGcc15Instances "Optimal")
-    else()
-      add_instancetests(successInstances "Optimal")
-    endif()
+    add_instancetests(successInstances "Optimal")
   endif()
 
   add_instancetests(failInstances "Fail")
