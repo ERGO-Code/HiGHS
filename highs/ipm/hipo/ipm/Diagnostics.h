@@ -1,10 +1,11 @@
-#ifndef HIPO_STAGNATION_TESTS_H
-#define HIPO_STAGNATION_TESTS_H
+#ifndef HIPO_DIAGNOSTICS_H
+#define HIPO_DIAGNOSTICS_H
 
 #include <sstream>
 #include <vector>
 
 #include "IterationHistory.h"
+#include "IterationReport.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
@@ -12,36 +13,7 @@ namespace hipo {
 
 struct Iterate;
 
-// Most likely cause of stagnation, used to decide how to recover.
-enum class StagnationCause {
-  kNone,         // no stagnation
-  kNumerical,    // residuals not reduced as predicted by the stepsizes
-  kNoProgress,   // no quantity made progress in the last iterations
-  kOscillation,  // no quantity improved its best value for a long time
-};
-
-// Outcome of the stagnation tests at one iteration, with the information
-// needed to decide how to recover.
-struct StagnationReport {
-  bool stagnation = false;
-  StagnationCause cause = StagnationCause::kNone;
-  Int iter = 0;
-
-  // residual reduction test
-  Int bad_res_count = 0;   // failures in the last kBadResWindow iterations
-  Int bad_res_blocks = 0;  // bit k set if residual k+1 failed at this iter
-  bool large_increase = false;
-
-  // largest blockwise backward error of the linear solves in the last
-  // iteration, to distinguish failures of the linear solver from other causes
-  double bw_error = 0.0;
-
-  // progress test
-  bool no_window_progress = false;
-  bool no_best_progress = false;
-};
-
-struct StagnationTests {
+struct Diagnostics {
   const Model& model;
 
   // outcome of the residual reduction test in the last kBadResWindow
@@ -61,22 +33,28 @@ struct StagnationTests {
                                               kHighsInf};
   Int progress_iter[kNumProgressQuantities]{};
 
-  explicit StagnationTests(const Model& model_input);
+  explicit Diagnostics(const Model& model_input);
 
   // ===================================================================================
-  // Detect stagnation, which happens if any of the following is true:
-  // - residualReductionTest failed in at least kBadResMaxIter of the last
-  //   kBadResWindow iterations;
-  // - residualReductionTest found a residual increased by more than a factor
-  //   kResReductionLargeIncrease;
-  // - progressTest failed.
-  // Returns a report with the outcome of the tests and the most likely cause
-  // of stagnation.
+  // Detect stagnation and add to report:
+  // - kBadResReduction, if residualReductionTest failed in at least
+  //   kBadResMaxIter of the last kBadResWindow iterations;
+  // - kLargeResIncrease, if residualReductionTest found a residual increased
+  //   by more than a factor kResReductionLargeIncrease;
+  // - kNoProgress and kOscillation, if the window and best-value parts of
+  //   progressTest failed.
   // Must be called after the step, while it.delta still holds the direction.
   // ===================================================================================
-  StagnationReport stagnation(const Iterate& it, Int iter, double feas_tol,
-                              double opt_tol, double crossover_tol,
-                              std::stringstream& log_stream);
+  void stagnation(const Iterate& it, Int iter, double feas_tol, double opt_tol,
+                  double crossover_tol, IterationReport& report,
+                  std::stringstream& log_stream);
+
+  // ===================================================================================
+  // Add kDivergence to report if mu is larger than its best value by a factor
+  // kDivergeTol, or, after iteration 5, an objective is larger than the other
+  // by a factor kDivergeTol^2.
+  // ===================================================================================
+  void divergence(const Iterate& it, Int iter, IterationReport& report) const;
 
   // ===================================================================================
   // Check that the step reduced the residuals by at least a fraction of what
@@ -85,12 +63,12 @@ struct StagnationTests {
   // with alpha_primal for k=1,2,3 and alpha_dual for k=4. Stepsizes and norms
   // before and after the step are taken from record; an iteration abandoned
   // before the step has zero stepsizes and is skipped.
-  // In report, sets bad_res_blocks, and large_increase if a residual increased
-  // by more than a factor kResReductionLargeIncrease.
+  // Sets large_increase if a residual increased by more than a factor
+  // kResReductionLargeIncrease.
   // Must be called after the step, while it.delta still holds the direction.
   // ===================================================================================
   bool residualReductionTest(const Iterate& it, const IterationRecord& record,
-                             double feas_tol, StagnationReport& report,
+                             double feas_tol, bool& large_increase,
                              std::stringstream& log_stream) const;
 
   // ===================================================================================
@@ -110,11 +88,12 @@ struct StagnationTests {
   // History and best values are recorded for all quantities, tracked or not,
   // and are reset only by clear(). infeas_drop is recorded only when it is
   // computed.
-  // In report, sets no_window_progress and no_best_progress.
+  // Sets no_window_progress and no_best_progress if the two parts failed.
   // ===================================================================================
   bool progressTest(const Iterate& it, Int iter, double feas_tol,
                     double opt_tol, double crossover_tol,
-                    StagnationReport& report, std::stringstream& log_stream);
+                    bool& no_window_progress, bool& no_best_progress,
+                    std::stringstream& log_stream);
 
   // ===================================================================================
   // Clear the data used by the tests. The windows of the progress test restart

@@ -7,7 +7,7 @@
 #include "IterationHistory.h"
 #include "LinearSolver.h"
 #include "Model.h"
-#include "StagnationTests.h"
+#include "Diagnostics.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
@@ -54,8 +54,8 @@ struct Iterate {
 
   double infeas_drop = 0.0;
 
-  // tests for numerical issues and lack of progress
-  StagnationTests tests;
+  // detectors of numerical trouble, lack of progress and divergence
+  Diagnostics diagnostics;
 
   double best_violation = kHighsInf;
   double best_violation_magnitude = kHighsInf;

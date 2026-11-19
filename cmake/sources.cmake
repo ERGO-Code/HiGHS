@@ -268,11 +268,12 @@ set(hipo_sources
     ipm/hipo/ipm/Recovery.cpp
     ipm/hipo/ipm/Refine.cpp
     ipm/hipo/ipm/Solver.cpp
-    ipm/hipo/ipm/StagnationTests.cpp
+    ipm/hipo/ipm/Diagnostics.cpp
     ipm/hipo/ipm/UpLookingSolver.cpp)
 
 set(hipo_headers
     ipm/hipo/ipm/IterationHistory.h
+    ipm/hipo/ipm/IterationReport.h
     ipm/hipo/ipm/FactorHighsSolver.h
     ipm/hipo/ipm/Parameters.h
     ipm/hipo/ipm/Control.h
@@ -285,7 +286,7 @@ set(hipo_headers
     ipm/hipo/ipm/PreProcess.h
     ipm/hipo/ipm/Recovery.h
     ipm/hipo/ipm/Solver.h
-    ipm/hipo/ipm/StagnationTests.h
+    ipm/hipo/ipm/Diagnostics.h
     ipm/hipo/ipm/Status.h
     ipm/hipo/ipm/UpLookingSolver.h)
 

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "Control.h"
+#include "Diagnostics.h"
 #include "FactorHighsSolver.h"
 #include "Info.h"
 #include "Iterate.h"
@@ -12,7 +13,6 @@
 #include "Options.h"
 #include "Parameters.h"
 #include "Recovery.h"
-#include "StagnationTests.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -299,9 +299,10 @@ class Solver {
   shouldTerminate checkIterate();
 
   // ===================================================================================
-  // Run the stagnation tests and return their outcome.
+  // Run the detectors and return the issues found at this iteration. The
+  // stagnation tests run only after the first iteration.
   // ===================================================================================
-  StagnationReport checkStagnation();
+  IterationReport checkIssues();
 
   // ===================================================================================
   // Check for reasons to stop other than optimality: a verified certificate of
@@ -327,19 +328,19 @@ class Solver {
   double dualRayRadius(const std::vector<double>& ray) const;
 
   // ===================================================================================
-  // Take the recovery action chosen by recovery_ for the stagnation described
-  // by report. Return true if the ipm should terminate.
+  // Take the recovery action chosen by recovery_ for the stagnation issues in
+  // report. Return true if the ipm should terminate.
   // ===================================================================================
-  shouldTerminate handleStagnation(const StagnationReport& report);
+  shouldTerminate handleStagnation(const IterationReport& report);
 
   // ===================================================================================
-  // If there are signs of divergence or stagnation, look for a certificate of
+  // If report has divergence or stagnation issues, look for a certificate of
   // primal or dual infeasibility and, if one is verified, set the status.
   // Return true if the ipm should terminate. When infeasibility is suspected,
   // the current point is saved in prev_point_, used to compute the candidates
   // at the next suspicious iteration.
   // ===================================================================================
-  shouldTerminate handleInfeasible(bool stagnation);
+  shouldTerminate handleInfeasible(const IterationReport& report);
 
   // ===================================================================================
   // Check the termination criterion:

@@ -203,7 +203,7 @@ _hipo_srcs = [
     'ipm/hipo/ipm/Recovery.cpp',
     'ipm/hipo/ipm/Refine.cpp',
     'ipm/hipo/ipm/Solver.cpp',
-    'ipm/hipo/ipm/StagnationTests.cpp',
+    'ipm/hipo/ipm/Diagnostics.cpp',
     'ipm/hipo/ipm/UpLookingSolver.cpp',
     'ipm/hipo/factorhighs/Analyse.cpp',
     'ipm/hipo/factorhighs/CallAndTimeBlas.cpp',

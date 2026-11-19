@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "StagnationTests.h"
+#include "IterationReport.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
@@ -18,31 +18,31 @@ enum class RecoveryAction {
 // Keeps track of the actions taken to recover from stagnation, and decides
 // which action to take next.
 struct Recovery {
-  // An action that was applied, for which cause and at which iteration.
+  // An action that was applied, for which issue and at which iteration.
   struct Record {
     RecoveryAction action;
-    StagnationCause cause;
+    IssueType issue;
     Int iter;
   };
 
   std::vector<Record> records;
 
   // ===================================================================================
-  // Decide the action to take, given the latest stagnation report.
+  // Decide the action to take, given the report of the latest iteration.
   // ===================================================================================
-  RecoveryAction nextAction(const StagnationReport& report) const;
+  RecoveryAction nextAction(const IterationReport& report) const;
 
   // ===================================================================================
-  // Record that action was applied, because of the stagnation described by
+  // Record that action was applied, because of the main stagnation issue in
   // report.
   // ===================================================================================
-  void applied(RecoveryAction action, const StagnationReport& report);
+  void applied(RecoveryAction action, const IterationReport& report);
 
   // ===================================================================================
-  // Check if action was ever applied, for any cause or for a specific cause.
+  // Check if action was ever applied, for any issue or for a specific issue.
   // ===================================================================================
   bool tried(RecoveryAction action) const;
-  bool tried(RecoveryAction action, StagnationCause cause) const;
+  bool tried(RecoveryAction action, IssueType issue) const;
 };
 
 }  // namespace hipo

@@ -1,4 +1,4 @@
-#include "StagnationTests.h"
+#include "Diagnostics.h"
 
 #include <algorithm>
 #include <cmath>
@@ -11,66 +11,74 @@
 
 namespace hipo {
 
-StagnationTests::StagnationTests(const Model& model_input)
-    : model{model_input} {}
+Diagnostics::Diagnostics(const Model& model_input) : model{model_input} {}
 
-StagnationReport StagnationTests::stagnation(const Iterate& it, Int iter,
-                                             double feas_tol, double opt_tol,
-                                             double crossover_tol,
-                                             std::stringstream& log_stream) {
+void Diagnostics::stagnation(const Iterate& it, Int iter, double feas_tol,
+                             double opt_tol, double crossover_tol,
+                             IterationReport& report,
+                             std::stringstream& log_stream) {
   // record of the last iteration; the empty record has zero stepsizes
   const IterationRecord empty_record{};
   const IterationRecord& record =
       it.history.records.empty() ? empty_record : it.history.records.back();
 
-  StagnationReport report;
-  report.iter = iter;
-  report.bw_error = record.bw_error;
-
+  bool large_increase = false;
   const bool reduction_ok =
-      residualReductionTest(it, record, feas_tol, report, log_stream);
+      residualReductionTest(it, record, feas_tol, large_increase, log_stream);
 
   // record the outcome in the history of the last kBadResWindow iterations,
   // and count the failures
   const Int window_mask = (Int{1} << kBadResWindow) - 1;
   bad_res_history =
       ((bad_res_history << 1) | (reduction_ok ? 0 : 1)) & window_mask;
-  for (Int h = bad_res_history; h != 0; h >>= 1) report.bad_res_count += h & 1;
+  Int bad_res_count = 0;
+  for (Int h = bad_res_history; h != 0; h >>= 1) bad_res_count += h & 1;
 
-  const bool bad_residuals = report.bad_res_count >= kBadResMaxIter;
+  const bool bad_residuals = bad_res_count >= kBadResMaxIter;
   if (bad_residuals) {
-    log_stream << "Bad reduction of residuals in " << report.bad_res_count
+    log_stream << "Bad reduction of residuals in " << bad_res_count
                << " of the last " << kBadResWindow << " iterations\n";
   }
 
-  if (report.large_increase) {
+  if (large_increase) {
     log_stream << "Residuals increased by more than a factor "
                << sci(kResReductionLargeIncrease, 0, 1) << "\n";
   }
 
-  progressTest(it, iter, feas_tol, opt_tol, crossover_tol, report, log_stream);
+  bool no_window_progress = false;
+  bool no_best_progress = false;
+  progressTest(it, iter, feas_tol, opt_tol, crossover_tol, no_window_progress,
+               no_best_progress, log_stream);
 
-  if (bad_residuals || report.large_increase)
-    report.cause = StagnationCause::kNumerical;
-  else if (report.no_window_progress)
-    report.cause = StagnationCause::kNoProgress;
-  else if (report.no_best_progress)
-    report.cause = StagnationCause::kOscillation;
-
-  report.stagnation = report.cause != StagnationCause::kNone;
-
-  return report;
+  if (bad_residuals) report.add(IssueType::kBadResReduction);
+  if (large_increase) report.add(IssueType::kLargeResIncrease);
+  if (no_window_progress) report.add(IssueType::kNoProgress);
+  if (no_best_progress) report.add(IssueType::kOscillation);
 }
 
-bool StagnationTests::residualReductionTest(
-    const Iterate& it, const IterationRecord& record, double feas_tol,
-    StagnationReport& report, std::stringstream& log_stream) const {
+void Diagnostics::divergence(const Iterate& it, Int iter,
+                             IterationReport& report) const {
+  const bool mu_is_large =
+      it.best_mu > 0.0 ? it.mu > it.best_mu * kDivergeTol : false;
+  const bool pobj_is_very_large =
+      it.pobj < -std::max(std::abs(it.dobj) * kDivergeTol * kDivergeTol, 1.0);
+  const bool dobj_is_very_large =
+      it.dobj > std::max(std::abs(it.pobj) * kDivergeTol * kDivergeTol, 1.0);
+  const bool objective_diverging =
+      iter > 5 && (pobj_is_very_large || dobj_is_very_large);
+
+  if (mu_is_large || objective_diverging) report.add(IssueType::kDivergence);
+}
+
+bool Diagnostics::residualReductionTest(const Iterate& it,
+                                        const IterationRecord& record,
+                                        double feas_tol, bool& large_increase,
+                                        std::stringstream& log_stream) const {
   const double alpha_primal = record.alpha_primal;
   const double alpha_dual = record.alpha_dual;
   const double* res_norm_old = record.res_norm_before;
 
-  report.large_increase = false;
-  report.bad_res_blocks = 0;
+  large_increase = false;
 
   // below these values, the residuals are small enough that their reduction is
   // not needed
@@ -135,7 +143,6 @@ bool StagnationTests::residualReductionTest(
 
     if (res_norm_new[k] > thresh) {
       passed = false;
-      report.bad_res_blocks |= Int{1} << k;
       log_stream << "Bad reduction of residual " << k + 1 << ", old "
                  << sci(res_norm_old[k], 0, 1) << ", new "
                  << sci(res_norm_new[k], 0, 1) << ", relaxed prediction "
@@ -144,16 +151,16 @@ bool StagnationTests::residualReductionTest(
     }
 
     if (res_norm_new[k] > kResReductionLargeIncrease * res_norm_old[k])
-      report.large_increase = true;
+      large_increase = true;
   }
 
   return passed;
 }
 
-bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
-                                   double opt_tol, double crossover_tol,
-                                   StagnationReport& report,
-                                   std::stringstream& log_stream) {
+bool Diagnostics::progressTest(const Iterate& it, Int iter, double feas_tol,
+                               double opt_tol, double crossover_tol,
+                               bool& no_window_progress, bool& no_best_progress,
+                               std::stringstream& log_stream) {
   const Int num = kNumProgressQuantities;
   // The progress of the gap is measured with mu. The relative gap saturates at
   // 2 when one objective is much larger than the other, and then does not show
@@ -256,13 +263,13 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
     log_stream << "\n";
   }
 
-  report.no_window_progress = !window_passed;
-  report.no_best_progress = !best_passed;
+  no_window_progress = !window_passed;
+  no_best_progress = !best_passed;
 
   return window_passed && best_passed;
 }
 
-void StagnationTests::clear(Int iter) {
+void Diagnostics::clear(Int iter) {
   bad_res_history = 0;
 
   for (Int k = 0; k < kNumProgressQuantities; ++k) {

@@ -1232,40 +1232,31 @@ shouldTerminate Solver::checkIterate() {
   return terminate;
 }
 
-StagnationReport Solver::checkStagnation() {
+IterationReport Solver::checkIssues() {
   std::stringstream log_stream;
-  StagnationReport report = it_->tests.stagnation(
-      *it_, iter_, options_.feasibility_tol, options_.optimality_tol,
-      options_.crossover_tol, log_stream);
+  IterationReport report;
+  report.iter = iter_;
+  if (iter_ > 0)
+    it_->diagnostics.stagnation(*it_, iter_, options_.feasibility_tol,
+                          options_.optimality_tol, options_.crossover_tol,
+                          report, log_stream);
+  it_->diagnostics.divergence(*it_, iter_, report);
   logger_.printInfo("%s", log_stream.str().c_str());
   return report;
 }
 
 shouldTerminate Solver::checkInfeasibilityOrStagnation() {
-  const StagnationReport report =
-      iter_ > 0 ? checkStagnation() : StagnationReport{};
-  const bool stagnation = report.stagnation;
+  const IterationReport report = checkIssues();
 
-  if (handleInfeasible(stagnation)) return true;
-  if (stagnation) return handleStagnation(report);
+  if (handleInfeasible(report)) return true;
+  if (report.stagnation()) return handleStagnation(report);
   return false;
 }
 
-shouldTerminate Solver::handleInfeasible(bool stagnation) {
-  // Signs of divergence, which suggest that the problem may be infeasible.
-  // Stagnation is also a possible sign of infeasibility.
-  const bool mu_is_large =
-      it_->best_mu > 0.0 ? it_->mu > it_->best_mu * kDivergeTol : false;
-  const bool pobj_is_very_large =
-      it_->pobj <
-      -std::max(std::abs(it_->dobj) * kDivergeTol * kDivergeTol, 1.0);
-  const bool dobj_is_very_large =
-      it_->dobj >
-      std::max(std::abs(it_->pobj) * kDivergeTol * kDivergeTol, 1.0);
-  const bool clearly_infeasible =
-      iter_ > 5 && (pobj_is_very_large || dobj_is_very_large);
+shouldTerminate Solver::handleInfeasible(const IterationReport& report) {
+  // Divergence and stagnation are possible signs of infeasibility.
   const bool suspect_infeasible =
-      stagnation || mu_is_large || clearly_infeasible;
+      report.stagnation() || report.has(IssueType::kDivergence);
 
   // The signs of divergence only trigger the search for a certificate. The
   // status is declared only if the certificate is verified on the original
@@ -1499,7 +1490,7 @@ double Solver::checkDualRay(const HighsSolution& point) const {
   return radius < threshold ? 0.0 : radius;
 }
 
-shouldTerminate Solver::handleStagnation(const StagnationReport& report) {
+shouldTerminate Solver::handleStagnation(const IterationReport& report) {
   RecoveryAction action = recovery_.nextAction(report);
 
   if (action == RecoveryAction::kSwitchFactorisation) {
@@ -1673,7 +1664,7 @@ isSuccess Solver::switchToMultifrontal() {
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
                                   it_->history, logger_));
   LS_->clear();
-  it_->tests.clear(iter_);
+  it_->diagnostics.clear(iter_);
   info_.error = kOk;
   return true;
 }

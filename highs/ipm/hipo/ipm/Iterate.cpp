@@ -35,7 +35,7 @@ Iterate::Iterate(Model& model_input, Info& info_input, Regularisation& r)
       info{info_input},
       delta(model.m(), model.n()),
       regul{r},
-      tests(model) {
+      diagnostics(model) {
   clearIter();
   clearRes();
   clearIres();
