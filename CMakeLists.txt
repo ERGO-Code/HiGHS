@@ -53,6 +53,12 @@ if((GIT) AND(EXISTS ${PROJECT_SOURCE_DIR}/.git))
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
   # string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+  if(DEFINED HIGHS_BUILD_GITHASH)
+    message(STATUS "Ignoring HIGHS_BUILD_GITHASH=${HIGHS_BUILD_GITHASH}: using git describe from ${PROJECT_SOURCE_DIR}/.git")
+  endif()
+elseif(NOT "${HIGHS_BUILD_GITHASH}" STREQUAL "")
+  # Source archives have no .git, so packagers can pass the revision in
+  set(GITHASH "${HIGHS_BUILD_GITHASH}")
 else()
   set(GITHASH "n/a")
 endif()
