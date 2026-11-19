@@ -83,7 +83,7 @@ via the Symbolic object, S.iperm().
 namespace hipo {
 
 class FHsolver {
-  const Logger* logger_;
+  const Logger* logger_ = nullptr;
   DataCollector data_;
   Numeric N_;
   CliqueStack serial_stack_;
