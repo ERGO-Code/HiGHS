@@ -7,31 +7,25 @@ namespace hipo {
 void Solver::refine(NewtonDir& delta) {
   Clock clock;
 
-  // measure of the error of the solve, selected by it_->refine_method
-  const bool componentwise = it_->refine_method == RefineMethod::kComponentwise;
-  const double tol =
-      componentwise ? kRefineTolComponentwise : kRefineTolBlockwise;
-  auto computeError = [&](const NewtonDir& d) {
-    return componentwise ? computeComponentwiseError(d)
-                         : computeBlockwiseError(d);
-  };
+  // Refinement is driven by the blockwise error; the componentwise error of
+  // the final direction is computed at the end, as a check.
 
   NewtonDir correction(m_, n_);
   NewtonDir temp(m_, n_);
 
   // compute the residuals of the linear system in it_->ires
   clock.start();
-  it_->residuals6x6(delta, componentwise);
+  it_->residuals6x6(delta, false);
   info_.times[kRefinementResTime] += clock.stop();
 
   clock.start();
-  double error = computeError(delta);
+  double error = computeBlockwiseError(delta);
   info_.times[kRefinementErrorTime] += clock.stop();
 
   double old_error{};
 
   for (Int iter = 0; iter < kRefineMaxIter; ++iter) {
-    if (error < tol) break;
+    if (error < kRefineTol) break;
 
     correction.clear();
     solve6x6(correction, it_->ires);
@@ -40,13 +34,13 @@ void Solver::refine(NewtonDir& delta) {
     temp.add(correction);
 
     clock.start();
-    it_->residuals6x6(temp, componentwise);
+    it_->residuals6x6(temp, false);
     info_.times[kRefinementResTime] += clock.stop();
 
     old_error = error;
 
     clock.start();
-    error = computeError(temp);
+    error = computeBlockwiseError(temp);
     info_.times[kRefinementErrorTime] += clock.stop();
 
     // accept the correction if the error decreased
@@ -61,23 +55,19 @@ void Solver::refine(NewtonDir& delta) {
     if (error > kRefineMinDecrease * old_error) break;
   }
 
-  // Componentwise error of the final direction, as a check. The residuals in
-  // it_->ires may belong to a rejected correction, so they are recomputed.
-  double cw_error = error;
-  if (!componentwise) {
-    clock.start();
-    it_->residuals6x6(delta, true);
-    info_.times[kRefinementResTime] += clock.stop();
-    clock.start();
-    cw_error = computeComponentwiseError(delta);
-    info_.times[kRefinementErrorTime] += clock.stop();
-  }
+  // The residuals in it_->ires may belong to a rejected correction, so they
+  // are recomputed for the final direction, with |6x6 matrix| * |delta|.
+  clock.start();
+  it_->residuals6x6(delta, true);
+  info_.times[kRefinementResTime] += clock.stop();
+  clock.start();
+  const double cw_error = computeComponentwiseError(delta);
+  info_.times[kRefinementErrorTime] += clock.stop();
 
   // save worst errors seen in this ipm iteration
-  it_->history.back().refinement_error =
-      std::max(it_->history.back().refinement_error, error);
-  it_->history.back().componentwise_error =
-      std::max(it_->history.back().componentwise_error, cw_error);
+  IterationRecord& record = it_->history.back();
+  record.bw_error = std::max(record.bw_error, error);
+  record.cw_error = std::max(record.cw_error, cw_error);
 }
 
 static double safeRatio(double num, double den) {

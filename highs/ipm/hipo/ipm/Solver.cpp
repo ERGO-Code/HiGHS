@@ -1686,7 +1686,7 @@ void Solver::printHeader() const {
     if (logger_.debug(1)) {
       logger_.print(" %13s %13s %5s %5s %5s %17s %8s %8s %27s %9s", "alpha p/d",
                     "sigma af/co", "cor", "solv", "fact", "static reg p/d",
-                    "minT", "maxT", "(xj * zj / mu)_range_&_num", "ref_err");
+                    "minT", "maxT", "(xj * zj / mu)_range_&_num", "bw_err");
       logger_.print(" %9s %17s %26s %11s %13s", "cw_err", "piv dyn/sgn/dom",
                     "|piv| min/max, max reg", "2x2/inert", "free/absorbed");
     }
@@ -1718,9 +1718,9 @@ void Solver::printOutput(bool reset) const {
             .front(),
         regul_.primal, regul_.dual, record.min_theta, record.max_theta,
         record.min_prod, record.max_prod, record.num_small_prod,
-        record.num_large_prod, record.refinement_error);
+        record.num_large_prod, record.bw_error);
     logger_.print(" %9.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d",
-                  record.componentwise_error, (int)record.num_dynamic_reg,
+                  record.cw_error, (int)record.num_dynamic_reg,
                   (int)record.num_wrong_sign, (int)record.num_reg_dominated,
                   record.min_pivot, record.max_pivot, record.max_reg,
                   (int)record.num_2x2, (int)record.wrong_inertia,

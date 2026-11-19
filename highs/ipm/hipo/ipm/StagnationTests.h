@@ -32,9 +32,9 @@ struct StagnationReport {
   Int bad_res_blocks = 0;  // bit k set if residual k+1 failed at this iter
   bool large_increase = false;
 
-  // largest backward error of the linear solves in the last iteration, to
-  // distinguish failures of the linear solver from other causes
-  double refinement_error = 0.0;
+  // largest blockwise backward error of the linear solves in the last
+  // iteration, to distinguish failures of the linear solver from other causes
+  double bw_error = 0.0;
 
   // progress test
   bool no_window_progress = false;

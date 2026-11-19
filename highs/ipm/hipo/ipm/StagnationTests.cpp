@@ -25,7 +25,7 @@ StagnationReport StagnationTests::stagnation(const Iterate& it, Int iter,
 
   StagnationReport report;
   report.iter = iter;
-  report.refinement_error = record.refinement_error;
+  report.bw_error = record.bw_error;
 
   const bool reduction_ok =
       residualReductionTest(it, record, feas_tol, report, log_stream);

@@ -21,11 +21,10 @@ struct IterationRecord {
   double max_prod = 0.0;
   Int num_small_prod = 0;
   Int num_large_prod = 0;
-  double refinement_error = 0.0;
   Int factorisation_used = 0;
 
-  // worst componentwise backward error of the solves, after refinement
-  double componentwise_error = 0.0;
+  double bw_error = 0.0;
+  double cw_error = 0.0;
 
   // pivots of the last factorisation (2x2 pivots excluded)
   Int num_dynamic_reg = 0;    // perturbed beyond the static regularisation
