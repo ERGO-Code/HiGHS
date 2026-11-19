@@ -77,6 +77,15 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   endif()
 endif()
 
+# GCC and Clang contract multiplications and additions into fused
+# multiply-adds when the target supports them (e.g. gcc 15 enables FMA by
+# default on some x86-64 platforms), which breaks the error terms in
+# HighsCDouble. GCC ignores "#pragma STDC FP_CONTRACT OFF", so the flag is
+# required.
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
+endif()
+
 # MSVC
 # set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
