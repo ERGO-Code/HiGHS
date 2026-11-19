@@ -14,20 +14,21 @@ namespace hipo {
 StagnationTests::StagnationTests(const Model& model_input)
     : model{model_input} {}
 
-StagnationReport StagnationTests::stagnation(const Iterate& it,
-                                             double alpha_primal,
-                                             double alpha_dual, Int iter,
+StagnationReport StagnationTests::stagnation(const Iterate& it, Int iter,
                                              double feas_tol, double opt_tol,
                                              double crossover_tol,
                                              std::stringstream& log_stream) {
+  // record of the last iteration; the empty record has zero stepsizes
+  const IterationRecord empty_record{};
+  const IterationRecord& record =
+      it.history.records.empty() ? empty_record : it.history.records.back();
+
   StagnationReport report;
   report.iter = iter;
-  report.refinement_error = it.history.records.empty()
-                                ? 0.0
-                                : it.history.records.back().refinement_error;
+  report.refinement_error = record.refinement_error;
 
-  const bool reduction_ok = residualReductionTest(it, alpha_primal, alpha_dual,
-                                                  feas_tol, report, log_stream);
+  const bool reduction_ok =
+      residualReductionTest(it, record, feas_tol, report, log_stream);
 
   // record the outcome in the history of the last kBadResWindow iterations,
   // and count the failures
@@ -61,16 +62,13 @@ StagnationReport StagnationTests::stagnation(const Iterate& it,
   return report;
 }
 
-void StagnationTests::saveResidualNorms(const Iterate& it) {
-  res_norm_old[0] = infNorm(it.res.r1);
-  res_norm_old[1] = infNorm(it.res.r2);
-  res_norm_old[2] = infNorm(it.res.r3);
-  res_norm_old[3] = infNorm(it.res.r4);
-}
-
 bool StagnationTests::residualReductionTest(
-    const Iterate& it, double alpha_primal, double alpha_dual, double feas_tol,
+    const Iterate& it, const IterationRecord& record, double feas_tol,
     StagnationReport& report, std::stringstream& log_stream) const {
+  const double alpha_primal = record.alpha_primal;
+  const double alpha_dual = record.alpha_dual;
+  const double* res_norm_old = record.res_norm_before;
+
   report.large_increase = false;
   report.bad_res_blocks = 0;
 
@@ -101,8 +99,8 @@ bool StagnationTests::residualReductionTest(
   double floor[4];
   for (Int k = 0; k < 4; ++k)
     floor[k] = std::max(tol[k], kResReductionNoiseFactor * eps * noise[k]);
-  double res_norm_new[4] = {infNorm(it.res.r1), infNorm(it.res.r2),
-                            infNorm(it.res.r3), infNorm(it.res.r4)};
+  double res_norm_new[4] = {record.res_norm_after[0], record.res_norm_after[1],
+                            record.res_norm_after[2], record.res_norm_after[3]};
 
   // For QPs, r4 depends also on x, so after the step
   //  r4_new = (1 - alpha_dual) * r4_old
@@ -266,10 +264,6 @@ bool StagnationTests::progressTest(const Iterate& it, Int iter, double feas_tol,
 
 void StagnationTests::clear(Int iter) {
   bad_res_history = 0;
-
-  // with zero old norms, the residual reduction test is skipped until the
-  // norms are saved again
-  for (Int k = 0; k < 4; ++k) res_norm_old[k] = 0.0;
 
   for (Int k = 0; k < kNumProgressQuantities; ++k) {
     progress_history[k].clear();

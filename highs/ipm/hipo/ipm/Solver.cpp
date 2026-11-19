@@ -258,7 +258,6 @@ isFailure Solver::predictor() {
 
   sigmaAffine();
   it_->residual56(sigma_);
-  it_->tests.saveResidualNorms(*it_);
   residualNorms(it_->history.back().res_norm_before);
 
   if (solveNewtonSystem(it_->delta)) return true;
@@ -1236,8 +1235,8 @@ shouldTerminate Solver::checkIterate() {
 StagnationReport Solver::checkStagnation() {
   std::stringstream log_stream;
   StagnationReport report = it_->tests.stagnation(
-      *it_, alpha_primal_, alpha_dual_, iter_, options_.feasibility_tol,
-      options_.optimality_tol, options_.crossover_tol, log_stream);
+      *it_, iter_, options_.feasibility_tol, options_.optimality_tol,
+      options_.crossover_tol, log_stream);
   logger_.printInfo("%s", log_stream.str().c_str());
   return report;
 }

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 
+#include "IterationHistory.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
@@ -43,9 +44,6 @@ struct StagnationReport {
 struct StagnationTests {
   const Model& model;
 
-  // data for residual reduction test
-  double res_norm_old[4]{};
-
   // outcome of the residual reduction test in the last kBadResWindow
   // iterations: bit i is set if the test failed i iterations ago
   Int bad_res_history{};
@@ -76,30 +74,23 @@ struct StagnationTests {
   // of stagnation.
   // Must be called after the step, while it.delta still holds the direction.
   // ===================================================================================
-  StagnationReport stagnation(const Iterate& it, double alpha_primal,
-                              double alpha_dual, Int iter, double feas_tol,
+  StagnationReport stagnation(const Iterate& it, Int iter, double feas_tol,
                               double opt_tol, double crossover_tol,
                               std::stringstream& log_stream);
-
-  // ===================================================================================
-  // Save the norms of residuals 1,2,3,4 used as rhs of the Newton system, to be
-  // used by residualReductionTest. Must be called before the correctors
-  // overwrite the residuals.
-  // ===================================================================================
-  void saveResidualNorms(const Iterate& it);
 
   // ===================================================================================
   // Check that the step reduced the residuals by at least a fraction of what
   // the stepsizes predict:
   //  ||rk_new|| <= max( (1 - eta * alpha) * ||rk_old||, floor )
-  // with alpha_primal for k=1,2,3 and alpha_dual for k=4.
+  // with alpha_primal for k=1,2,3 and alpha_dual for k=4. Stepsizes and norms
+  // before and after the step are taken from record; an iteration abandoned
+  // before the step has zero stepsizes and is skipped.
   // In report, sets bad_res_blocks, and large_increase if a residual increased
   // by more than a factor kResReductionLargeIncrease.
   // Must be called after the step, while it.delta still holds the direction.
   // ===================================================================================
-  bool residualReductionTest(const Iterate& it, double alpha_primal,
-                             double alpha_dual, double feas_tol,
-                             StagnationReport& report,
+  bool residualReductionTest(const Iterate& it, const IterationRecord& record,
+                             double feas_tol, StagnationReport& report,
                              std::stringstream& log_stream) const;
 
   // ===================================================================================
