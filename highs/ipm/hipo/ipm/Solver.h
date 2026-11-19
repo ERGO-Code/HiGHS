@@ -299,16 +299,17 @@ class Solver {
   shouldTerminate checkIterate();
 
   // ===================================================================================
-  // Run the detectors and return the issues found at this iteration. The
-  // stagnation tests run only after the first iteration.
+  // Run the detectors at the end of an iteration, on its iterate and record,
+  // and store the issues and messages in the record. The stagnation and
+  // numerical tests run only after the first iteration.
   // ===================================================================================
-  IterationReport checkIssues();
+  void runDiagnostics();
 
   // ===================================================================================
   // Check for reasons to stop other than optimality: a verified certificate of
   // primal or dual infeasibility (see handleInfeasible), or stagnation that the
-  // recovery actions cannot resolve (see handleStagnation). Return true if the
-  // ipm should terminate.
+  // recovery actions cannot resolve (see handleStagnation), using the report
+  // stored by runDiagnostics. Return true if the ipm should terminate.
   // ===================================================================================
   shouldTerminate checkInfeasibilityOrStagnation();
 
@@ -379,6 +380,7 @@ class Solver {
   void printInfo() const;
   void printHeader() const;
   void printOutput(bool reset = false) const;
+  void printDiagnostics() const;
   void printSummary() const;
 
   void resetOptions();

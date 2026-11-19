@@ -1,8 +1,10 @@
 #ifndef HIPO_ITERATION_HISTORY_H
 #define HIPO_ITERATION_HISTORY_H
 
+#include <string>
 #include <vector>
 
+#include "IterationReport.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
@@ -43,6 +45,11 @@ struct IterationRecord {
 
   Int num_near_free = 0;
   Int num_absorbed_rows = 0;
+
+  // issues detected at the end of the iteration, and the detectors' messages,
+  // one per line
+  IterationReport report;
+  std::string messages;
 };
 
 struct IterationHistory {

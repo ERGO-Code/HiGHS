@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <string>
 #include <vector>
 
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -34,6 +35,44 @@ inline bool isStagnation(IssueType type) {
   return type <= IssueType::kOscillation;
 }
 
+// One-letter code of each issue, for the log.
+inline char issueCode(IssueType type) {
+  switch (type) {
+    case IssueType::kBadResReduction:
+      return 'R';
+    case IssueType::kLargeResIncrease:
+      return 'L';
+    case IssueType::kNoProgress:
+      return 'P';
+    case IssueType::kOscillation:
+      return 'O';
+    case IssueType::kDivergence:
+      return 'V';
+    case IssueType::kInaccurateSolve:
+      return 'i';
+    case IssueType::kVeryInaccurateSolve:
+      return 'I';
+    case IssueType::kWrongInertia:
+      return 'W';
+    case IssueType::kDynamicReg:
+      return 'G';
+    case IssueType::kAbsorbedRows:
+      return 'A';
+    case IssueType::kManyNearFree:
+      return 'F';
+  }
+  return '?';
+}
+
+// Meaning of the codes, for the log.
+inline const char* issueCodesLegend() {
+  return "R bad residual reduction, L large residual increase, P no progress, "
+         "O oscillation, V divergence,\n"
+         "i/I (very) inaccurate solve, W wrong inertia, G dynamic "
+         "regularisation, A absorbed rows,\n"
+         "F many nearly free columns\n";
+}
+
 // Issues detected at one iteration.
 struct IterationReport {
   Int iter = 0;
@@ -47,6 +86,13 @@ struct IterationReport {
 
   bool stagnation() const {
     return std::any_of(issues.begin(), issues.end(), isStagnation);
+  }
+
+  // codes of the issues, in the order they were detected
+  std::string codes() const {
+    std::string s;
+    for (IssueType type : issues) s += issueCode(type);
+    return s;
   }
 
   // stagnation issue with the highest priority; requires stagnation()

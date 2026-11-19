@@ -162,6 +162,7 @@ void Solver::doSolve() {
   printInfo();
 
   runIpm();
+  printDiagnostics();
   if (errorOrInterrupt()) return;
 
   runIpx();
@@ -182,6 +183,7 @@ void Solver::runIpm() {
       break;
     }
     makeStep();
+    runDiagnostics();
     printOutput();
   }
 }
@@ -208,6 +210,7 @@ isFailure Solver::initialise() {
   it_->computeMu();
   it_->indicators();
 
+  runDiagnostics();
   printOutput();
 
   if (checkInterrupt()) return true;
@@ -1232,23 +1235,29 @@ shouldTerminate Solver::checkIterate() {
   return terminate;
 }
 
-IterationReport Solver::checkIssues() {
+void Solver::runDiagnostics() {
+  // needed by the progress test; also computed in prepareIter, for termination
+  it_->computeInfeasDrop(crossoverIsOn(), options_.feasibility_tol,
+                         options_.optimality_tol);
+
+  IterationRecord& record = it_->history.back();
+  record.report = IterationReport{};
+  record.report.iter = iter_;
+
   std::stringstream log_stream;
-  IterationReport report;
-  report.iter = iter_;
   if (iter_ > 0) {
     it_->diagnostics.stagnation(*it_, iter_, options_.feasibility_tol,
                                 options_.optimality_tol, options_.crossover_tol,
-                                report, log_stream);
-    it_->diagnostics.numerical(*it_, report, log_stream);
+                                record.report, log_stream);
+    it_->diagnostics.numerical(*it_, record.report, log_stream);
   }
-  it_->diagnostics.divergence(*it_, iter_, report);
-  logger_.printInfo("%s", log_stream.str().c_str());
-  return report;
+  it_->diagnostics.divergence(*it_, iter_, record.report);
+
+  record.messages = log_stream.str();
 }
 
 shouldTerminate Solver::checkInfeasibilityOrStagnation() {
-  const IterationReport report = checkIssues();
+  const IterationReport report = it_->history.back().report;
 
   if (handleInfeasible(report)) return true;
   if (report.stagnation()) return handleStagnation(report);
@@ -1682,6 +1691,7 @@ void Solver::printHeader() const {
                     "minT", "maxT", "(xj * zj / mu)_range_&_num", "bw_err");
       logger_.print(" %9s %17s %26s %11s %13s", "cw_err", "piv dyn/sgn/dom",
                     "|piv| min/max, max reg", "2x2/inert", "free/absorbed");
+      logger_.print(" %s", "issues");
     }
     logger_.print("\n");
   }
@@ -1718,8 +1728,52 @@ void Solver::printOutput(bool reset) const {
                   record.min_pivot, record.max_pivot, record.max_reg,
                   (int)record.num_2x2, (int)record.wrong_inertia,
                   (int)record.num_near_free, (int)record.num_absorbed_rows);
+    logger_.print(" %s", record.report.codes().c_str());
   }
   logger_.print("\n");
+}
+
+void Solver::printDiagnostics() const {
+  // Print the messages stored by runDiagnostics, for each iteration that has
+  // any, as
+  //    iter  codes   first message
+  //                  second message
+  if (!it_) return;
+
+  std::stringstream log_stream;
+  bool header_printed = false;
+
+  for (const IterationRecord& record : it_->history.records) {
+    const std::string& messages = record.messages;
+    if (messages.empty()) continue;
+
+    if (!header_printed) {
+      log_stream << "\nDiagnostics, issue codes:\n" << issueCodesLegend()
+                 << " iter  issues  messages\n";
+      header_printed = true;
+    }
+
+    // iteration and issue codes before the first message, blanks before the
+    // others, so that the messages are aligned
+    std::string codes = record.report.codes();
+    if (codes.size() < 6) codes.resize(6, ' ');
+    const std::string first_prefix =
+        integer(record.report.iter, 5) + "  " + codes + "  ";
+    const std::string other_prefix(first_prefix.size(), ' ');
+
+    // messages are separated by newlines
+    size_t start = 0;
+    while (start < messages.size()) {
+      size_t end = messages.find('\n', start);
+      if (end == std::string::npos) end = messages.size();
+      log_stream << (start == 0 ? first_prefix : other_prefix);
+      log_stream.write(messages.data() + start, end - start);
+      log_stream << '\n';
+      start = end + 1;
+    }
+  }
+
+  if (header_printed) logger_.printInfo("%s", log_stream.str().c_str());
 }
 
 void Solver::printInfo() const {
