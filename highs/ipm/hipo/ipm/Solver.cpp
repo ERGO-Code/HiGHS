@@ -195,8 +195,8 @@ isFailure Solver::initialise() {
 
   if (initialiseLinearSolver()) return true;
 
-  it_->data.append();
-  it_->data.back().factorisation_used = LS_->type();
+  it_->history.append();
+  it_->history.back().factorisation_used = LS_->type();
 
   if (checkInterrupt()) return true;
 
@@ -242,8 +242,8 @@ shouldTerminate Solver::prepareIter() {
 
   LS_->clear();
 
-  it_->data.append();
-  it_->data.back().factorisation_used = LS_->type();
+  it_->history.append();
+  it_->history.back().factorisation_used = LS_->type();
 
   it_->computeScaling();
 
@@ -259,7 +259,7 @@ isFailure Solver::predictor() {
   sigmaAffine();
   it_->residual56(sigma_);
   it_->tests.saveResidualNorms(*it_);
-  residualNorms(it_->data.back().res_norm_before);
+  residualNorms(it_->history.back().res_norm_before);
 
   if (solveNewtonSystem(it_->delta)) return true;
 
@@ -529,7 +529,7 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) {
 }
 
 void Solver::recordFactorisationSignals() {
-  IpmIterData& data = it_->data.back();
+  IterationRecord& record = it_->history.back();
   const double eps = std::numeric_limits<double>::epsilon();
 
   FactorInfo info;
@@ -539,29 +539,29 @@ void Solver::recordFactorisationSignals() {
 
   // 2x2 pivots and inertia: n negative pivots for the augmented system, none
   // for the normal equations
-  data.num_2x2 = info.num_2x2;
+  record.num_2x2 = info.num_2x2;
   const Int expected_neg = options_.nla == kHipoNormalEqString ? 0 : n_;
-  data.wrong_inertia = std::abs(info.num_neg - expected_neg) + info.num_zero;
+  record.wrong_inertia = std::abs(info.num_neg - expected_neg) + info.num_zero;
 
   // pivot statistics, 1x1 pivots only
-  data.num_dynamic_reg = 0;
-  data.num_wrong_sign = 0;
-  data.num_reg_dominated = 0;
-  data.max_reg = 0.0;
-  data.min_pivot = kHighsInf;
-  data.max_pivot = 0.0;
+  record.num_dynamic_reg = 0;
+  record.num_wrong_sign = 0;
+  record.num_reg_dominated = 0;
+  record.max_reg = 0.0;
+  record.min_pivot = kHighsInf;
+  record.max_pivot = 0.0;
 
   auto addPivot = [&](double p, double reg, double static_reg) {
     if (!std::isfinite(p)) return;
     // the computed regularisation is exact up to rounding of the pivot
     if (std::abs(reg - static_reg) >
         1e-6 * static_reg + 1e2 * eps * std::abs(p))
-      ++data.num_dynamic_reg;
-    if (p + reg < 0.0) ++data.num_wrong_sign;
-    if (std::abs(p) < kPivotRegDominatedRatio * reg) ++data.num_reg_dominated;
-    data.max_reg = std::max(data.max_reg, reg);
-    data.min_pivot = std::min(data.min_pivot, std::abs(p + reg));
-    data.max_pivot = std::max(data.max_pivot, std::abs(p + reg));
+      ++record.num_dynamic_reg;
+    if (p + reg < 0.0) ++record.num_wrong_sign;
+    if (std::abs(p) < kPivotRegDominatedRatio * reg) ++record.num_reg_dominated;
+    record.max_reg = std::max(record.max_reg, reg);
+    record.min_pivot = std::min(record.min_pivot, std::abs(p + reg));
+    record.max_pivot = std::max(record.max_pivot, std::abs(p + reg));
   };
 
   for (Int i = 0; i < (Int)Px.size(); ++i)
@@ -571,9 +571,9 @@ void Solver::recordFactorisationSignals() {
 
   // nearly free columns
   const std::vector<double>& theta_inv = it_->scaling;
-  data.num_near_free = 0;
+  record.num_near_free = 0;
   for (Int j = 0; j < n_; ++j)
-    if (theta_inv[j] < kNearFreeRatio * it_->Rp[j]) ++data.num_near_free;
+    if (theta_inv[j] < kNearFreeRatio * it_->Rp[j]) ++record.num_near_free;
 
   // rows with a large residual absorbed by the regularisation
   const HighsSparseMatrix& A = model_.A();
@@ -584,12 +584,12 @@ void Solver::recordFactorisationSignals() {
     for (Int el = A.start_[j]; el < A.start_[j + 1]; ++el)
       diag[A.index_[el]] += A.value_[el] * A.value_[el] / denom;
   }
-  data.num_absorbed_rows = 0;
+  record.num_absorbed_rows = 0;
   for (Int i = 0; i < m_; ++i) {
     const double tol =
         options_.feasibility_tol * (1.0 + std::abs(model_.b()[i]));
     if (diag[i] < it_->Rd[i] && std::abs(it_->res.r1[i]) > tol)
-      ++data.num_absorbed_rows;
+      ++record.num_absorbed_rows;
   }
 }
 
@@ -747,10 +747,10 @@ void Solver::makeStep() {
   it_->computeMu();
   it_->indicators();
 
-  IpmIterData& data = it_->data.back();
-  data.alpha_primal = alpha_primal_;
-  data.alpha_dual = alpha_dual_;
-  residualNorms(data.res_norm_after);
+  IterationRecord& record = it_->history.back();
+  record.alpha_primal = alpha_primal_;
+  record.alpha_dual = alpha_dual_;
+  residualNorms(record.res_norm_after);
 
   info_.times[kStepTime] += clock.stop();
 }
@@ -982,13 +982,13 @@ void Solver::sigmaAffine() {
       std::min(alpha_primal_, alpha_dual_) < kSigmaAffineSmallStep;
   sigma_ = small_steps ? sigmaFromStepsizes() : kSigmaAffine;
 
-  it_->data.back().sigma_aff = sigma_;
+  it_->history.back().sigma_aff = sigma_;
 }
 
 void Solver::sigmaCorrectors() {
   sigma_ = sigmaFromStepsizes();
 
-  it_->data.back().sigma = sigma_;
+  it_->history.back().sigma = sigma_;
 }
 
 double Solver::sigmaFromStepsizes() const {
@@ -1152,7 +1152,7 @@ isFailure Solver::centralityCorrectors() {
     // else, keep computing correctors
   }
 
-  it_->data.back().correctors = cor;
+  it_->history.back().correctors = cor;
 
   return false;
 }
@@ -1633,7 +1633,7 @@ void Solver::resetToBestIter(Int iter, bool print) {
 
 isFailure Solver::initialiseLinearSolver() {
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                  it_->data, logger_));
+                                  it_->history, logger_));
   info_.error = LS_->setup();
   if (info_.error) return true;
 
@@ -1659,7 +1659,7 @@ isFailure Solver::initialiseLinearSolver() {
     do_switch = should_switch_to_uplooking;
 
   if (do_switch) {
-    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_));
+    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->history, regul_, model_));
     LS_->setup();
     LS_->clear();
   }
@@ -1672,7 +1672,7 @@ isSuccess Solver::switchToMultifrontal() {
     return false;
 
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                  it_->data, logger_));
+                                  it_->history, logger_));
   LS_->clear();
   it_->tests.clear(iter_);
   info_.error = kOk;
@@ -1709,23 +1709,23 @@ void Solver::printOutput(bool reset) const {
                 it_->pinf, it_->dinf, it_->pdgap);
   if (!options_.timeless_log) logger_.print(" %7.1f", control_.elapsed());
   if (logger_.debug(1) && !reset) {
-    const IpmIterData& data = it_->data.back();
+    const IterationRecord& record = it_->history.back();
     logger_.print(
         " %6.2f %6.2f %6.2f %6.2f %5d %5d %5c %8.1e %8.1e %8.1e %8.1e %8.1e "
         "%8.1e %4d %4d %9.1e",
-        alpha_primal_, alpha_dual_, data.sigma_aff, data.sigma, data.correctors,
-        data.num_solves,
-        LinearSolverTypeToString((LinearSolverType)data.factorisation_used)
+        alpha_primal_, alpha_dual_, record.sigma_aff, record.sigma,
+        record.correctors, record.num_solves,
+        LinearSolverTypeToString((LinearSolverType)record.factorisation_used)
             .front(),
-        regul_.primal, regul_.dual, data.min_theta, data.max_theta,
-        data.min_prod, data.max_prod, data.num_small_prod, data.num_large_prod,
-        data.refinement_error);
+        regul_.primal, regul_.dual, record.min_theta, record.max_theta,
+        record.min_prod, record.max_prod, record.num_small_prod,
+        record.num_large_prod, record.refinement_error);
     logger_.print(" %9.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d",
-                  data.componentwise_error, (int)data.num_dynamic_reg,
-                  (int)data.num_wrong_sign, (int)data.num_reg_dominated,
-                  data.min_pivot, data.max_pivot, data.max_reg,
-                  (int)data.num_2x2, (int)data.wrong_inertia,
-                  (int)data.num_near_free, (int)data.num_absorbed_rows);
+                  record.componentwise_error, (int)record.num_dynamic_reg,
+                  (int)record.num_wrong_sign, (int)record.num_reg_dominated,
+                  record.min_pivot, record.max_pivot, record.max_reg,
+                  (int)record.num_2x2, (int)record.wrong_inertia,
+                  (int)record.num_near_free, (int)record.num_absorbed_rows);
   }
   logger_.print("\n");
 }

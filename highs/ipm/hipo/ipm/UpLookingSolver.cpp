@@ -7,7 +7,8 @@
 
 namespace hipo {
 
-UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
+UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info,
+                                 IterationHistory& history,
                                  const Regularisation& regul,
                                  const Model& model)
     : kkt_{kkt},
@@ -16,7 +17,7 @@ UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
       val_{kkt_.isNE() ? kkt_.valNE : kkt_.valAS},
       n_{static_cast<Int>(ptr_.size() - 1)},
       info_{info},
-      data_{data},
+      history_{history},
       regul_{regul},
       model_{model} {}
 
@@ -268,7 +269,7 @@ Int UpLookingSolver::solveAS(const std::vector<double>& rhs_x,
   permuteVector(as_buffer_, kkt_.iperm());
   info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
-  data_.back().num_solves++;
+  history_.back().num_solves++;
 
   clock.start();
   lhs_x.assign(as_buffer_.begin(), as_buffer_.begin() + n);
@@ -288,7 +289,7 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
   permuteVector(lhs, kkt_.iperm());
   info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
-  data_.back().num_solves++;
+  history_.back().num_solves++;
 
   return kOk;
 }

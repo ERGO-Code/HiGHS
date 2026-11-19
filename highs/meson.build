@@ -193,7 +193,7 @@ _ipx_srcs = [
 ]
 
 _hipo_srcs = [
-    'ipm/hipo/ipm/IpmData.cpp',
+    'ipm/hipo/ipm/IterationHistory.cpp',
     'ipm/hipo/ipm/FactorHighsSolver.cpp',
     'ipm/hipo/ipm/Control.cpp',
     'ipm/hipo/ipm/Iterate.cpp',

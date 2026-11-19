@@ -190,7 +190,7 @@ class Solver {
   double computeBlockwiseError(const NewtonDir& delta) const;
 
   // ===================================================================================
-  // Signals collected in it_->data, to detect numerical trouble:
+  // Signals collected in it_->history, to detect numerical trouble:
   // - pivot statistics, nearly free columns and absorbed rows, after each
   //   factorisation (needs it_->Rp, it_->Rd);
   // - infinity norms of r1, r2, r3, r4 of it_->res.

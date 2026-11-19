@@ -22,8 +22,9 @@ StagnationReport StagnationTests::stagnation(const Iterate& it,
                                              std::stringstream& log_stream) {
   StagnationReport report;
   report.iter = iter;
-  report.refinement_error =
-      it.data.record.empty() ? 0.0 : it.data.record.back().refinement_error;
+  report.refinement_error = it.history.records.empty()
+                                ? 0.0
+                                : it.history.records.back().refinement_error;
 
   const bool reduction_ok = residualReductionTest(it, alpha_primal, alpha_dual,
                                                   feas_tol, report, log_stream);

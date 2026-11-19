@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "Info.h"
-#include "IpmData.h"
+#include "IterationHistory.h"
 #include "LinearSolver.h"
 #include "Model.h"
 #include "StagnationTests.h"
@@ -40,7 +40,7 @@ enum class RefineMethod { kComponentwise, kBlockwise };
 struct Iterate {
   Model& model;
   Info& info;
-  IpmData data;
+  IterationHistory history;
   std::vector<double> x, xl, xu, y, zl, zu;
   Residuals res;
   NewtonDir delta;

@@ -8,8 +8,7 @@ void Solver::refine(NewtonDir& delta) {
   Clock clock;
 
   // measure of the error of the solve, selected by it_->refine_method
-  const bool componentwise =
-      it_->refine_method == RefineMethod::kComponentwise;
+  const bool componentwise = it_->refine_method == RefineMethod::kComponentwise;
   const double tol =
       componentwise ? kRefineTolComponentwise : kRefineTolBlockwise;
   auto computeError = [&](const NewtonDir& d) {
@@ -75,10 +74,10 @@ void Solver::refine(NewtonDir& delta) {
   }
 
   // save worst errors seen in this ipm iteration
-  it_->data.back().refinement_error =
-      std::max(it_->data.back().refinement_error, error);
-  it_->data.back().componentwise_error =
-      std::max(it_->data.back().componentwise_error, cw_error);
+  it_->history.back().refinement_error =
+      std::max(it_->history.back().refinement_error, error);
+  it_->history.back().componentwise_error =
+      std::max(it_->history.back().componentwise_error, cw_error);
 }
 
 static double safeRatio(double num, double den) {

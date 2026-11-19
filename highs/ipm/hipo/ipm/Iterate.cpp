@@ -99,20 +99,20 @@ void Iterate::computeScaling() {
   }
 
   // compute extremes of theta
-  data.back().min_theta = kHighsInf;
-  data.back().max_theta = 0.0;
+  history.back().min_theta = kHighsInf;
+  history.back().max_theta = 0.0;
   for (double d : scaling) {
     if (d != 0.0) {
-      data.back().min_theta = std::min(data.back().min_theta, 1.0 / d);
-      data.back().max_theta = std::max(data.back().max_theta, 1.0 / d);
+      history.back().min_theta = std::min(history.back().min_theta, 1.0 / d);
+      history.back().max_theta = std::max(history.back().max_theta, 1.0 / d);
     }
   }
 }
 void Iterate::products() {
-  double& min_prod = data.back().min_prod;
-  double& max_prod = data.back().max_prod;
-  Int& num_small = data.back().num_small_prod;
-  Int& num_large = data.back().num_large_prod;
+  double& min_prod = history.back().min_prod;
+  double& max_prod = history.back().max_prod;
+  Int& num_small = history.back().num_small_prod;
+  Int& num_large = history.back().num_large_prod;
 
   min_prod = kHighsInf;
   max_prod = 0.0;

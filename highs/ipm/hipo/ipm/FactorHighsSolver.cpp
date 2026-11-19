@@ -14,12 +14,13 @@ namespace hipo {
 FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
                                      const Regularisation& regul, Info& info,
-                                     IpmData& record, const Logger& logger)
+                                     IterationHistory& history,
+                                     const Logger& logger)
     : FH_{},
       kkt_{kkt},
       regul_{regul},
       info_{info},
-      data_{record},
+      history_{history},
       logger_{logger},
       model_{model},
       options_{options} {
@@ -145,7 +146,7 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
   info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
 
-  data_.back().num_solves++;
+  history_.back().num_solves++;
 
   clock.start();
   lhs_x.assign(as_buffer_.begin(), as_buffer_.begin() + n);
@@ -167,7 +168,7 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
   info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
 
-  data_.back().num_solves++;
+  history_.back().num_solves++;
 
   return kOk;
 }

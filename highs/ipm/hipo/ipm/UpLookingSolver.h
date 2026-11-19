@@ -2,7 +2,7 @@
 #define HIPO_UP_LOOKING_SOLVER_H
 
 #include "Info.h"
-#include "IpmData.h"
+#include "IterationHistory.h"
 #include "KktMatrix.h"
 #include "LinearSolver.h"
 #include "Model.h"
@@ -39,7 +39,7 @@ class UpLookingSolver : public LinearSolver {
   std::vector<double> as_buffer_;
 
   Info& info_;
-  IpmData& data_;
+  IterationHistory& history_;
   const Regularisation& regul_;
   const Model& model_;
 
@@ -50,7 +50,7 @@ class UpLookingSolver : public LinearSolver {
   void solve(std::vector<double>& x);
 
  public:
-  UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
+  UpLookingSolver(KktMatrix& kkt, Info& info, IterationHistory& history,
                   const Regularisation& regul, const Model& model);
 
   Int factorAS(const std::vector<double>& scaling) override;

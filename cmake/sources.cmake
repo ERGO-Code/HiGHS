@@ -258,7 +258,7 @@ set(ipx_headers
   ipm/ipx/utils.h)
 
 set(hipo_sources
-    ipm/hipo/ipm/IpmData.cpp
+    ipm/hipo/ipm/IterationHistory.cpp
     ipm/hipo/ipm/FactorHighsSolver.cpp
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp
@@ -272,7 +272,7 @@ set(hipo_sources
     ipm/hipo/ipm/UpLookingSolver.cpp)
 
 set(hipo_headers
-    ipm/hipo/ipm/IpmData.h
+    ipm/hipo/ipm/IterationHistory.h
     ipm/hipo/ipm/FactorHighsSolver.h
     ipm/hipo/ipm/Parameters.h
     ipm/hipo/ipm/Control.h

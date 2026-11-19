@@ -1,5 +1,5 @@
-#ifndef HIPO_IPM_DATA_H
-#define HIPO_IPM_DATA_H
+#ifndef HIPO_ITERATION_HISTORY_H
+#define HIPO_ITERATION_HISTORY_H
 
 #include <vector>
 
@@ -7,9 +7,10 @@
 
 namespace hipo {
 
-// structs to collect data during the ipm iterations
+// Record of each ipm iteration, used for the log and to detect numerical
+// trouble
 
-struct IpmIterData {
+struct IterationRecord {
   double sigma_aff = 0.0;
   double sigma = 0.0;
   Int correctors = 0;
@@ -48,10 +49,10 @@ struct IpmIterData {
   Int num_absorbed_rows = 0;
 };
 
-struct IpmData {
-  std::vector<IpmIterData> record;
+struct IterationHistory {
+  std::vector<IterationRecord> records;
   void append();
-  IpmIterData& back();
+  IterationRecord& back();
 };
 
 }  // namespace hipo
