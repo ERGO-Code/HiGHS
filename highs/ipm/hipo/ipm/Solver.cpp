@@ -1686,12 +1686,12 @@ void Solver::printHeader() const {
                   "dual obj", "pinf", "dinf", "gap");
     if (!options_.timeless_log) logger_.print(" %7s", "time");
     if (logger_.debug(1)) {
-      logger_.print(" %13s %13s %5s %5s %5s %17s %8s %8s %27s %9s", "alpha p/d",
+      logger_.print(" %13s %13s %5s %5s %5s %17s %17s %27s", "alpha p/d",
                     "sigma af/co", "cor", "solv", "fact", "static reg p/d",
-                    "minT", "maxT", "(xj * zj / mu)_range_&_num", "bw_err");
-      logger_.print(" %9s %17s %26s %11s %13s", "cw_err", "piv dyn/sgn/dom",
-                    "|piv| min/max, max reg", "2x2/inert", "free/absorbed");
-      logger_.print(" %s", "issues");
+                    "min/max Theta", "(xj * zj / mu)_range_&_num");
+      logger_.print(" %17s %17s %17s %8s %5s %5s %6s %6s %s", "bw/cw error",
+                    "piv dyn/sgn/dom", "min/max pivot", "max reg", "2x2",
+                    "inert", "free", "absorb", "issues");
     }
     logger_.print("\n");
   }
@@ -1714,7 +1714,7 @@ void Solver::printOutput(bool reset) const {
     const IterationRecord& record = it_->history.back();
     logger_.print(
         " %6.2f %6.2f %6.2f %6.2f %5d %5d %5c %8.1e %8.1e %8.1e %8.1e %8.1e "
-        "%8.1e %4d %4d %9.1e",
+        "%8.1e %4d %4d %8.1e",
         alpha_primal_, alpha_dual_, record.sigma_aff, record.sigma,
         record.correctors, record.num_solves,
         LinearSolverTypeToString((LinearSolverType)record.factorisation_used)
@@ -1722,13 +1722,13 @@ void Solver::printOutput(bool reset) const {
         regul_.primal, regul_.dual, record.min_theta, record.max_theta,
         record.min_prod, record.max_prod, record.num_small_prod,
         record.num_large_prod, record.bw_error);
-    logger_.print(" %9.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d",
+    logger_.print(" %8.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d %s",
                   record.cw_error, (int)record.num_dynamic_reg,
                   (int)record.num_wrong_sign, (int)record.num_reg_dominated,
                   record.min_pivot, record.max_pivot, record.max_reg,
                   (int)record.num_2x2, (int)record.wrong_inertia,
-                  (int)record.num_near_free, (int)record.num_absorbed_rows);
-    logger_.print(" %s", record.report.codes().c_str());
+                  (int)record.num_near_free, (int)record.num_absorbed_rows,
+                  record.report.codes().c_str());
   }
   logger_.print("\n");
 }
@@ -1748,8 +1748,8 @@ void Solver::printDiagnostics() const {
     if (messages.empty()) continue;
 
     if (!header_printed) {
-      log_stream << "\nDiagnostics, issue codes:\n" << issueCodesLegend()
-                 << " iter  issues  messages\n";
+      log_stream << "\nDiagnostics, issue codes:\n"
+                 << issueCodesLegend() << " iter  issues  messages\n";
       header_printed = true;
     }
 
