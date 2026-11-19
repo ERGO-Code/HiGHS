@@ -103,8 +103,8 @@ const double kParallelForwardMinSpeedup = 2;
 const double kParallelBackwardMinSpeedup = 1.2;
 
 struct SolverControls {
-  double reg_p = 1e-12;  // static primal regularisation
-  double reg_d = 1e-10;  // static dual regularisation
+  double reg_p = 1e-12;
+  double reg_d = 1e-10;
   Int refine_max_iter = kRefineMaxIter;
   double refine_tol = kRefineTol;
   double sigma_min = 0.0;

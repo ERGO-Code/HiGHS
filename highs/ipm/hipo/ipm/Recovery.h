@@ -8,12 +8,49 @@
 
 namespace hipo {
 
-// Actions that can be taken when stagnation is detected.
 enum class RecoveryAction {
-  kNone,                 // nothing to do
-  kSwitchFactorisation,  // switch to FactorHighs and reset to best iterate
-  kTerminate,            // give up
+  kNone,
+  kMoreRefinement,
+  kIncreaseReg,
+  kDecreaseReg,
+  kRecentre,
+  kSwitchFactorisation,
+  kTerminate,
 };
+
+enum class ActionTiming {
+  kNextSolve,
+  kNextFactorisation,
+  kNextIteration,
+  kImmediate,
+};
+
+struct ActionProperties {
+  const char* name;
+  ActionTiming timing;
+  bool reset_to_best;
+  bool temporary;
+};
+
+inline ActionProperties actionProperties(RecoveryAction action) {
+  switch (action) {
+    case RecoveryAction::kNone:
+      return {"none", ActionTiming::kImmediate, false, false};
+    case RecoveryAction::kMoreRefinement:
+      return {"refine", ActionTiming::kNextSolve, false, true};
+    case RecoveryAction::kIncreaseReg:
+      return {"reg+", ActionTiming::kNextFactorisation, false, true};
+    case RecoveryAction::kDecreaseReg:
+      return {"reg-", ActionTiming::kNextFactorisation, false, true};
+    case RecoveryAction::kRecentre:
+      return {"centre", ActionTiming::kNextIteration, false, true};
+    case RecoveryAction::kSwitchFactorisation:
+      return {"switch", ActionTiming::kNextIteration, true, false};
+    case RecoveryAction::kTerminate:
+      return {"stop", ActionTiming::kImmediate, true, false};
+  }
+  return {"?", ActionTiming::kImmediate, false, false};
+}
 
 // Keeps track of the actions taken to recover from stagnation, and decides
 // which action to take next.
