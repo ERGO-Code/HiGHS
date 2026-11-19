@@ -1,7 +1,7 @@
 # Check that the current HiGHS PR does not break Uno.
 #
 # uno-highs: current LP / QP solver interface of HiGHS vs the latest Uno release.
-# uno-hipo:  HiPO linear solver interface (still in flight) vs Uno's `hipo` branch.
+# uno-hipo:  HiPO linear solver interface vs Uno's `main` branch (no Uno release has HiPO yet).
 name: uno-reverse-ci
 
 on:
@@ -18,8 +18,8 @@ on:
         description: "uno-highs job: Uno tag/branch/SHA to test (empty = latest Uno release)"
         default: ""
       uno_hipo_ref:
-        description: "uno-hipo job: Uno tag/branch/SHA to test (the in-flight HiPO branch)"
-        default: "hipo"
+        description: "uno-hipo job: Uno tag/branch/SHA to test"
+        default: "main"
   schedule:
     - cron: "0 6 * * 1"
 
@@ -151,11 +151,11 @@ jobs:
           cmake --build HiGHS/build --parallel
           cmake --install HiGHS/build
 
-      - name: Checkout Uno (HiPO branch)
+      - name: Checkout Uno (main)
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.inputs.uno_repository || 'cvanaret/Uno' }}
-          ref: ${{ github.event.inputs.uno_hipo_ref || 'hipo' }}
+          ref: ${{ github.event.inputs.uno_hipo_ref || 'main' }}
           path: Uno
 
       - name: Build Uno against HiGHS with HiPO

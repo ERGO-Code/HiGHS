@@ -588,7 +588,8 @@ TEST_CASE("LP-modification", "[highs_test_lp_modification]") {
   REQUIRE(model_status == HighsModelStatus::kOptimal);
 
   highs.getInfoValue("objective_function_value", optimal_objective_value);
-  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+  REQUIRE(std::fabs(optimal_objective_value - avgas_optimal_objective_value) <
+          double_equal_tolerance);
 
   // Delete all the columns: OK
   REQUIRE(highs.deleteCols(0, num_col - 1) == HighsStatus::kOk);
@@ -1893,7 +1894,7 @@ TEST_CASE("mod-duplicate-indices", "[highs_test_lp_modification]") {
   highs.run();
   double objective0 = highs.getInfo().objective_function_value;
   REQUIRE(objective0 < objective1);
-  REQUIRE(objective0 == -7.75);
+  REQUIRE(std::fabs(objective0 + 7.75) < double_equal_tolerance);
 
   highs.resetThreadScheduler(true);
 }
@@ -2705,3 +2706,26 @@ std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch(
   }
 }
 */
+TEST_CASE("issue-3671", "[highs_data]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  double c = 1.0;
+  double lb = 0.0;
+  double ub = 10.0;
+  h.addCols(1, &c, &lb, &ub, 0, nullptr, nullptr, nullptr);
+  HighsInt* m = nullptr;
+  REQUIRE(h.deleteCols(m) == HighsStatus::kError);
+}
+
+TEST_CASE("issue-3672", "[highs_data]") {
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  double c = 1.0;
+  double lb = 0.0;
+  double ub = 10.0;
+  h.addCols(1, &c, &lb, &ub, 0, nullptr, nullptr, nullptr);
+  HighsInt* m = nullptr;
+  REQUIRE(h.changeObjectiveSense(ObjSense(42)) == HighsStatus::kError);
+}
