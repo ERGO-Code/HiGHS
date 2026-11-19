@@ -1,3 +1,7 @@
+#include <cfloat>
+#include <cmath>
+#include <cstdio>
+
 #include "HCheckConfig.h"
 #include "catch.hpp"
 #include "util/HighsCDouble.h"
@@ -93,6 +97,73 @@ TEST_CASE("HighsCDouble-division", "[util]") {
   const double dividend = 0.375;
   HighsCDouble y = unnormalized(dividend) / unnormalized(value);
   REQUIRE(std::abs(double(y) - dividend / value) <= 1e-15);
+}
+
+TEST_CASE("HighsCDouble-exact-product", "[util]") {
+  // the error terms of HighsCDouble require exact two_sum and two_product
+  // transformations, which break if the compiler contracts multiplications and
+  // additions into fused multiply-adds or reassociates them. the data is from
+  // the derivation of an implied bound from a cut with a column bounded by
+  // 4.41e18 (large-int-bounds), where the error of the product decides the
+  // result: the exact bound is -80, with a lost error term it becomes 432 or
+  // 512. the data is read through volatile to prevent constant folding at
+  // compile time.
+  volatile double data[] = {0.71442627431274497, -0.89278752651626225, -100,
+                            4.41e18, 0.074961867518904254};
+  const double v8 = data[0];
+  const double v10 = data[1];
+  const double lb8 = data[2];
+  const double ub10 = data[3];
+  const double rhs = data[4];
+
+  // TEMPORARY diagnostics for the large-int-bounds CI failure: floating-point
+  // features seen by the compiler; revert before merging
+  {
+    int fma = 0;
+    int fastFma = 0;
+    int avx2 = 0;
+    int gnuc = 0;
+#ifdef __FMA__
+    fma = 1;
+#endif
+#ifdef FP_FAST_FMA
+    fastFma = 1;
+#endif
+#ifdef __AVX2__
+    avx2 = 1;
+#endif
+#ifdef __GNUC__
+    gnuc = __GNUC__;
+#endif
+    printf(
+        "CDOUBLEDIAG __FMA__ %d FP_FAST_FMA %d __AVX2__ %d __GNUC__ %d "
+        "FLT_EVAL_METHOD %d\n",
+        fma, fastFma, avx2, gnuc, int(FLT_EVAL_METHOD));
+  }
+
+  // two_product must give the exact error of the product
+  const double hi = v10 * ub10;
+  const HighsCDouble product = HighsCDouble(ub10) * v10;
+  const double lo = double(product - hi);
+  const double exactLo = std::fma(v10, ub10, -hi);
+  printf("CDOUBLEDIAG product hi %.17g lo %.17g exact lo %.17g\n", hi, lo,
+         exactLo);
+  REQUIRE(lo == exactLo);
+
+  // the implied bound c10 >= ub10 + (rhs - minact) / v10 of the cut
+  // v8 * c8 + v10 * c10 <= rhs with c8 >= lb8 and c10 <= ub10
+  HighsCDouble minact = 0.0;
+  minact += v8 * static_cast<HighsCDouble>(lb8);
+  minact += v10 * static_cast<HighsCDouble>(ub10);
+  const HighsCDouble impliedBound = (rhs - minact) / v10;
+  // tolerance max(feastol, epsilon / |v10|) of extractCliquesFromCut with the
+  // default tolerances
+  const double boundTol = 1e-6;
+  const double bound =
+      std::ceil(static_cast<double>(impliedBound + ub10 - boundTol));
+  printf("CDOUBLEDIAG minact %.17g impliedBound %.17g bound %.17g\n",
+         static_cast<double>(minact), static_cast<double>(impliedBound), bound);
+  REQUIRE(bound == -80);
 }
 
 TEST_CASE("HighsCDouble-floor", "[util]") {
