@@ -22,7 +22,8 @@ using mutex = HighsMutex;
 unsigned int available_core_count();
 
 inline void initialize_scheduler(int numThreads = 0) {
-  if (numThreads == 0) {
+  // A running scheduler ignores numThreads, so skip the costly core count
+  if (numThreads == 0 && !HighsTaskExecutor::isRunning()) {
 #ifdef HIGHS_NO_DEFAULT_THREADS
     numThreads = 1;
 #else
