@@ -43,11 +43,11 @@ inline char issueCode(IssueType type) {
     case IssueType::kLargeResIncrease:
       return 'L';
     case IssueType::kNoProgress:
-      return 'P';
+      return 'N';
     case IssueType::kOscillation:
       return 'O';
     case IssueType::kDivergence:
-      return 'V';
+      return 'D';
     case IssueType::kInaccurateSolve:
       return 'i';
     case IssueType::kVeryInaccurateSolve:
@@ -66,8 +66,8 @@ inline char issueCode(IssueType type) {
 
 // Meaning of the codes, for the log.
 inline const char* issueCodesLegend() {
-  return "R bad residual reduction, L large residual increase, P no progress, "
-         "O oscillation, V divergence,\n"
+  return "R bad residual reduction, L large residual increase, N no progress, "
+         "O oscillation, D divergence,\n"
          "i/I (very) inaccurate solve, W wrong inertia, G dynamic "
          "regularisation, A absorbed rows,\n"
          "F many nearly free columns\n";

@@ -1748,9 +1748,10 @@ void Solver::printDiagnostics() const {
     if (messages.empty()) continue;
 
     if (!header_printed) {
-      log_stream << "\nDiagnostics, issue codes:\n"
-                 << issueCodesLegend() << " iter  issues  messages\n";
+      log_stream << "\nDiagnostics\n iter  issues  messages\n";
       header_printed = true;
+    } else {
+      log_stream << '\n';
     }
 
     // iteration and issue codes before the first message, blanks before the
@@ -1773,7 +1774,9 @@ void Solver::printDiagnostics() const {
     }
   }
 
-  if (header_printed) logger_.printInfo("%s", log_stream.str().c_str());
+  if (!header_printed) return;
+  log_stream << "\nIssue codes:\n" << issueCodesLegend();
+  logger_.printInfo("%s", log_stream.str().c_str());
 }
 
 void Solver::printInfo() const {
