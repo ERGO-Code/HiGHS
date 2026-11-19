@@ -77,15 +77,30 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   endif()
 endif()
 
-# GCC and Clang contract multiplications and additions into fused
-# multiply-adds when the target supports them (e.g. gcc 15 enables FMA by
-# default on some x86-64 platforms), which breaks the error terms in
-# HighsCDouble. GCC ignores "#pragma STDC FP_CONTRACT OFF", so the flag is
-# required. The third-party code in extern (e.g. OpenBLAS) removes it again.
+# The error terms in HighsCDouble require that double arithmetic is exactly
+# IEEE double arithmetic. The third-party code in extern (e.g. OpenBLAS)
+# removes these options again.
+set(HIGHS_FLOATING_POINT_OPTIONS "")
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  set(HIGHS_FP_CONTRACT_OFF_OPTION
-      "$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
-  add_compile_options("${HIGHS_FP_CONTRACT_OFF_OPTION}")
+  # GCC and Clang contract multiplications and additions into fused
+  # multiply-adds when the target supports them (e.g. gcc 15 enables FMA by
+  # default on some x86-64 platforms). GCC ignores
+  # "#pragma STDC FP_CONTRACT OFF", so the flag is required.
+  list(APPEND HIGHS_FLOATING_POINT_OPTIONS
+       "$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
+
+  # on 32-bit x86, GCC and Clang use the x87 unit with 80-bit intermediate
+  # results by default. SSE2 gives double arithmetic as on x86-64 (and as
+  # MSVC uses by default for 32-bit x86).
+  if (CMAKE_SIZEOF_VOID_P EQUAL 4 AND
+      CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86|i[3-6]86|x86_64|AMD64|amd64)$" AND
+      NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    list(APPEND HIGHS_FLOATING_POINT_OPTIONS
+         "$<$<COMPILE_LANGUAGE:C,CXX>:-msse2>"
+         "$<$<COMPILE_LANGUAGE:C,CXX>:-mfpmath=sse>")
+  endif()
+
+  add_compile_options(${HIGHS_FLOATING_POINT_OPTIONS})
 endif()
 
 # MSVC
