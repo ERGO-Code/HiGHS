@@ -25,6 +25,47 @@ static bool debugSolReportAllowed() {
   return numReports++ < 100;
 }
 
+#if defined(__GLIBC__)
+#include <execinfo.h>
+#include <unistd.h>
+#elif defined(_WIN32)
+#include <windows.h>
+// windows.h must come first
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
+#endif
+
+// prints the call stack of the first 5 invalid bound changes (glibc and
+// windows only)
+static void debugSolBacktrace() {
+  static int numBacktraces = 0;
+  if (numBacktraces++ >= 5) return;
+  void* frames[32];
+  printf("DEBUGSOL backtrace:\n");
+  fflush(stdout);
+#if defined(__GLIBC__)
+  const int numFrames = backtrace(frames, 32);
+  backtrace_symbols_fd(frames, numFrames, STDOUT_FILENO);
+#elif defined(_WIN32)
+  HANDLE process = GetCurrentProcess();
+  static bool symInitialised = false;
+  if (!symInitialised) symInitialised = SymInitialize(process, NULL, TRUE);
+  const USHORT numFrames = CaptureStackBackTrace(0, 32, frames, NULL);
+  alignas(SYMBOL_INFO) char buffer[sizeof(SYMBOL_INFO) + 256];
+  SYMBOL_INFO* symbol = reinterpret_cast<SYMBOL_INFO*>(buffer);
+  symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+  symbol->MaxNameLen = 255;
+  for (USHORT i = 0; i < numFrames; ++i) {
+    DWORD64 address = reinterpret_cast<DWORD64>(frames[i]);
+    if (symInitialised && SymFromAddr(process, address, NULL, symbol))
+      printf("  %s\n", symbol->Name);
+    else
+      printf("  %p\n", frames[i]);
+  }
+  fflush(stdout);
+#endif
+}
+
 #define DEBUGSOL_CHECK(cond)                                          \
   do {                                                                \
     if (!(cond) && debugSolReportAllowed()) {                         \
@@ -187,6 +228,7 @@ void HighsDebugSol::boundChangeAdded(const HighsDomain& domain,
         domain.col_lower_[domchg.column], domain.col_upper_[domchg.column],
         int(reasonType), int(reasonIndex));
     fflush(stdout);
+    debugSolBacktrace();
   }
 }
 

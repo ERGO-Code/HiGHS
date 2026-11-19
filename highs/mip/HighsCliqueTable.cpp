@@ -1293,6 +1293,50 @@ void HighsCliqueTable::extractCliquesFromCut(const HighsMipSolver& mipsolver,
     HighsCDouble impliedBound = (rhs - minact) / vals[i];
     const double boundTol =
         std::max(globaldom.feastol(), globaldom.epsilon() / std::abs(vals[i]));
+#ifdef HIGHS_DEBUGSOL
+    // TEMPORARY diagnostics for the large-int-bounds CI failure: report
+    // implied bounds that exclude the debug solution; revert before merging
+    {
+      const HighsDebugSol& dbg = mipsolver.mipdata_->debugSolution;
+      static int numDiagReports = 0;
+      if (dbg.debugSolActive && numDiagReports < 20) {
+        const double boundVal =
+            vals[i] > 0
+                ? std::floor(static_cast<double>(
+                      impliedBound + globaldom.col_lower_[inds[i]] + boundTol))
+                : std::ceil(static_cast<double>(
+                      impliedBound + globaldom.col_upper_[inds[i]] - boundTol));
+        const double solVal = dbg.debugSolution[inds[i]];
+        const double feastolDiag = mipsolver.mipdata_->feastol;
+        if ((vals[i] > 0 && boundVal < solVal - feastolDiag) ||
+            (vals[i] < 0 && boundVal > solVal + feastolDiag)) {
+          numDiagReports++;
+          HighsCDouble activity = 0.0;
+          for (HighsInt k = 0; k != len; ++k)
+            activity +=
+                static_cast<HighsCDouble>(vals[k]) * dbg.debugSolution[inds[k]];
+          printf(
+              "CLQDIAG invalid implied bound: col %d %s %.17g, debug solution "
+              "value %.17g, coef %.17g, current bounds [%.17g, %.17g], rhs "
+              "%.17g, minact %.17g, impliedBound %.17g, boundTol %g, debug "
+              "solution activity %.17g (violation %g), length %d\n",
+              int(inds[i]), vals[i] > 0 ? "<=" : ">=", boundVal, solVal,
+              vals[i], globaldom.col_lower_[inds[i]],
+              globaldom.col_upper_[inds[i]], rhs, static_cast<double>(minact),
+              static_cast<double>(impliedBound), boundTol,
+              static_cast<double>(activity),
+              static_cast<double>(activity - rhs), int(len));
+          for (HighsInt k = 0; k != len; ++k)
+            printf(
+                "CLQDIAG   col %d coef %.17g bounds [%.17g, %.17g] debug "
+                "solution value %.17g\n",
+                int(inds[k]), vals[k], globaldom.col_lower_[inds[k]],
+                globaldom.col_upper_[inds[k]], dbg.debugSolution[inds[k]]);
+          fflush(stdout);
+        }
+      }
+    }
+#endif
     if (vals[i] > 0) {
       const double boundVal = std::floor(static_cast<double>(
           impliedBound + globaldom.col_lower_[inds[i]] + boundTol));
