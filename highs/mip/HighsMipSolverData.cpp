@@ -1152,7 +1152,7 @@ void HighsMipSolverData::runSetup() {
     numCliqueEntriesAfterFirstPresolve = cliquetable.getNumEntries();
     // available_core_count() is slow: skip it when nothing is logged
     const HighsInt available_cores =
-        *mipsolver.options_mip_->log_options.output_flag
+        mipsolver.options_mip_->output_flag
             ? static_cast<HighsInt>(highs::parallel::available_core_count())
             : 0;
     highsLogUser(

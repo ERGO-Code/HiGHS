@@ -5208,7 +5208,7 @@ HighsStatus Highs::initializeMultiThreading() {
   this->max_threads_ = highs::parallel::num_threads();
   HighsLogOptions& log_options = this->options_.log_options;
   // available_core_count() is slow: only call it when it is logged
-  if (*log_options.output_flag && *log_options.log_dev_level) {
+  if (options_.output_flag && options_.log_dev_level) {
     unsigned int available_cores = highs::parallel::available_core_count();
     highsLogDev(log_options, HighsLogType::kInfo,
                 "Scheduler initialized: %d threads (physical cores: %d)\n",
