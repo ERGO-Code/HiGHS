@@ -2644,6 +2644,10 @@ TEST_CASE("large-int-bounds", "[highs_test_mip_solver]") {
   // (wrong optimal objective); revert before merging
   highs.setOptionValue("output_flag", true);
   highs.setOptionValue("log_dev_level", 1);
+  // only used in builds with DEBUGSOL=ON
+  highs.setOptionValue(
+      "mip_debug_solution_file",
+      std::string(HIGHS_DIR) + "/check/instances/large-int-bounds.sol");
   highs.setOptionValue("mip_rel_gap", 0);
   highs.setOptionValue("mip_abs_gap", 0);
   highs.readModel(filename);

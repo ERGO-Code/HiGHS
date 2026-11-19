@@ -17,6 +17,23 @@
 #include "mip/HighsMipSolver.h"
 #include "mip/HighsMipSolverData.h"
 
+// TEMPORARY diagnostics for the large-int-bounds CI failure: report failed
+// debug solution checks instead of asserting (the CI job compiles with
+// NDEBUG), at most 100 reports per process; revert before merging
+static bool debugSolReportAllowed() {
+  static int numReports = 0;
+  return numReports++ < 100;
+}
+
+#define DEBUGSOL_CHECK(cond)                                          \
+  do {                                                                \
+    if (!(cond) && debugSolReportAllowed()) {                         \
+      printf("DEBUGSOL check failed in %s (line %d): %s\n", __func__, \
+             __LINE__, #cond);                                        \
+      fflush(stdout);                                                 \
+    }                                                                 \
+  } while (0)
+
 HighsDebugSol::HighsDebugSol(HighsMipSolver& mipsolver)
     : debugSolActive(false) {
   this->mipsolver = &mipsolver;
@@ -117,10 +134,10 @@ void HighsDebugSol::registerDomain(const HighsDomain& domain) {
   if (!debugSolActive) return;
 
   for (HighsInt i = 0; i != mipsolver->numCol(); ++i) {
-    assert(domain.col_lower_[i] <=
-           debugSolution[i] + mipsolver->mipdata_->feastol);
-    assert(domain.col_upper_[i] >=
-           debugSolution[i] - mipsolver->mipdata_->feastol);
+    DEBUGSOL_CHECK(domain.col_lower_[i] <=
+                   debugSolution[i] + mipsolver->mipdata_->feastol);
+    DEBUGSOL_CHECK(domain.col_upper_[i] >=
+                   debugSolution[i] - mipsolver->mipdata_->feastol);
   }
 }
 
@@ -133,7 +150,8 @@ void HighsDebugSol::newIncumbentFound() {
 
 void HighsDebugSol::boundChangeAdded(const HighsDomain& domain,
                                      const HighsDomainChange& domchg,
-                                     bool branching) {
+                                     bool branching, HighsInt reasonType,
+                                     HighsInt reasonIndex) {
   if (!debugSolActive) return;
 
   if (conflictingBounds.count(&domain) == 0) return;
@@ -153,7 +171,23 @@ void HighsDebugSol::boundChangeAdded(const HighsDomain& domain,
     return;
   }
 
-  assert(false);
+  // reason types: >= 0 cut pool / conflict pool propagation (index = cut),
+  // -1 branching, -2 unspecified (e.g. reduced-cost fixing), -3 / -4 model
+  // row upper / lower (index = row), -5 clique table, -6 conflicting bounds,
+  // -7 objective
+  if (debugSolReportAllowed()) {
+    printf(
+        "DEBUGSOL invalid bound change: %s domain, col %d %s %.17g, debug "
+        "solution value %.17g, current bounds [%.17g, %.17g], reason type %d "
+        "index %d\n",
+        &domain == &mipsolver->mipdata_->getDomain() ? "global" : "local",
+        int(domchg.column),
+        domchg.boundtype == HighsBoundType::kLower ? ">=" : "<=",
+        domchg.boundval, debugSolution[domchg.column],
+        domain.col_lower_[domchg.column], domain.col_upper_[domchg.column],
+        int(reasonType), int(reasonIndex));
+    fflush(stdout);
+  }
 }
 
 void HighsDebugSol::boundChangeRemoved(const HighsDomain& domain,
@@ -176,7 +210,14 @@ void HighsDebugSol::checkCut(const HighsInt* Rindex, const double* Rvalue,
   for (HighsInt i = 0; i != Rlen; ++i)
     violation += debugSolution[Rindex[i]] * Rvalue[i];
 
-  assert(violation <= mipsolver->mipdata_->feastol);
+  if (violation > mipsolver->mipdata_->feastol && debugSolReportAllowed()) {
+    printf("DEBUGSOL invalid cut: violation %g, length %d, rhs %.17g\n",
+           static_cast<double>(violation), int(Rlen), rhs);
+    for (HighsInt i = 0; i != Rlen; ++i)
+      printf("DEBUGSOL   col %d coef %.17g debug solution value %.17g\n",
+             int(Rindex[i]), Rvalue[i], debugSolution[Rindex[i]]);
+    fflush(stdout);
+  }
 }
 
 void HighsDebugSol::checkRowAggregation(const HighsLp& lp,
@@ -199,7 +240,7 @@ void HighsDebugSol::checkRowAggregation(const HighsLp& lp,
 
   double viol = fabs(double(violation));
 
-  assert(viol <= mipsolver->mipdata_->feastol);
+  DEBUGSOL_CHECK(viol <= mipsolver->mipdata_->feastol);
 }
 
 void HighsDebugSol::checkRow(const HighsInt* Rindex, const double* Rvalue,
@@ -211,8 +252,8 @@ void HighsDebugSol::checkRow(const HighsInt* Rindex, const double* Rvalue,
   for (HighsInt i = 0; i != Rlen; ++i)
     activity += debugSolution[Rindex[i]] * Rvalue[i];
 
-  assert(activity - mipsolver->mipdata_->feastol <= Rupper);
-  assert(activity + mipsolver->mipdata_->feastol >= Rlower);
+  DEBUGSOL_CHECK(activity - mipsolver->mipdata_->feastol <= Rupper);
+  DEBUGSOL_CHECK(activity + mipsolver->mipdata_->feastol >= Rlower);
 }
 
 void HighsDebugSol::resetDomain(const HighsDomain& domain) {
@@ -226,7 +267,7 @@ void HighsDebugSol::nodePruned(const HighsDomain& localdomain, double cutoff) {
 
   if (conflictingBounds.count(&localdomain) == 0) return;
 
-  assert(!conflictingBounds[&localdomain].empty());
+  DEBUGSOL_CHECK(!conflictingBounds[&localdomain].empty());
 }
 
 void HighsDebugSol::checkClique(const HighsCliqueTable::CliqueVar* clq,
@@ -238,23 +279,25 @@ void HighsDebugSol::checkClique(const HighsCliqueTable::CliqueVar* clq,
   for (HighsInt i = 0; i != clqlen; ++i)
     violation += (HighsInt)(clq[i].weight(debugSolution) + 0.5);
 
-  assert(violation <= 0);
+  DEBUGSOL_CHECK(violation <= 0);
 }
 
 void HighsDebugSol::checkVub(HighsInt col, HighsInt vubcol, double vubcoef,
                              double vubconstant) const {
   if (!debugSolActive || std::abs(vubcoef) == kHighsInf) return;
 
-  assert(debugSolution[col] <= debugSolution[vubcol] * vubcoef + vubconstant +
-                                   mipsolver->mipdata_->feastol);
+  DEBUGSOL_CHECK(debugSolution[col] <= debugSolution[vubcol] * vubcoef +
+                                           vubconstant +
+                                           mipsolver->mipdata_->feastol);
 }
 
 void HighsDebugSol::checkVlb(HighsInt col, HighsInt vlbcol, double vlbcoef,
                              double vlbconstant) const {
   if (!debugSolActive || std::abs(vlbcoef) == kHighsInf) return;
 
-  assert(debugSolution[col] >= debugSolution[vlbcol] * vlbcoef + vlbconstant -
-                                   mipsolver->mipdata_->feastol);
+  DEBUGSOL_CHECK(debugSolution[col] >= debugSolution[vlbcol] * vlbcoef +
+                                           vlbconstant -
+                                           mipsolver->mipdata_->feastol);
 }
 
 void HighsDebugSol::checkConflictReasonFrontier(
@@ -278,7 +321,7 @@ void HighsDebugSol::checkConflictReasonFrontier(
     }
   }
 
-  assert(numActiveBoundChgs < (HighsInt)reasonSideFrontier.size());
+  DEBUGSOL_CHECK(numActiveBoundChgs < (HighsInt)reasonSideFrontier.size());
 }
 
 void HighsDebugSol::checkConflictReconvergenceFrontier(
@@ -310,7 +353,7 @@ void HighsDebugSol::checkConflictReconvergenceFrontier(
       ++numActiveBoundChgs;
   }
 
-  assert(numActiveBoundChgs <= (HighsInt)reconvergenceFrontier.size());
+  DEBUGSOL_CHECK(numActiveBoundChgs <= (HighsInt)reconvergenceFrontier.size());
 }
 
 #endif

@@ -1654,51 +1654,6 @@ HighsLpRelaxation::Status HighsLpRelaxation::resolveLp(HighsDomain* domain) {
           }
         }
 
-        // TEMPORARY diagnostics for the large-int-bounds CI failure: recompute
-        // the row activities exactly and report numerically doubtful LP
-        // solutions; revert before merging
-        {
-          const HighsLp& diagLp = lpsolver.getLp();
-          std::vector<HighsCDouble> diagAct(diagLp.num_row_, 0.0);
-          double diagMaxX = 0.0;
-          double diagColViol = 0.0;
-          for (HighsInt i = 0; i != diagLp.num_col_; ++i) {
-            double x = sol.col_value[i];
-            diagMaxX = std::max(diagMaxX, std::abs(x));
-            diagColViol = std::max({diagColViol, diagLp.col_lower_[i] - x,
-                                    x - diagLp.col_upper_[i]});
-            for (HighsInt j = diagLp.a_matrix_.start_[i];
-                 j != diagLp.a_matrix_.start_[i + 1]; ++j)
-              diagAct[diagLp.a_matrix_.index_[j]] +=
-                  static_cast<HighsCDouble>(diagLp.a_matrix_.value_[j]) * x;
-          }
-          double diagRowViol = 0.0;
-          double diagRowValErr = 0.0;
-          HighsInt diagWorstRow = -1;
-          for (HighsInt i = 0; i != diagLp.num_row_; ++i) {
-            double act = static_cast<double>(diagAct[i]);
-            double viol = std::max(
-                {0.0, diagLp.row_lower_[i] - act, act - diagLp.row_upper_[i]});
-            if (viol > diagRowViol) {
-              diagRowViol = viol;
-              diagWorstRow = i;
-            }
-            diagRowValErr =
-                std::max(diagRowValErr, std::abs(act - sol.row_value[i]));
-          }
-          if (diagRowViol > 1e-6 || diagColViol > 1e-6 || diagMaxX > 1e12)
-            printf(
-                "LPDIAG submip %d status %d objective %.17g lpobj %.17g "
-                "maxX %g rowViol %g (row %d of %d, model rows %d) colViol %g "
-                "rowValErr %g iters %lld\n",
-                int(mipsolver.submip), int(status), static_cast<double>(objsum),
-                lpsolver.getInfo().objective_function_value, diagMaxX,
-                diagRowViol, int(diagWorstRow), int(diagLp.num_row_),
-                int(mipsolver.numRow()), diagColViol, diagRowValErr,
-                static_cast<long long>(
-                    lpsolver.getInfo().simplex_iteration_count));
-          fflush(stdout);
-        }
         objective = static_cast<double>(objsum);
         break;
       }
