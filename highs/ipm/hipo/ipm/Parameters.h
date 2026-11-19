@@ -48,6 +48,11 @@ const double kVeryInaccurateSolveTol = 1e-2;
 const double kPoorCentralityFraction = 0.01;
 const double kPoorCentralityAlpha = 0.1;
 
+// parameters for recovery policy
+const Int kActionPatience = 3;
+const Int kActionNumericalWindow = 5;
+const Int kMaxRegChanges = 3;
+
 // parameters for choice of AS or NE
 const double kSystemSpopsWeight = 30.0;
 const double kSystemRatioOpsThresh = 10.0;

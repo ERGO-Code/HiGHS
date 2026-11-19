@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "IterationReport.h"
+#include "Recovery.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
@@ -50,6 +51,8 @@ struct IterationRecord {
   // one per line
   IterationReport report;
   std::string messages;
+
+  RecoveryAction action = RecoveryAction::kNone;
 };
 
 struct IterationHistory {

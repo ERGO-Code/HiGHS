@@ -1256,6 +1256,13 @@ void Solver::runDiagnostics() {
   }
   it_->diagnostics.divergence(*it_, iter_, record.report);
 
+  const bool can_switch = LS_ && LS_->type() == kUpLookingType &&
+                          options_.factor == kHighsChooseString;
+  record.action = recovery_.propose(record.report, can_switch);
+  if (record.action != RecoveryAction::kNone)
+    log_stream << "Would apply " << actionProperties(record.action).name
+               << "\n";
+
   record.messages = log_stream.str();
 }
 
@@ -1663,7 +1670,8 @@ isFailure Solver::initialiseLinearSolver() {
     do_switch = should_switch_to_uplooking;
 
   if (do_switch) {
-    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->history, controls_, model_));
+    LS_.reset(
+        new UpLookingSolver(*kkt_, info_, it_->history, controls_, model_));
     LS_->setup();
     LS_->clear();
   }
@@ -1700,6 +1708,14 @@ void Solver::printHeader() const {
   }
 }
 
+// issue codes, followed by the action of the dry run, e.g. "RG >reg+"
+static std::string issuesAndAction(const IterationRecord& record) {
+  std::string s = record.report.codes();
+  if (record.action != RecoveryAction::kNone)
+    s += std::string(" >") + actionProperties(record.action).name;
+  return s;
+}
+
 void Solver::printOutput(bool reset) const {
   printHeader();
 
@@ -1731,7 +1747,7 @@ void Solver::printOutput(bool reset) const {
                   record.min_pivot, record.max_pivot, record.max_reg,
                   (int)record.num_2x2, (int)record.wrong_inertia,
                   (int)record.num_near_free, (int)record.num_absorbed_rows,
-                  record.report.codes().c_str());
+                  issuesAndAction(record).c_str());
   }
   logger_.print("\n");
 }

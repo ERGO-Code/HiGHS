@@ -80,6 +80,54 @@ struct Recovery {
   // ===================================================================================
   bool tried(RecoveryAction action) const;
   bool tried(RecoveryAction action, IssueType issue) const;
+
+  // ===================================================================================
+  // Choose the action for the issues in report, record it in proposals and
+  // return it. Nothing is applied. Ladders:
+  //  numerical:  refine -> reg+ (x kMaxRegChanges) -> switch, entered at reg+
+  //              with I or W
+  //  stagnation: centre -> switch -> stop, entered at switch without C or
+  //              with L
+  //  absorbed:   reg- (x kMaxRegChanges)
+  // Issues are considered in decreasing order of priority, and the first one
+  // with an action available is acted upon:
+  //  1. stagnation, with I, W or G in the last kActionNumericalWindow
+  //     iterations: numerical ladder;
+  //  2. stagnation: stagnation ladder;
+  //  3. I, W or G: numerical ladder;
+  //  4. A: absorbed ladder.
+  // No action is chosen within kActionPatience iterations of the previous one.
+  // An action that is not temporary is chosen at most once. switch is skipped
+  // if !can_switch.
+  // ===================================================================================
+  RecoveryAction propose(const IterationReport& report, bool can_switch);
+
+  struct Proposal {
+    RecoveryAction action;
+    Int iter;
+  };
+  std::vector<Proposal> proposals;
+
+ private:
+  enum Ladder {
+    kNumericalLadder,
+    kStagnationLadder,
+    kAbsorbedLadder,
+    kNumLadders
+  };
+
+  // next rung of each ladder, and how many times it was chosen
+  Int next_rung[kNumLadders]{};
+  Int rung_uses[kNumLadders]{};
+
+  // last iteration with I, W or G
+  bool numerical_seen = false;
+  Int last_numerical_iter = 0;
+
+  // first rung from entry onwards that can be chosen, or kNone if the ladder is
+  // exhausted
+  RecoveryAction climb(Ladder ladder, Int entry, bool can_switch);
+  bool proposed(RecoveryAction action) const;
 };
 
 }  // namespace hipo
