@@ -65,8 +65,8 @@ struct Diagnostics {
   //   from the expected one;
   // - kDynamicReg, if a pivot was perturbed beyond the static regularisation;
   // - kAbsorbedRows, if a row has its residual absorbed by the regularisation;
-  // - kManyNearFree, if there are more nearly free columns than rows (near
-  //   optimality, up to m basic columns are nearly free).
+  // - kManyNearFree, for LPs, if there are more nearly free columns than rows
+  //   (near optimality, up to m basic columns are nearly free).
   // ===================================================================================
   void numerical(const Iterate& it, IterationReport& report,
                  std::stringstream& log_stream) const;

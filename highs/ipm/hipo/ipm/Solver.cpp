@@ -571,11 +571,14 @@ void Solver::recordFactorisationSignals() {
   for (Int i = 0; i < (Int)Py.size(); ++i)
     addPivot(Py[i], it_->Rd[i], controls_.reg_d);
 
-  // nearly free columns
+  // nearly free columns, only for LPs: the bound m used by the detector holds
+  // only at a vertex
   const std::vector<double>& theta_inv = it_->scaling;
   record.num_near_free = 0;
-  for (Int j = 0; j < n_; ++j)
-    if (theta_inv[j] < kNearFreeRatio * it_->Rp[j]) ++record.num_near_free;
+  if (!model_.qp()) {
+    for (Int j = 0; j < n_; ++j)
+      if (theta_inv[j] < kNearFreeRatio * it_->Rp[j]) ++record.num_near_free;
+  }
 
   // rows with a large residual absorbed by the regularisation
   const HighsSparseMatrix& A = model_.A();
