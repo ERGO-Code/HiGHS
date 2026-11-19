@@ -13,14 +13,18 @@ namespace hipo {
 
 Diagnostics::Diagnostics(const Model& model_input) : model{model_input} {}
 
+// Record of the last iteration. The empty record, used before the first one,
+// has zero stepsizes and no signals.
+static const IterationRecord& lastRecord(const Iterate& it) {
+  static const IterationRecord empty_record{};
+  return it.history.records.empty() ? empty_record : it.history.records.back();
+}
+
 void Diagnostics::stagnation(const Iterate& it, Int iter, double feas_tol,
                              double opt_tol, double crossover_tol,
                              IterationReport& report,
                              std::stringstream& log_stream) {
-  // record of the last iteration; the empty record has zero stepsizes
-  const IterationRecord empty_record{};
-  const IterationRecord& record =
-      it.history.records.empty() ? empty_record : it.history.records.back();
+  const IterationRecord& record = lastRecord(it);
 
   bool large_increase = false;
   const bool reduction_ok =
@@ -68,6 +72,46 @@ void Diagnostics::divergence(const Iterate& it, Int iter,
       iter > 5 && (pobj_is_very_large || dobj_is_very_large);
 
   if (mu_is_large || objective_diverging) report.add(IssueType::kDivergence);
+}
+
+void Diagnostics::numerical(const Iterate& it, IterationReport& report,
+                            std::stringstream& log_stream) const {
+  const IterationRecord& record = lastRecord(it);
+
+  if (record.cw_error > kVeryInaccurateSolveTol) {
+    report.add(IssueType::kVeryInaccurateSolve);
+    log_stream << "Very inaccurate solve, componentwise error "
+               << sci(record.cw_error, 0, 1) << "\n";
+  } else if (record.cw_error > kInaccurateSolveTol) {
+    report.add(IssueType::kInaccurateSolve);
+    log_stream << "Inaccurate solve, componentwise error "
+               << sci(record.cw_error, 0, 1) << "\n";
+  }
+
+  if (record.num_wrong_sign > 0 || record.wrong_inertia > 0) {
+    report.add(IssueType::kWrongInertia);
+    log_stream << "Wrong inertia, " << record.num_wrong_sign
+               << " 1x1 pivots with wrong sign, inertia off by "
+               << record.wrong_inertia << "\n";
+  }
+
+  if (record.num_dynamic_reg > 0) {
+    report.add(IssueType::kDynamicReg);
+    log_stream << record.num_dynamic_reg
+               << " pivots with dynamic regularisation\n";
+  }
+
+  if (record.num_absorbed_rows > 0) {
+    report.add(IssueType::kAbsorbedRows);
+    log_stream << record.num_absorbed_rows
+               << " rows with residual absorbed by the regularisation\n";
+  }
+
+  if (record.num_near_free > model.m()) {
+    report.add(IssueType::kManyNearFree);
+    log_stream << record.num_near_free << " nearly free columns, " << model.m()
+               << " rows\n";
+  }
 }
 
 bool Diagnostics::residualReductionTest(const Iterate& it,

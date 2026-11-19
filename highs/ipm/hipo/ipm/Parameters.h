@@ -40,6 +40,10 @@ const double kLargeProduct = 1e3;
 const double kPivotRegDominatedRatio = 1.0;
 const double kNearFreeRatio = 1e3;
 
+// parameters for numerical detectors
+const double kInaccurateSolveTol = 1e-6;
+const double kVeryInaccurateSolveTol = 1e-2;
+
 // parameters for choice of AS or NE
 const double kSystemSpopsWeight = 30.0;
 const double kSystemRatioOpsThresh = 10.0;

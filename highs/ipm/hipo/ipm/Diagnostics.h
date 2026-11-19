@@ -57,6 +57,21 @@ struct Diagnostics {
   void divergence(const Iterate& it, Int iter, IterationReport& report) const;
 
   // ===================================================================================
+  // Detect numerical trouble in the linear solves and factorisation of the last
+  // iteration, from its record, and add to report:
+  // - kVeryInaccurateSolve, if cw_error > kVeryInaccurateSolveTol, otherwise
+  //   kInaccurateSolve, if cw_error > kInaccurateSolveTol;
+  // - kWrongInertia, if a 1x1 pivot has the wrong sign or the inertia differs
+  //   from the expected one;
+  // - kDynamicReg, if a pivot was perturbed beyond the static regularisation;
+  // - kAbsorbedRows, if a row has its residual absorbed by the regularisation;
+  // - kManyNearFree, if there are more nearly free columns than rows (near
+  //   optimality, up to m basic columns are nearly free).
+  // ===================================================================================
+  void numerical(const Iterate& it, IterationReport& report,
+                 std::stringstream& log_stream) const;
+
+  // ===================================================================================
   // Check that the step reduced the residuals by at least a fraction of what
   // the stepsizes predict:
   //  ||rk_new|| <= max( (1 - eta * alpha) * ||rk_old||, floor )

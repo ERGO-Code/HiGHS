@@ -1236,10 +1236,12 @@ IterationReport Solver::checkIssues() {
   std::stringstream log_stream;
   IterationReport report;
   report.iter = iter_;
-  if (iter_ > 0)
+  if (iter_ > 0) {
     it_->diagnostics.stagnation(*it_, iter_, options_.feasibility_tol,
-                          options_.optimality_tol, options_.crossover_tol,
-                          report, log_stream);
+                                options_.optimality_tol, options_.crossover_tol,
+                                report, log_stream);
+    it_->diagnostics.numerical(*it_, report, log_stream);
+  }
   it_->diagnostics.divergence(*it_, iter_, report);
   logger_.printInfo("%s", log_stream.str().c_str());
   return report;
