@@ -230,6 +230,8 @@ void FactorHighsSolver::checkMemory() const {
                             ? kMemoryMarginParallelTree
                             : kMemoryMarginSerial;
   const double required = margin * kkt_.S.storage();
+  if (required < kMemoryCheckMinBytes && !availableMemoryBytesSetForTesting())
+    return;
   const double available = availableMemoryBytes();
   if (available < 0 || required <= available) return;
   const double bytes_per_GB = 1024.0 * 1024.0 * 1024.0;

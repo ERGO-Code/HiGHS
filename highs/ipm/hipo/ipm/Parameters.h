@@ -57,6 +57,10 @@ const double kSkipSystemNzBoundsRatio = 50.0;
 const double kMemoryMarginSerial = 1.2;
 const double kMemoryMarginParallelTree = 2.5;
 
+// Below this many bytes required, memory is not checked, since reading the
+// available memory costs about 30us of file reads on Linux
+const double kMemoryCheckMinBytes = 256.0 * 1024 * 1024;
+
 // parameters for iterative refinement
 const Int kRefineMaxIter = 3;
 const double kRefineTol = 1e-12;

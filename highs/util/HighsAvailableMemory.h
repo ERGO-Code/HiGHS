@@ -21,6 +21,7 @@ double availableMemoryBytes();
 // For tests: availableMemoryBytes() returns bytes if it is nonnegative, and
 // measures the memory again if it is negative
 void setAvailableMemoryBytesForTesting(const double bytes);
+bool availableMemoryBytesSetForTesting();
 
 // Thrown when a solver stops because it's predicted not to fit in memory.
 // This is planned, so it's logged as a warning rather than an error

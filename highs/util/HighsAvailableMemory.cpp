@@ -109,6 +109,10 @@ void setAvailableMemoryBytesForTesting(const double bytes) {
   available_memory_bytes_for_testing = bytes;
 }
 
+bool availableMemoryBytesSetForTesting() {
+  return available_memory_bytes_for_testing >= 0;
+}
+
 double availableMemoryBytes() {
   if (available_memory_bytes_for_testing >= 0)
     return available_memory_bytes_for_testing;
