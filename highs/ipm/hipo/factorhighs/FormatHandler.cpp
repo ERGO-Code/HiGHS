@@ -18,12 +18,14 @@ FormatHandler::FormatHandler(const Symbolic& S, Int sn,
       frontal_{frontal},
       clique_ptr_{clique_ptr} {
   local_reg_.resize(sn_size_);
+  local_unreg_pivots_.resize(sn_size_);
   swaps_.resize(sn_size_);
   pivot_2x2_.resize(sn_size_);
 }
 
 void FormatHandler::terminate(std::vector<double>& clique,
                               std::vector<double>& total_reg,
+                              std::vector<double>& total_unreg_pivots,
                               std::vector<Int>& swaps,
                               std::vector<double>& pivot_2x2) {
   // Move local copies of data into their final position.
@@ -35,12 +37,15 @@ void FormatHandler::terminate(std::vector<double>& clique,
   swaps = std::move(swaps_);
   pivot_2x2 = std::move(pivot_2x2_);
 
-  // Move local regularisation into total regularisation.
-  for (Int i = 0; i < sn_size_; ++i)
+  // Move local regularisation and pivots into the total ones.
+  for (Int i = 0; i < sn_size_; ++i) {
     total_reg[S_->snStart(sn_) + i] = local_reg_[i];
+    total_unreg_pivots[S_->snStart(sn_) + i] = local_unreg_pivots_[i];
+  }
 
   // This function should not require a lock, since all threads access different
-  // locations within total_reg, sn_columns and schur_contribution.
+  // locations within total_reg, total_unreg_pivots, sn_columns and
+  // schur_contribution.
 }
 
 }  // namespace hipo

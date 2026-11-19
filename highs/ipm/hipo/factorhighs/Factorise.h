@@ -57,6 +57,9 @@ class Factorise {
   // regularisation
   std::vector<double> total_reg_{};
 
+  // 1x1 pivots before regularisation, infinite for 2x2 pivots
+  std::vector<double> unreg_pivots_{};
+
   // flag to stop computation
   std::atomic<bool> flag_stop_{false};
 

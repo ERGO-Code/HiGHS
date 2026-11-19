@@ -117,6 +117,19 @@ void Numeric::getReg(double* reg) {
   std::memcpy(reg, total_reg_.data(), total_reg_.size() * sizeof(double));
 }
 
+void Numeric::getUnregPivots(std::vector<double>& unreg_pivots) const {
+  unreg_pivots = unreg_pivots_;
+}
+
+Int Numeric::num2x2() const {
+  // only the first column of a 2x2 pivot stores a nonzero entry
+  Int num = 0;
+  for (const std::vector<double>& sn_2x2 : pivot_2x2_)
+    for (double v : sn_2x2)
+      if (v != 0.0) ++num;
+  return num;
+}
+
 void Numeric::inertia(Int& pos, Int& neg, Int& zero, double tol) const {
   if (!SH_) return;
   SH_->inertia(pos, neg, zero, tol);

@@ -247,7 +247,7 @@ void Factorise::processSupernode(Int sn) {
   FH->extremeEntries();
 
   // terminate the format handler
-  FH->terminate(schur_contribution_[sn], total_reg_, swaps_[sn],
+  FH->terminate(schur_contribution_[sn], total_reg_, unreg_pivots_, swaps_[sn],
                 pivot_2x2_[sn]);
 
   if (serial) stack_->pushWork(sn);
@@ -284,6 +284,7 @@ bool Factorise::run(Numeric& num) {
   HIPO_CLOCK_CREATE;
 
   total_reg_.assign(n_, 0.0);
+  unreg_pivots_.assign(n_, 0.0);
 
   // allocate space
   schur_contribution_.resize(S_.sn());
@@ -303,11 +304,13 @@ bool Factorise::run(Numeric& num) {
   if (flag_stop_.load(std::memory_order_relaxed)) return true;
 
   permuteVector(total_reg_, S_.iperm());
+  permuteVector(unreg_pivots_, S_.iperm());
 
   // move factorisation to numerical object
   num.S_ = &S_;
   num.sn_columns_ = &sn_columns_;
   num.total_reg_ = std::move(total_reg_);
+  num.unreg_pivots_ = std::move(unreg_pivots_);
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);
   num.data_ = &data_;

@@ -48,6 +48,14 @@ Int FHsolver::backwardSolve(double* x, Int k) const {
 }
 
 void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
+void FHsolver::getInfo(FHinfo& info, double zero_tol) const {
+  N_.getUnregPivots(info.unreg_pivots);
+  info.num_2x2 = N_.num2x2();
+  info.num_pos = 0;
+  info.num_neg = 0;
+  info.num_zero = 0;
+  N_.inertia(info.num_pos, info.num_neg, info.num_zero, zero_tol);
+}
 
 void FHsolver::setBlockSize(Int nb) {
   if (nb > 0) options_.nb = nb;

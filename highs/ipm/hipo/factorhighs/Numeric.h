@@ -38,6 +38,9 @@ class Numeric {
   // dynamic regularisation applied to the matrix
   std::vector<double> total_reg_{};
 
+  // 1x1 pivots before regularisation, infinite for 2x2 pivots
+  std::vector<double> unreg_pivots_{};
+
   void computeAnySwaps();
 
  public:
@@ -55,6 +58,8 @@ class Numeric {
   Int backwardSolve(double* x, Int k) const;
 
   void getReg(double* reg);
+  void getUnregPivots(std::vector<double>& unreg_pivots) const;
+  Int num2x2() const;
   void inertia(Int& pos, Int& neg, Int& zero, double tol) const;
 };
 

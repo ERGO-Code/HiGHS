@@ -1,3 +1,5 @@
+#include <limits>
+
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 #include "DenseFact.h"
@@ -40,10 +42,11 @@ static std::pair<Int, double> maxInCol(Int j, Int n, Int m, double* A,
 }
 
 static void staticReg(double& pivot, Int sign, const FHoptions& options,
-                      double& totalreg) {
-  // apply static regularisation
+                      double& totalreg, double& unreg_pivot) {
+  // apply static regularisation, and save the pivot before it
 
   double old_pivot = pivot;
+  unreg_pivot = old_pivot;
   if (sign == 0) sign = pivot > 0 ? 1 : -1;
   if (sign > 0)
     pivot += options.reg_d;
@@ -55,7 +58,7 @@ static void staticReg(double& pivot, Int sign, const FHoptions& options,
 static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
                               Int* swaps, Int* sign, double thresh,
                               const FHoptions& options, double* totalreg,
-                              DataCollector& data) {
+                              double* unreg_pivots, DataCollector& data) {
   // Perform Bunch-Kaufman pivoting within a block of the supernode (see Schenk,
   // Gartner, ETNA 2006).
   // It works only for upper triangular A.
@@ -98,7 +101,7 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
     swapCols('U', n, A, lda, j, c, swaps, sign, data);
 
     double old_pivot = A[j + lda * j];
-    staticReg(A[j + lda * j], sign_c, options, totalreg[j]);
+    staticReg(A[j + lda * j], sign_c, options, totalreg[j], unreg_pivots[j]);
 
     if (sign_c * A[j + lda * j] < 0) {
       data.setWrongSign(A[j + lda * j]);
@@ -126,14 +129,14 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
          std::abs(Acc) * gamma_r >= kAlphaBK * gamma_c * gamma_c)) {
       // Accept current pivot
       swapCols('U', n, A, lda, j, c, swaps, sign, data);
-      staticReg(A[j + lda * j], sign_c, options, totalreg[j]);
+      staticReg(A[j + lda * j], sign_c, options, totalreg[j], unreg_pivots[j]);
 
       if (sign_c * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
     } else if (std::abs(Arr) >= kAlphaBK * gamma_r) {
       // Use pivot r
       swapCols('U', n, A, lda, j, r, swaps, sign, data);
-      staticReg(A[j + lda * j], sign_r, options, totalreg[j]);
+      staticReg(A[j + lda * j], sign_r, options, totalreg[j], unreg_pivots[j]);
 
       if (sign_r * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
 
@@ -148,8 +151,13 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
       // Move column r into position j+1
       swapCols('U', n, A, lda, j + 1, r_pos, swaps, sign, data);
       flag_2x2 = true;
-      staticReg(A[j + lda * j], sign_c, options, totalreg[j]);
-      staticReg(A[j + 1 + lda * (j + 1)], sign_r, options, totalreg[j + 1]);
+      staticReg(A[j + lda * j], sign_c, options, totalreg[j], unreg_pivots[j]);
+      staticReg(A[j + 1 + lda * (j + 1)], sign_r, options, totalreg[j + 1],
+                unreg_pivots[j + 1]);
+
+      // a 2x2 pivot has no single unregularised pivot
+      unreg_pivots[j] = std::numeric_limits<double>::infinity();
+      unreg_pivots[j + 1] = std::numeric_limits<double>::infinity();
 
       if (sign_c * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
       if (sign_r * A[j + 1 + lda * (j + 1)] < 0)
@@ -162,8 +170,9 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
 }
 
 Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
-               double thresh, double* totalreg, Int* swaps, double* pivot_2x2,
-               DataCollector& data, const FHoptions& options) {
+               double thresh, double* totalreg, double* unreg_pivots,
+               Int* swaps, double* pivot_2x2, DataCollector& data,
+               const FHoptions& options) {
   // ===========================================================================
   // Factorisation kernel
   // Matrix A is in format F
@@ -197,7 +206,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
 
       if (options.pivoting) {
         flag_2x2 = blockBunchKaufman(j, n, A, lda, swaps, pivot_sign, thresh,
-                                     options, totalreg, data);
+                                     options, totalreg, unreg_pivots, data);
       }
 
       // cannot do 2x2 pivoting on last column
@@ -216,7 +225,7 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
         // blockBunchKaufman.
         if (!options.pivoting) {
           // add static regularisation
-          staticReg(Ajj, pivot_sign[j], options, totalreg[j]);
+          staticReg(Ajj, pivot_sign[j], options, totalreg[j], unreg_pivots[j]);
           data.setMaxReg(std::abs(totalreg[j]));
         }
 

@@ -3,6 +3,7 @@
 
 #include "CliqueStack.h"
 #include "DataCollector.h"
+#include "FactorHighsInfo.h"
 #include "FactorHighsOptions.h"
 #include "Numeric.h"
 #include "Symbolic.h"
@@ -128,6 +129,10 @@ class FHsolver {
 
   // Extract the regularisation values used, including static and dynamic.
   void getRegularisation(double* reg);
+
+  // Extract information about the last factorisation, see FHinfo. The inertia
+  // uses zero_tol as tolerance for zero.
+  void getInfo(FHinfo& info, double zero_tol = 1e-16) const;
 
   // Set block size for dense linear algebra
   void setBlockSize(Int nb);

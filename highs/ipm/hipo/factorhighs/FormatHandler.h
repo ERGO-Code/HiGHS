@@ -50,6 +50,7 @@ class FormatHandler {
   std::vector<double> clique_{};
   double* clique_ptr_ = nullptr;
   std::vector<double> local_reg_{};
+  std::vector<double> local_unreg_pivots_{};
   std::vector<Int> swaps_{};
   std::vector<double> pivot_2x2_{};
 
@@ -57,7 +58,8 @@ class FormatHandler {
   FormatHandler(const Symbolic& S, Int sn, std::vector<double>& frontal,
                 double* clique_ptr, const FHoptions& FH_opt);
   void terminate(std::vector<double>& clique, std::vector<double>& total_reg,
-                 std::vector<Int>& swaps, std::vector<double>& pivot_2x2);
+                 std::vector<double>& total_unreg_pivots, std::vector<Int>& swaps,
+                 std::vector<double>& pivot_2x2);
 
   // avoid copies
   FormatHandler(const FormatHandler&) = delete;
