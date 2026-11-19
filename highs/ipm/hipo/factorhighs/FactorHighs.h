@@ -90,14 +90,9 @@ class FHsolver {
   bool local_logger_ = false;
 
  public:
-  // C-style callback that returns nonzero to stop a long computation early.
-  // It must not throw.
-  using StopCallback = int (*)(void* data);
+  using StopCallback = FHoptions::StopCallback;
 
  private:
-  StopCallback should_stop_ = nullptr;
-  void* stop_data_ = nullptr;
-
   FHoptions options_{};
 
   // Columns of factorisation, stored by supernode.

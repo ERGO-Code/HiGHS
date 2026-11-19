@@ -112,7 +112,7 @@ void Factorise::processSupernode(Int sn) {
   const bool serial = !parallel;
 
   if (flag_stop_.load(std::memory_order_relaxed)) return;
-  if (FH_opt_.should_stop && FH_opt_.should_stop()) {
+  if (FH_opt_.stopRequested()) {
     flag_stop_.store(true, std::memory_order_relaxed);
     return;
   }

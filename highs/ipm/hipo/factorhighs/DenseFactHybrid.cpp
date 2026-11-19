@@ -61,8 +61,7 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
   // ===========================================================================
   for (Int j = 0; j < n_blocks; ++j) {
     // Check every 8 blocks, skipping single-block fronts, to keep it cheap
-    if (j % 8 == 1 && options.should_stop && options.should_stop())
-      return kRetGeneric;
+    if (j % 8 == 1 && options.stopRequested()) return kRetGeneric;
 
     // j is the index of the block column
 
