@@ -103,18 +103,11 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
     double old_pivot = A[j + lda * j];
     staticReg(A[j + lda * j], sign_c, options, totalreg[j], unreg_pivots[j]);
 
-    if (sign_c * A[j + lda * j] < 0) {
-      data.setWrongSign(A[j + lda * j]);
-      // A[j + lda * j] = sign_c * thresh;
-    }
-
     if (std::max(std::abs(Acc), gamma_c) < thresh) {
       // perturbe pivot
       A[j + lda * j] = sign_c * thresh;
-      data.countRegPiv();
     }
     totalreg[j] = A[j + lda * j] - old_pivot;
-    data.setMaxReg(std::abs(totalreg[j]));
 
   } else {
     // Max in column r of diagonal block
@@ -130,16 +123,10 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
       // Accept current pivot
       swapCols('U', n, A, lda, j, c, swaps, sign, data);
       staticReg(A[j + lda * j], sign_c, options, totalreg[j], unreg_pivots[j]);
-
-      if (sign_c * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
-
     } else if (std::abs(Arr) >= kAlphaBK * gamma_r) {
       // Use pivot r
       swapCols('U', n, A, lda, j, r, swaps, sign, data);
       staticReg(A[j + lda * j], sign_r, options, totalreg[j], unreg_pivots[j]);
-
-      if (sign_r * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
-
     } else {
       // Use 2x2 pivot (c,r)
 
@@ -158,10 +145,6 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
       // a 2x2 pivot has no single unregularised pivot
       unreg_pivots[j] = std::numeric_limits<double>::infinity();
       unreg_pivots[j + 1] = std::numeric_limits<double>::infinity();
-
-      if (sign_c * A[j + lda * j] < 0) data.setWrongSign(A[j + lda * j]);
-      if (sign_r * A[j + 1 + lda * (j + 1)] < 0)
-        data.setWrongSign(A[j + 1 + lda * (j + 1)]);
     }
   }
 
@@ -226,7 +209,6 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
         if (!options.pivoting) {
           // add static regularisation
           staticReg(Ajj, pivot_sign[j], options, totalreg[j], unreg_pivots[j]);
-          data.setMaxReg(std::abs(totalreg[j]));
         }
 
         // save reciprocal of pivot
@@ -293,8 +275,6 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
           callAndTime_dger(M, M, -1.0, temp2.data(), 1, r2, lda,
                            &A[j + 2 + (j + 2) * lda], lda, data);
         }
-
-        data.count2x2();
       }
     }
   }

@@ -26,7 +26,7 @@ struct IterationRecord {
   double bw_error = 0.0;
   double cw_error = 0.0;
 
-  // pivots of the last factorisation (2x2 pivots excluded)
+  // pivots statistics
   Int num_dynamic_reg = 0;    // perturbed beyond the static regularisation
   Int num_wrong_sign = 0;     // wrong sign after regularisation
   Int num_reg_dominated = 0;  // smaller than their regularisation
@@ -36,14 +36,11 @@ struct IterationRecord {
   Int num_2x2 = 0;
   Int wrong_inertia = 0;  // distance of the inertia from the expected one
 
-  // step lengths and norms of r1, r2, r3, r4 before and after the step
   double alpha_primal = 0.0;
   double alpha_dual = 0.0;
   double res_norm_before[4]{};
   double res_norm_after[4]{};
 
-  // columns with Theta^-1 small compared to Rp, and rows with a large
-  // residual whose diagonal of A * Theta * A^T is smaller than Rd
   Int num_near_free = 0;
   Int num_absorbed_rows = 0;
 };

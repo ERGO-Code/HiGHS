@@ -24,10 +24,10 @@ enum class IssueType {
   // numerical trouble in the linear solver
   kInaccurateSolve,      // componentwise backward error after refinement large
   kVeryInaccurateSolve,  // ... so large that the direction is unreliable
-  kWrongInertia,     // pivots with the wrong sign
-  kDynamicReg,       // pivots perturbed beyond the static regularisation
-  kAbsorbedRows,     // rows whose residual is absorbed by the regularisation
-  kManyNearFree,     // more nearly free columns than rows
+  kWrongInertia,         // pivots with the wrong sign
+  kDynamicReg,           // pivots perturbed beyond the static regularisation
+  kAbsorbedRows,  // rows whose residual is absorbed by the regularisation
+  kManyNearFree,  // more nearly free columns than rows
 };
 
 inline bool isStagnation(IssueType type) {

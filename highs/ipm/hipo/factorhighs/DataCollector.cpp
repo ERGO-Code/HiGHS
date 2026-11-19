@@ -5,25 +5,10 @@
 
 namespace hipo {
 
-// Functions to manage DataCollector
-
 DataCollector::DataCollector() {
   times_.resize(kTimeSize);
   blas_calls_.resize(kTimeBlasEnd - kTimeBlasStart + 1);
 }
-void DataCollector::append() {
-  // add an empty IterData object to the record
-  iter_data_record_.push_back(IterData());
-}
-IterData& DataCollector::back() {
-  // access most recent record of data
-  if (iter_data_record_.empty()) append();
-  return iter_data_record_.back();
-}
-
-//
-// Data-collecting functions
-//
 
 void DataCollector::sumTime(TimeItems i, double t) {
 #if HIPO_TIMING_LEVEL > 0
@@ -36,62 +21,6 @@ void DataCollector::sumTime(TimeItems i, double t) {
 #endif
 #endif
 }
-void DataCollector::setExtremeEntries(double minD, double maxD, double minoffD,
-                                      double maxoffD) {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  // Store max and min entries of D and L.
-  std::lock_guard<std::mutex> lock(mutex_);
-  back().minD = std::min(back().minD, minD);
-  back().maxD = std::max(back().maxD, maxD);
-  back().minL = std::min(back().minL, minoffD);
-  back().maxL = std::max(back().maxL, maxoffD);
-#endif
-}
-void DataCollector::countRegPiv() {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  // Increase the number of dynamically regularised pivots.
-  std::lock_guard<std::mutex> lock(mutex_);
-  ++back().n_reg_piv;
-#endif
-}
-void DataCollector::countSwap() {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  std::lock_guard<std::mutex> lock(mutex_);
-  ++back().n_swap;
-#endif
-}
-void DataCollector::count2x2() {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  std::lock_guard<std::mutex> lock(mutex_);
-  ++back().n_2x2;
-#endif
-}
-void DataCollector::setWrongSign(double p) {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  std::lock_guard<std::mutex> lock(mutex_);
-  ++back().n_wrong_sign;
-  back().max_wrong_sign = std::max(back().max_wrong_sign, std::abs(p));
-#endif
-}
-void DataCollector::setMaxReg(double new_reg) {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  // Keep track of maximum regularisation used.
-  std::lock_guard<std::mutex> lock(mutex_);
-  back().max_reg = std::max(back().max_reg, new_reg);
-#endif
-}
-
-void DataCollector::setNorms(double norm1, double maxdiag) {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  std::lock_guard<std::mutex> lock(mutex_);
-  back().M_norm1 = norm1;
-  back().M_maxdiag = maxdiag;
-#endif
-}
-
-//
-// Printing
-//
 
 void DataCollector::printTimes(const Logger& logger) const {
 #if HIPO_TIMING_LEVEL >= 1
@@ -289,36 +218,6 @@ void DataCollector::printTimes(const Logger& logger) const {
   log_stream << "----------------------------------------------------\n";
 #endif
 
-  logger.print(log_stream.str().c_str());
-#endif
-}
-
-void DataCollector::printIter(const Logger& logger) const {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-
-  std::stringstream log_stream;
-
-  log_stream << "\niter |   min D     max D     min L     max L  |"
-                "    reg   swap    2x2    ws | "
-                " max_reg   max_ws    norm1     maxdiag|\n";
-
-  for (Int i = 0; i < iter_data_record_.size(); ++i) {
-    const IterData& iter = iter_data_record_[i];
-
-    log_stream << integer(i, 3) << "  |";
-    log_stream << sci(iter.minD, 9, 1) << " ";
-    log_stream << sci(iter.maxD, 9, 1) << " ";
-    log_stream << sci(iter.minL, 9, 1) << " ";
-    log_stream << sci(iter.maxL, 9, 1) << " |";
-    log_stream << integer(iter.n_reg_piv, 6) << " ";
-    log_stream << integer(iter.n_swap, 6) << " ";
-    log_stream << integer(iter.n_2x2, 6) << " ";
-    log_stream << integer(iter.n_wrong_sign, 6) << " |";
-    log_stream << sci(iter.max_reg, 9, 1) << " ";
-    log_stream << sci(iter.max_wrong_sign, 9, 1) << " ";
-    log_stream << sci(iter.M_norm1, 9, 1) << " ";
-    log_stream << sci(iter.M_maxdiag, 9, 1) << "|\n";
-  }
   logger.print(log_stream.str().c_str());
 #endif
 }

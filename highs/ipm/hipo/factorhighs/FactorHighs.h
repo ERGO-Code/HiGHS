@@ -118,11 +118,6 @@ class FHsolver {
   Int diagSolve(double* x, Int k = 1) const;
   Int backwardSolve(double* x, Int k = 1) const;
 
-  // If multiple factorisation are performed, call newIter() before each
-  // factorisation. This is used only to collect data for debugging, if
-  // expensive data collection is turned on at compile time.
-  void newIter();
-
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p = 0.0, double reg_d = 0.0);

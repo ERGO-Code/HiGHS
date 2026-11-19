@@ -30,7 +30,6 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
 
 void FactorHighsSolver::clear() {
   valid_ = false;
-  FH_.newIter();
 }
 
 // =========================================================================

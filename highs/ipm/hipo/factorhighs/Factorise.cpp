@@ -73,15 +73,6 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   next_child_reverse_ = next_child_;
   reverseLinkedList(first_child_reverse_, next_child_reverse_);
 
-  // compute largest diagonal entry in absolute value
-  max_diag_ = 0.0;
-  min_diag_ = kHighsInf;
-  for (Int col = 0; col < n_; ++col) {
-    double val = std::abs(valM_[ptrM_[col]]);
-    max_diag_ = std::max(max_diag_, val);
-    min_diag_ = std::min(min_diag_, val);
-  }
-
   // one norm of columns of M
   std::vector<double> one_norm_cols(n_, 0.0);
   for (Int col = 0; col < n_; ++col) {
@@ -95,8 +86,6 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   M_norm1_ = one_norm_cols.empty() ? 0.0
                                    : *std::max_element(one_norm_cols.begin(),
                                                        one_norm_cols.end());
-
-  data_.setNorms(M_norm1_, max_diag_);
 }
 
 void Factorise::permute(const std::vector<Int>& iperm) {
@@ -227,7 +216,6 @@ void Factorise::processSupernode(Int sn) {
   // ===================================================
   HIPO_CLOCK_START(2);
   // threshold for regularisation
-  // const double reg_thresh = max_diag_ * kDynamicDiagCoeff;
   const double reg_thresh = M_norm1_ * kDynamicDiagCoeff;
 
   if (Int flag = FH->denseFactorise(reg_thresh)) {
@@ -243,9 +231,6 @@ void Factorise::processSupernode(Int sn) {
   HIPO_CLOCK_STOP(2, data_, kTimeFactoriseDenseFact);
 
   HIPO_CLOCK_START(2);
-  // compute largest elements in factorisation
-  FH->extremeEntries();
-
   // terminate the format handler
   FH->terminate(schur_contribution_[sn], total_reg_, unreg_pivots_, swaps_[sn],
                 pivot_2x2_[sn]);

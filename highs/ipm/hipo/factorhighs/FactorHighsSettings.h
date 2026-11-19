@@ -9,11 +9,6 @@
 // SWITCHES
 // ===========================================================================
 
-// Collect data during regularisation, e.g. number of regularised pivots, 2x2
-// pivots, pivot swaps, pivots with wrong sign, min and max entry of L and D.
-// This can be quite expensive and should only be used for debugging.
-// #define HIPO_COLLECT_EXPENSIVE_DATA
-
 // Choose level of timing:
 // - 0: no timing
 // - 1: basic timing

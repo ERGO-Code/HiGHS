@@ -61,7 +61,6 @@ void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
 
 // Other
 void FactorHighs_symbolic_print(void* FH, void* S, HighsInt verbose);
-void FactorHighs_newIter(void* FH);
 
 #ifdef __cplusplus
 }

@@ -77,12 +77,6 @@ class FormatHandler {
   virtual void assembleFrontal(Int i, Int j, double val) = 0;
   virtual void assembleChild(Int child_sn, const double* child) = 0;
   virtual Int denseFactorise(double reg_thresh) = 0;
-
-  // =================================================================
-  // Virtual functions.
-  // These may be overridden by derived classes, if needed.
-  // =================================================================
-  virtual void extremeEntries() {}
 };
 
 const Int extra_space_frontal = 10;

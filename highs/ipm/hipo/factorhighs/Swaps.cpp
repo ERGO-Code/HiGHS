@@ -52,8 +52,6 @@ void swapCols(char uplo, Int n, double* A, Int lda, Int i, Int j, Int* swaps,
 
   // keep track of order of swaps
   swaps[i] = j;
-
-  data.countSwap();
 }
 
 void applySwaps(const Int* swaps, Int nrow, Int ncol, double* R,

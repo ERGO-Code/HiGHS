@@ -11,14 +11,9 @@
 namespace hipo {
 
 FHsolver::~FHsolver() {
-  if (logger_) {
-    data_.printTimes(*logger_);
-    data_.printIter(*logger_);
-  }
+  if (logger_) data_.printTimes(*logger_);
   if (local_logger_ && logger_) delete logger_;
 }
-
-void FHsolver::newIter() { data_.append(); }
 
 void FHsolver::setRegularisation(double reg_p, double reg_d) {
   options_.reg_p = reg_p;
@@ -84,11 +79,6 @@ void FHsolver::setLogger(const Logger* logger, bool use_printf) {
     if (logger_) local_logger_ = true;
   }
 
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  if (logger_)
-    logger_->printw(
-        "Running in debug mode: COLLECTING EXPENSIVE FACTORISATION DATA\n");
-#endif
 #if HIPO_TIMING_LEVEL > 0
   if (logger_)
     logger_->printw(
