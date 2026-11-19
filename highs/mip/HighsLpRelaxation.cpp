@@ -21,6 +21,10 @@
 #include "util/HighsHash.h"
 #include "util/HighsSolverSelect.h"
 
+// Cap on IPM iterations in MIP LP solves. Of 1309 IPM solves on the benchmark
+// sets, 3 needed more than this
+const HighsInt kMipIpmIterationLimit = 200;
+
 void HighsLpRelaxation::setProfiling(HighsProfiling* profiling) {
   assert(profiling);
   lpsolver.setProfiling(profiling);
@@ -1178,13 +1182,11 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
                               mipsolver.options_mip_->solver_select_strategy);
       lpsolver.setOptionValue("solver_select_require_basis", true);
       // LPs with a simplex iteration limit, such as those in heuristics,
-      // have a budget that selected IPM must also respect. Of 1309 IPM
-      // solves on the benchmark sets, 3 needed more than this
-      const HighsInt kSelectedIpmIterationLimit = 200;
+      // have a budget that selected IPM must also respect
       lpsolver.setOptionValue(
           "ipm_iteration_limit",
           lpsolver.getOptions().simplex_iteration_limit < kHighsIInf
-              ? kSelectedIpmIterationLimit
+              ? kMipIpmIterationLimit
               : kHighsIInf);
     } else {
       use_solver = kSimplexString;
@@ -1439,7 +1441,7 @@ HighsLpRelaxation::Status HighsLpRelaxation::run(bool resolve_on_error) {
         // solveLp
         const std::string ipm_solver = use_hipo ? kHipoString : kIpxString;
         ipm.setOptionValue("solver", ipm_solver);
-        ipm.setOptionValue("ipm_iteration_limit", 200);
+        ipm.setOptionValue("ipm_iteration_limit", kMipIpmIterationLimit);
         ipm.passModel(lpsolver.getLp());
         // todo @ Julian : If you remove this you can see the looping on
         // istanbul-no-cutoff
