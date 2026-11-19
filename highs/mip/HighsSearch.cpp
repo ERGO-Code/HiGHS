@@ -987,6 +987,24 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
                        lp->getObjective(),
                        inheuristic ? kSolutionSourceHeuristic
                                    : kSolutionSourceEvaluateNode);
+          // TEMPORARY diagnostics for the large-int-bounds CI failure (see
+          // issue 3694): report nodes that are pruned below although the
+          // objective of their integral LP solution does not exceed the cutoff
+          // bound (the solution was rejected or did not improve the cutoff);
+          // the return value of addIncumbent cannot be used, since workers
+          // always return true; revert before merging
+          if (lp->unscaledDualFeasible(status) &&
+              !(lp->getObjective() > getCutoffBound())) {
+            printf(
+                "SEARCHDIAG integral node pruned without exceeding the cutoff: "
+                "submip %d inheuristic %d worker %d depth %d objective %.17g "
+                "cutoff before %.17g cutoff after %.17g\n",
+                int(mipsolver.submip), int(inheuristic),
+                int(mipsolver.mipdata_->parallelLockActive()),
+                int(getCurrentDepth()), lp->getObjective(), cutoffbnd,
+                getCutoffBound());
+            fflush(stdout);
+          }
           if (getUpperLimit() < cutoffbnd)
             lp->setObjectiveLimit(getUpperLimit());
 
