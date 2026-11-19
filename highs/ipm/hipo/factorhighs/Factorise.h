@@ -1,6 +1,7 @@
 #ifndef FACTORHIGHS_FACTORISE_H
 #define FACTORHIGHS_FACTORISE_H
 
+#include <atomic>
 #include <cmath>
 
 #include "CliqueStack.h"
