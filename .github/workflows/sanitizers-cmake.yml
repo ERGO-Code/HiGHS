@@ -37,11 +37,6 @@ jobs:
           if [ "${{ matrix.sanitizer }}" = "Address" ]; then
             EXTRA_FLAGS="-DCMAKE_CXX_FLAGS=-D_GLIBCXX_SANITIZE_VECTOR"
           fi
-          # TEMPORARY: debug solution checks for the large-int-bounds
-          # diagnostics; revert before merging
-          if [ "${{ matrix.sanitizer }}" = "Thread" ] && [ "${{ matrix.config }}" = "RelWithDebInfo" ]; then
-            EXTRA_FLAGS="-DDEBUGSOL=ON"
-          fi
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.config }} -DDEBUG_MEMORY=${{ matrix.sanitizer }} -DALL_TESTS=ON -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ $EXTRA_FLAGS
           cmake --build . -j2
 

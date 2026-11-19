@@ -46,9 +46,8 @@ struct HighsDebugSol {
   void registerDomain(const HighsDomain& domain);
 
   void boundChangeAdded(const HighsDomain& domain,
-                        const HighsDomainChange& domchg, bool branching = false,
-                        HighsInt reasonType = -2,
-                        HighsInt reasonIndex = 0);  // TEMPORARY reason
+                        const HighsDomainChange& domchg,
+                        bool branching = false);
 
   void boundChangeRemoved(const HighsDomain& domain,
                           const HighsDomainChange& domchg);
@@ -98,7 +97,7 @@ struct HighsDebugSol {
   void registerDomain(const HighsDomain&) const {}
 
   void boundChangeAdded(const HighsDomain&, const HighsDomainChange&,
-                        bool = false, HighsInt = 0, HighsInt = 0) const {}
+                        bool = false) const {}
 
   void boundChangeRemoved(const HighsDomain&, const HighsDomainChange&) const {}
 

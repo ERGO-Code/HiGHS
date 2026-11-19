@@ -2325,10 +2325,8 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
     colUpperPos_[boundchg.column] = domchgstack_.size();
   }
 
-  // TEMPORARY: the reason is passed for the large-int-bounds diagnostics
   mipsolver->mipdata_->debugSolution.boundChangeAdded(
-      *this, boundchg, reason.type == Reason::kBranching, reason.type,
-      reason.index);
+      *this, boundchg, reason.type == Reason::kBranching);
 
   if (reason.type == Reason::kBranching)
     branchPos_.push_back(domchgstack_.size());
