@@ -1172,7 +1172,7 @@ void HighsMipSolverData::runSetup() {
         num_col == 1 ? "" : "s", num_binary, num_general_integer,
         num_implied_integer, num_continuous, num_domain_fixed,
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
-        // available_core_count() reads sysfs: skip it when nothing is logged
+        // available_core_count() is slow: skip it when nothing is logged
         HighsInt{*mipsolver.options_mip_->log_options.output_flag
                      ? static_cast<int>(highs::parallel::available_core_count())
                      : 0},

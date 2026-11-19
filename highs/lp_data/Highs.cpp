@@ -5207,7 +5207,7 @@ HighsStatus Highs::initializeMultiThreading() {
   highs::parallel::initialize_scheduler(this->options_.threads);
   this->max_threads_ = highs::parallel::num_threads();
   HighsLogOptions& log_options = this->options_.log_options;
-  // available_core_count() reads sysfs, so only call it when it is logged
+  // available_core_count() is slow: only call it when it is logged
   if (*log_options.output_flag && *log_options.log_dev_level) {
     unsigned int available_cores = highs::parallel::available_core_count();
     highsLogDev(log_options, HighsLogType::kInfo,
