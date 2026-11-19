@@ -1150,6 +1150,11 @@ void HighsMipSolverData::runSetup() {
                         num_implied_integer + num_domain_fixed);
   if (numRestarts == 0) {
     numCliqueEntriesAfterFirstPresolve = cliquetable.getNumEntries();
+    // available_core_count() is slow: skip it when nothing is logged
+    const HighsInt available_cores =
+        mipsolver.options_mip_->output_flag
+            ? static_cast<HighsInt>(highs::parallel::available_core_count())
+            : 0;
     highsLogUser(
         mipsolver.options_mip_->log_options, HighsLogType::kInfo,
         // clang-format off
@@ -1172,7 +1177,7 @@ void HighsMipSolverData::runSetup() {
         num_col == 1 ? "" : "s", num_binary, num_general_integer,
         num_implied_integer, num_continuous, num_domain_fixed,
         mipsolver.numNonzero(), mipsolver.numNonzero() == 1 ? "" : "s",
-        HighsInt{static_cast<int>(highs::parallel::available_core_count())},
+        available_cores,
         HighsInt{static_cast<int>(std::thread::hardware_concurrency())},
         mipsolver.getMaxNumWorkers(), HighsInt{highs::parallel::num_threads()});
   } else {
