@@ -462,7 +462,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
     // Deltax = (Theta^-1+Rp+Q)^-1 * Deltax
     for (Int i = 0; i < n_; ++i) {
       double denom = theta_inv[i] + regul_.primal;
-      if (model_.qp()) denom += model_.sense() * model_.Q().diag(i);
+      if (model_.qp()) denom += model_.Q().diag(i);
       delta.x[i] /= denom;
     }
 
@@ -782,7 +782,7 @@ isFailure Solver::startingPoint() {
 
   std::vector<double> cPlusQx = model_.c();
   if (norm2(cPlusQx) < 1e-6) vectorAdd(cPlusQx, 1e-3);
-  if (model_.qp()) model_.Q().alphaProductPlusY(model_.sense(), x, cPlusQx);
+  if (model_.qp()) model_.Q().alphaProductPlusY(1.0, x, cPlusQx);
 
   double max_norm_x = std::max(infNorm(x), std::max(infNorm(xl), infNorm(xu)));
   if (infNorm(cPlusQx) > max_norm_x * 1e3) cPlusQx = model_.c();
