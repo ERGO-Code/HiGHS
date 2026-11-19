@@ -722,7 +722,8 @@ void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
 }
 
 bool Iterate::resetBest(Int iter) {
-  if (iter == best_iter) return false;
+  // Nothing to reset to if no best iterate has been saved
+  if (best_iter < 0 || iter == best_iter) return false;
 
   x = best_x;
   xl = best_xl;
