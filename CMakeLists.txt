@@ -81,9 +81,11 @@ endif()
 # multiply-adds when the target supports them (e.g. gcc 15 enables FMA by
 # default on some x86-64 platforms), which breaks the error terms in
 # HighsCDouble. GCC ignores "#pragma STDC FP_CONTRACT OFF", so the flag is
-# required.
+# required. The third-party code in extern (e.g. OpenBLAS) removes it again.
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
+  set(HIGHS_FP_CONTRACT_OFF_OPTION
+      "$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
+  add_compile_options("${HIGHS_FP_CONTRACT_OFF_OPTION}")
 endif()
 
 # MSVC
