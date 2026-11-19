@@ -13,12 +13,12 @@ namespace hipo {
 
 FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
-                                     const Regularisation& regul, Info& info,
+                                     const SolverControls& controls, Info& info,
                                      IterationHistory& history,
                                      const Logger& logger)
     : FH_{},
       kkt_{kkt},
-      regul_{regul},
+      controls_{controls},
       info_{info},
       history_{history},
       logger_{logger},
@@ -88,7 +88,7 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   kkt_.buildASvalues(scaling);
 
   // set static regularisation, since it may have changed
-  FH_.setRegularisation(regul_.primal, regul_.dual);
+  FH_.setRegularisation(controls_.reg_p, controls_.reg_d);
 
   Clock clock;
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
@@ -108,7 +108,7 @@ Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   kkt_.buildNEvalues(scaling);
 
   // set static regularisation, since it may have changed
-  FH_.setRegularisation(regul_.primal, regul_.dual);
+  FH_.setRegularisation(controls_.reg_p, controls_.reg_d);
 
   Clock clock;
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
@@ -720,7 +720,7 @@ void FactorHighsSolver::getReg(std::vector<double>& Rp,
     assert(kkt_.isNE());
     // Primal regularisation is added to Theta^-1 when forming the normal
     // equations.
-    Rp.assign(n, regul_.primal);
+    Rp.assign(n, controls_.reg_p);
     Rd.resize(m);
     FH_.getRegularisation(Rd.data());
   }

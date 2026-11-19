@@ -29,12 +29,12 @@ struct KktMatrix {
   Symbolic S;
 
   const Model& model;
-  const Regularisation& regul;
+  const SolverControls& controls;
   Info& info;
   const Logger& logger;
   const Options& options;
 
-  KktMatrix(const Model& model, const Regularisation& regul, Info& info,
+  KktMatrix(const Model& model, const SolverControls& controls, Info& info,
             const Logger& logger, const Options& options);
 
   Int buildASstructure();

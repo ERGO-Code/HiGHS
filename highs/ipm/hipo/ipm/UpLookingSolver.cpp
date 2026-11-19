@@ -9,7 +9,7 @@ namespace hipo {
 
 UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info,
                                  IterationHistory& history,
-                                 const Regularisation& regul,
+                                 const SolverControls& controls,
                                  const Model& model)
     : kkt_{kkt},
       ptr_{kkt_.isNE() ? kkt_.ptrNE : kkt_.ptrAS},
@@ -18,7 +18,7 @@ UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info,
       n_{static_cast<Int>(ptr_.size() - 1)},
       info_{info},
       history_{history},
-      regul_{regul},
+      controls_{controls},
       model_{model} {}
 
 void UpLookingSolver::etreeAndCounts(const std::vector<Int>& ptr,
@@ -166,9 +166,9 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
     double old_pivot = d;
     unreg_pivots_[row] = d;
     if (signs_[row] > 0)
-      d += regul_.dual;
+      d += controls_.reg_d;
     else
-      d -= regul_.primal;
+      d -= controls_.reg_p;
 
     const double pivot_scale = std::max(1.0, std::abs(orig_diag));
     if (d * signs_[row] < reg_threshold_ * pivot_scale) {
@@ -312,7 +312,7 @@ void UpLookingSolver::getReg(std::vector<double>& Rp, std::vector<double>& Rd) {
     assert(kkt_.isNE());
     // Primal regularisation is added to Theta^-1 when forming the normal
     // equations.
-    Rp.assign(n, regul_.primal);
+    Rp.assign(n, controls_.reg_p);
     Rd = std::move(reg);
   }
 }

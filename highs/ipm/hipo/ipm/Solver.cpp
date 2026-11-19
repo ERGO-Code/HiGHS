@@ -131,7 +131,7 @@ void Solver::reset() {
   alpha_primal_ = 0.0;
   alpha_dual_ = 0.0;
   sigma_ = 0.0;
-  regul_ = Regularisation{};
+  controls_ = SolverControls{};
   recovery_ = Recovery{};
   prev_point_valid_ = false;
 
@@ -155,7 +155,7 @@ void Solver::doSolve() {
   reset();
 
   // iterate object needs to be initialised before potentially interrupting
-  it_.reset(new Iterate(model_, info_, regul_));
+  it_.reset(new Iterate(model_, info_, controls_));
 
   if (checkInterrupt()) return;
 
@@ -193,7 +193,7 @@ isFailure Solver::initialise() {
 
   start_time_ = control_.elapsed();
 
-  kkt_.reset(new KktMatrix(model_, regul_, info_, logger_, options_));
+  kkt_.reset(new KktMatrix(model_, controls_, info_, logger_, options_));
 
   if (initialiseLinearSolver()) return true;
 
@@ -460,7 +460,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
 
     // Deltax = (Theta^-1+Rp+Q)^-1 * Deltax
     for (Int i = 0; i < n_; ++i) {
-      double denom = theta_inv[i] + regul_.primal;
+      double denom = theta_inv[i] + controls_.reg_p;
       if (model_.qp()) denom += model_.sense() * model_.Q().diag(i);
       delta.x[i] /= denom;
     }
@@ -567,9 +567,9 @@ void Solver::recordFactorisationSignals() {
   };
 
   for (Int i = 0; i < (Int)Px.size(); ++i)
-    addPivot(Px[i], it_->Rp[i], regul_.primal);
+    addPivot(Px[i], it_->Rp[i], controls_.reg_p);
   for (Int i = 0; i < (Int)Py.size(); ++i)
-    addPivot(Py[i], it_->Rd[i], regul_.dual);
+    addPivot(Py[i], it_->Rd[i], controls_.reg_d);
 
   // nearly free columns
   const std::vector<double>& theta_inv = it_->scaling;
@@ -662,7 +662,7 @@ void Solver::stepSizes() {
   std::vector<double>& dzu = it_->delta.zu;
 
   // parameters for Mehrotra heuristic
-  const double gamma_f = 0.9;
+  const double gamma_f = controls_.step_fraction;
   const double gamma_a = 1.0 / (1.0 - gamma_f);
 
   // compute stepsizes and blocking components
@@ -729,8 +729,8 @@ void Solver::stepSizes() {
     assert(block_d >= 0);
   }
 
-  alpha_primal_ = std::min(alpha_p, 1.0 - 1e-4);
-  alpha_dual_ = std::min(alpha_d, 1.0 - 1e-4);
+  alpha_primal_ = std::min(alpha_p, controls_.max_step);
+  alpha_dual_ = std::min(alpha_d, controls_.max_step);
 
   if (model_.qp()) {
     alpha_primal_ = std::min(alpha_primal_, alpha_dual_);
@@ -983,12 +983,13 @@ void Solver::sigmaAffine() {
   const bool small_steps =
       std::min(alpha_primal_, alpha_dual_) < kSigmaAffineSmallStep;
   sigma_ = small_steps ? sigmaFromStepsizes() : kSigmaAffine;
+  sigma_ = std::max(sigma_, controls_.sigma_min);
 
   it_->history.back().sigma_aff = sigma_;
 }
 
 void Solver::sigmaCorrectors() {
-  sigma_ = sigmaFromStepsizes();
+  sigma_ = std::max(sigmaFromStepsizes(), controls_.sigma_min);
 
   it_->history.back().sigma = sigma_;
 }
@@ -1087,7 +1088,8 @@ isFailure Solver::centralityCorrectors() {
   stepsToBoundary(alpha_p_old, alpha_d_old, it_->delta);
 
   Int cor;
-  for (cor = 0; cor < info_.correctors; ++cor) {
+  const Int max_cor = std::min(info_.correctors, controls_.max_correctors);
+  for (cor = 0; cor < max_cor; ++cor) {
     residualsMcc();
 
     NewtonDir corrector(m_, n_);
@@ -1633,7 +1635,7 @@ void Solver::resetToBestIter(Int iter, bool print) {
 }
 
 isFailure Solver::initialiseLinearSolver() {
-  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
+  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, controls_, info_,
                                   it_->history, logger_));
   info_.error = LS_->setup();
   if (info_.error) return true;
@@ -1660,7 +1662,7 @@ isFailure Solver::initialiseLinearSolver() {
     do_switch = should_switch_to_uplooking;
 
   if (do_switch) {
-    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->history, regul_, model_));
+    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->history, controls_, model_));
     LS_->setup();
     LS_->clear();
   }
@@ -1672,7 +1674,7 @@ isSuccess Solver::switchToMultifrontal() {
   if (LS_->type() != kUpLookingType || options_.factor != kHighsChooseString)
     return false;
 
-  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
+  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, controls_, info_,
                                   it_->history, logger_));
   LS_->clear();
   it_->diagnostics.clear(iter_);
@@ -1719,7 +1721,7 @@ void Solver::printOutput(bool reset) const {
         record.correctors, record.num_solves,
         LinearSolverTypeToString((LinearSolverType)record.factorisation_used)
             .front(),
-        regul_.primal, regul_.dual, record.min_theta, record.max_theta,
+        controls_.reg_p, controls_.reg_d, record.min_theta, record.max_theta,
         record.min_prod, record.max_prod, record.num_small_prod,
         record.num_large_prod, record.bw_error);
     logger_.print(" %8.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d %s",
@@ -1918,7 +1920,7 @@ void Solver::chooseNumberOfCorrectors() {
     // all the time, so use f/2.
     // Therefore, we want (1+k)(1+f/2) < ratio.
 
-    double thresh = ratio / (1.0 + kRefineMaxIter / 2.0) - 1;
+    double thresh = ratio / (1.0 + controls_.refine_max_iter / 2.0) - 1;
 
     info_.correctors = std::floor(thresh);
     info_.correctors = std::max(info_.correctors, (Int)1);

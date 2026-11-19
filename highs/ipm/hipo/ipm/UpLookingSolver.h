@@ -40,7 +40,7 @@ class UpLookingSolver : public LinearSolver {
 
   Info& info_;
   IterationHistory& history_;
-  const Regularisation& regul_;
+  const SolverControls& controls_;
   const Model& model_;
 
   void etreeAndCounts(const std::vector<Int>& ptr, const std::vector<Int>& rows,
@@ -51,7 +51,7 @@ class UpLookingSolver : public LinearSolver {
 
  public:
   UpLookingSolver(KktMatrix& kkt, Info& info, IterationHistory& history,
-                  const Regularisation& regul, const Model& model);
+                  const SolverControls& controls, const Model& model);
 
   Int factorAS(const std::vector<double>& scaling) override;
   Int factorNE(const std::vector<double>& scaling) override;

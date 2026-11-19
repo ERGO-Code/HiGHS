@@ -30,11 +30,11 @@ void NewtonDir::add(const NewtonDir& d) {
   vectorAdd(zu, 1.0, d.zu, 1.0);
 }
 
-Iterate::Iterate(Model& model_input, Info& info_input, Regularisation& r)
+Iterate::Iterate(Model& model_input, Info& info_input, const SolverControls& c)
     : model{model_input},
       info{info_input},
       delta(model.m(), model.n()),
-      regul{r},
+      controls{c},
       diagnostics(model) {
   clearIter();
   clearRes();
@@ -282,7 +282,7 @@ std::vector<double> Iterate::residual8(const Residuals& r,
 
   // temp = (Theta^-1+Rp+Q)^-1 * res7
   for (Int i = 0; i < model.n(); ++i) {
-    double denom = scaling[i] + regul.primal;
+    double denom = scaling[i] + controls.reg_p;
     if (model.qp()) denom += model.sense() * model.Q().diag(i);
     temp[i] /= denom;
   }

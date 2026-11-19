@@ -45,7 +45,7 @@ struct Iterate {
 
   std::vector<double> scaling;
   double best_mu;
-  const Regularisation& regul;
+  const SolverControls& controls;
   // regularisation used in the last factorisation, see LinearSolver::getReg
   std::vector<double> Rp;
   std::vector<double> Rd;
@@ -65,7 +65,7 @@ struct Iterate {
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
   // ===================================================================================
-  Iterate(Model& model_input, Info& info_input, Regularisation& r);
+  Iterate(Model& model_input, Info& info_input, const SolverControls& c);
 
   // clear existing data
   void clearIter();

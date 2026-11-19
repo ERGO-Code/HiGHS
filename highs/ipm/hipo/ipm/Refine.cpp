@@ -24,8 +24,8 @@ void Solver::refine(NewtonDir& delta) {
 
   double old_error{};
 
-  for (Int iter = 0; iter < kRefineMaxIter; ++iter) {
-    if (error < kRefineTol) break;
+  for (Int iter = 0; iter < controls_.refine_max_iter; ++iter) {
+    if (error < controls_.refine_tol) break;
 
     correction.clear();
     solve6x6(correction, it_->ires);

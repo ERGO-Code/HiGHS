@@ -42,7 +42,7 @@ class Solver {
   Int iter_{};
   double alpha_primal_{}, alpha_dual_{};
   double sigma_{};
-  Regularisation regul_{};
+  SolverControls controls_{};
   Recovery recovery_{};
   Info info_;
   Control control_;

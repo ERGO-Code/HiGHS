@@ -98,10 +98,15 @@ const double kParallelSolveMinSize = 1e4;
 const double kParallelForwardMinSpeedup = 2;
 const double kParallelBackwardMinSpeedup = 1.2;
 
-// static regularisation
-struct Regularisation {
-  double primal = 1e-12;
-  double dual = 1e-10;
+struct SolverControls {
+  double reg_p = 1e-12;  // static primal regularisation
+  double reg_d = 1e-10;  // static dual regularisation
+  Int refine_max_iter = kRefineMaxIter;
+  double refine_tol = kRefineTol;
+  double sigma_min = 0.0;
+  double step_fraction = 0.9;
+  double max_step = 1.0 - 1e-4;
+  Int max_correctors = kMaxCorrectors;
 };
 
 }  // namespace hipo

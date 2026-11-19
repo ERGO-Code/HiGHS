@@ -4,9 +4,9 @@
 
 namespace hipo {
 
-KktMatrix::KktMatrix(const Model& m, const Regularisation& r, Info& i,
+KktMatrix::KktMatrix(const Model& m, const SolverControls& c, Info& i,
                      const Logger& l, const Options& o)
-    : model{m}, regul{r}, info{i}, logger{l}, options{o} {}
+    : model{m}, controls{c}, info{i}, logger{l}, options{o} {}
 
 Int KktMatrix::buildASstructure() {
   // Build lower triangular structure of the augmented system.
@@ -260,7 +260,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
       Int corr = corr_A[el];
 
       double denom = scaling.empty() ? 1.0 : scaling[col];
-      denom += regul.primal;
+      denom += controls.reg_p;
       if (model.qp()) denom += model.sense() * Q.diag(col);
 
       const double mult = 1.0 / denom;
