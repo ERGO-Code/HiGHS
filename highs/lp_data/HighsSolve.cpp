@@ -984,6 +984,16 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
                                   options.primal_feasibility_tolerance);
   }
   HighsLp& mip = has_semi_variables ? use_lp : lp;
+  // For issue-3726 unit test, the following lines ensure that solving
+  // the MIP yields HighsModelStatus::kOptimal with objecive of 13,
+  // but without them it yields HighsModelStatus::kInfeasible
+  /*
+  if (options.objective_bound < kHighsInf) {
+    printf("HighsMipSolver objective_bound = %g: change to %g\n",
+           options.objective_bound, kHighsInf);
+    options.objective_bound = kHighsInf;
+  }
+  */
   HighsMipSolver solver(callback, options, mip, solution);
   solver.setProfiling(profiling);
   profiling->start(kSubSolverMip);
