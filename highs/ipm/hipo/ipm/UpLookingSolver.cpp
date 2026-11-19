@@ -67,6 +67,7 @@ Int UpLookingSolver::setup() {
   counts2Ptr(n_, ptrL_.data(), colcount.data());
 
   regularisation_.assign(n_, 0.0);
+  unreg_pivots_.assign(n_, 0.0);
 
   signs_.assign(n_, 1.0);
   if (kkt_.isAS())
@@ -162,6 +163,7 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
 
     // diagonal entry
     double old_pivot = d;
+    unreg_pivots_[row] = d;
     if (signs_[row] > 0)
       d += regul_.dual;
     else
@@ -311,6 +313,41 @@ void UpLookingSolver::getReg(std::vector<double>& Rp, std::vector<double>& Rd) {
     // equations.
     Rp.assign(n, regul_.primal);
     Rd = std::move(reg);
+  }
+}
+
+void UpLookingSolver::getFactorInfo(FactorInfo& info) {
+  const Int n = model_.n();
+  const Int m = model_.m();
+
+  std::vector<double> unreg_pivots = unreg_pivots_;
+  permuteVector(unreg_pivots, kkt_.iperm());
+
+  if (kkt_.isAS()) {
+    // pivots of the (1,1) block are expected to be negative
+    info.Px.resize(n);
+    info.Py.resize(m);
+    for (Int i = 0; i < n; ++i) info.Px[i] = -unreg_pivots[i];
+    for (Int i = 0; i < m; ++i) info.Py[i] = unreg_pivots[n + i];
+  } else {
+    assert(kkt_.isNE());
+    info.Px.clear();
+    info.Py = std::move(unreg_pivots);
+  }
+
+  // only 1x1 pivots; the factor stores their inverse
+  info.num_2x2 = 0;
+  info.num_pos = 0;
+  info.num_neg = 0;
+  info.num_zero = 0;
+  for (Int i = 0; i < n_; ++i) {
+    const double pivot = 1.0 / valL_[ptrL_[i]];
+    if (pivot > 1e-16)
+      ++info.num_pos;
+    else if (pivot < -1e-16)
+      ++info.num_neg;
+    else
+      ++info.num_zero;
   }
 }
 

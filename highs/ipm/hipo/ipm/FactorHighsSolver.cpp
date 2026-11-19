@@ -726,4 +726,29 @@ void FactorHighsSolver::getReg(std::vector<double>& Rp,
   }
 }
 
+void FactorHighsSolver::getFactorInfo(FactorInfo& info) {
+  const Int n = model_.n();
+  const Int m = model_.m();
+
+  FHinfo fh_info;
+  FH_.getInfo(fh_info);
+
+  if (kkt_.isAS()) {
+    // pivots of the (1,1) block are expected to be negative
+    info.Px.resize(n);
+    info.Py.resize(m);
+    for (Int i = 0; i < n; ++i) info.Px[i] = -fh_info.unreg_pivots[i];
+    for (Int i = 0; i < m; ++i) info.Py[i] = fh_info.unreg_pivots[n + i];
+  } else {
+    assert(kkt_.isNE());
+    info.Px.clear();
+    info.Py = std::move(fh_info.unreg_pivots);
+  }
+
+  info.num_2x2 = fh_info.num_2x2;
+  info.num_pos = fh_info.num_pos;
+  info.num_neg = fh_info.num_neg;
+  info.num_zero = fh_info.num_zero;
+}
+
 }  // namespace hipo

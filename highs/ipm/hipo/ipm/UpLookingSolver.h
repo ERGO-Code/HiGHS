@@ -27,6 +27,7 @@ class UpLookingSolver : public LinearSolver {
   std::vector<double> valL_;
 
   std::vector<double> regularisation_;
+  std::vector<double> unreg_pivots_;
   std::vector<Int> signs_;
 
   const double reg_threshold_ = 1e-13;
@@ -65,6 +66,7 @@ class UpLookingSolver : public LinearSolver {
   double spops() const override { return 0; }
   double nz() const override { return valL_.size(); }
   void getReg(std::vector<double>& Rp, std::vector<double>& Rd) override;
+  void getFactorInfo(FactorInfo& info) override;
 
   LinearSolverType type() const override { return kUpLookingType; }
 };

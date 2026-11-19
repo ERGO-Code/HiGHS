@@ -259,6 +259,7 @@ isFailure Solver::predictor() {
   sigmaAffine();
   it_->residual56(sigma_);
   it_->tests.saveResidualNorms(*it_);
+  residualNorms(it_->data.back().res_norm_before);
 
   if (solveNewtonSystem(it_->delta)) return true;
 
@@ -440,6 +441,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
         return;
       }
       LS_->getReg(it_->Rp, it_->Rd);
+      recordFactorisationSignals();
     }
 
     info_.error = LS_->solveNE(res8, delta.y);
@@ -472,6 +474,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
         return;
       }
       LS_->getReg(it_->Rp, it_->Rd);
+      recordFactorisationSignals();
     }
 
     info_.error = LS_->solveAS(res7, rhs.r1, delta.x, delta.y);
@@ -523,6 +526,78 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) {
   }
 
   info_.times[kRecoverTime] += clock.stop();
+}
+
+void Solver::recordFactorisationSignals() {
+  IpmIterData& data = it_->data.back();
+  const double eps = std::numeric_limits<double>::epsilon();
+
+  FactorInfo info;
+  LS_->getFactorInfo(info);
+  const std::vector<double>& Px = info.Px;
+  const std::vector<double>& Py = info.Py;
+
+  // 2x2 pivots and inertia: n negative pivots for the augmented system, none
+  // for the normal equations
+  data.num_2x2 = info.num_2x2;
+  const Int expected_neg = options_.nla == kHipoNormalEqString ? 0 : n_;
+  data.wrong_inertia = std::abs(info.num_neg - expected_neg) + info.num_zero;
+
+  // pivot statistics, 1x1 pivots only
+  data.num_dynamic_reg = 0;
+  data.num_wrong_sign = 0;
+  data.num_reg_dominated = 0;
+  data.max_reg = 0.0;
+  data.min_pivot = kHighsInf;
+  data.max_pivot = 0.0;
+
+  auto addPivot = [&](double p, double reg, double static_reg) {
+    if (!std::isfinite(p)) return;
+    // the computed regularisation is exact up to rounding of the pivot
+    if (std::abs(reg - static_reg) >
+        1e-6 * static_reg + 1e2 * eps * std::abs(p))
+      ++data.num_dynamic_reg;
+    if (p + reg < 0.0) ++data.num_wrong_sign;
+    if (std::abs(p) < kPivotRegDominatedRatio * reg) ++data.num_reg_dominated;
+    data.max_reg = std::max(data.max_reg, reg);
+    data.min_pivot = std::min(data.min_pivot, std::abs(p + reg));
+    data.max_pivot = std::max(data.max_pivot, std::abs(p + reg));
+  };
+
+  for (Int i = 0; i < (Int)Px.size(); ++i)
+    addPivot(Px[i], it_->Rp[i], regul_.primal);
+  for (Int i = 0; i < (Int)Py.size(); ++i)
+    addPivot(Py[i], it_->Rd[i], regul_.dual);
+
+  // nearly free columns
+  const std::vector<double>& theta_inv = it_->scaling;
+  data.num_near_free = 0;
+  for (Int j = 0; j < n_; ++j)
+    if (theta_inv[j] < kNearFreeRatio * it_->Rp[j]) ++data.num_near_free;
+
+  // rows with a large residual absorbed by the regularisation
+  const HighsSparseMatrix& A = model_.A();
+  std::vector<double> diag(m_, 0.0);
+  for (Int j = 0; j < n_; ++j) {
+    double denom = theta_inv[j] + it_->Rp[j];
+    if (model_.qp()) denom += model_.sense() * model_.Q().diag(j);
+    for (Int el = A.start_[j]; el < A.start_[j + 1]; ++el)
+      diag[A.index_[el]] += A.value_[el] * A.value_[el] / denom;
+  }
+  data.num_absorbed_rows = 0;
+  for (Int i = 0; i < m_; ++i) {
+    const double tol =
+        options_.feasibility_tol * (1.0 + std::abs(model_.b()[i]));
+    if (diag[i] < it_->Rd[i] && std::abs(it_->res.r1[i]) > tol)
+      ++data.num_absorbed_rows;
+  }
+}
+
+void Solver::residualNorms(double* norms) const {
+  norms[0] = infNorm(it_->res.r1);
+  norms[1] = infNorm(it_->res.r2);
+  norms[2] = infNorm(it_->res.r3);
+  norms[3] = infNorm(it_->res.r4);
 }
 
 double Solver::stepToBoundary(const std::vector<double>& x,
@@ -671,6 +746,12 @@ void Solver::makeStep() {
   it_->residual1234();
   it_->computeMu();
   it_->indicators();
+
+  IpmIterData& data = it_->data.back();
+  data.alpha_primal = alpha_primal_;
+  data.alpha_dual = alpha_dual_;
+  residualNorms(data.res_norm_after);
+
   info_.times[kStepTime] += clock.stop();
 }
 
@@ -1607,6 +1688,8 @@ void Solver::printHeader() const {
       logger_.print(" %13s %13s %5s %5s %5s %17s %8s %8s %27s %9s", "alpha p/d",
                     "sigma af/co", "cor", "solv", "fact", "static reg p/d",
                     "minT", "maxT", "(xj * zj / mu)_range_&_num", "ref_err");
+      logger_.print(" %9s %17s %26s %11s %13s", "cw_err", "piv dyn/sgn/dom",
+                    "|piv| min/max, max reg", "2x2/inert", "free/absorbed");
     }
     logger_.print("\n");
   }
@@ -1637,6 +1720,12 @@ void Solver::printOutput(bool reset) const {
         regul_.primal, regul_.dual, data.min_theta, data.max_theta,
         data.min_prod, data.max_prod, data.num_small_prod, data.num_large_prod,
         data.refinement_error);
+    logger_.print(" %9.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d",
+                  data.componentwise_error, (int)data.num_dynamic_reg,
+                  (int)data.num_wrong_sign, (int)data.num_reg_dominated,
+                  data.min_pivot, data.max_pivot, data.max_reg,
+                  (int)data.num_2x2, (int)data.wrong_inertia,
+                  (int)data.num_near_free, (int)data.num_absorbed_rows);
   }
   logger_.print("\n");
 }

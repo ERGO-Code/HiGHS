@@ -58,6 +58,7 @@ class FactorHighsSolver : public LinearSolver {
   double spops() const override;
   double nz() const override;
   void getReg(std::vector<double>& Rp, std::vector<double>& Rd) override;
+  void getFactorInfo(FactorInfo& info) override;
   LinearSolverType type() const override { return kFactorHighsType; }
 };
 

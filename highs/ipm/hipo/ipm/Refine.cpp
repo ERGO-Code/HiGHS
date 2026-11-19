@@ -62,9 +62,23 @@ void Solver::refine(NewtonDir& delta) {
     if (error > kRefineMinDecrease * old_error) break;
   }
 
-  // save worst error seen in this ipm iteration
+  // Componentwise error of the final direction, as a check. The residuals in
+  // it_->ires may belong to a rejected correction, so they are recomputed.
+  double cw_error = error;
+  if (!componentwise) {
+    clock.start();
+    it_->residuals6x6(delta, true);
+    info_.times[kRefinementResTime] += clock.stop();
+    clock.start();
+    cw_error = computeComponentwiseError(delta);
+    info_.times[kRefinementErrorTime] += clock.stop();
+  }
+
+  // save worst errors seen in this ipm iteration
   it_->data.back().refinement_error =
       std::max(it_->data.back().refinement_error, error);
+  it_->data.back().componentwise_error =
+      std::max(it_->data.back().componentwise_error, cw_error);
 }
 
 static double safeRatio(double num, double den) {

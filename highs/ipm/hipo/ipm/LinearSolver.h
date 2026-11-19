@@ -21,6 +21,7 @@ namespace hipo {
 // - factorNE: factorise the normal equations
 // - solveNE: solve a linear system with the normal equations
 // - getReg: extract regularisation used in the last factorisation
+// - getFactorInfo: extract information about the last factorisation
 // - clear: reset the data structure for the next factorisation.
 //
 // The linear solver may also define functions:
@@ -34,6 +35,21 @@ namespace hipo {
 // lower triangle, or else) is constructed.
 
 enum LinearSolverType { kFactorHighsType = 1, kUpLookingType };
+
+struct FactorInfo {
+  // Pivots before regularisation, expected positive: the x pivots of the
+  // augmented system are negated. Regularised pivots are Px + Rp, Py + Rd.
+  // Px: size n (AS), empty (NE). Py: size m. 2x2 pivots: +-inf.
+  std::vector<double> Px;
+  std::vector<double> Py;
+
+  Int num_2x2 = 0;
+
+  // number of positive, negative and zero pivots of the regularised matrix
+  Int num_pos = 0;
+  Int num_neg = 0;
+  Int num_zero = 0;
+};
 
 class LinearSolver {
  public:
@@ -74,6 +90,9 @@ class LinearSolver {
   // Rp has size n and Rd has size m. For the normal equations, Rp is the static
   // primal regularisation used to form the matrix.
   virtual void getReg(std::vector<double>& Rp, std::vector<double>& Rd) = 0;
+
+  // Extract information about the last factorisation, see FactorInfo.
+  virtual void getFactorInfo(FactorInfo& info) = 0;
 
   virtual LinearSolverType type() const = 0;
 

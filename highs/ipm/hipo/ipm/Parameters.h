@@ -36,6 +36,10 @@ const double kMccIncreaseMin = 0.1;
 const double kSmallProduct = 1e-3;
 const double kLargeProduct = 1e3;
 
+// parameters for signals collected at each iteration
+const double kPivotRegDominatedRatio = 1.0;
+const double kNearFreeRatio = 1e3;
+
 // parameters for choice of AS or NE
 const double kSystemSpopsWeight = 30.0;
 const double kSystemRatioOpsThresh = 10.0;
