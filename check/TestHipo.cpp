@@ -277,3 +277,23 @@ TEST_CASE("test-hipo-serial-blas", "[highs_hipo]") {
   HighsExtras::blas::openblas_set_num_threads(initial_threads);
   highs.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3715", "[highs_lp_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".mps";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s", "NAME small2\nROWS\n N obj\n E s0\n E s1\n E s2\n E d0\n E d1\n E d2\n E d3\nCOLUMNS\n    f0_0 obj 9\n    f0_0 s0 1\n    f0_0 d0 1\n    f0_1 obj 4\n    f0_1 s0 1\n    f0_1 d1 1\n    f0_2 obj 7\n    f0_2 s0 1\n    f0_2 d2 1\n    f0_3 obj 1\n    f0_3 s0 1\n    f0_3 d3 1\n    f1_0 obj 8\n    f1_0 s1 1\n    f1_0 d0 1\n    f1_1 obj 8\n    f1_1 s1 1\n    f1_1 d1 1\n    f1_2 obj 8\n    f1_2 s1 1\n    f1_2 d2 1\n    f1_3 obj 7\n    f1_3 s1 1\n    f1_3 d3 1\n    f2_0 obj 8\n    f2_0 s2 1\n    f2_0 d0 1\n    f2_1 obj 4\n    f2_1 s2 1\n    f2_1 d1 1\n    f2_2 obj 7\n    f2_2 s2 1\n    f2_2 d2 1\n    f2_3 obj 2\n    f2_3 s2 1\n    f2_3 d3 1\nRHS\n    rhs s0 7267\n    rhs s1 14623\n    rhs s2 6263\n    rhs d0 7615\n    rhs d1 5870\n    rhs d2 6327\n    rhs d3 8341\n    rhs obj 147155\nENDATA\n");
+  fclose(file);
+
+  Highs h;
+  h.setOptionValue("solver", "hipo");
+  h.setOptionValue("run_crossover", "off");
+  h.setOptionValue("presolve", "off ");
+   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+   //  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);   
+}  
