@@ -95,6 +95,10 @@ enum class SolverSelectStrategy {
   // one IPM solver
   kIpxIfLarge = 7,
   kHipoIfLarge = 8,
+  // As kRankedFeatures, but when a basis is required, as in the MIP solver,
+  // a selected IPM only runs if dual simplex exceeds a budget of work first
+  // (solveLpWithSelection)
+  kRankedFeaturesSimplexFirst = 9,
 };
 
 // Whether LPs go through solver selection with this strategy

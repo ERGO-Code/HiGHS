@@ -916,7 +916,7 @@ class HighsOptions : public HighsOptionsStruct {
         kHighsAnalysisLevelMax);
     records.push_back(record_int);
 
-    // Strategies 3 to 8 are for development, so aren't in the description.
+    // Strategies 3 to 9 are for development, so aren't in the description.
     // They can still be set, as can advanced options. See
     // util/HighsSolverSelect.h
     record_int = new OptionRecordInt(
@@ -926,7 +926,7 @@ class HighsOptions : public HighsOptionsStruct {
         "mip_lp_solver is \"choose\": 0 => Simplex only; 1 => "
         "Fitted model on columns, rows and nonzeros; 2 => Fitted model on "
         "ranked features",
-        advanced, &solver_select_strategy, 0, 0, 8);
+        advanced, &solver_select_strategy, 0, 0, 9);
     records.push_back(record_int);
 
     record_bool =

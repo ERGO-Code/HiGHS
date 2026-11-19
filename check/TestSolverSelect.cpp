@@ -93,7 +93,7 @@ TEST_CASE("solver-select-features", "[solver_select]") {
 // Every strategy x require_basis combination, via the real end-to-end
 // solver="choose" dispatch in HighsSolve.cpp, solves exampleLp() optimally
 TEST_CASE("solver-select-each-strategy-solves-optimally", "[solver_select]") {
-  for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6, 7, 8}) {
+  for (const HighsInt strategy : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
     for (const bool require_basis : {false, true}) {
       INFO("strategy " << strategy << ", require_basis " << require_basis);
       Highs highs;
@@ -360,7 +360,7 @@ TEST_CASE("solver-select-feature-order", "[solver_select]") {
 TEST_CASE("solver-select-fitted-models-solve", "[solver_select]") {
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/greenbea.mps";
-  for (const HighsInt strategy : {1, 2}) {
+  for (const HighsInt strategy : {1, 2, 9}) {
     INFO("strategy " << strategy);
     Highs highs;
     highs.setOptionValue("output_flag", dev_run);

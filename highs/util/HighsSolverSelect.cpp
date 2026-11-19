@@ -401,6 +401,7 @@ HighsSolverSelect selectSolver(const HighsLp& lp,
       return evaluateModel(kS1Model, f);
     }
     case SolverSelectStrategy::kRankedFeatures:
+    case SolverSelectStrategy::kRankedFeaturesSimplexFirst:
       // The model chooses dual simplex below min_num_nz, so don't pay for
       // the features
       if (lp.a_matrix_.numNz() < kS2Model.min_num_nz)

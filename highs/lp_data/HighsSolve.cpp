@@ -68,11 +68,14 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
   struct RestoreOptions {
     HighsOptions& options;
     const bool hipo_stop_if_no_memory;
+    const HighsInt simplex_iteration_limit;
     ~RestoreOptions() {
       options.solver = kHighsChooseString;
       options.hipo_stop_if_no_memory = hipo_stop_if_no_memory;
+      options.simplex_iteration_limit = simplex_iteration_limit;
     }
-  } restore{options, options.hipo_stop_if_no_memory};
+  } restore{options, options.hipo_stop_if_no_memory,
+            options.simplex_iteration_limit};
   // With IPX to fall back on, HiPO shouldn't try what won't fit in memory
   options.hipo_stop_if_no_memory = true;
   auto solveWith = [&](const std::string& solver) {
@@ -88,6 +91,30 @@ static HighsStatus solveLpWithSelection(HighsLpSolverObject& solver_object,
                  "Solver selection (strategy %d) chose \"%s\"\n",
                  int(options.solver_select_strategy),
                  selected_solver_string.c_str());
+  // In the MIP solver, IPM's root LP vertex sends the tree down a different
+  // path, which is only worth it when simplex is slow. So simplex has a
+  // budget of iterations * nonzeros first, and cheap LPs keep its vertex
+  if (selected_ipm && options.solver_select_require_basis &&
+      options.solver_select_strategy ==
+          static_cast<HighsInt>(
+              SolverSelectStrategy::kRankedFeaturesSimplexFirst)) {
+    const double kSimplexFirstWork = 5e9;
+    const double budget = kSimplexFirstWork / lp.a_matrix_.numNz();
+    if (budget >= options.simplex_iteration_limit)
+      return solveWith(kSimplexString);
+    options.simplex_iteration_limit = static_cast<HighsInt>(budget);
+    const HighsStatus simplex_status = solveWith(kSimplexString);
+    options.simplex_iteration_limit = restore.simplex_iteration_limit;
+    if (solver_object.model_status_ != HighsModelStatus::kIterationLimit)
+      return simplex_status;
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "Dual simplex exceeded its budget of %d iterations, so use "
+                 "\"%s\"\n",
+                 int(budget), selected_solver_string.c_str());
+    // Otherwise later simplex solves would start from this basis, not the
+    // one from crossover
+    solver_object.ekk_instance_.updateStatus(LpAction::kNewBasis);
+  }
   const HighsInt simplex_iteration_count =
       solver_object.highs_info_.simplex_iteration_count;
   HighsStatus status = solveWith(selected_solver_string);

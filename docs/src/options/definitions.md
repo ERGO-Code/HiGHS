@@ -130,7 +130,7 @@
 ## [solver\_select\_strategy](@id option-solver-select-strategy)
 - Strategy for automatic LP solver selection when solver is "choose" and, for LPs without a basis in the MIP solver, when mip\_lp\_solver is "choose": 0 => Simplex only; 1 => Fitted model on columns, rows and nonzeros; 2 => Fitted model on ranked features
 - Type: integer
-- Range: {0, 8}
+- Range: {0, 9}
 - Default: 0
 
 ## [simplex\_strategy](@id option-simplex-strategy)
