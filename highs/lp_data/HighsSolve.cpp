@@ -1032,8 +1032,11 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
     lp.a_matrix_.productQuad(solution.row_value, solution.col_value);
     solution.value_valid = true;
   } else {
-    // There is no primal solution: should be so by default
-    assert(!solution.value_valid);
+    // There is no primal solution from the MIP solver, but it's
+    // possible that a (feasible) start solution - which is used in
+    // the constructor of HighsMipSolver, so valid - is not feasible
+    // in the reduced space, so clear it
+    solution.clear();
   }
   // Check that no modified upper bounds for semi-variables are active
   if (solution.value_valid &&
