@@ -511,7 +511,14 @@ bool tryNormaliseKnapsack(KnapsackRow& knapsack,
     ++numMaxWeightItems;
   }
 
-  if (numMaxWeightItems == 0) return false;
+  if (numMaxWeightItems == 0 ||
+      static_cast<HighsCDouble>(weight(numMaxWeightItems - 1)) +
+              weight(stats.numNonZeros - 1) - knapsack.capacity <=
+          feastol) {
+    // Can't normalise if there's no max weight item
+    // or if smallest item is too close to feasibility tolerance
+    return false;
+  }
 
   auto upgradeRow = [&](const double newWeight) {
     // The largest non-max-weight item must fit newWeight times for
@@ -673,6 +680,13 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
 
       const KnapsackTerm& term = knapsack.terms[nextTerm++];
       const bool positive = term.literal % 2 == 1;
+      if (fixed) {
+        // Column is fixed, so eliminate it from the row
+        rhs -= static_cast<HighsCDouble>(term.weight) *
+               (positive ? lower : 1 - lower);
+        addToMatrix(knapsack.row, col, -Avalue[pos]);
+        continue;
+      }
       const double newCoef = positive ? term.weight : -term.weight;
       if (!positive) rhs -= term.weight;
       const double delta = knapsack.direction * newCoef - Avalue[pos];
@@ -742,7 +756,10 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       }
     }
     if (!eligible || allSameCoefficients) continue;
-    if (knapsack.capacity < 0) return Result::kPrimalInfeasible;
+    if (knapsack.capacity < 0) {
+      if (knapsack.capacity < -primal_feastol) return Result::kPrimalInfeasible;
+      continue;
+    }
     if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
       postsolve_stack.redundantRow(row);
       removeRow(row);
