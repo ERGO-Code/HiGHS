@@ -2381,7 +2381,7 @@ TEST_CASE("issue-3273", "[highs_test_mip_solver]") {
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
                      HighsVarType::kContinuous, HighsVarType::kInteger};
   Highs highs;
-  //  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   std::vector<double> optimal_solution = {1, 11, 1, 1};

@@ -1445,9 +1445,7 @@ try_again:
                               mipsolver_quad_objective_value -
                           mipsolver.model_->offset_);
 
-
-
-  /*
+  // >>>> Now use feasibleInOriginalSpace, checking for equivalence in output
   double check_mipsolver_objective_value;
   MipViolation check_violation;
   HighsSolution check_solution;
@@ -1460,14 +1458,16 @@ try_again:
   check_violation.copy(check_bound_violation_, check_row_violation_, check_integrality_violation_);
 
   assert(check_mipsolver_objective_value == mipsolver_objective_value);
-  HighsSolution check_solution;
+  for (HighsInt iCol = 0; iCol < mipsolver.orig_model_->num_col_; iCol++)
+    assert(check_solution.col_value[iCol] == solution.col_value[iCol]);
+  for (HighsInt iRow = 0; iRow < mipsolver.orig_model_->num_row_; iRow++)
+    assert(check_solution.row_value[iRow] == solution.row_value[iRow]);
   assert(check_transformed_solobj == transformed_solobj);
   assert(check_feasible == feasible);
   assert(check_bound_violation_ == bound_violation_);
   assert(check_row_violation_ == row_violation_);
   assert(check_integrality_violation_ == integrality_violation_);
-
-  */
+  // Now use feasibleInOriginalSpace, checking for equivalence in output <<<< 
 
 
 
