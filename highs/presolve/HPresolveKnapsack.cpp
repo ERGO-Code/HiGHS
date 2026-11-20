@@ -45,7 +45,7 @@ void clearKnapSackStatistics(KnapsackStatistics& stats) {
   stats.numSmall = 0;
   stats.numZeros = 0;
   stats.numNonZeros = 0;
-  HighsInt numOnes = 0;
+  stats.numOnes = 0;
   stats.secondSmallestUniqueWeight = 0;
   stats.smallSum = 0;
   stats.outsideThirdSum = 0;
@@ -103,8 +103,6 @@ void computeKnapsackStatistics(KnapsackRow& knapsack,
                  weight != minWeight) {
         stats.secondSmallestUniqueWeight = weight;
       }
-    } else {
-      break;
     }
   }
   if (stats.numSmall >= 2) {
@@ -119,11 +117,11 @@ void tightenRhs(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
                 const double feastol, KnapsackStatistics& stats,
                 bool& changed) {
   bool changedRhs = false;
+  computeKnapsackStatistics(knapsack, order, feastol, stats);
   if (knapsack.terms[order[0]].weight - knapsack.capacity >= -feastol) {
     // Can't tighten capacity to lower than the largest item's weight
     return;
   }
-  computeKnapsackStatistics(knapsack, order, feastol, stats);
   if (isLargeKnapsackTerm(knapsack.terms[order[0]].weight, knapsack.capacity,
                           feastol)) {
     // Knapsack capacity is min(capacity, largest_item + small_sum)
@@ -176,15 +174,15 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
 
   for (HighsInt i = 0; i != stats.numLarge; i++) {
     KnapsackTerm& term = knapsack.terms[order[i]];
-    if (term.weight + minWeight - knapsack.capacity < -feastol) {
+    if (term.weight + minWeight - knapsack.capacity > feastol) {
       // A large item cannot fit with the smallest item
       // Increase its weight to capacity
       increaseKnapsackWeight(knapsack, term,
                              static_cast<double>(knapsack.capacity), feastol,
                              changed);
     } else if (term.weight + stats.secondSmallestUniqueWeight -
-                   knapsack.capacity <
-               -feastol) {
+                   knapsack.capacity >
+               feastol) {
       // A large item cannot fit with the second-smallest unique value
       // Increase its weight to capacity - minWeight
       increaseKnapsackWeight(knapsack, term,
@@ -339,7 +337,7 @@ void gcdRemoveTail(std::vector<int64_t>& weights, int64_t& b,
   HighsCDouble largeSum = 0;
   for (HighsInt prefixSize = 1; prefixSize < numTerms; ++prefixSize) {
     if (gcd != 1) {
-      gcd = HighsIntegers::gcd(gcd, weights[prefixSize]);
+      gcd = HighsIntegers::gcd(gcd, weights[prefixSize - 1]);
       if (gcd > 1 && tailSum[prefixSize] - static_cast<double>(b % gcd) <= 0) {
         b /= gcd;
         for (HighsInt i = 0; i < numTerms; ++i) {
@@ -377,28 +375,30 @@ void gcdRemoveTail(std::vector<int64_t>& weights, int64_t& b,
   }
 }
 
-void gcdSimplify(KnapsackRow& knapsack, const double featol, bool& changed) {
+void gcdSimplify(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
+                 const double feastol, bool& changed) {
   // Heuristically try recursive all-but-one GCD calls
   const HighsInt numTerms = static_cast<HighsInt>(knapsack.terms.size());
   std::vector<int64_t> weights;
   weights.reserve(numTerms);
-  for (const KnapsackTerm& term : knapsack.terms) {
-    weights.push_back(static_cast<int64_t>(term.weight));
+  for (const HighsInt i : order) {
+    weights.push_back(static_cast<int64_t>(knapsack.terms[i].weight));
   }
   int64_t b = static_cast<int64_t>(static_cast<double>(knapsack.capacity));
   const int64_t originalB = b;
-  gcdRemoveTail(weights, b, numTerms, featol);
+  gcdRemoveTail(weights, b, numTerms, feastol);
   while (gcdAllButOne(weights, b, numTerms)) {
-    changed = true;
   }
   if (b != originalB) {
     HighsCDouble newWeightSum = 0;
     for (HighsInt i = 0; i != numTerms; ++i) {
-      knapsack.terms[i].weight = static_cast<double>(weights[i]);
-      newWeightSum += knapsack.terms[i].weight;
+      KnapsackTerm& term = knapsack.terms[order[i]];
+      term.weight = static_cast<double>(weights[i]);
+      newWeightSum += term.weight;
     }
     knapsack.weightSum = newWeightSum;
     knapsack.capacity = static_cast<double>(b);
+    changed = true;
   }
 }
 
@@ -591,23 +591,22 @@ void strengthenTwoWeightKnapsack(KnapsackRow& knapsack,
   maxSmallItems.reserve(numSameLarge + 1);
   HighsCDouble maxActivity = 0;
   HighsInt smallItemCount = numSameSmall;
-  for (HighsInt i = 0; i != numSameLarge; ++i) {
+  for (HighsInt i = 0; i <= numSameLarge; ++i) {
     const HighsCDouble largeSum = static_cast<HighsCDouble>(large) * i;
     if (largeSum - knapsack.capacity > feastol) break;
     while (smallItemCount > 0 &&
-           largeSum + static_cast<HighsCDouble>(small) * numSameSmall -
+           largeSum + static_cast<HighsCDouble>(small) * smallItemCount -
                    knapsack.capacity >
                feastol) {
       smallItemCount--;
     }
     maxSmallItems.push_back(smallItemCount);
     const HighsCDouble activity =
-        largeSum + static_cast<HighsCDouble>(small) * numSameSmall;
+        largeSum + static_cast<HighsCDouble>(small) * smallItemCount;
     if (activity - maxActivity > 0) maxActivity = activity;
   }
 
   // May be able to tighten the knapsack
-  HighsCDouble oldCapacity = knapsack.capacity;
   tightenKnapsackCapacity(knapsack, maxActivity, feastol, changed);
 
   // Try and lift
@@ -799,14 +798,14 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     // Sort terms in non-increasing order
     std::vector<HighsInt> order(knapsack.terms.size());
     std::iota(order.begin(), order.end(), HighsInt{0});
-    pdqsort(order.begin(), order.end(),
-            [&](const HighsInt i, const HighsInt j) {
-              return knapsack.terms[i].weight > knapsack.terms[j].weight;
-            });
+    const auto isItemLarger = [&](const HighsInt i, const HighsInt j) {
+      return knapsack.terms[i].weight > knapsack.terms[j].weight;
+    };
+    pdqsort(order.begin(), order.end(), isItemLarger);
 
     if (allIntCoefficients && knapsack.capacity < kHighsIInf) {
       // Simplify constraint (or strengthen) using GCD arguments
-      gcdSimplify(knapsack, primal_feastol, changed);
+      gcdSimplify(knapsack, order, primal_feastol, changed);
       // Knapsack may now be redundant
       if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
         postsolve_stack.redundantRow(row);
@@ -817,15 +816,17 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
 
     KnapsackStatistics stats;
     tightenRhs(knapsack, order, primal_feastol, stats, changed);
+    bool lifted = false;
     const bool cliqueUpgraded =
-        liftKnapsackWeights(knapsack, order, primal_feastol, stats, changed);
+        liftKnapsackWeights(knapsack, order, primal_feastol, stats, lifted);
+    changed |= lifted;
     // Recognise whether the knapsack can be upgraded
     if (!cliqueUpgraded) {
-      bool normalised =
-          tryNormaliseKnapsack(knapsack, order, stats, primal_feastol, changed);
-      if (!normalised) {
-        normalised = tryNormaliseConditionalKnapsack(knapsack, order, stats,
-                                                     primal_feastol, changed);
+      if (lifted) pdqsort(order.begin(), order.end(), isItemLarger);
+      if (!tryNormaliseKnapsack(knapsack, order, stats, primal_feastol,
+                                changed) &&
+          !tryNormaliseConditionalKnapsack(knapsack, order, stats,
+                                           primal_feastol, changed)) {
         strengthenTwoWeightKnapsack(knapsack, order, stats, primal_feastol,
                                     changed);
       }
