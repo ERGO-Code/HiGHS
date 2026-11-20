@@ -1400,6 +1400,13 @@ class Highs {
    */
   void setProfiling(HighsProfiling* profiling);
 
+  // Logs and returns HighsStatus::kError when argument to method is
+  // found to be null
+  HighsStatus negativeArgumentError(const std::string& method,
+                                    const std::string& argument) const;
+  HighsStatus nullArgumentError(const std::string& method,
+                                const std::string& argument) const;
+
   // Start of advanced methods: only for internal use!
 
   // Nested methods below Highs::run()

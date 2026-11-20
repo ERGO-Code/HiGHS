@@ -18,6 +18,19 @@ set(HIGHS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 configure_file(${CMAKE_CURRENT_LIST_DIR}/../highs/HConfig.h.in ${PROJECT_BINARY_DIR}/HConfig.h)
 message(STATUS "Configuring highs_extras version ${VERSION}")
 
+# HiGHS sets floating-point options for HighsCDouble (see the top-level
+# CMakeLists.txt). The third-party code built here does not use HighsCDouble and
+# may rely on the default behaviour for performance (e.g. contraction in
+# OpenBLAS), so the options are removed again for this directory and its
+# subdirectories.
+if (HIGHS_FLOATING_POINT_OPTIONS)
+  get_directory_property(_highs_extras_compile_options COMPILE_OPTIONS)
+  list(REMOVE_ITEM _highs_extras_compile_options
+       ${HIGHS_FLOATING_POINT_OPTIONS})
+  set_directory_properties(
+    PROPERTIES COMPILE_OPTIONS "${_highs_extras_compile_options}")
+endif()
+
 set(highs_extras_sources
     HighsExtrasApi.cpp
     HighsExtrasExternalDeps.cpp)
