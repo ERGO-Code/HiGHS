@@ -1564,6 +1564,8 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   std::vector<double> solution_values(lp.num_col_, 1 / M);
   highs.setSolution(2, nullptr, solution_values.data());
 
+  // The reduced MIP has bounds [1, 0] on column 1, so the start
+  // solution is trivially infeasible in the presolved space
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(std::abs(2 / M - highs.getInfo().objective_function_value) < 1e-9);
@@ -1627,6 +1629,8 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
     std::vector<double> solution_values = {0, 1 / M};
     highs.setSolution(2, nullptr, solution_values.data());
 
+    // The reduced MIP has bounds [1, 0] on column 1, so the start
+    // solution is trivially infeasible in the presolved space
     highs.run();
     if (dev_run) highs.writeSolution("", 1);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
@@ -2377,7 +2381,7 @@ TEST_CASE("issue-3273", "[highs_test_mip_solver]") {
   lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kContinuous,
                      HighsVarType::kContinuous, HighsVarType::kInteger};
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
   REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
   const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
   std::vector<double> optimal_solution = {1, 11, 1, 1};

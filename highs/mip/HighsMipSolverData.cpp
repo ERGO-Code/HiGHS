@@ -835,7 +835,13 @@ void HighsMipSolverData::runMipPresolve(
 }
 
 void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
-  // Run when (re-)starting the MIP solver, or in cleanupSolve (why?)
+  // Run when (re-)starting the MIP solver, or in cleanupSolve
+  //
+  // The call in cleanupSolve is for cases such as #3118(a) when the
+  // MIP is found infeasible in presolve, but a start solution is
+  // feasible within the tolerances. Hence the solution in the reduced
+  // space cannot be expected to be feasible. Indeed, in #3118 the MIP
+  // after presolve is trivially infeasible.
   if (mipsolver.solution_objective_ == kHighsInf) return;
   // Assigning new incumbent
   incumbent = postSolveStack.getReducedPrimalSolution(mipsolver.solution_);
@@ -849,7 +855,7 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
                             mipsolver.options_mip_->mip_feasibility_tolerance &&
                         mipsolver.row_violation_ <=
                             mipsolver.options_mip_->mip_feasibility_tolerance;
-  if (numRestarts == 0) {
+  if (numRestarts == 0 && !from_cleanup_solve) {
     // Perform checking and logging of the current MIP solution
     if (!feasible || !checkSolution(incumbent)) {
       // A current solution that is infeasible in the original or
@@ -858,11 +864,10 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
 	// The current MIP solution shouldn't be infeasible in the
 	// original space, since it's already been tested
 	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
-		     "MIP %s solution is infeasible: objective value is "
+		     "MIP start solution is infeasible: objective value is "
 		     "%.12g with violations:"
 		     " variable bound = %.4g; constraint bound = %.4g; "
 		     "integrality = %.4g\n",
-		     from_cleanup_solve ? "current" : "start ",
 		     mipsolver.solution_objective_, mipsolver.bound_violation_,
 		     mipsolver.row_violation_,
 		     mipsolver.integrality_violation_);
@@ -871,8 +876,7 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
 	assert(!checkSolution(incumbent));
 	// The current MIP solution is not feasible in the reduced space
 	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-		     "MIP %s solution is infeasible in the reduced space\n",
-		     from_cleanup_solve ? "current" : "start ");
+		     "MIP start solution is infeasible in the reduced space\n");
       }
       // Reset the solution objecive and clear the saved solution
       mipsolver.solution_objective_ = kHighsInf;
@@ -909,12 +913,10 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
       // This should only happen if the problem is reduced by presolve
       assert(reduced);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-		   "MIP %s solution is feasible: objective value is %.12g\n",
-		   from_cleanup_solve ? "current" : "start ",
+		   "MIP start solution is feasible: objective value is %.12g\n",
 		   previous_mipsolver_solution_objective);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "MIP %s solution is %s%s: objective value is %.12g\n",
-		   from_cleanup_solve ? "current" : "start ",
+                   "MIP start solution is %s%s: objective value is %.12g\n",
                    feasible ? "feasible" : "infeasible",
                    reduced ? " in the reduced space" : "",
                    mipsolver.solution_objective_);
@@ -974,6 +976,13 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
+  HighsInt check_num_row = model.num_row_;
+  HighsInt check_num_col = model.num_col_;
+  HighsInt check_num_nz = model.numNz();
+  highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
+		       model.a_matrix_.index_, model.a_matrix_.value_,
+		       ARstart_, ARindex_, ARvalue_);
+
   checkAddSolution();
 
   if (mipsolver.numCol() == 0)
@@ -992,9 +1001,12 @@ void HighsMipSolverData::runSetup() {
   rowMatrixSet = false;
   if (!rowMatrixSet) {
     rowMatrixSet = true;
-    highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
-                         model.a_matrix_.index_, model.a_matrix_.value_,
-                         ARstart_, ARindex_, ARvalue_);
+    //    highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
+    //                         model.a_matrix_.index_, model.a_matrix_.value_,
+    //                         ARstart_, ARindex_, ARvalue_);
+    assert(check_num_row == model.num_row_);
+    assert(check_num_col == model.num_col_);
+    assert(check_num_nz == model.numNz());
     // (re-)initialize number of uplocks and downlocks
     uplocks.assign(model.num_col_, 0);
     downlocks.assign(model.num_col_, 0);
