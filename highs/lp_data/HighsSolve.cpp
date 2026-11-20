@@ -20,6 +20,7 @@
 #include "pdlp/HiPdlpWrapper.h"
 #include "qpsolver/QpAsmWrapper.h"
 #include "simplex/HApp.h"
+#include "util/HighsAvailableMemory.h"
 #include "util/HighsSolverSelect.h"
 #include "util/HighsUndoStack.h"
 
@@ -28,7 +29,7 @@ struct SolveExceptionRecord {
   Type type = Type::kNone;
   std::string solver;
   std::string what;
-  bool caught() const { return type != Type::kNone; }
+  bool use_warning = false;
 };
 template <typename Solve>
 bool solveCatchCall(const char* solve_string, HighsModelStatus& model_status,
@@ -40,6 +41,8 @@ bool solveCatchCall(const char* solve_string, HighsModelStatus& model_status,
   } catch (const std::exception& exception) {
     record.type = SolveExceptionRecord::Type::kException;
     record.what = exception.what();
+    record.use_warning =
+        dynamic_cast<const HighsPredictedOutOfMemory*>(&exception) != nullptr;
     model_status = dynamic_cast<const std::bad_alloc*>(&exception)
                        ? HighsModelStatus::kMemoryLimit
                        : HighsModelStatus::kSolveError;
@@ -71,8 +74,10 @@ static void reportSolveException(const HighsLogOptions& log_options,
     case SolveExceptionRecord::Type::kNone:
       break;
     case SolveExceptionRecord::Type::kException:
-      highsLogUser(log_options, HighsLogType::kError, "Exception %s in %s\n",
-                   record.what.c_str(), record.solver.c_str());
+      highsLogUser(
+          log_options,
+          record.use_warning ? HighsLogType::kWarning : HighsLogType::kError,
+          "Exception %s in %s\n", record.what.c_str(), record.solver.c_str());
       break;
     case SolveExceptionRecord::Type::kInterrupt:
       highsLogDev(log_options, HighsLogType::kError,
