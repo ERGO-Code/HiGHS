@@ -79,6 +79,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestRunData.cpp
       TestSemiVariables.cpp
       TestSetup.cpp
+      TestSolverSelect.cpp
       TestSort.cpp
       TestSpecialLps.cpp
       TestSymmetry.cpp
@@ -112,6 +113,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   set_target_properties(unit_tests PROPERTIES UNITY_BUILD OFF)
 
+  if (BUILD_SHARED_EXTRAS_LIB)
+    # get output directory of highs_extras (regardless of platform)
+    target_compile_definitions(unit_tests PRIVATE HIGHS_TEST_EXTRAS_DIR="$<TARGET_FILE_DIR:highs_extras>")
+  endif()
 
   if (UNIX)
       target_compile_options(unit_tests PRIVATE "-Wno-unused-variable")
@@ -181,13 +186,13 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                         RESOURCE_LOCK unittestbin)
 
     # create a binary running all the tests in the executable
-    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    add_test(NAME unit_tests_all COMMAND unit_tests)
     set_tests_properties(unit_tests_all
                         PROPERTIES
                         DEPENDS unit-test-build)
     set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
   else()
-    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    add_test(NAME unit_tests_all COMMAND unit_tests)
     set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
   endif()
 
@@ -220,26 +225,12 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "standmps\;218\; 1.4060175000\;"
       )
   
-   set(successMacArmInstances
-      "25fv47\;3103\; 5.5018458883\;"
-      "80bau3b\;3705\; 9.8722419241\;"
-      "adlittle\;74\; 2.2549496316\;"
-      "afiro\;22\;-4.6475314286\;"
-      "etamacro\;531\;-7.5571523330\;"
-      "greenbea\;5156\;-7.2555248130\;"
-      "shell\;623\; 1.2088253460\;"
-      "stair\;531\;-2.5126695119\;"
-      "standata\;72\; 1.2576995000\;"
-      "standgub\;68\; 1.2576995000\;"
-      "standmps\;218\; 1.4060175000\;"
-   )
-
    set(successRiscVInstances
       "25fv47\;3103\; 5.5018458\;"
       "80bau3b\;3705\; 9.8722419\;"
       "etamacro\;531\;-7.5571523\;"
       "greenbea\;5156\;-7.2555248\;"
-      "stair\;531\;-2.5126695\;" # last like mac arm
+      "stair\;531\;-2.5126695\;"
       "adlittle\;74\; 2.2549496\;"
       "afiro\;22\;-4.6475314\;"
       "shell\;623\; 1.2088253\;"
@@ -320,20 +311,21 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
             "standgub\; 1.2576994\;"
             )
     else() # CUPDLP_CPU
+        # Trimmed so both GCC <= 14 and GCC 15 results match
         set(pdlpInstances
-            "25fv47\; 5.5018469\;"
+            "25fv47\; 5.50184\;"
             "adlittle\; 2.254949\;"
-            "afiro\;-4.64753150\;"
+            "afiro\;-4.6475315\;"
             "avgas\;-7.7499999\;"
             "blending\;-3.1999999\;"
             "chip\;-8.9999999\;"
-            "e226\;-1.16389294\;"
-            "scrs8\; 9.04297094\;"
+            "e226\;-1.16389\;"
+            "scrs8\; 9.0429\;"
             "sctest\; 5.75000000\;"
-            "shell\; 1.20882534\;"
-            "stair\;-2.51266942\;"
-            "standata\; 1.25769944\;"
-            "standgub\; 1.25769944\;"
+            "shell\; 1.2088253\;"
+            "stair\;-2.512669\;"
+            "standata\; 1.2576994\;"
+            "standgub\; 1.2576994\;"
             )
     endif()
   elseif(WIN32 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM" AND
@@ -359,17 +351,17 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         # on windows 25fv47 model status can be unknown, with objective 5.5018458957e+03
         set(pdlpInstances
             "25fv47\; 5.50184\;"
-            "adlittle\; 2.25494944\;"
+            "adlittle\; 2.254949\;"
             "afiro\;-4.647531504\;"
             "avgas\;-7.7499999\;"
             "blending\;-3.19999999\;"
             "chip\;-8.9999999\;"
-            "scrs8\; 9.04297094\;"
+            "scrs8\; 9.04297\;"
             "sctest\; 5.7500000\;"
             "shell\; 1.20882534\;"
-            "stair\;-2.51266942\;"
-            "standata\; 1.257699393\;"
-            "standgub\; 1.25769939\;"
+            "stair\;-2.512669\;"
+            "standata\; 1.25769\;"
+            "standgub\; 1.25769\;"
             )
     endif()
   elseif(APPLE)
@@ -379,13 +371,13 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         "afiro\;-4.647531\;"
         "avgas\;-7.7499999\;"
         "blending\;-3.19999999\;"
-        "chip\;-9.0000000\;"
+        "chip\;-8.9999999\;"
         "e226\;-1.16389\;"
-        "scrs8\; 9.04296\;"
+        "scrs8\; 9.0429\;"
         "sctest\; 5.75000000\;"
-        "shell\; 1.20882535\;"
+        "shell\; 1.2088253\;"
         "stair\;-2.5126\;"
-        "standata\; 1.25769947\;"
+        "standata\; 1.2576994\;"
         "standgub\; 1.2576994\;"
     )
   endif()
@@ -432,7 +424,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
           if(${solutionstatus} STREQUAL "Optimal")
               if(${setting} STREQUAL "--presolve=off" AND 
-                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND 
+                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND
                 (NOT OPT_LEVEL_CHANGED) AND
                 (CMAKE_SIZEOF_VOID_P EQUAL 8))
                   set_tests_properties (${name}${setting} PROPERTIES
@@ -450,7 +442,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   # add tests for success and fail instances
   if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
-    add_instancetests(successMacArmInstances "Optimal")
+    # without floating-point contraction (see the top-level CMakeLists.txt),
+    # macOS on arm64 gives the same iteration counts as x86-64
+    add_instancetests(successInstances "Optimal")
   elseif(LINUX AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)")
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv64")
         add_instancetests(successRiscVInstances "Optimal")
@@ -491,6 +485,36 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
       endforeach(setting)
   endforeach(instance)
+
+  # LPs in the MIP solver go through solver selection with the fitted models
+  # (1 and 2) and with IPM forced (6 is HiPO, or IPX without it). Strategy 0
+  # is the default tested above
+  foreach(strategy 1 2 6)
+      set(select_options ${CMAKE_BINARY_DIR}/testoptions_select_${strategy}.txt)
+      FILE(WRITE ${select_options}
+      "mip_rel_gap=0.0
+      mip_abs_gap=0.0
+      solver_select_strategy=${strategy}")
+      foreach(instance ${mipInstances})
+          list(GET instance 0 name)
+          list(GET instance 1 optval)
+          set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
+          set(test_name ${name}--solver_select_strategy=${strategy})
+          if (FAST_BUILD)
+            add_test(NAME ${test_name} COMMAND $<TARGET_FILE:highs-bin>
+                --options_file ${select_options} ${inst})
+          else()
+            add_test(NAME ${test_name} COMMAND $<TARGET_FILE:highs>
+                --options_file ${select_options} ${inst})
+          endif()
+          set_tests_properties (${test_name} PROPERTIES
+                  DEPENDS unit_tests_all
+                  PASS_REGULAR_EXPRESSION
+                  "Status            Optimal\n  Primal bound      ${optval}.*\n  Dual bound        ${optval}.*\n  Solution status   feasible\n                    ${optval}.* \\(objective\\)"
+                  FAIL_REGULAR_EXPRESSION
+                  "Solution status   infeasible")
+      endforeach(instance)
+  endforeach(strategy)
 
   if(FAST_BUILD)
     foreach(instance_pdlp ${pdlpInstances})

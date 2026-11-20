@@ -227,3 +227,33 @@ TEST_CASE("issue-3459", "[highs_crossover]") {
 
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3710", "[highs_crossover]") {
+  // Crossover from a user solution must not need the task scheduler
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMaximize;
+  lp.col_cost_ = {1, 2};
+  lp.col_lower_ = {0, 0};
+  lp.col_upper_ = {inf, inf};
+  lp.row_lower_ = {-inf};
+  lp.row_upper_ = {4};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 2};
+  lp.a_matrix_.index_ = {0, 1};
+  lp.a_matrix_.value_ = {1, 2};
+
+  HighsSolution solution;
+  solution.col_value = {2, 1};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+
+  // Scheduler never initialised on this thread
+  Highs::resetThreadScheduler(true);
+  REQUIRE(h.crossover(solution) == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 4);
+}

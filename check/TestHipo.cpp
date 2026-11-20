@@ -3,10 +3,12 @@
 #include <vector>
 
 #include "HCheckConfig.h"
+#include "HConfig.h"
 #include "Highs.h"
 #include "HighsExternalApi.h"
 #include "catch.hpp"
 #include "io/Filereader.h"
+#include "ipm/hipo/factorhighs/FactorHighs.h"
 #include "ipm/hipo/factorhighs/FactorHighs_c_api.h"
 #include "ipm/hipo/ipm/Solver.h"
 #include "ipm/hipo/ipm/Status.h"
@@ -165,18 +167,52 @@ TEST_CASE("issue-3369", "[highs_hipo]") {
   REQUIRE(h.getInfo().ipm_iteration_count < 10);
 }
 
+// A stop callback that returns nonzero stops the METIS and AMD orderings,
+// which then fail. HiPO uses this for its time limit. The matrix is a grid
+// Laplacian, large enough that both orderings check the callback
+TEST_CASE("test-hipo-ordering-stop", "[highs_hipo]") {
+  if (!HighsExternalApi::isAvailable<HighsExtras::metis>() ||
+      !HighsExternalApi::isAvailable<HighsExtras::amd>())
+    return;
+  // Lower triangle, with the diagonal, in CSC format
+  const hipo::Int m = 300;
+  const hipo::Int n = m * m;
+  std::vector<hipo::Int> ptr = {0};
+  std::vector<hipo::Int> rows;
+  for (hipo::Int k = 0; k < n; k++) {
+    rows.push_back(k);
+    if (k % m < m - 1) rows.push_back(k + 1);
+    if (k + m < n) rows.push_back(k + m);
+    ptr.push_back(static_cast<hipo::Int>(rows.size()));
+  }
+  const hipo::Int nz = static_cast<hipo::Int>(rows.size());
+  std::vector<hipo::Int> perm(n);
+
+  hipo::FHsolver FH;
+  REQUIRE(FH.reorderMetis(n, nz, rows.data(), ptr.data(), perm.data(), false,
+                          0) == 0);
+  REQUIRE(FH.reorderAmd(n, nz, rows.data(), ptr.data(), perm.data(), false) ==
+          0);
+
+  FH.setStopCallback([](void*) { return 1; });
+  REQUIRE(FH.reorderMetis(n, nz, rows.data(), ptr.data(), perm.data(), false,
+                          0) != 0);
+  REQUIRE(FH.reorderAmd(n, nz, rows.data(), ptr.data(), perm.data(), false) !=
+          0);
+}
+
 TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   // problem size
-  const int n = 5;
-  const int nz = 10;
+  const HighsInt n = 5;
+  const HighsInt nz = 10;
 
   // define the lower triangle in CSC format, with 0-based indexing
-  int ptr[n + 1] = {0, 3, 5, 8, 9, 10};
-  int rows[nz] = {0, 2, 3, 1, 2, 2, 3, 4, 3, 4};
+  HighsInt ptr[n + 1] = {0, 3, 5, 8, 9, 10};
+  HighsInt rows[nz] = {0, 2, 3, 1, 2, 2, 3, 4, 3, 4};
   double vals[nz] = {5, 3, 4, 3, 2, 9, -1, 1, 8, 1};
 
   // matrix is spd, so expect all pivots to be positive
-  int signs[n] = {1, 1, 1, 1, 1};
+  HighsInt signs[n] = {1, 1, 1, 1, 1};
 
   // rhs and expected solution
   double rhs[n] = {1, 2, 3, 4, 5};
@@ -205,12 +241,12 @@ TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   FactorHighs_setRegularisation(FH, 0.0, 0.0);
 
   // compute ordering with metis
-  int perm[n];
-  int metis_status = FactorHighs_reorderMetis(FH, n, nz, rows, ptr, perm);
+  HighsInt perm[n];
+  HighsInt metis_status = FactorHighs_reorderMetis(FH, n, nz, rows, ptr, perm);
   REQUIRE(metis_status == 0);
 
   // perform analyse phase
-  int analyse_status =
+  HighsInt analyse_status =
       FactorHighs_analyse(FH, S, n, nz, rows, ptr, signs, perm);
   REQUIRE(analyse_status == 0);
 
@@ -219,11 +255,12 @@ TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   FactorHighs_symbolic_print(FH, S, verbose);
 
   // factorise the matrix
-  int factorise_status = FactorHighs_factorise(FH, S, n, nz, rows, ptr, vals);
+  HighsInt factorise_status =
+      FactorHighs_factorise(FH, S, n, nz, rows, ptr, vals);
   REQUIRE(factorise_status == 0);
 
   // compute the inertia of the factorisation
-  int pos, neg, zero;
+  HighsInt pos, neg, zero;
   double zero_tolerance = 1e-16;
   FactorHighs_inertia(FH, &pos, &neg, &zero, zero_tolerance);
 

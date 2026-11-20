@@ -1451,8 +1451,9 @@ HighsBasis HEkk::getHighsBasis(HighsLp& use_lp) const {
   highs_basis.alien = false;
   highs_basis.useful = true;
   highs_basis.was_alien = false;
-  highs_basis.debug_id =
-      (HighsInt)(build_synthetic_tick_ + total_synthetic_tick_);
+  // The tick count can exceed the range of HighsInt
+  highs_basis.debug_id = (HighsInt)std::min(
+      build_synthetic_tick_ + total_synthetic_tick_, (double)kHighsIInf);
   highs_basis.debug_update_count = info_.update_count;
   highs_basis.debug_origin_name = basis_.debug_origin_name;
   return highs_basis;
@@ -2298,11 +2299,16 @@ void HEkk::initialisePartitionedRowwiseMatrix() {
   analysis_.simplexTimerStart(matrixSetupClock);
   ar_matrix_.createRowwisePartitioned(lp_.a_matrix_,
                                       basis_.nonbasicFlag_.data());
+  ar_matrix_.name_ = "partitioned row-wise constraint";
+  // The partitioned row-wise matrix is generated from an accepted
+  // constraint matrix, so it is OK so long as it's been constructed
+  // correctly.
   assert(ar_matrix_.legalDimensions(options_->log_options));
   assert(ar_matrix_.trimDimensions(options_->log_options) == HighsStatus::kOk);
-  assert(ar_matrix_.assess(options_->log_options, options_->small_matrix_value,
-                           options_->large_matrix_value,
-                           false) == HighsStatus::kOk);
+  // In particular, only its structure should be assessed, as its
+  // values are inherited from the constraint matrix, and may contain
+  // small values from presolve
+  assert(ar_matrix_.assessStructure(*options_) == HighsStatus::kOk);
   assert(ar_matrix_.debugPartitionOk(basis_.nonbasicFlag_.data()));
   analysis_.simplexTimerStop(matrixSetupClock);
   status_.has_ar_matrix = true;
