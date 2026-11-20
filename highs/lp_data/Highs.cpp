@@ -469,6 +469,8 @@ HighsStatus Highs::passModel(HighsModel model) {
   clearModel();
   // Move the model's LP and Hessian to the internal LP and Hessian
   lp = std::move(model.lp_);
+  // Any mods were made by another solve, so don't apply to this model (#3756)
+  lp.mods_.clear();
   hessian = std::move(model.hessian_);
 
   auto clearModelAndReturnError = [&]() {
@@ -1331,8 +1333,9 @@ HighsStatus Highs::optimizeModelTryCatch() {
   // Wrap the call to Highs::calledOptimizeModel() in a try-catch
   // block
   HighsStatus status;
-  // Changes to the model already in mods_ were made by an outer solve, so
-  // mustn't be undone here
+  // Changes to the model already in mods_ were made by an outer
+  // optimizeModel() on this instance (e.g. via
+  // completeSolutionFromDiscreteAssignment()), so mustn't be undone here
   const bool mods_were_clear = !model_.lp_.hasMods();
   auto handleCatch = [&]() {
     // The exception skipped returnFromOptimizeModel(). Set the flag before

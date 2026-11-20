@@ -2843,3 +2843,26 @@ TEST_CASE("issue-3573", "[highs_test_mip_solver]") {
 
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3756", "[highs_test_mip_solver]") {
+  // Infinite costs in the original model were recorded in mods_, which
+  // was copied into the (smaller) LP relaxation model, so restoring
+  // infinite costs indexed beyond its solution vectors
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3756.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
+  // A model passed to Highs cannot carry mods made by another solve
+  HighsLp lp = highs.getLp();
+  lp.mods_.save_inf_cost_variable_index = {0};
+  lp.mods_.save_inf_cost_variable_cost = {kHighsInf};
+  lp.mods_.save_inf_cost_variable_lower = {0};
+  lp.mods_.save_inf_cost_variable_upper = {0};
+  REQUIRE(highs.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(!highs.getLp().hasMods());
+  highs.resetThreadScheduler(true);
+}
