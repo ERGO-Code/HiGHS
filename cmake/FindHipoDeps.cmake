@@ -410,6 +410,18 @@ function(highs_configure_blas)
         else()
             message(STATUS "Enabling DYNAMIC_ARCH for runtime CPU detection.")
             set(DYNAMIC_ARCH ON CACHE BOOL "" FORCE)
+            if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$"
+               AND CMAKE_C_COMPILER_ID STREQUAL "GNU"
+               AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 10
+               AND CMAKE_C_COMPILER_VERSION VERSION_LESS 10.4)
+                # OpenBLAS adds the SVE cores (NEOVERSEV1, NEOVERSEN2, ARMV8SVE,
+                # A64FX) to DYNAMIC_ARCH from GCC 10, but its NEOVERSEV1/N2
+                # kernels need GCC 10.4 and fail to configure with e.g. Debian
+                # 11's GCC 10.2. Leave them out: those CPUs then fall back to
+                # generic ARMv8 kernels at run time
+                message(STATUS "GCC ${CMAKE_C_COMPILER_VERSION} < 10.4: building OpenBLAS DYNAMIC_ARCH without the SVE cores.")
+                set(DYNAMIC_LIST "CORTEXA53;CORTEXA57;THUNDERX;THUNDERX2T99;TSV110;EMAG8180;NEOVERSEN1;THUNDERX3T110" CACHE STRING "" FORCE)
+            endif()
         endif()
 
         # CMAKE_SIZEOF_VOID_P is 4 for 32-bit and 8 for 64-bit
