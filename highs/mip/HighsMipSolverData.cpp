@@ -1348,129 +1348,16 @@ try_again:
 double HighsMipSolverData::transformNewIntegerFeasibleSolution(
     const std::vector<double>& sol,
     const bool possibly_store_as_new_incumbent) {
-
-  HighsSolution solution;
-  solution.col_value = sol;
-  solution.value_valid = true;
-  // Perform primal postsolve to get the original column values
-  const HighsInt report_col = -kHighsIInf;
-  this->reportOriginalPresolvedCol(report_col, sol);
-  postSolveStack.undoPrimal(*mipsolver.options_mip_, solution, report_col);
-  // Determine the row values, as they aren't computed in primal
-  // postsolve
-  HighsStatus return_status =
-      calculateRowValuesQuad(*mipsolver.orig_model_, solution);
-  if (kAllowDeveloperAssert) assert(return_status == HighsStatus::kOk);
-  bool allow_try_again = true;
-try_again:
-
-  // compute the objective value in the original space
+  double mipsolver_objective_value;
   MipViolation violation;
-  HighsCDouble mipsolver_quad_objective_value = 0;
-  bool feasible = mipsolver.solutionFeasible(
-      mipsolver.orig_model_, solution.col_value, &solution.row_value, violation,
-      mipsolver_quad_objective_value);
+  HighsSolution solution;
+  double transformed_solobj;
+  bool feasible = feasibleInOriginalSpace(sol, transformed_solobj,
+					  solution, mipsolver_objective_value, violation);
   double bound_violation_ = 0;
   double row_violation_ = 0;
   double integrality_violation_ = 0;
   violation.copy(bound_violation_, row_violation_, integrality_violation_);
-  double mipsolver_objective_value = double(mipsolver_quad_objective_value);
-  if (!feasible && allow_try_again) {
-    // printf(
-    //     "trying to repair sol that is violated by %.12g bounds, %.12g rows,
-    //     %.12g "integrality\n", bound_violation_, row_violation_,
-    //     integrality_violation_);
-    HighsLp fixedModel = *mipsolver.orig_model_;
-    fixedModel.integrality_.clear();
-    for (HighsInt i = 0; i != mipsolver.orig_model_->num_col_; ++i) {
-      if (mipsolver.orig_model_->integrality_[i] == HighsVarType::kInteger) {
-        double solval = std::round(solution.col_value[i]);
-        fixedModel.col_lower_[i] = std::max(fixedModel.col_lower_[i], solval);
-        fixedModel.col_upper_[i] = std::min(fixedModel.col_upper_[i], solval);
-      }
-    }
-    this->total_repair_lp++;
-    double time_available = std::max(
-        mipsolver.options_mip_->time_limit - mipsolver.timer_.read(), 0.1);
-    // Highs instantiation
-    Highs tmpSolver;
-    tmpSolver.setProfiling(mipsolver.profiling_);
-    const bool debug_report = false;
-    if (debug_report) {
-      tmpSolver.setOptionValue("log_dev_level", 2);
-      tmpSolver.setOptionValue("highs_analysis_level", 4);
-    } else {
-      tmpSolver.setOptionValue("output_flag", false);
-    }
-    // tmpSolver.setOptionValue("simplex_scale_strategy", 0);
-    // tmpSolver.setOptionValue("presolve", kHighsOffString);
-    tmpSolver.setOptionValue("time_limit", time_available);
-    // Set primal feasibility tolerance for LP solves according to
-    // mip_feasibility_tolerance. Interestingly, dual feasibility
-    // tolerance not set to smaller tolerance as in
-    // HighsLpRelaxationconstructor.
-    double mip_primal_feasibility_tolerance =
-        mipsolver.options_mip_->mip_feasibility_tolerance;
-    tmpSolver.setOptionValue("primal_feasibility_tolerance",
-                             mip_primal_feasibility_tolerance);
-    // check if only root presolve is allowed
-    const bool use_presolve = !mipsolver.options_mip_->mip_root_presolve_only;
-    const std::string presolve =
-        use_presolve ? kHighsChooseString : kHighsOffString;
-    tmpSolver.setOptionValue("presolve", presolve);
-    tmpSolver.passModel(std::move(fixedModel));
-    // Until a good decision can be made on whether to use simplex,
-    // HiPO or IPX to solve an LP without a basis, use simplex
-    tmpSolver.setOptionValue("solver", kSimplexString);
-    tmpSolver.optimizeLp();
-    if (use_presolve &&
-        tmpSolver.getModelStatus() == HighsModelStatus::kSolveError) {
-      tmpSolver.setOptionValue("presolve", kHighsOffString);
-      tmpSolver.optimizeLp();
-    }
-    this->total_repair_lp_iterations +=
-        tmpSolver.getInfo().simplex_iteration_count;
-    if (tmpSolver.getInfo().primal_solution_status == kSolutionStatusFeasible) {
-      this->total_repair_lp_feasible++;
-      solution = tmpSolver.getSolution();
-      calculateRowValuesQuad(*mipsolver.orig_model_, solution.col_value,
-                             solution.row_value);
-      allow_try_again = false;
-      goto try_again;
-    }
-  }
-
-  const double transformed_solobj =
-      static_cast<double>(static_cast<HighsInt>(mipsolver.orig_model_->sense_) *
-                              mipsolver_quad_objective_value -
-                          mipsolver.model_->offset_);
-
-  // >>>> Now use feasibleInOriginalSpace, checking for equivalence in output
-  double check_mipsolver_objective_value;
-  MipViolation check_violation;
-  HighsSolution check_solution;
-  double check_transformed_solobj;
-  bool check_feasible = feasibleInOriginalSpace(sol, check_transformed_solobj,
-					  check_solution, check_mipsolver_objective_value, check_violation);
-  double check_bound_violation_ = 0;
-  double check_row_violation_ = 0;
-  double check_integrality_violation_ = 0;
-  check_violation.copy(check_bound_violation_, check_row_violation_, check_integrality_violation_);
-
-  assert(check_mipsolver_objective_value == mipsolver_objective_value);
-  for (HighsInt iCol = 0; iCol < mipsolver.orig_model_->num_col_; iCol++)
-    assert(check_solution.col_value[iCol] == solution.col_value[iCol]);
-  for (HighsInt iRow = 0; iRow < mipsolver.orig_model_->num_row_; iRow++)
-    assert(check_solution.row_value[iRow] == solution.row_value[iRow]);
-  assert(check_transformed_solobj == transformed_solobj);
-  assert(check_feasible == feasible);
-  assert(check_bound_violation_ == bound_violation_);
-  assert(check_row_violation_ == row_violation_);
-  assert(check_integrality_violation_ == integrality_violation_);
-  // Now use feasibleInOriginalSpace, checking for equivalence in output <<<< 
-
-
-
 
   // Possible MIP solution callback
   if (!mipsolver.submip && feasible && mipsolver.callback_->user_callback &&

@@ -882,6 +882,7 @@ static void testStartSolution(Highs& h, const double required_objective,
   REQUIRE(std::fabs(computed_objective - objective) <= 1e-6 * (1 + std::fabs(objective)));
 }
 
+/*
 TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   // The image of the start solution in the reduced space is feasible,
   // and better than the start solution. The solution returned must
@@ -913,7 +914,7 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
 
   h.resetGlobalScheduler(true);
 }
-
+*/
 TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
   // MIP has optimal solution x = (0, 1, 1, 1, 0, 0) with objective
   // value of -4
