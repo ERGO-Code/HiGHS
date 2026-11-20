@@ -8,10 +8,13 @@ concurrency:
 
 jobs:
   unit_tests:
-    runs-on: ${{ matrix.os }}
+    name: unit_tests (shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        # Must be one more than the number of SLOW_GROUPS in the Test step.
+        shard: [0, 1, 2]
 
     steps:
       - uses: actions/checkout@v6
@@ -37,12 +40,25 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
+          # Shards 0..N-2 run the slow test files named below (Catch filename tags);
+          # the last shard runs every other file, so new test files are always covered.
+          SLOW_GROUPS=("TestMipSolver" "TestSymmetry TestCallbacks TestIis")
+          SHARD=${{ matrix.shard }}
+          if [ ${{ strategy.job-total }} -ne $(( ${#SLOW_GROUPS[@]} + 1 )) ]; then
+            echo "matrix.shard must have $(( ${#SLOW_GROUPS[@]} + 1 )) entries"; exit 1
+          fi
+          if [ $SHARD -lt ${#SLOW_GROUPS[@]} ]; then
+            SPEC=$(printf '[#%s],' ${SLOW_GROUPS[$SHARD]}); SPEC=${SPEC%,}
+          else
+            SPEC=$(printf '~[#%s]' ${SLOW_GROUPS[*]})
+          fi
+          echo "Running unit tests: $SPEC"
           valgrind \
           --leak-check=full \
           --show-leak-kinds=all \
           --track-origins=yes \
           -s \
-          ./bin/unit_tests \
+          ./bin/unit_tests -# "$SPEC" \
           2>&1 | tee logfile
 
       - name: Check log for Errors
