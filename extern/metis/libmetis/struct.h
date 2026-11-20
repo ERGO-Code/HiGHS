@@ -109,7 +109,12 @@ typedef struct ctrl_t {
                              mallocs/frees */
 
   unsigned rng_state;
-  
+
+  /* Early termination */
+  Highs_METIS_ShouldStop should_stop; /*!< Callback to request termination, may be NULL */
+  void *stop_data;                    /*!< User data passed to should_stop */
+  int stopped;                        /*!< Set once should_stop returned nonzero */
+
 } ctrl_t;
 
 

@@ -1868,6 +1868,86 @@ TEST_CASE("test-probing-inherited-clique-table",
   HighsTaskExecutor::shutdown(true);
 }
 
+TEST_CASE("test-substitute-zero-scale", "[highs_test_presolve_rules]") {
+  // issue #3633: substituting x0 = 0 x1 + 2 fixes x0 = 2, so no zero
+  // coefficients of x1 must be added to the rows of x0
+  //   min x1
+  //   x0 + x1 <= 4
+  //   2 x0 + x2 >= 1
+  //   0 <= x0 <= 3, x1 binary, x2 >= 0
+  HighsLp lp;
+  lp.num_col_ = 3;
+  lp.num_row_ = 2;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {0.0, 1.0, 0.0};
+  lp.col_lower_ = {0.0, 0.0, 0.0};
+  lp.col_upper_ = {3.0, 1.0, kHighsInf};
+  lp.integrality_ = {HighsVarType::kContinuous, HighsVarType::kInteger,
+                     HighsVarType::kContinuous};
+  lp.row_lower_ = {-kHighsInf, 1.0};
+  lp.row_upper_ = {4.0, kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = 3;
+  lp.a_matrix_.num_row_ = 2;
+  lp.a_matrix_.start_ = {0, 2, 3, 4};
+  lp.a_matrix_.index_ = {0, 1, 0, 1};
+  lp.a_matrix_.value_ = {1.0, 2.0, 1.0, 1.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  presolve.presolveTestSubstitute(postsolve_stack, 0, 1, 2.0, 0.0);
+
+  // x0 is fixed and removed, x1 remains in row 0 only and x2 in row 1 only,
+  // each with coefficient 1
+  const HighsLp& presolved = *mipsolver.model_;
+  REQUIRE(presolved.num_col_ == 2);
+  REQUIRE(presolved.num_row_ == 2);
+  for (HighsInt j = 0; j < presolved.num_col_; j++) {
+    HighsInt origCol = postsolve_stack.getOrigColIndex(j);
+    REQUIRE(origCol != 0);
+    HighsInt start = presolved.a_matrix_.start_[j];
+    REQUIRE(presolved.a_matrix_.start_[j + 1] - start == 1);
+    HighsInt origRow =
+        postsolve_stack.getOrigRowIndex(presolved.a_matrix_.index_[start]);
+    REQUIRE(origRow == (origCol == 1 ? 0 : 1));
+    REQUIRE(presolved.a_matrix_.value_[start] == 1.0);
+  }
+
+  // the rows account for x0 = 2
+  for (HighsInt i = 0; i < presolved.num_row_; i++) {
+    if (postsolve_stack.getOrigRowIndex(i) == 0)
+      REQUIRE(presolved.row_upper_[i] == 2.0);
+    else
+      REQUIRE(presolved.row_lower_[i] == -3.0);
+  }
+
+  HighsTaskExecutor::shutdown(true);
+}
+
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
                    const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,

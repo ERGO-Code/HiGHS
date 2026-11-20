@@ -4720,6 +4720,10 @@ HighsModelStatus HPresolve::run(HighsPostsolveStack& postsolve_stack) {
 HPresolve::Result HPresolve::substitute(HighsInt substcol, HighsInt staycol,
                                         double offset, double scale,
                                         HighsInt row) {
+  if (scale == 0.0) {
+    if (row != -1) removeRow(row);
+    return removeFixedCol(substcol, offset);
+  }
   HPRESOLVE_CHECKED_CALL(
       updateCliqueTableSubstituteCol(substcol, staycol, offset, scale));
   markColDeleted(substcol);
