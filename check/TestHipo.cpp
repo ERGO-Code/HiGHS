@@ -8,6 +8,7 @@
 #include "HighsExternalApi.h"
 #include "catch.hpp"
 #include "io/Filereader.h"
+#include "ipm/hipo/factorhighs/FactorHighs.h"
 #include "ipm/hipo/factorhighs/FactorHighs_c_api.h"
 #include "ipm/hipo/ipm/Solver.h"
 #include "ipm/hipo/ipm/Status.h"
@@ -258,6 +259,40 @@ TEST_CASE("issue-3749", "[highs_hipo]") {
   }
 }
 
+// A stop callback that returns nonzero stops the METIS and AMD orderings,
+// which then fail. HiPO uses this for its time limit. The matrix is a grid
+// Laplacian, large enough that both orderings check the callback
+TEST_CASE("test-hipo-ordering-stop", "[highs_hipo]") {
+  if (!HighsExternalApi::isAvailable<HighsExtras::metis>() ||
+      !HighsExternalApi::isAvailable<HighsExtras::amd>())
+    return;
+  // Lower triangle, with the diagonal, in CSC format
+  const hipo::Int m = 300;
+  const hipo::Int n = m * m;
+  std::vector<hipo::Int> ptr = {0};
+  std::vector<hipo::Int> rows;
+  for (hipo::Int k = 0; k < n; k++) {
+    rows.push_back(k);
+    if (k % m < m - 1) rows.push_back(k + 1);
+    if (k + m < n) rows.push_back(k + m);
+    ptr.push_back(static_cast<hipo::Int>(rows.size()));
+  }
+  const hipo::Int nz = static_cast<hipo::Int>(rows.size());
+  std::vector<hipo::Int> perm(n);
+
+  hipo::FHsolver FH;
+  REQUIRE(FH.reorderMetis(n, nz, rows.data(), ptr.data(), perm.data(), false,
+                          0) == 0);
+  REQUIRE(FH.reorderAmd(n, nz, rows.data(), ptr.data(), perm.data(), false) ==
+          0);
+
+  FH.setStopCallback([](void*) { return 1; });
+  REQUIRE(FH.reorderMetis(n, nz, rows.data(), ptr.data(), perm.data(), false,
+                          0) != 0);
+  REQUIRE(FH.reorderAmd(n, nz, rows.data(), ptr.data(), perm.data(), false) !=
+          0);
+}
+
 TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   // problem size
   const HighsInt n = 5;
@@ -358,7 +393,8 @@ TEST_CASE("test-hipo-serial-blas", "[highs_hipo]") {
   // OpenBLAS may be limited to a single thread, in which case the opt-out
   // cannot be observed
   if (multiple_threads > 1) {
-    // With hipo_serial_blas false, HiPO leaves the number of threads unchanged
+    // With hipo_serial_blas false, HiPO leaves the number of threads
+    // unchanged
     REQUIRE(HighsExtras::blas::openblas_set_num_threads(2) == multiple_threads);
     highs.setOptionValue("hipo_serial_blas", false);
     highs.clearSolver();
