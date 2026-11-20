@@ -516,8 +516,9 @@ bool tryNormaliseKnapsack(KnapsackRow& knapsack,
   auto upgradeRow = [&](const double newWeight) {
     // The largest non-max-weight item must fit newWeight times for
     // normalised knapsack to dominate original w.r.t. LP relaxation.
-    if (static_cast<HighsCDouble>(weight(numMaxWeightItems)) * newWeight >
-        knapsack.capacity)
+    if (static_cast<HighsCDouble>(weight(numMaxWeightItems)) * newWeight -
+            knapsack.capacity >
+        0)
       return false;
     changed = true;
     for (HighsInt i = 0; i != numMaxWeightItems; ++i) {
