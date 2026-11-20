@@ -204,6 +204,11 @@ struct HighsMipSolverData {
   void saveReportMipSolution(const double new_upper_limit);
   void checkAddSolution(const bool from_cleanup_solve = false);
   void runSetup();
+  bool feasibleInOriginalSpace(const std::vector<double>& reduced_col_value,
+			       double& transformed_solobj,
+			       HighsSolution& original_space_solution,
+			       double& mipsolver_objective_value,
+			       MipViolation& violation);
   double transformNewIntegerFeasibleSolution(
       const std::vector<double>& sol,
       const bool possibly_store_as_new_incumbent = true);
