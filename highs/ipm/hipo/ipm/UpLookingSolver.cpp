@@ -10,7 +10,7 @@ namespace hipo {
 UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info,
                                  IterationHistory& history,
                                  const SolverControls& controls,
-                                 const Model& model)
+                                 const Model& model, const Control& control)
     : kkt_{kkt},
       ptr_{kkt_.isNE() ? kkt_.ptrNE : kkt_.ptrAS},
       rows_{kkt_.isNE() ? kkt_.rowsNE : kkt_.rowsAS},
@@ -19,7 +19,8 @@ UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info,
       info_{info},
       history_{history},
       controls_{controls},
-      model_{model} {}
+      model_{model},
+      control_{control} {}
 
 void UpLookingSolver::etreeAndCounts(const std::vector<Int>& ptr,
                                      const std::vector<Int>& rows,
@@ -78,9 +79,9 @@ Int UpLookingSolver::setup() {
   return kOk;
 }
 
-void UpLookingSolver::factor(const std::vector<Int>& ptr,
-                             const std::vector<Int>& rows,
-                             const std::vector<double>& val) {
+Int UpLookingSolver::factor(const std::vector<Int>& ptr,
+                            const std::vector<Int>& rows,
+                            const std::vector<double>& val) {
   // Up-looking factorisation.
   // It computes L one row at a time.
   // If the first k rows have been computed, then we already have a
@@ -96,6 +97,8 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
   //
   // A must be upper triangular.
   // L is computed as lower triangular. The diagonal of L is used to store D^-1.
+  //
+  // Returns kErrorFactorise if the time limit is reached; L is then invalid.
 
   std::vector<HighsBool> mark(n_, false);
   std::vector<Int> stack(n_);
@@ -104,7 +107,15 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
   std::vector<double> x(n_, 0.0);
   std::vector<Int64> next = ptrL_;
 
+  // number of entries of L scanned since the last check of the time limit
+  Int64 work = 0;
+
   for (Int row = 0; row < n_; ++row) {
+    if (work >= kUplookTimeCheckWork) {
+      work = 0;
+      if (control_.timeLimitReached()) return kErrorFactorise;
+    }
+
     // ===================================================================
     //  Sparsity pattern of row of L
     // ===================================================================
@@ -151,6 +162,7 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
       assert(rowsL_[ptrL_[col]] == col);
       for (Int el = ptrL_[col] + 1; el < next[col]; ++el)
         x[rowsL_[el]] -= valL_[el] * value;
+      work += next[col] - ptrL_[col];
 
       const double Dinv = valL_[ptrL_[col]];
       rowsL_[next[col]] = row;
@@ -181,6 +193,8 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
     rowsL_[next[row]] = row;
     next[row]++;
   }
+
+  return kOk;
 }
 
 void UpLookingSolver::solve(std::vector<double>& x) {
@@ -219,7 +233,7 @@ Int UpLookingSolver::factorAS(const std::vector<double>& scaling) {
   permuteSym(kkt_.iperm(), ptrT, rowsT, valT, false);
 
   clock.start();
-  factor(ptrT, rowsT, valT);
+  if (Int status = factor(ptrT, rowsT, valT)) return status;
   info_.times[kFactoriseTime] += clock.stop();
   info_.factor_number++;
 
@@ -241,7 +255,7 @@ Int UpLookingSolver::factorNE(const std::vector<double>& scaling) {
   permuteSym(kkt_.iperm(), ptrT, rowsT, valT, false);
 
   clock.start();
-  factor(ptrT, rowsT, valT);
+  if (Int status = factor(ptrT, rowsT, valT)) return status;
   info_.times[kFactoriseTime] += clock.stop();
   info_.factor_number++;
 

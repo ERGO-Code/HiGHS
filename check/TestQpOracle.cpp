@@ -676,3 +676,16 @@ void testOracleSolve(const HighsModel& model) {
 
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3678", "[highs_data]") {
+  Highs h;
+  h.setOptionValue("output_flag", false);
+  double c[2] = {0, 0};
+  double lb[2] = {0, 0};
+  double ub[2] = {10, 10};
+  h.addCols(2, c, lb, ub, 0, nullptr, nullptr, nullptr);
+  auto oracle = [](const HighsInt, const HighsInt*, const HighsInt*,
+                   const double*, HighsInt*, HighsInt*, double*,
+                   void*) { return HighsInt(0); };
+  REQUIRE(h.passHessian(5, oracle, nullptr, nullptr) == HighsStatus::kError);
+}

@@ -91,6 +91,7 @@ void Solver::setOptions(const HighsOptions& highs_options) {
 
   options_.max_iter = highs_options.ipm_iteration_limit;
   options_.crossover = highs_options.run_crossover;
+  options_.stop_if_no_memory = highs_options.hipo_stop_if_no_memory;
   options_.nla = highs_options.hipo_system;
   options_.ordering = highs_options.hipo_ordering;
   options_.factor = highs_options.hipo_factor;
@@ -152,6 +153,11 @@ void Solver::doSolve() {
     return;
   }
 
+  if (!HighsTaskExecutor::isRunning()) {
+    info_.error = kErrorScheduler;
+    return;
+  }
+
   reset();
 
   // iterate object needs to be initialised before potentially interrupting
@@ -163,6 +169,7 @@ void Solver::doSolve() {
 
   runIpm();
   printDiagnostics();
+  // A factorisation stopped by the time limit is reported by finaliseStatus
   if (errorOrInterrupt()) return;
 
   runIpx();
@@ -419,6 +426,9 @@ isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
 
 isSuccess Solver::restartWithMultifrontal() {
   if (!info_.error) return false;
+  // If the time limit is reached, the failure may be due to the factorisation
+  // being interrupted, so don't try again with another factorisation.
+  if (control_.timeLimitReached()) return false;
   if (!switchToMultifrontal()) return false;
   logger_.printInfo("Switching to FactorHighs because of bad direction\n");
   resetToBestIter(iter_ - 1);
@@ -1647,7 +1657,7 @@ void Solver::resetToBestIter(Int iter, bool print) {
 
 isFailure Solver::initialiseLinearSolver() {
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, controls_, info_,
-                                  it_->history, logger_));
+                                  it_->history, logger_, control_));
   info_.error = LS_->setup();
   if (info_.error) return true;
 
@@ -1672,9 +1682,12 @@ isFailure Solver::initialiseLinearSolver() {
   else
     do_switch = should_switch_to_uplooking;
 
+  // Up-looking may later switch to multifrontal, so check for that too
+  LS_->checkMemory();
+
   if (do_switch) {
     LS_.reset(
-        new UpLookingSolver(*kkt_, info_, it_->history, controls_, model_));
+        new UpLookingSolver(*kkt_, info_, it_->history, controls_, model_, control_));
     LS_->setup();
     LS_->clear();
   }
@@ -1687,7 +1700,7 @@ isSuccess Solver::switchToMultifrontal() {
     return false;
 
   LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, controls_, info_,
-                                  it_->history, logger_));
+                                  it_->history, logger_, control_));
   LS_->clear();
   it_->diagnostics.clear(iter_);
   info_.error = kOk;
@@ -2006,7 +2019,19 @@ Status Solver::getStatus() const {
 
 void Solver::finaliseStatus() {
   info_.status = getStatus();
-  if (info_.error) info_.status = kStatusError;
+  if (info_.error) {
+    // The time limit stops analyse and factorise by making them fail, so
+    // report such a failure after the time limit as the time limit. Other
+    // errors, such as NaN or failed allocation, stay errors
+    const bool stoppable =
+        info_.error == kErrorAnalyse || info_.error == kErrorFactorise;
+    if (stoppable && control_.timeLimitReached()) {
+      info_.error = kOk;
+      info_.status = kStatusTimeLimit;
+    } else {
+      info_.status = kStatusError;
+    }
+  }
   if (info_.status == kStatusNotSet) info_.status = kStatusMaxIter;
 }
 

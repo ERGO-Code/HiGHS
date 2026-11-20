@@ -1,12 +1,14 @@
 #include "FactorHighsSolver.h"
 
 #include <limits>
+#include <new>
 
 #include "HighsExternalApi.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 #include "parallel/HighsParallel.h"
+#include "util/HighsAvailableMemory.h"
 #include "util/stringutil.h"
 
 namespace hipo {
@@ -15,7 +17,8 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
                                      const SolverControls& controls, Info& info,
                                      IterationHistory& history,
-                                     const Logger& logger)
+                                     const Logger& logger,
+                                     const Control& control)
     : FH_{},
       kkt_{kkt},
       controls_{controls},
@@ -23,14 +26,29 @@ FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
       history_{history},
       logger_{logger},
       model_{model},
-      options_{options} {
+      options_{options},
+      control_{control} {
   FH_.setBlockSize(options.block_size);
   FH_.setLogger(&logger);
+  // Stop the ordering and factorisation if the time limit is reached. Only the
+  // time limit is checked, since the callback may run on a worker thread and
+  // must not throw.
+  FH_.setStopCallback(
+      [](void* data) -> int {
+        return static_cast<FactorHighsSolver*>(data)
+            ->control_.timeLimitReached();
+      },
+      this);
 }
 
-void FactorHighsSolver::clear() {
-  valid_ = false;
+void FactorHighsSolver::printAnalyseFailure(const char* message) const {
+  if (control_.timeLimitReached())
+    logger_.printw("%s", message);
+  else
+    logger_.printe("%s", message);
 }
+
+void FactorHighsSolver::clear() { valid_ = false; }
 
 // =========================================================================
 // Analyse phase
@@ -204,6 +222,24 @@ Int FactorHighsSolver::setup() {
   return kOk;
 }
 
+void FactorHighsSolver::checkMemory() const {
+  // storage() is the serial factorisation only, so allow a margin over it
+  const double margin = options_.getParallel(ParallelTechnique::kTree)
+                            ? kMemoryMarginParallelTree
+                            : kMemoryMarginSerial;
+  const double required = margin * kkt_.S.storage();
+  if (required < kMemoryCheckMinBytes && !availableMemoryBytesSetForTesting())
+    return;
+  const double available = availableMemoryBytes();
+  if (available < 0 || required <= available) return;
+  const double bytes_per_GB = 1024.0 * 1024.0 * 1024.0;
+  logger_.printw("HiPO requires %.1f GB but %.1f GB is available\n",
+                 required / bytes_per_GB, available / bytes_per_GB);
+  // Allocation can succeed and the process still be killed when the memory is
+  // used, so stop now. The caller handles this like any failed allocation
+  if (options_.stop_if_no_memory) throw HighsPredictedOutOfMemory();
+}
+
 Int FactorHighsSolver::chooseNla() {
   Symbolic symb_NE{};
   Symbolic symb_AS{};
@@ -314,7 +350,7 @@ Int FactorHighsSolver::chooseNla() {
     else
       status = kErrorAnalyse;
 
-    logger_.printe("Both NE and AS failed analyse phase\n");
+    printAnalyseFailure("Both NE and AS failed analyse phase\n");
   } else {
     // Total number of operations, given by dense flops and sparse indexing
     // operations, weighted with an empirical factor
@@ -538,7 +574,7 @@ Int FactorHighsSolver::setNla() {
       logger_.printe("AS requested, integer overflow\n");
       return kErrorOverflow;
     } else if (status) {
-      logger_.printe("AS requested, failed analyse phase\n");
+      printAnalyseFailure("AS requested, failed analyse phase\n");
       return kErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "AS requested\n";
@@ -550,7 +586,7 @@ Int FactorHighsSolver::setNla() {
       logger_.printe("NE requested, integer overflow\n");
       return kErrorOverflow;
     } else if (status) {
-      logger_.printe("NE requested, failed analyse phase\n");
+      printAnalyseFailure("NE requested, failed analyse phase\n");
       return kErrorAnalyse;
     }
     log_stream << textline("Newton system:") << "NE requested\n";
