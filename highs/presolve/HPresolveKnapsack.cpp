@@ -647,42 +647,38 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   const HighsInt maxRowSize =
       std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
   const HighsInt numRows = model->num_row_;
-  std::vector<std::pair<HighsInt, double>> oldRow;
+  std::vector<HighsInt> oldRowPositions;
 
   auto changeRow = [&](const KnapsackRow& knapsack) {
     // Replace the knapsack row with a tightened row in the matrix
-    oldRow.clear();
-    for (const auto& nz : getRowVector(knapsack.row)) {
-      oldRow.emplace_back(nz.index(), nz.value());
-    }
+    oldRowPositions.clear();
+    const auto row = getRowVector(knapsack.row);
+    for (auto nz = row.begin(); nz != row.end(); ++nz)
+      oldRowPositions.push_back(nz.position());
+
     HighsCDouble rhs = knapsack.capacity;
-    size_t i = 0;
-    size_t j = 0;
-    while (i != knapsack.terms.size()) {
-      const HighsInt& col = knapsack.terms[i].literal / 2;
-      const bool positive = knapsack.terms[i].literal % 2 == 1;
-      const double weight = knapsack.terms[i].weight;
-      // Some term may have been fixed by clique table propagation
-      // and still have non-zero knapsack weight
-      if (model->col_lower_[col] == model->col_upper_[col])
-        rhs -= (positive ? weight : -weight) * model->col_lower_[col];
-      if (!positive) rhs -= weight;
-      while (oldRow[j].first != col) {
-        assert(j != oldRow.size());
-        ++j;
+    size_t nextTerm = 0;
+    for (const HighsInt pos : oldRowPositions) {
+      const HighsInt col = Acol[pos];
+      const double lower = model->col_lower_[col];
+      const bool fixed = lower == model->col_upper_[col];
+      if (nextTerm == knapsack.terms.size() ||
+          knapsack.terms[nextTerm].literal / 2 != col) {
+        // Handle columns that were already fixed while the knapsack
+        // was created but still exist in the row
+        assert(fixed);
+        rhs += knapsack.direction * Avalue[pos] * lower;
+        continue;
       }
-      const double delta =
-          knapsack.direction * (positive ? weight : -weight) - oldRow[j].second;
-      if (delta != 0) {
-        addToMatrix(knapsack.row, col, delta);
-      }
-      ++i;
+
+      const KnapsackTerm& term = knapsack.terms[nextTerm++];
+      const bool positive = term.literal % 2 == 1;
+      const double newCoef = positive ? term.weight : -term.weight;
+      if (!positive) rhs -= term.weight;
+      const double delta = knapsack.direction * newCoef - Avalue[pos];
+      if (delta != 0) addToMatrix(knapsack.row, col, delta);
     }
-    for (const auto& nz : getRowVector(knapsack.row)) {
-      if (model->col_lower_[nz.index()] == model->col_upper_[nz.index()]) {
-        rhs += knapsack.direction * nz.value() * model->col_lower_[nz.index()];
-      }
-    }
+    assert(nextTerm == knapsack.terms.size());
     if (knapsack.direction == 1)
       changeRowUpper(knapsack.row, static_cast<double>(rhs));
     else
