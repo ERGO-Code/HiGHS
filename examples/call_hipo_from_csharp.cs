@@ -1,5 +1,5 @@
 // Solves an LP with the HiPO solver, which needs the Highs.Native.Extras
-// NuGet package next to Highs.Native. Exits with 1 if HiPO is unavailable.
+// NuGet package. Exits with 2 if HiPO is unavailable, 1 if the solve fails.
 
 using System;
 
@@ -23,7 +23,7 @@ class Program {
       HighsLpSolver solver = new HighsLpSolver();
       if (solver.setStringOptionValue("solver", "hipo") != HighsStatus.kOk) {
          Console.WriteLine("HiPO is unavailable: add the Highs.Native.Extras package");
-         return 1;
+         return 2;
       }
       // so that HiPO solves the LP rather than presolve
       solver.setStringOptionValue("presolve", "off");

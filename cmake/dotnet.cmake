@@ -106,8 +106,14 @@ file(COPY
   DESTINATION ${DOTNET_PROJECT_DIR})
 
 # Optional Highs.Native.Extras package (HiPO and its third-party dependencies),
-# the counterpart of highspy-extras. The library is copied in by extern/.
-if(HIPO AND BUILD_SHARED_EXTRAS_LIB)
+# the counterpart of highspy-extras. extern/ copies the library into
+# DOTNET_EXTRAS_PROJECT_DIR when it is defined. The package must be
+# self-contained, so BLAS is either built in (BUILD_OPENBLAS) or the system's
+# Accelerate on macOS.
+if(HIPO AND BUILD_SHARED_EXTRAS_LIB AND NOT (BUILD_OPENBLAS OR APPLE))
+  message(WARNING "Highs.Native.Extras is not generated: it needs -DBUILD_OPENBLAS=ON, "
+                  "since an external BLAS library would not be in the package.")
+elseif(HIPO AND BUILD_SHARED_EXTRAS_LIB)
   set(DOTNET_EXTRAS_PROJECT_DIR ${DOTNET_PACKAGES_DIR}/Highs.Native.Extras)
   configure_file(
     ${PROJECT_SOURCE_DIR}/nuget/Highs.Native.Extras.csproj.in
@@ -119,4 +125,3 @@ if(HIPO AND BUILD_SHARED_EXTRAS_LIB)
     ${PROJECT_SOURCE_DIR}/nuget/HiGHS_Logo.png
     DESTINATION ${DOTNET_EXTRAS_PROJECT_DIR})
 endif()
-

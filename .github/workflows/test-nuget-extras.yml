@@ -1,6 +1,6 @@
 name: test-nuget-extras
 
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,20 +32,25 @@ jobs:
       - name: Dotnet pack
         run: |
           dotnet pack build/dotnet/Highs.Native -c Release -o nugets
-          dotnet pack build/dotnet/Highs.Native.Extras -c Release -o nugets
+          dotnet pack build/dotnet/Highs.Native.Extras -c Release -o nugets \
+            "-p:RestoreSources=${{ github.workspace }}/nugets"
           ls nugets
 
-      # HiPO is optional: Highs.Native alone must load and report it unavailable
+      # HiPO is optional: Highs.Native alone must solve and report HiPO unavailable
       - name: Test Highs.Native without extras
         run: |
           dotnet new console -o test_nuget
           cd test_nuget
           rm Program.cs
-          cp ../examples/call_hipo_from_csharp.cs .
           dotnet add package Highs.Native -s ../nugets
-          if dotnet run > out.txt; then cat out.txt; echo "HiPO ran without Highs.Native.Extras"; exit 1; fi
-          cat out.txt
-          grep -q "HiPO is unavailable" out.txt
+          cp ../examples/call_highs_from_csharp.cs .
+          dotnet run
+          rm call_highs_from_csharp.cs
+          cp ../examples/call_hipo_from_csharp.cs .
+          status=0
+          dotnet run || status=$?
+          # 2: HiPO is unavailable
+          test "$status" -eq 2
 
       - name: Test Highs.Native with extras
         working-directory: test_nuget

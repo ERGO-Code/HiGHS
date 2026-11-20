@@ -17,6 +17,13 @@
     <PackageIcon>HiGHS_Logo.png</PackageIcon>
   </PropertyGroup>
 
+  <!-- HiGHS rejects an extras library of another version at run time, so pin
+       Highs.Native to this exact version. Packing needs it from a local source:
+       dotnet pack -p:RestoreSources=<dir with the Highs.Native .nupkg> -->
+  <ItemGroup>
+    <PackageReference Include="Highs.Native" Version="[$(Version)]" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Include="README-extras.md" Pack="true" PackagePath="" />
     <None Include="THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="" />

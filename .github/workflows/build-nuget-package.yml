@@ -20,6 +20,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The HiPO builds use --parallel 2 to keep the OpenBLAS build within the memory
+# of the hosted runners
 jobs:
   # Build macos intel
   build_macos_intel:
@@ -39,7 +41,7 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config Release --parallel 2 --verbose
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
@@ -88,6 +90,9 @@ jobs:
       - name: Configure CMake win32
         shell: bash
         working-directory: ${{github.workspace}}/build32
+        # no -DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON as on x64 and ARM64: the
+        # optimized (clang-cl) OpenBLAS build covers only those, so win-x86
+        # always gets the generic kernels
         run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON -A Win32 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
       - name: Build win32
@@ -246,6 +251,21 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R ${{github.workspace}}/build/dotnet/*/runtimes
 
+      # upload-artifact does not fail when one of its two paths is missing, so
+      # check that every runtime is in place before packing
+      - name: Check runtimes
+        shell: bash
+        working-directory: ${{github.workspace}}/build/dotnet
+        run: |
+          missing=0
+          for rid in win-x64 win-x86 win-arm64 linux-x64 linux-arm64 linux-arm osx-x64 osx-arm64; do
+            ls Highs.Native/runtimes/$rid/native/*highs.* || missing=1
+          done
+          for rid in win-x64 win-x86 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64; do
+            ls Highs.Native.Extras/runtimes/$rid/native/*highs_extras.* || missing=1
+          done
+          exit $missing
+
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
@@ -256,7 +276,7 @@ jobs:
 
       - name: Dotnet pack Highs.Native.Extras
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native.Extras
-        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.16.0' }} -o ${{github.workspace}}/nupkgs
+        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.16.0' }} -o ${{github.workspace}}/nupkgs "-p:RestoreSources=${{github.workspace}}/nupkgs"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -289,4 +309,5 @@ jobs:
           user: ${{ secrets.NUGET_USER }}
 
       - name: Dotnet push
-        run: dotnet nuget push "*.nupkg" --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        # --skip-duplicate: a re-run after one of the two packages failed to push
+        run: dotnet nuget push "*.nupkg" --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
