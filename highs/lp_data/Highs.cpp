@@ -1331,9 +1331,27 @@ HighsStatus Highs::optimizeModelTryCatch() {
   // Wrap the call to Highs::calledOptimizeModel() in a try-catch
   // block
   HighsStatus status;
+  // Changes to the model already in mods_ were made by an outer solve, so
+  // mustn't be undone here
+  const bool mods_were_clear = !model_.lp_.hasMods();
   auto handleCatch = [&]() {
-    // Clear all solver data, since there may be nothing useful
+    // The exception skipped returnFromOptimizeModel(). Set the flag before
+    // clearSolver(), whose returnFromHighs() asserts it
+    called_return_from_optimize_model = true;
+    // It also skipped stopping any clocks that were running
+    for (HighsInt i = 0; i < timer_.num_clock; i++)
+      if (timer_.running(i)) timer_.stop(i);
+    // Clear all solver data, since there may be nothing useful, but keep
+    // the model status set by the catch
+    const HighsModelStatus model_status = model_status_;
     this->clearSolver();
+    model_status_ = model_status;
+    // ... and undo any changes to the model made for solving it
+    if (mods_were_clear) {
+      HighsStatus restore_status = HighsStatus::kOk;
+      this->restoreInfCost(restore_status);
+      this->model_.lp_.unapplyMods();
+    }
     status = HighsStatus::kError;
   };
   try {
