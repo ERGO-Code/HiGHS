@@ -89,7 +89,7 @@ void computeKnapsackStatistics(KnapsackRow& knapsack,
     }
     stats.numNonZeros++;
     if (weight == 1) stats.numOnes++;
-    if (3 * weight - knapsack.capacity < feastol) {
+    if (static_cast<HighsCDouble>(weight) * 3 - knapsack.capacity <= feastol) {
       stats.outsideThirdSum += weight;
     }
     if (!isLargeKnapsackTerm(weight, knapsack.capacity, feastol)) {
@@ -122,25 +122,23 @@ void tightenRhs(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
     // Can't tighten capacity to lower than the largest item's weight
     return;
   }
-  if (isLargeKnapsackTerm(knapsack.terms[order[0]].weight, knapsack.capacity,
-                          feastol)) {
+  const HighsCDouble capacity = knapsack.capacity;
+  if (isLargeKnapsackTerm(knapsack.terms[order[0]].weight, capacity, feastol)) {
     // Knapsack capacity is min(capacity, largest_item + small_sum)
     tightenKnapsackCapacity(knapsack,
                             knapsack.terms[order[0]].weight + stats.smallSum,
                             feastol, changedRhs);
   }
-  if (stats.numLarge >= 2) {
-    // Knapsack capacity is min(capacity, largest_item + second_largest_item +
-    // sum_items_under_one_third_capacity) assuming the two large items are
-    // above one third capacity (generalisation of the first case)
-    if (3 * knapsack.terms[order[0]].weight - knapsack.capacity > feastol &&
-        3 * knapsack.terms[order[1]].weight - knapsack.capacity > feastol) {
-      tightenKnapsackCapacity(knapsack,
-                              knapsack.terms[order[0]].weight +
-                                  knapsack.terms[order[1]].weight +
-                                  stats.outsideThirdSum,
-                              feastol, changedRhs);
-    }
+  if (stats.numNonZeros >= 2 &&
+      static_cast<HighsCDouble>(knapsack.terms[order[1]].weight) * 3 -
+              capacity >
+          feastol) {
+    // At most two items above one third of the original capacity can fit.
+    tightenKnapsackCapacity(knapsack,
+                            stats.outsideThirdSum +
+                                knapsack.terms[order[0]].weight +
+                                knapsack.terms[order[1]].weight,
+                            feastol, changedRhs);
   }
   if (changedRhs) {
     changed = true;
@@ -188,10 +186,11 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
       increaseKnapsackWeight(knapsack, term,
                              static_cast<double>(knapsack.capacity - minWeight),
                              feastol, changed);
-    } else if (term.weight + stats.smallSum -
-                   knapsack.terms[order[stats.numLarge - 1]].weight -
-                   knapsack.capacity >
-               feastol) {
+    } else if (stats.numSmall >= 2 &&
+               term.weight + stats.smallSum -
+                       knapsack.terms[order[stats.numLarge]].weight -
+                       knapsack.capacity >
+                   feastol) {
       // A large item cannot fit with all small items excluding the largest
       // small item. We therefore know if the item is selected, at least
       // two small items can't be selected.
@@ -496,7 +495,8 @@ bool tryNormaliseKnapsack(KnapsackRow& knapsack,
     return knapsack.terms[order[i]].weight;
   };
 
-  if (stats.numSmall == 0 || stats.numLarge == 0 ||
+  if (stats.numLarge == 0) return false;
+  if (stats.numSmall == 0 ||
       (weight(stats.numLarge - 1) == 1 &&
        weight(stats.numLarge + stats.numSmall - 1) == 1)) {
     return true;
@@ -511,6 +511,11 @@ bool tryNormaliseKnapsack(KnapsackRow& knapsack,
   if (numMaxWeightItems == 0) return false;
 
   auto upgradeRow = [&](const double newWeight) {
+    // The largest non-max-weight item must fit newWeight times for
+    // normalised knapsack to dominate original w.r.t. LP relaxation.
+    if (static_cast<HighsCDouble>(weight(numMaxWeightItems)) * newWeight >
+        knapsack.capacity)
+      return false;
     changed = true;
     for (HighsInt i = 0; i != numMaxWeightItems; ++i) {
       knapsack.weightSum -= weight(i) - newWeight;
@@ -521,6 +526,7 @@ bool tryNormaliseKnapsack(KnapsackRow& knapsack,
       weight(i) = 1;
     }
     knapsack.capacity = newWeight;
+    return true;
   };
 
   const HighsInt numNonZeros = stats.numNonZeros;
@@ -540,8 +546,7 @@ bool tryNormaliseKnapsack(KnapsackRow& knapsack,
     }
     if (v == numNonZeros) {
       // All small items needed to exceed capacity
-      upgradeRow(static_cast<double>(numNonZeros - numMaxWeightItems - 1));
-      return true;
+      return upgradeRow(numExceed - 1);
     }
     HighsCDouble exceedSumBack = 0;
     for (HighsInt i = numNonZeros - 1; i >= numNonZeros - numExceed; --i) {
@@ -550,24 +555,11 @@ bool tryNormaliseKnapsack(KnapsackRow& knapsack,
     if (exceedSumBack - knapsack.capacity > feastol) {
       // If the largest n small weights AND the smallest n small weights
       // both exceed capacity, then the row holds for all n combinations
-      upgradeRow(static_cast<double>(numExceed - 1));
-      return true;
+      return upgradeRow(numExceed - 1);
     }
-  } else {
-    // If all small terms don't exceed capacity, then the row can be rewritten
-    // as \sum m x_i + \sum x_j <= m, where x_i are large items and
-    // x_j are small items (where there's m small items)
-    if (static_cast<HighsCDouble>(weight(numMaxWeightItems)) *
-                (numNonZeros - numMaxWeightItems) -
-            knapsack.capacity <=
-        feastol) {
-      // If the largest small term can fit m times into the knapsack
-      // then the row upgrade has a strictly stronger LP relaxation
-      upgradeRow(numNonZeros - numMaxWeightItems);
-      return true;
-    }
+    return false;
   }
-  return false;
+  return upgradeRow(numNonZeros - numMaxWeightItems);
 }
 
 void strengthenTwoWeightKnapsack(KnapsackRow& knapsack,
@@ -759,7 +751,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
 
     if (allIntCoefficients) {
       // Round capacity to be integer if all coefficients are integer
-      knapsack.capacity = floor(knapsack.capacity);
+      knapsack.capacity = floor(knapsack.capacity + primal_feastol);
     }
 
     // Fix any columns with coefficients that are too large
