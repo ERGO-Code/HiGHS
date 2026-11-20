@@ -864,25 +864,26 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
 // Solve the model with the start solution, presolve on, and check
 // that the solver reaches the optimal objective value, and that this
 // is the objective value of the solution returned
-static void testStartSolution(Highs& h, const double required_objective,
-			      HighsModelStatus required_model_status = HighsModelStatus::kOptimal) {
+static void testStartSolution(
+    Highs& h, const double required_objective,
+    HighsModelStatus required_model_status = HighsModelStatus::kOptimal) {
   // In the two uses below, required_model_status is
   // HighsModelStatus::koptimal or HighsModelStatus::kSolutionLimit
   HighsStatus required_status =
-    required_model_status == HighsModelStatus::kOptimal ?
-    HighsStatus::kOk : HighsStatus::kWarning;
+      required_model_status == HighsModelStatus::kOptimal
+          ? HighsStatus::kOk
+          : HighsStatus::kWarning;
   REQUIRE(h.run() == required_status);
   REQUIRE(h.getModelStatus() == required_model_status);
   const double objective = h.getObjectiveValue();
   REQUIRE(std::fabs(objective - required_objective) <=
           1e-6 * (1 + std::fabs(required_objective)));
-  const std::vector<double> col_value = h.getSolution().col_value;  
+  const std::vector<double> col_value = h.getSolution().col_value;
   const double computed_objective = h.getLp().objectiveValue(col_value);
-  printf("objective = %g; computed_objective = %g\n", objective, computed_objective);
-  REQUIRE(std::fabs(computed_objective - objective) <= 1e-6 * (1 + std::fabs(objective)));
+  REQUIRE(std::fabs(computed_objective - objective) <=
+          1e-6 * (1 + std::fabs(objective)));
 }
 
-/*
 TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   // The image of the start solution in the reduced space is feasible,
   // and better than the start solution. The solution returned must
@@ -895,7 +896,7 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   start[16] = 19;
   start[17] = 23;
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("mip_rel_gap", 0);
   // Prevent the optimal solution from being found other than via the
   // image of the start solution
@@ -907,14 +908,15 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   solution.value_valid = true;
   const double start_objective = h.getLp().objectiveValue(start);
   const double required_objective = 6400000.258333333;
-  printf("start_objective = %g; required_objective = %g\n", start_objective, required_objective);
+  // Sanity check that the start objective exceeds the required
+  // objective
   REQUIRE(required_objective < start_objective);
   REQUIRE(h.setSolution(solution) == HighsStatus::kOk);
   testStartSolution(h, required_objective, HighsModelStatus::kSolutionLimit);
 
   h.resetGlobalScheduler(true);
 }
-*/
+
 TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
   // MIP has optimal solution x = (0, 1, 1, 1, 0, 0) with objective
   // value of -4
@@ -951,7 +953,7 @@ TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = {-1, 1, 1, -1, 1, 1, 1, 1, 1};
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
 
   h.run();
