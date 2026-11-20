@@ -976,13 +976,16 @@ void HighsMipSolverData::runSetup() {
   lower_bound -= mipsolver.model_->offset_;
   upper_bound -= mipsolver.model_->offset_;
 
-  HighsInt check_num_row = model.num_row_;
-  HighsInt check_num_col = model.num_col_;
-  HighsInt check_num_nz = model.numNz();
+  // If there is a start solution, checkAddSolution() determines
+  // whether it yields an incumbent, requiring a check that it
+  // corresponds to a feasible solution in the reduced space. This
+  // requires a call to checkSolution, which generally uses the
+  // row-wise copy of the matrix (why?) so set it up here, rather than
+  // before (re-)initializing number of uplocks and downlocks
   highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
 		       model.a_matrix_.index_, model.a_matrix_.value_,
 		       ARstart_, ARindex_, ARvalue_);
-
+  rowMatrixSet = true;
   checkAddSolution();
 
   if (mipsolver.numCol() == 0)
@@ -998,36 +1001,25 @@ void HighsMipSolverData::runSetup() {
   implint_cols.clear();
   integral_cols.clear();
 
-  rowMatrixSet = false;
-  if (!rowMatrixSet) {
-    rowMatrixSet = true;
-    //    highsSparseTranspose(model.num_row_, model.num_col_, model.a_matrix_.start_,
-    //                         model.a_matrix_.index_, model.a_matrix_.value_,
-    //                         ARstart_, ARindex_, ARvalue_);
-    assert(check_num_row == model.num_row_);
-    assert(check_num_col == model.num_col_);
-    assert(check_num_nz == model.numNz());
-    // (re-)initialize number of uplocks and downlocks
-    uplocks.assign(model.num_col_, 0);
-    downlocks.assign(model.num_col_, 0);
-    for (HighsInt i = 0; i != model.num_col_; ++i) {
-      HighsInt start = model.a_matrix_.start_[i];
-      HighsInt end = model.a_matrix_.start_[i + 1];
-      for (HighsInt j = start; j != end; ++j) {
-        HighsInt row = model.a_matrix_.index_[j];
-
-        if (model.row_lower_[row] != -kHighsInf) {
-          if (model.a_matrix_.value_[j] < 0)
-            ++uplocks[i];
-          else
-            ++downlocks[i];
-        }
-        if (model.row_upper_[row] != kHighsInf) {
-          if (model.a_matrix_.value_[j] < 0)
-            ++downlocks[i];
-          else
-            ++uplocks[i];
-        }
+  // (re-)initialize number of uplocks and downlocks
+  uplocks.assign(model.num_col_, 0);
+  downlocks.assign(model.num_col_, 0);
+  for (HighsInt i = 0; i != model.num_col_; ++i) {
+    HighsInt start = model.a_matrix_.start_[i];
+    HighsInt end = model.a_matrix_.start_[i + 1];
+    for (HighsInt j = start; j != end; ++j) {
+      HighsInt row = model.a_matrix_.index_[j];
+      if (model.row_lower_[row] != -kHighsInf) {
+	if (model.a_matrix_.value_[j] < 0)
+	  ++uplocks[i];
+	else
+	  ++downlocks[i];
+      }
+      if (model.row_upper_[row] != kHighsInf) {
+	if (model.a_matrix_.value_[j] < 0)
+	  ++downlocks[i];
+	else
+	  ++uplocks[i];
       }
     }
   }
