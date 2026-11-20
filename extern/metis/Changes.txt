@@ -29,3 +29,9 @@ Changes:
 - The input matrix (xadj and adjncy) is const.
 
 - The Metis integer type is defined based on HIGHSINT64.
+
+- Highs_METIS_NodeND takes an optional callback should_stop and a
+  user data pointer stop_data, stored in ctrl. The callback is 
+  checked before each bisection in MlevelNestedDissection(CC). If 
+  it returns nonzero, the recursion unwinds freeing all subgraphs
+  and Highs_METIS_NodeND returns METIS_ERROR_INTERRUPTED.
