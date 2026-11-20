@@ -861,6 +861,17 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
                         mipsolver.row_violation_ <=
                             mipsolver.options_mip_->mip_feasibility_tolerance;
   if (numRestarts == 0 && !from_cleanup_solve) {
+    auto clearSavedSolution = [&]() {
+      // Reset the solution objecive and clear the saved solution
+      mipsolver.solution_objective_ = kHighsInf;
+      mipsolver.solution_.clear();
+      // The following values should not yet have been changed from
+      // their values corresponding to no start solution
+      assert(lower_bound == -kHighsInf);
+      assert(upper_bound == kHighsInf);
+      assert(upper_limit == kHighsInf);
+      assert(optimality_limit == kHighsInf);
+    };
     // Perform checking and logging of the current MIP solution
     if (!feasible || !checkSolution(incumbent)) {
       // A current solution that is infeasible in the original or
@@ -884,16 +895,7 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
                      HighsLogType::kWarning,
                      "MIP start solution is infeasible in the reduced space\n");
       }
-      // Reset the solution objecive and clear the saved solution
-      mipsolver.solution_objective_ = kHighsInf;
-      mipsolver.solution_.clear();
-      // The following values should not yet have been changed from
-      // their values corresponding to no start solution
-      assert(lower_bound == -kHighsInf);
-      assert(upper_bound == kHighsInf);
-      assert(upper_limit == kHighsInf);
-      assert(optimality_limit == kHighsInf);
-      return;
+      return clearSavedSolution();
     }
     assert(feasible);
     // Since the supplied solution (mipsolver.solution_) may not
@@ -902,36 +904,28 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
     // applied to incumbent - checking its feasibility (and possibly
     // solving a "repair LP" to try to achieve feasibility, as in
     // transformNewIntegerFeasibleSolution)
-    //
-    // If the solution in the original space is feasible, then it and
-    // its objective value replace the solution objecive and saved
-    // solution, as required to fix #3634
     double mipsolver_reduced_objective_value;
     double original_space_objective_value;
     HighsSolution original_space_solution;
     MipViolation original_space_violation;
-    const bool feasible_in_original_space = feasibleInOriginalSpace(
-        incumbent, mipsolver_reduced_objective_value, original_space_solution,
-        original_space_objective_value, original_space_violation);
-    if (!feasible_in_original_space) {
-      // Reset the solution objecive and clear the saved solution
-      mipsolver.solution_objective_ = kHighsInf;
-      mipsolver.solution_.clear();
-      // The following values should not yet have been changed from
-      // their values corresponding to no start solution
-      assert(lower_bound == -kHighsInf);
-      assert(upper_bound == kHighsInf);
-      assert(upper_limit == kHighsInf);
-      assert(optimality_limit == kHighsInf);
-      return;
-    }
-    // This affects solobj
-    solobj = mipsolver_reduced_objective_value;
+    if (!feasibleInOriginalSpace(incumbent, mipsolver_reduced_objective_value,
+                                 original_space_solution,
+                                 original_space_objective_value,
+                                 original_space_violation))
+      return clearSavedSolution();
+    // The solution in the original space is feasible, so it and its
+    // objective value replace the solution objecive and saved
+    // solution, as required to fix #3634
+    //
+    // Record the previous saved objective to check for changes
     const double previous_mipsolver_solution_objective =
         mipsolver.solution_objective_;
     // Update the saved objective and solution
     mipsolver.solution_objective_ = original_space_objective_value;
     mipsolver.solution_ = original_space_solution.col_value;
+    // The objective used by the MIP solver in the reduced space may
+    // have changed
+    solobj = mipsolver_reduced_objective_value;
     const bool has_start_solution_objective_difference =
         std::fabs(mipsolver.solution_objective_ -
                   previous_mipsolver_solution_objective) /
@@ -941,16 +935,13 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
       // This should only happen if the problem is reduced by presolve
       assert(reduced);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "MIP start solution is feasible: objective value is %.12g\n",
-                   previous_mipsolver_solution_objective);
-      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "MIP start solution is %s in the reduced space: objective "
-                   "value is %.12g\n",
-                   feasible ? "feasible" : "infeasible",
+                   "MIP start solution is has objective value %.12g in the "
+                   "original space, but %.12g in the reduced space\n",
+                   previous_mipsolver_solution_objective,
                    mipsolver.solution_objective_);
     }
   }
-  if (feasible) return;
+  if (!feasible) return;
   if (solobj < upper_bound) {
     double prev_upper_bound = upper_bound;
 

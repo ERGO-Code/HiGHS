@@ -864,17 +864,9 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
 // Solve the model with the start solution, presolve on, and check
 // that the solver reaches the optimal objective value, and that this
 // is the objective value of the solution returned
-static void testStartSolution(
-    Highs& h, const double required_objective,
-    HighsModelStatus required_model_status = HighsModelStatus::kOptimal) {
-  // In the two uses below, required_model_status is
-  // HighsModelStatus::koptimal or HighsModelStatus::kSolutionLimit
-  HighsStatus required_status =
-      required_model_status == HighsModelStatus::kOptimal
-          ? HighsStatus::kOk
-          : HighsStatus::kWarning;
-  REQUIRE(h.run() == required_status);
-  REQUIRE(h.getModelStatus() == required_model_status);
+static void testStartSolution(Highs& h, const double required_objective) {
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   const double objective = h.getObjectiveValue();
   REQUIRE(std::fabs(objective - required_objective) <=
           1e-6 * (1 + std::fabs(required_objective)));
@@ -912,7 +904,7 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   // objective
   REQUIRE(required_objective < start_objective);
   REQUIRE(h.setSolution(solution) == HighsStatus::kOk);
-  testStartSolution(h, required_objective, HighsModelStatus::kSolutionLimit);
+  testStartSolution(h, required_objective);
 
   h.resetGlobalScheduler(true);
 }
