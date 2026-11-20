@@ -106,10 +106,13 @@ void computeKnapsackStatistics(KnapsackRow& knapsack,
     }
   }
   if (stats.numSmall >= 2) {
-    stats.secondSmallestUniqueWeight = std::min(
-        stats.secondSmallestUniqueWeight,
-        knapsack.terms[order[stats.numLarge + stats.numSmall - 1]].weight +
-            knapsack.terms[order[stats.numLarge + stats.numSmall - 2]].weight);
+    const double twoSmallestWeights =
+        minWeight + knapsack.terms[order[stats.numNonZeros - 2]].weight;
+    // If all small weights are equal, the next sum uses two items.
+    stats.secondSmallestUniqueWeight =
+        stats.secondSmallestUniqueWeight == minWeight
+            ? twoSmallestWeights
+            : std::min(stats.secondSmallestUniqueWeight, twoSmallestWeights);
   }
 }
 
