@@ -202,7 +202,7 @@ struct HighsMipSolverData {
   void runMipPresolve(const HighsInt presolve_reduction_limit);
   void setupDomainPropagation();
   void saveReportMipSolution(const double new_upper_limit);
-  void checkAddSolution();
+  void checkAddSolution(const bool from_cleanup_solve = false);
   void runSetup();
   double transformNewIntegerFeasibleSolution(
       const std::vector<double>& sol,

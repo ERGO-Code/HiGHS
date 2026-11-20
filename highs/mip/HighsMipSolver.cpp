@@ -1240,7 +1240,8 @@ void HighsMipSolver::cleanupSolve() {
         integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
     if (feasible && mipdata_->upper_bound == kHighsInf) {
-      mipdata_->checkAddSolution();
+      const bool from_cleanup_solve = true;
+      mipdata_->checkAddSolution(from_cleanup_solve);
       if (modelstatus_ == HighsModelStatus::kInfeasible &&
           mipdata_->upper_bound != kHighsInf) {
         mipdata_->lower_bound = mipdata_->upper_bound;

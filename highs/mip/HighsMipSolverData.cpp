@@ -834,7 +834,7 @@ void HighsMipSolverData::runMipPresolve(
                              *mipsolver.model_);
 }
 
-void HighsMipSolverData::checkAddSolution() {
+void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
   // Run when (re-)starting the MIP solver
   if (mipsolver.solution_objective_ == kHighsInf) return;
   // Assigning new incumbent
@@ -850,28 +850,29 @@ void HighsMipSolverData::checkAddSolution() {
                         mipsolver.row_violation_ <=
                             mipsolver.options_mip_->mip_feasibility_tolerance;
   if (numRestarts == 0) {
-    // Perform checking and logging of the MIP start solution
+    // Perform checking and logging of the current MIP solution
     if (!feasible || !checkSolution(incumbent)) {
       // A start solution that is infeasible in the original or
       // reduced space cannot be used
       if (!feasible) {
-        // The start solution shouldn't be infeasible in the original
-        // space, since it's tested externally
-        highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
-                     "MIP start solution is infeasible: objective value is "
-                     "%.12g with violations:"
-                     " variable bound = %.4g; constraint bound = %.4g; "
-                     "integrality = %.4g\n",
-                     mipsolver.solution_objective_, mipsolver.bound_violation_,
-                     mipsolver.row_violation_,
-                     mipsolver.integrality_violation_);
+	// The current MIP solution shouldn't be infeasible in the
+	// original space, since it's already been tested
+	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kError,
+		     "MIP %s solution is infeasible: objective value is "
+		     "%.12g with violations:"
+		     " variable bound = %.4g; constraint bound = %.4g; "
+		     "integrality = %.4g\n",
+		     from_cleanup_solve ? "current" : "start ",
+		     mipsolver.solution_objective_, mipsolver.bound_violation_,
+		     mipsolver.row_violation_,
+		     mipsolver.integrality_violation_);
       } else {
-        // The start solution is not feasible in the reduced space
         assert(postSolveStack.numReductions() > 0);
 	assert(!checkSolution(incumbent));
-        highsLogUser(
-            mipsolver.options_mip_->log_options, HighsLogType::kWarning,
-            "MIP start solution is infeasible in the reduced space\n");
+	// The current MIP solution is not feasible in the reduced space
+	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kWarning,
+		     "MIP %s solution is infeasible in the reduced space\n",
+		     from_cleanup_solve ? "current" : "start ");
       }
       // Reset the solution objecive and clear the saved solution
       mipsolver.solution_objective_ = kHighsInf;
@@ -885,9 +886,6 @@ void HighsMipSolverData::checkAddSolution() {
       return;
     }
     assert(feasible);
-    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                 "MIP start solution is feasible: objective value is %.12g\n",
-                 mipsolver.solution_objective_);
     // Since the supplied solution (mipsolver.solution_) may not
     // correspond to postsolve applied to incumbent (#3510), compute
     // the objective locally using incumbent, saving the value of
@@ -908,8 +906,15 @@ void HighsMipSolverData::checkAddSolution() {
     solobj = mipsolver_solution_objective - mipsolver.model_->offset_;
     if (has_start_solution_objective_difference) {
       const bool reduced = postSolveStack.numReductions() > 0;
+      // This should only happen if the problem is reduced by presolve
+      assert(reduced);
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
-                   "MIP start solution is %s%s: objective value is %.12g\n",
+		   "MIP %s solution is feasible: objective value is %.12g\n",
+		   from_cleanup_solve ? "current" : "start ",
+		   previous_mipsolver_solution_objective);
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+                   "MIP %s solution is %s%s: objective value is %.12g\n",
+		   from_cleanup_solve ? "current" : "start ",
                    feasible ? "feasible" : "infeasible",
                    reduced ? " in the reduced space" : "",
                    mipsolver.solution_objective_);
