@@ -71,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build wheels
-        uses: pypa/cibuildwheel@v4.3.2
+        uses: pypa/cibuildwheel@v4.3.5
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
 
@@ -122,7 +122,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v4.3.2
+        uses: pypa/cibuildwheel@v4.3.5
         with:
           package-dir: ./highspy-extras
         env:

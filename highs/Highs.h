@@ -1369,6 +1369,19 @@ class Highs {
   static void resetThreadScheduler(bool blocking = false);
 
   /**
+   * @brief Initialize optional extras and cache the result.
+   *
+   * An empty directory searches default library directories only when
+   * search_if_empty is true. Statically linked extras ignore both arguments.
+   *
+   * @return HighsStatus::kOk on success, HighsStatus::kError on failure.
+   * Subsequent calls return the cached result without retrying, unless
+   * extras are explicitly unloaded.
+   */
+  static HighsStatus initializeExtras(const std::string& directory,
+                                      bool search_if_empty = true);
+
+  /**
    * @brief If profiling is not nullptr, sets up profiling and copies
    * its pointer to Highs
    */
@@ -1390,6 +1403,13 @@ class Highs {
    * @brief Checks that pointer is not nullptr, and copies it to Highs
    */
   void setProfiling(HighsProfiling* profiling);
+
+  // Logs and returns HighsStatus::kError when argument to method is
+  // found to be null
+  HighsStatus negativeArgumentError(const std::string& method,
+                                    const std::string& argument) const;
+  HighsStatus nullArgumentError(const std::string& method,
+                                const std::string& argument) const;
 
   // Start of advanced methods: only for internal use!
 

@@ -203,7 +203,8 @@ enum class HighsPresolveStatus {
   kOptionsError,  // V2.0: Delete since it's not used!
   kNotSet,
   kOutOfMemory,  // V2.0: Move above kNotSet
-  kException     // V2.0: Move above kNotSet
+  kException,    // V2.0: Move above kNotSet
+  kMatrixValueError
 };
 
 enum class HighsPostsolveStatus {  // V2.0: Delete if not used!
@@ -220,7 +221,7 @@ enum class HighsModelStatus {
   kNotset = 0,
   kLoadError,  // V2.0: Delete since it's not used!
   kModelError,
-  kPresolveError,  // V2.0: Delete since it's not used!
+  kPresolveError,
   kSolveError,
   kPostsolveError,  // V2.0: Delete if not used! Add to documentation if used
   kModelEmpty,

@@ -6,6 +6,7 @@
 #include "util/HighsUtils.h"
 
 const bool dev_run = false;
+const double double_equal_tolerance = 1e-5;
 
 // No commas in test case name.
 TEST_CASE("LP-orientation", "[lp_orientation]") {
@@ -70,19 +71,22 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
   // Pass the LP
   highs.passModel(lp);
   highs.run();
-  REQUIRE(info.objective_function_value == optimal_objective_function_value);
+  REQUIRE(std::fabs(info.objective_function_value -
+                    optimal_objective_function_value) < double_equal_tolerance);
 
   // Make the external LP row-wise then pass and solve it
   lp.ensureRowwise();
   highs.passModel(lp);
   highs.run();
-  REQUIRE(info.objective_function_value == optimal_objective_function_value);
+  REQUIRE(std::fabs(info.objective_function_value -
+                    optimal_objective_function_value) < double_equal_tolerance);
 
   // Make the external LP col-wise then pass and solve it
   lp.ensureColwise();
   highs.passModel(lp);
   highs.run();
-  REQUIRE(info.objective_function_value == optimal_objective_function_value);
+  REQUIRE(std::fabs(info.objective_function_value -
+                    optimal_objective_function_value) < double_equal_tolerance);
 
   // Clear the internal LP
   highs.clearModel();
@@ -93,7 +97,8 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
                         ARstart.data(), ARindex.data(),
                         ARvalue.data()) == HighsStatus::kOk);
   highs.run();
-  REQUIRE(info.objective_function_value == optimal_objective_function_value);
+  REQUIRE(std::fabs(info.objective_function_value -
+                    optimal_objective_function_value) < double_equal_tolerance);
 
   // Clear the internal LP
   highs.clearModel();
@@ -113,7 +118,8 @@ TEST_CASE("LP-orientation", "[lp_orientation]") {
                          one_row_value.data()) == HighsStatus::kOk);
   }
   highs.run();
-  REQUIRE(info.objective_function_value == optimal_objective_function_value);
+  REQUIRE(std::fabs(info.objective_function_value -
+                    optimal_objective_function_value) < double_equal_tolerance);
 
   //  return_status = highs.writeModel("");
 

@@ -79,4 +79,9 @@ HPresolve::Result HPresolve::presolveRuleTestAggregator(
     if (!colDeleted[col]) updateRowDualImpliedBounds(col);
   return aggregator(postsolve_stack);
 }
+HPresolve::Result HPresolve::presolveTestTransformColumn(
+    HighsPostsolveStack& postsolve_stack, HighsInt col, double scale,
+    double constant) {
+  return transformColumn(postsolve_stack, col, scale, constant);
+}
 }  // namespace presolve
