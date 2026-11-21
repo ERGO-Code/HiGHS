@@ -348,13 +348,13 @@ TEST_CASE("pdlp-small-row-coefficient", "[pdlp]") {
   REQUIRE(highs.addRows(2, row_lower, row_upper, 2, start, index, value) ==
           HighsStatus::kOk);
   highs.run();
-  REQUIRE(highs.getModelStatus() != HighsModelStatus::kUnboundedOrInfeasible);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
 
   highs.resetThreadScheduler(true);
 
   // Mirror image: min x s.t. 1e-8 x >= 1, x >= 0 has optimal value 1e8.
   // PDLP used to report that the LP is infeasible/unbounded after a few
-  // iterations
+  // iterations.
   Highs mirror;
   mirror.setOptionValue("output_flag", dev_run);
   mirror.setOptionValue("solver", kPdlpString);
