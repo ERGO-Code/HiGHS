@@ -212,6 +212,7 @@ void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
                                        cupdlp_float *dPrimalInfeasRes) {
   CUPDLPproblem *problem = work->problem;
   CUPDLPresobj *resobj = work->resobj;
+  CUPDLPscaling *scaling = work->scaling;
 
   cupdlp_float alpha;
 
@@ -240,8 +241,12 @@ void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
       (dualObj - problem->offset) / problem->sense_origin / dScale;
 
   // dual constraints [ATy1 + GTy2 + lambda]
-  // #3679: infeasibility ray residuals are measured in the scaled space, so
-  // the column/row scaling is deliberately not undone here (ifScaled = 0)
+  // #3679: the ray residual is measured in both the scaled and the unscaled
+  // spaces, and the larger is returned, so the ray is accepted only if it
+  // passes the tolerance in both. Testing only the unscaled residual gives
+  // false positives when the LP has tiny coefficients, and testing only the
+  // scaled residual could give false positives that the original test
+  // would not.
   cupdlp_primal_infeasibility_kernel_cuda(work->buffer2, aty, dSlackPos,
                                           dSlackNeg, work->colScale, 1.0 / dScale,
                                           /*ifScaled=*/0, problem->data->nCols);
@@ -250,6 +255,14 @@ void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
   //                       &dConstrResSq);
   cupdlp_twoNorm(work, problem->data->nCols, work->buffer2,
                  dPrimalInfeasRes);
+  if (scaling->ifScaled) {
+    cupdlp_float dUnscaledRes = 0.0;
+    cupdlp_primal_infeasibility_kernel_cuda(
+        work->buffer2, aty, dSlackPos, dSlackNeg, work->colScale,
+        1.0 / dScale, scaling->ifScaled, problem->data->nCols);
+    cupdlp_twoNorm(work, problem->data->nCols, work->buffer2, &dUnscaledRes);
+    *dPrimalInfeasRes = MAX(*dPrimalInfeasRes, dUnscaledRes);
+  }
 
   // dual bound
   // always satisfied, no need to check
@@ -285,8 +298,7 @@ void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
       (dualObj - problem->offset) / problem->sense_origin / dScale;
 
   // dual constraints [ATy1 + GTy2 + lambda]
-  // #3679: infeasibility ray residuals are measured in the scaled space, so
-  // the column/row scaling is deliberately not undone here
+  // #3679: return the larger of the scaled and unscaled residuals (see above)
   CUPDLP_COPY_VEC(resobj->dualInfeasConstr, aty, cupdlp_float,
                   problem->data->nCols);
   cupdlp_scaleVector(work, 1.0 / dScale, resobj->dualInfeasConstr,
@@ -301,6 +313,13 @@ void PDHG_Compute_Primal_Infeasibility(CUPDLPwork *work, const cupdlp_float *y,
   //                       &dConstrResSq);
   cupdlp_twoNorm(work, problem->data->nCols, resobj->dualInfeasConstr,
                  dPrimalInfeasRes);
+  if (scaling->ifScaled) {
+    cupdlp_float dUnscaledRes = 0.0;
+    cupdlp_edot(resobj->dualInfeasConstr, work->colScale, problem->data->nCols);
+    cupdlp_twoNorm(work, problem->data->nCols, resobj->dualInfeasConstr,
+                   &dUnscaledRes);
+    *dPrimalInfeasRes = MAX(*dPrimalInfeasRes, dUnscaledRes);
+  }
 
   // dual bound
   // always satisfied, no need to check
@@ -316,6 +335,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
                                      cupdlp_float *dDualInfeasRes) {
   CUPDLPproblem *problem = work->problem;
   CUPDLPresobj *resobj = work->resobj;
+  CUPDLPscaling *scaling = work->scaling;
   cupdlp_float pScale = 1.0;
   cupdlp_float pConstrResSq = 0.0;
   cupdlp_float pBoundLbResSq = 0.0;
@@ -334,36 +354,41 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
       (primalObj - problem->offset) / problem->sense_origin / pScale;
 
   // primal constraints [Ax, min(Gx, 0)]
-  // #3679: infeasibility ray residuals are measured in the scaled space, so
-  // the column/row scaling is deliberately not undone here (ifScaled = 0)
-  cupdlp_dual_infeasibility_kernel_constr_cuda(work->buffer2, ax,
-                                              work->rowScale, 1.0 / pScale,
-                                              /*ifScaled=*/0,
-                                              problem->nEqs,
-                                              problem->data->nRows);
-  cupdlp_twoNormSquared(work, problem->data->nRows, work->buffer2,
-                        &pConstrResSq);
+  // #3679: the ray residual is measured in both the scaled and the unscaled
+  // spaces, and the larger is returned, so the ray is accepted only if it
+  // passes the tolerance in both. Testing only the unscaled residual gives
+  // false positives when the LP has tiny coefficients, and testing only the
+  // scaled residual could give false positives that the original test
+  // would not.
+  *dDualInfeasRes = 0.0;
+  for (int unscale = 0; unscale <= (scaling->ifScaled ? 1 : 0); unscale++) {
+    cupdlp_dual_infeasibility_kernel_constr_cuda(work->buffer2, ax,
+                                                work->rowScale, 1.0 / pScale,
+                                                unscale, problem->nEqs,
+                                                problem->data->nRows);
+    cupdlp_twoNormSquared(work, problem->data->nRows, work->buffer2,
+                          &pConstrResSq);
 
-  // primal bound
-  // lb
-  cupdlp_dual_infeasibility_kernel_lb_cuda(work->buffer2, x,
-                                           problem->hasLower,
-                                           work->colScale,
-                                           1.0 / pScale, /*ifScaled=*/0,
-                                           problem->data->nCols);
-  cupdlp_twoNormSquared(work, problem->data->nCols, work->buffer2,
-                        &pBoundLbResSq);
-  // ub
-  cupdlp_dual_infeasibility_kernel_ub_cuda(work->buffer2, x,
-                                           problem->hasUpper,
-                                           work->colScale,
-                                           1.0 / pScale, /*ifScaled=*/0,
-                                           problem->data->nCols);
-  cupdlp_twoNormSquared(work, problem->data->nCols, work->buffer2,
-                        &pBoundUbResSq);
+    // primal bound
+    // lb
+    cupdlp_dual_infeasibility_kernel_lb_cuda(work->buffer2, x,
+                                             problem->hasLower,
+                                             work->colScale, 1.0 / pScale,
+                                             unscale, problem->data->nCols);
+    cupdlp_twoNormSquared(work, problem->data->nCols, work->buffer2,
+                          &pBoundLbResSq);
+    // ub
+    cupdlp_dual_infeasibility_kernel_ub_cuda(work->buffer2, x,
+                                             problem->hasUpper,
+                                             work->colScale, 1.0 / pScale,
+                                             unscale, problem->data->nCols);
+    cupdlp_twoNormSquared(work, problem->data->nCols, work->buffer2,
+                          &pBoundUbResSq);
 
-  // sum up
-  *dDualInfeasRes = sqrt(pConstrResSq + pBoundLbResSq + pBoundUbResSq);
+    // sum up
+    *dDualInfeasRes = MAX(*dDualInfeasRes,
+                          sqrt(pConstrResSq + pBoundLbResSq + pBoundUbResSq));
+  }
 
 #else
 
@@ -383,8 +408,7 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
       (primalObj - problem->offset) / problem->sense_origin / pScale;
 
   // primal constraints [Ax, min(Gx, 0)]
-  // #3679: infeasibility ray residuals are measured in the scaled space, so
-  // the column/row scaling is deliberately not undone here
+  // #3679: return the larger of the scaled and unscaled residuals (see above)
   CUPDLP_COPY_VEC(resobj->primalInfeasConstr, ax, cupdlp_float,
                   problem->data->nRows);
   cupdlp_scaleVector(work, 1.0 / pScale, resobj->primalInfeasConstr,
@@ -414,6 +438,37 @@ void PDHG_Compute_Dual_Infeasibility(CUPDLPwork *work, const cupdlp_float *x,
 
   // sum up
   *dDualInfeasRes = sqrt(pConstrResSq + pBoundLbResSq + pBoundUbResSq);
+
+  if (scaling->ifScaled) {
+    // Unscaled residual of the same ray
+    cupdlp_edot(resobj->primalInfeasConstr, work->rowScale,
+                problem->data->nRows);
+    cupdlp_twoNormSquared(work, problem->data->nRows,
+                          resobj->primalInfeasConstr, &pConstrResSq);
+    // lb
+    CUPDLP_COPY_VEC(resobj->primalInfeasBound, resobj->primalInfeasRay,
+                    cupdlp_float, problem->data->nCols);
+    cupdlp_projNeg(resobj->primalInfeasBound, problem->data->nCols);
+    cupdlp_edot(resobj->primalInfeasBound, problem->hasLower,
+                problem->data->nCols);
+    cupdlp_ediv(resobj->primalInfeasBound, work->colScale,
+                problem->data->nCols);
+    cupdlp_twoNormSquared(work, problem->data->nCols,
+                          resobj->primalInfeasBound, &pBoundLbResSq);
+    // ub
+    CUPDLP_COPY_VEC(resobj->primalInfeasBound, resobj->primalInfeasRay,
+                    cupdlp_float, problem->data->nCols);
+    cupdlp_projPos(resobj->primalInfeasBound, problem->data->nCols);
+    cupdlp_edot(resobj->primalInfeasBound, problem->hasUpper,
+                problem->data->nCols);
+    cupdlp_ediv(resobj->primalInfeasBound, work->colScale,
+                problem->data->nCols);
+    cupdlp_twoNormSquared(work, problem->data->nCols,
+                          resobj->primalInfeasBound, &pBoundUbResSq);
+    *dDualInfeasRes =
+        MAX(*dDualInfeasRes,
+            sqrt(pConstrResSq + pBoundLbResSq + pBoundUbResSq));
+  }
 
 #endif
 }
