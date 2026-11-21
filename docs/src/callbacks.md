@@ -91,6 +91,17 @@ its callback type is a cast of `kCallbackIpmInterrupt` in the C++ enum
 C. The IPM iteration count is passed as the `ipm_iteration_count`
 member of the `HighsCallbackDataOut` struct.
 
+### PDLP interrupt callback
+
+The PDLP interrupt is called periodically during a HiPDLP solve, in
+the same place that the time limit is checked, and its callback type
+is a cast of `kCallbackPdlpInterrupt` in the C++ enum
+`HighsCallbackType`, and the `kHighsCallbackPdlpInterrupt` constant in
+C. The PDLP iteration count is passed as the `pdlp_iteration_count`
+member of the `HighsCallbackDataOut` struct. If the user sets
+`user_interrupt` in the `HighsCallbackDataIn` struct, the solver stops
+and the model status is `kInterrupt`.
+
 ### MIP improving solution callback
 
 The MIP improving solution is called whenever the MIP solver

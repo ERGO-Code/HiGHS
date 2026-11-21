@@ -263,6 +263,7 @@ HighsStatus HighsCallbackInput::repairSolution() {
     clone.startCallback(kCallbackMipInterrupt);
     clone.startCallback(kCallbackSimplexInterrupt);
     clone.startCallback(kCallbackIpmInterrupt);
+    clone.startCallback(kCallbackPdlpInterrupt);
     clone.run();
 
     auto status = clone.getModelStatus();

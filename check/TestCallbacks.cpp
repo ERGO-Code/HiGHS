@@ -1,4 +1,5 @@
-// #include <algorithm>
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -15,6 +16,7 @@ const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
 const HighsInt adlittle_ipm_iteration_limit = 5;
 const HighsInt adlittle_simplex_iteration_limit = 30;
+const HighsInt adlittle_pdlp_iteration_limit = 1;
 
 const HighsInt primal1_qp_iteration_limit = 5;
 
@@ -156,6 +158,16 @@ HighsCallbackFunctionType userInterruptCallback =
                 int(data_out->ipm_iteration_count));
           data_in->user_interrupt =
               data_out->ipm_iteration_count > adlittle_ipm_iteration_limit;
+        } else if (callback_type == kCallbackPdlpInterrupt) {
+          if (dev_run)
+            printf(
+                "userInterruptCallback(type %2d; data %2d): %s with iteration "
+                "count = "
+                "%d\n",
+                callback_type, local_callback_data, message.c_str(),
+                int(data_out->pdlp_iteration_count));
+          data_in->user_interrupt =
+              data_out->pdlp_iteration_count > adlittle_pdlp_iteration_limit;
         } else if (callback_type == kCallbackMipInterrupt) {
           if (dev_run)
             printf(
@@ -506,6 +518,38 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
     REQUIRE(highs.getInfo().ipm_iteration_count ==
             adlittle_ipm_iteration_limit + 1);
   }
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("highs-callback-pdlp-interrupt", "[highs_callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Don't presolve, so that PDLP solves the original LP
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("solver", kHiPdlpString);
+  highs.setCallback(userInterruptCallback);
+  highs.startCallback(kCallbackPdlpInterrupt);
+  highs.readModel(filename);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  REQUIRE(highs.getInfo().pdlp_iteration_count > adlittle_pdlp_iteration_limit);
+  // The solution returned is the latest iterate, rather than the
+  // initial point
+  const HighsSolution& solution = highs.getSolution();
+  REQUIRE(solution.value_valid);
+  double max_abs_value = 0;
+  for (double value : solution.col_value)
+    max_abs_value = std::max(max_abs_value, std::fabs(value));
+  REQUIRE(max_abs_value > 0);
+
+  // No interrupt when the callback is stopped
+  highs.stopCallback(kCallbackPdlpInterrupt);
+  highs.clearSolver();
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
   highs.resetThreadScheduler(true);
 }
 
