@@ -22,6 +22,7 @@
 #include "model/HighsModel.h"
 #include "presolve/ICrash.h"
 #include "presolve/PresolveComponent.h"
+#include "util/HighsUndoStack.h"
 
 /**
  * @brief Return the version
@@ -1417,7 +1418,6 @@ class Highs {
   HighsStatus optimizeLp();
   HighsStatus optimizeModel();
   HighsStatus optimizeModelTryCatch();
-  HighsStatus calledOptimizeModel();
 
   const HighsSimplexStats& getSimplexStats() const {
     return ekk_instance_.getSimplexStats();
@@ -1685,11 +1685,13 @@ class Highs {
   HighsProfiling* profiling_ = nullptr;
 
   HighsInt max_threads_ = 0;
-  // This is strictly for debugging. It's used to check whether
-  // returnFromOptimizeModel() was called after the previous call to
-  // Highs::optimizeModel() and, assuming that this is always done, it checks
-  // whether Highs::optimizeModel() is called recursively.
-  bool called_return_from_optimize_model = true;
+  // Set while Highs::optimizeModel() is solving, so that it can't be
+  // called again from within the solve, for example by a callback
+  bool optimize_model_running_ = false;
+  // Set when optimizeModelApplyMods() has modified the incumbent
+  // model, so that nested calls to Highs::optimizeModel() (from
+  // completeSolutionFromDiscreteAssignment()) don't apply or undo mods
+  bool model_mods_applied_ = false;
   HighsInt debug_optimize_call_num_ = 0;
 
   void reportModelStats() const;
@@ -1701,6 +1703,84 @@ class Highs {
 
   HighsStatus completeSolutionFromDiscreteAssignment();
 
+  // State shared by the phases of optimizeModelLp
+  struct LpState {
+    bool possibly_use_log_dev_level_2 = false;
+    HighsInt use_log_dev_level = 0;
+    bool use_output_flag = false;
+
+    bool solver_will_use_basis = false;
+    bool may_require_basis_postsolve = false;
+    bool no_incumbent_lp_solution_or_basis = false;
+
+    // Pivot threshold resulting from solving the presolved LP with
+    // simplex: illegal value unless updated
+    double factor_pivot_threshold = -1;
+
+    // Number of iterations when PDLP is used to solve the presolved
+    // problem, since the iteration count is reset to zero if PDLP is
+    // used to clean up after postsolve
+    HighsInt presolved_lp_pdlp_iteration_count = 0;
+
+    // Postsolve recovered a solution and basis, so the simplex
+    // solver is hot-started on the original LP
+    bool postsolve_recovered_basis = false;
+
+    // Copy of the HighsInfo for the presolved LP to determine whether
+    // a PDLP clean-up should be carried out
+    HighsInfo presolved_lp_info;
+  };
+
+  // Phases of calledOptimizeModel
+  struct Context {
+    double initial_time = -1;
+    double presolve_time = -1;
+    double solve_presolved_lp_time = -1;
+    double postsolve_time = -1;
+    double solve_original_lp_time = -1;
+    HighsInt postsolve_iteration_count = -1;
+
+    HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+
+    bool undo_mods = false;
+    bool bounds_infeasible = false;
+    HighsStatus status = HighsStatus::kOk;
+    HighsUndoStack options_undo;
+
+    LpState lp_state;
+  };
+  HighsStatus calledOptimizeModel(Context& context);
+  bool optimizeModelPreChecks(Context& context);
+  bool optimizeModelApplyMods(Context& context);
+  void optimizeModelUndoMods(Context& context, HighsStatus& return_status);
+  bool returnFromOptimizeModelBeforeRunning(
+      Context& context, const HighsModelStatus model_status);
+  bool optimizeModelCompleteSolution(Context& context);
+  bool optimizeModelPrepare(Context& context);
+  void optimizeModelQp(Context& context);
+  void optimizeModelMip(Context& context);
+  void optimizeModelLp(Context& context);
+  // Phases of optimizeModelLp
+  bool lpSetup(Context& context);
+  bool lpUsePresolve(const Context& context, const HighsLp& lp) const;
+  bool lpSolveUnreduced(Context& context, HighsLp& lp);
+  bool lpPresolve(Context& context, PresolveComponent& presolve, HighsLp*& lp);
+  bool lpHandlePresolveStatus(Context& context,
+                              const HighsPresolveStatus presolve_status);
+  void lpResolveUnboundedOrInfeasible(Context& context, HighsLp& lp);
+  bool lpPrepareReducedLp(Context& context, HighsLp& lp);
+  void lpSetReducedToEmptySolution();
+  bool lpSolveReduced(Context& context,
+                      const HighsPresolveStatus presolve_status, HighsLp& lp);
+  bool lpPostsolve(Context& context, PresolveComponent& presolve,
+                   const HighsPresolveStatus presolve_status, HighsLp& lp);
+  bool lpCleanupOriginal(Context& context, HighsLp& incumbent_lp);
+  void lpFinish(Context& context, const HighsLp& lp);
+  HighsStatus lpTimedSolve(Context& context, HighsLp& lp,
+                           const std::string& description, double& time);
+  HighsStatus lpICrash();
+  void lpReportTimes(const Context& context);
+
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
   HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
   HighsStatus callSolveQp(HighsModel& model, const std::string& message);
@@ -1710,8 +1790,18 @@ class Highs {
 
   PresolveComponent presolve_;
   HighsPresolveStatus runPresolve(const bool force_lp_presolve,
+                                  const bool force_presolve = false) {
+    return runPresolve(presolve_, model_.lp_, force_lp_presolve,
+                       force_presolve);
+  }
+  HighsPresolveStatus runPresolve(PresolveComponent& presolve, HighsLp& lp,
+                                  const bool force_lp_presolve,
                                   const bool force_presolve = false);
-  HighsPostsolveStatus runPostsolve();
+  HighsPostsolveStatus runPostsolve() {
+    return runPostsolve(presolve_, model_.lp_);
+  }
+  HighsPostsolveStatus runPostsolve(PresolveComponent& presolve,
+                                    const HighsLp& lp);
 
   HighsStatus openWriteFile(const std::string& filename,
                             const std::string& method_name, FILE*& file,
@@ -1789,8 +1879,7 @@ class Highs {
 
   HighsStatus returnFromWriteSolution(FILE* file,
                                       const HighsStatus return_status);
-  HighsStatus returnFromOptimizeModel(const HighsStatus return_status,
-                                      const bool undo_mods);
+  HighsStatus returnFromOptimizeModel(Context& context);
   HighsStatus returnFromHighs(const HighsStatus return_status);
   void reportSolvedLpQpStats();
 
@@ -1923,7 +2012,7 @@ class Highs {
                               std::vector<HighsInt>& basic_var,
                               const bool constraint,
                               const double ill_conditioning_bound);
-  bool processedBoundsFindsInfeasibility();
+  bool processedBoundsFindsInfeasibility(bool& made_bound_mods);
   bool validLinearObjective(const HighsLinearObjective& linear_objective,
                             const HighsInt iObj) const;
   bool hasRepeatedLinearObjectivePriorities(

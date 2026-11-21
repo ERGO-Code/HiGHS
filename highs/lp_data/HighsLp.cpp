@@ -51,7 +51,9 @@ bool HighsLp::hasMods() const {
          this->mods_.save_relaxed_semi_variable_lower_bound_index.size() > 0 ||
          this->mods_.save_tightened_semi_variable_upper_bound_index.size() >
              0 ||
-         this->mods_.save_inf_cost_variable_index.size() > 0;
+         this->mods_.save_inf_cost_variable_index.size() > 0 ||
+         this->mods_.save_inconsistent_col_bound_index.size() > 0 ||
+         this->mods_.save_inconsistent_row_bound_index.size() > 0;
 }
 
 bool HighsLp::needsMods(const double infinite_cost) const {
@@ -709,6 +711,30 @@ HighsStatus HighsLp::assess(const HighsOptions& options) {
 }
 
 void HighsLp::unapplyMods() {
+  // Restore any inconsistent column and row bounds. These were the
+  // last mods to be applied, so are the first to be undone
+  const HighsInt num_inconsistent_col_bound =
+      this->mods_.save_inconsistent_col_bound_index.size();
+  assert(this->mods_.save_inconsistent_col_bound_lower.size() ==
+         size_t(num_inconsistent_col_bound));
+  assert(this->mods_.save_inconsistent_col_bound_upper.size() ==
+         size_t(num_inconsistent_col_bound));
+  for (HighsInt k = 0; k < num_inconsistent_col_bound; k++) {
+    HighsInt iCol = this->mods_.save_inconsistent_col_bound_index[k];
+    this->col_lower_[iCol] = this->mods_.save_inconsistent_col_bound_lower[k];
+    this->col_upper_[iCol] = this->mods_.save_inconsistent_col_bound_upper[k];
+  }
+  const HighsInt num_inconsistent_row_bound =
+      this->mods_.save_inconsistent_row_bound_index.size();
+  assert(this->mods_.save_inconsistent_row_bound_lower.size() ==
+         size_t(num_inconsistent_row_bound));
+  assert(this->mods_.save_inconsistent_row_bound_upper.size() ==
+         size_t(num_inconsistent_row_bound));
+  for (HighsInt k = 0; k < num_inconsistent_row_bound; k++) {
+    HighsInt iRow = this->mods_.save_inconsistent_row_bound_index[k];
+    this->row_lower_[iRow] = this->mods_.save_inconsistent_row_bound_lower[k];
+    this->row_upper_[iRow] = this->mods_.save_inconsistent_row_bound_upper[k];
+  }
   // Restore any non-semi types
   const HighsInt num_non_semi = this->mods_.save_non_semi_variable_index.size();
   for (HighsInt k = 0; k < num_non_semi; k++) {
@@ -789,6 +815,12 @@ void HighsLpMods::clear() {
   this->save_inf_cost_variable_cost.clear();
   this->save_inf_cost_variable_lower.clear();
   this->save_inf_cost_variable_upper.clear();
+  this->save_inconsistent_col_bound_index.clear();
+  this->save_inconsistent_col_bound_lower.clear();
+  this->save_inconsistent_col_bound_upper.clear();
+  this->save_inconsistent_row_bound_index.clear();
+  this->save_inconsistent_row_bound_lower.clear();
+  this->save_inconsistent_row_bound_upper.clear();
 }
 
 bool HighsLpMods::isClear() {
@@ -803,6 +835,12 @@ bool HighsLpMods::isClear() {
   if (this->save_relaxed_semi_variable_lower_bound_value.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_index.size()) return false;
   if (this->save_tightened_semi_variable_upper_bound_value.size()) return false;
+  if (this->save_inconsistent_col_bound_index.size()) return false;
+  if (this->save_inconsistent_col_bound_lower.size()) return false;
+  if (this->save_inconsistent_col_bound_upper.size()) return false;
+  if (this->save_inconsistent_row_bound_index.size()) return false;
+  if (this->save_inconsistent_row_bound_lower.size()) return false;
+  if (this->save_inconsistent_row_bound_upper.size()) return false;
   return true;
 }
 
