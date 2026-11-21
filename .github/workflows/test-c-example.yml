@@ -33,11 +33,18 @@ jobs:
       - name: Compile and test C example
         shell: bash
         run: |
-          gcc $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
+          gcc -Wall -Werror $GITHUB_WORKSPACE/examples/call_highs_from_c.c \
             -o c_example \
             -I installs/highs/include/highs \
             -L installs/highs/lib -lhighs
           LD_LIBRARY_PATH=installs/highs/lib ./c_example
+      # Consumers such as SciPy build HiGHS headers with -Wall -Werror (#3612)
+      - name: Check public headers compile without warnings
+        shell: bash
+        run: |
+          printf '#include "Highs.h"\n#include "HighsExternalApi.h"\n#include "interfaces/highs_c_api.h"\n' > headers.cpp
+          g++ -std=c++11 -Wall -Werror -c headers.cpp -o /dev/null \
+            -I build -I $GITHUB_WORKSPACE/highs -I $GITHUB_WORKSPACE/extern
 
   fast-build-off:
     runs-on: ubuntu-latest

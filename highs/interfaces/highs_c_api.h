@@ -2703,7 +2703,7 @@ HighsInt Highs_initializeExtras(const char* directory,
  *
  * @returns The HiGHS compilation date.
  */
-static const char* Highs_compilationDate(void);
+const char* Highs_compilationDate(void);
 
 // These are deprecated because they don't follow the style guide. Constants
 // must begin with `k`.

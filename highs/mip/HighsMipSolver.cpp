@@ -203,7 +203,6 @@ void HighsMipSolver::run() {
   if (profiling_->mip_ && !submip)
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
                  "MIP-Timing: %11.2g - completed setup\n", timer_.read());
-
   if (mipdata_->getDomain().infeasible()) {
     cleanupSolve();
     return;
