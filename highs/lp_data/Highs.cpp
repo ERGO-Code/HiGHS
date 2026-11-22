@@ -1683,8 +1683,9 @@ void Highs::optimizeModelLp(Context& context) {
 
   HighsLp& incumbent_lp = model_.lp_;
 
-  if (!lpUsePresolve(context, incumbent_lp)) {
-    if (lpSolveUnreduced(context, incumbent_lp)) return;
+  std::string lp_solve_msg;
+  if (!lpUsePresolve(context, incumbent_lp, lp_solve_msg)) {
+    if (lpSolveUnreduced(context, incumbent_lp, lp_solve_msg)) return;
   } else {
     HighsLp* lp = &incumbent_lp;
     if (lpPresolve(context, presolve_, lp)) return;
@@ -1800,7 +1801,8 @@ HighsStatus Highs::lpICrash() {
   return HighsStatus::kOk;
 }
 
-bool Highs::lpUsePresolve(const Context& context, const HighsLp& lp) const {
+bool Highs::lpUsePresolve(const Context& context, const HighsLp& lp,
+                          std::string& lp_solve_msg) const {
   const bool unconstrained_lp = lp.numNz() == 0;
   assert(lp.num_row_ || unconstrained_lp);
   const bool has_basis = basis_.useful;
@@ -1812,38 +1814,42 @@ bool Highs::lpUsePresolve(const Context& context, const HighsLp& lp) const {
 
   const bool without_presolve = options_.presolve == kHighsOffString;
 
-  return !((has_basis && context.lp_state.solver_will_use_basis) ||
-           without_presolve || unconstrained_lp);
-}
-
-bool Highs::lpSolveUnreduced(Context& context, HighsLp& lp) {
-  const bool unconstrained_lp = lp.numNz() == 0;
-  const bool has_basis = basis_.useful;
-  const bool without_presolve = options_.presolve == kHighsOffString;
+  if (!((has_basis && context.lp_state.solver_will_use_basis) ||
+        without_presolve || unconstrained_lp))
+    return true;
   // Determine a coherent message about how the LP is being solved
-  std::stringstream lp_solve_ss;
   if (unconstrained_lp) {
-    lp_solve_ss << "Solving unconstrained LP";
+    lp_solve_msg = "Solving unconstrained LP";
   } else if (has_basis) {
     if (without_presolve) {
-      lp_solve_ss << "Solving LP with useful basis";
+      lp_solve_msg = "Solving LP with useful basis";
     } else {
-      lp_solve_ss << "Solving LP with useful basis so presolve not used";
+      lp_solve_msg = "Solving LP with useful basis so presolve not used";
     }
   } else {
     assert(without_presolve);
-    lp_solve_ss << "Solving LP without presolve or useful basis";
+    lp_solve_msg = "Solving LP without presolve or useful basis";
   }
-  std::string lp_solve = lp_solve_ss.str();
-  ekk_instance_.lp_name_ = lp_solve;
+  return false;
+}
+
+bool Highs::lpSolveUnreduced(Context& context, HighsLp& lp,
+                             const std::string& lp_solve_msg) {
   // If there is a valid HiGHS basis, refine any status values that
   // are simply HighsBasisStatus::kNonbasic
   if (basis_.useful) refineBasis(lp, solution_, basis_);
+  return lpSolveOriginal(context, lp, lp_solve_msg, lp_solve_msg);
+}
+
+bool Highs::lpSolveOriginal(Context& context, HighsLp& lp,
+                            const std::string& lp_name,
+                            const std::string& message) {
+  ekk_instance_.lp_name_ = lp_name;
   HighsStatus call_status =
-      lpTimedSolve(context, lp, lp_solve, context.solve_original_lp_time);
+      lpTimedSolve(context, lp, message, context.solve_original_lp_time);
+  this->run_data_.solve_time = context.solve_original_lp_time;
   context.status = interpretCallStatus(options_.log_options, call_status,
                                        context.status, "callSolveLp");
-  this->run_data_.solve_time = context.solve_original_lp_time;
   return context.status == HighsStatus::kError;
 }
 
@@ -2048,28 +2054,12 @@ bool Highs::lpSolveReduced(Context& context,
   LpState& lp_state = context.lp_state;
   HighsStatus call_status;
   switch (presolve_status) {
-    case HighsPresolveStatus::kNotPresolved: {
-      ekk_instance_.lp_name_ = "Original LP";
-      call_status = lpTimedSolve(context, lp, "Not presolved: solving the LP",
-                                 context.solve_original_lp_time);
-      this->run_data_.solve_time = context.solve_original_lp_time;
-      context.status = interpretCallStatus(options_.log_options, call_status,
-                                           context.status, "callSolveLp");
-      if (context.status == HighsStatus::kError) return true;
-      break;
-    }
-    case HighsPresolveStatus::kNotReduced: {
-      ekk_instance_.lp_name_ = "Unreduced LP";
-      // Log the presolve reductions
-      call_status = lpTimedSolve(
-          context, lp, "Problem not reduced by presolve: solving the LP",
-          context.solve_original_lp_time);
-      this->run_data_.solve_time = context.solve_original_lp_time;
-      context.status = interpretCallStatus(options_.log_options, call_status,
-                                           context.status, "callSolveLp");
-      if (context.status == HighsStatus::kError) return true;
-      break;
-    }
+    case HighsPresolveStatus::kNotPresolved:
+      return lpSolveOriginal(context, lp, "Original LP",
+                             "Not presolved: solving the LP");
+    case HighsPresolveStatus::kNotReduced:
+      return lpSolveOriginal(context, lp, "Unreduced LP",
+                             "Problem not reduced by presolve: solving the LP");
     case HighsPresolveStatus::kReduced: {
       // Solving the presolved LP with strictly reduced dimensions
       // so ensure that the Ekk instance is cleared

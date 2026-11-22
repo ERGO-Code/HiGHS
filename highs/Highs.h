@@ -1757,8 +1757,12 @@ class Highs {
   void optimizeModelLp(Context& context);
   // Phases of optimizeModelLp
   bool lpSetup(Context& context);
-  bool lpUsePresolve(const Context& context, const HighsLp& lp) const;
-  bool lpSolveUnreduced(Context& context, HighsLp& lp);
+  bool lpUsePresolve(const Context& context, const HighsLp& lp,
+                     std::string& lp_solve_msg) const;
+  bool lpSolveUnreduced(Context& context, HighsLp& lp,
+                        const std::string& lp_solve_msg);
+  bool lpSolveOriginal(Context& context, HighsLp& lp,
+                       const std::string& lp_name, const std::string& message);
   bool lpPresolve(Context& context, PresolveComponent& presolve, HighsLp*& lp);
   bool lpHandlePresolveStatus(Context& context,
                               const HighsPresolveStatus presolve_status);

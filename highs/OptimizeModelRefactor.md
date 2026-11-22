@@ -109,9 +109,9 @@ undone when the `Context` is destroyed at the end of
 
 ```mermaid
 flowchart TD
-    setup["lpSetup(context)<br/>iCrash (lpICrash), basis from solution"] --> usePresolve{"lpUsePresolve(context, incumbent_lp)"}
+    setup["lpSetup(context)<br/>iCrash (lpICrash), basis from solution"] --> usePresolve{"lpUsePresolve(context, incumbent_lp, lp_solve_msg)<br/>sets the message if not presolving"}
 
-    usePresolve -->|"no: useful basis,<br/>presolve off,<br/>or no matrix"| unreduced["lpSolveUnreduced(context, incumbent_lp)"]
+    usePresolve -->|"no: useful basis,<br/>presolve off,<br/>or no matrix"| unreduced["lpSolveUnreduced(context, incumbent_lp, lp_solve_msg)<br/>refineBasis(), lpSolveOriginal()"]
     unreduced --> finish
 
     usePresolve -->|yes| presolve["lpPresolve(context, presolve_, lp)<br/>runPresolve(presolve_, incumbent_lp)"]
@@ -123,7 +123,7 @@ flowchart TD
     handle -->|reduced to empty| empty["lpSetReducedToEmptySolution()"]
     handle -->|not presolved / not reduced| solveReduced
 
-    prepareReduced --> solveReduced["lpSolveReduced(context, status, *lp)"]
+    prepareReduced --> solveReduced["lpSolveReduced(context, status, *lp)<br/>not presolved / not reduced: lpSolveOriginal()"]
     empty --> solveReduced
     solveReduced --> postsolve["lpPostsolve(context, presolve_, status, incumbent_lp)<br/>runPostsolve(presolve_, incumbent_lp)<br/>sets lp_state.postsolve_recovered_basis"]
     postsolve --> cleanup["lpCleanupOriginal(context, incumbent_lp)<br/>simplex hot start if a basis was recovered,<br/>PDLP clean-up (disabled, as before)"]
@@ -135,7 +135,10 @@ Every function that can stop the solve returns `true` to do so, with
 example infeasibility detected by presolve), and the caller returns
 straight away. Every LP
 solve goes through `lpTimedSolve()`, which replaces the
-`timedSolveLp` lambda.
+`timedSolveLp` lambda. The three solves of the original LP (without
+presolve, and the `kNotPresolved` and `kNotReduced` cases) share
+`lpSolveOriginal()`, which differs between them only in the Ekk LP
+name and the message.
 
 ## New mechanisms
 
@@ -379,12 +382,12 @@ option save/restore becoming `HighsUndoStack`.
 | iCrash (inline) | `lpICrash()`, called from `lpSetup()` |
 | `timedSolveLp` lambda | `lpTimedSolve()` |
 | Choice of whether to presolve | `lpUsePresolve()` |
-| Solve without presolve | `lpSolveUnreduced()` |
+| Solve without presolve | `lpSolveUnreduced()`, with the message built in `lpUsePresolve()` |
 | `runPresolve()` and reduction reporting | `lpPresolve()` |
 | Terminal presolve statuses | `lpHandlePresolveStatus()`, with `lpResolveUnboundedOrInfeasible()` |
 | Assess and `cleanBounds` on the reduced LP | `lpPrepareReducedLp()` |
 | Trivial solution when reduced to empty | `lpSetReducedToEmptySolution()` |
-| Solves in the presolve switch | `lpSolveReduced()` |
+| Solves in the presolve switch | `lpSolveReduced()`; the solves of the original LP in `lpSolveOriginal()` |
 | Postsolve | `lpPostsolve()` |
 | Simplex hot start after postsolve, PDLP clean-up | `lpCleanupOriginal()` |
 | KKT check, info, final status | `lpFinish()` |
