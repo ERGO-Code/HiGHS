@@ -1808,7 +1808,7 @@ TEST_CASE("issue-3171", "[highs_test_mip_solver]") {
 
 TEST_CASE("issue-3262", "[highs_test_mip_solver]") {
   Highs highs;
-  highs.setOptionValue("output_flag", dev_run);
+  //  highs.setOptionValue("output_flag", dev_run);
 
   HighsLp lp;
   lp.sense_ = ObjSense::kMinimize;
@@ -1828,7 +1828,12 @@ TEST_CASE("issue-3262", "[highs_test_mip_solver]") {
   highs.passModel(lp);
   highs.setOptionValue(kPresolveString, kHighsOffString);
 
-  REQUIRE_NOTHROW(highs.run());
+  // Removed only reference to "NOTHROW" in HiGHS since its use in
+  // extern/catch/catch.hpp causes failure in "mingw (CLANG64, " unit
+  // tests
+  //
+  //  REQUIRE_NOTHROW(highs.run());
+  REQUIRE(highs.run() == HighsStatus::kOk);
 
   highs.resetThreadScheduler(true);
 }
