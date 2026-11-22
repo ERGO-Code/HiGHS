@@ -1583,10 +1583,18 @@ bool Highs::optimizeModelCompleteSolution(OptimizeModelContext& context) {
   //
   // The nested call to optimizeModel() sees the model with mods
   // already applied, so doesn't apply or undo any itself
+  //
+  // Clear the model status, so that an error before the nested call
+  // isn't returned with the model status of an earlier solve
+  model_status_ = HighsModelStatus::kNotset;
   if (completeSolutionFromDiscreteAssignment() != HighsStatus::kOk) {
-    // Retain the (error) model status from the nested call to
+    // Retain any (error) model status from the nested call to
     // optimizeModel()
-    return returnFromOptimizeModelBeforeRunning(context, model_status_);
+    const HighsModelStatus model_status =
+        model_status_ == HighsModelStatus::kNotset
+            ? HighsModelStatus::kSolveError
+            : model_status_;
+    return returnFromOptimizeModelBeforeRunning(context, model_status);
   }
   return false;
 }
