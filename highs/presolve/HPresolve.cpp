@@ -1555,7 +1555,9 @@ HPresolve::Result HPresolve::checkColBounds(HighsInt col, bool* isFixed) {
   //    (boundDiff <= options->small_matrix_value ||
   //     getMaxAbsColVal(col) * boundDiff <= primal_feastol)) {
   //
-  // can lead to a feasible MIP being declared infeasible
+  // can lead to a feasible MIP being declared infeasible as a
+  // near-fixed column removed at a bound moves its rows, and such
+  // moves add up
   //
   // Requiring the bound difference to be non-positive cannot be
   // incorrect. It just fixes fewer variables
