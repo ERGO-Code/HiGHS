@@ -66,8 +66,7 @@ TEST_CASE("hi-pdlp-feasibility-tolerances", "[hipdlp]") {
       iteration_count[k] = h.getInfo().pdlp_iteration_count;
       if (dev_run)
         printf("%s: feasibility tolerance %g needs %d iterations\n",
-               solver.c_str(), feasibility_tolerance,
-               int(iteration_count[k]));
+               solver.c_str(), feasibility_tolerance, int(iteration_count[k]));
       h.resetThreadScheduler(true);
     }
     REQUIRE(iteration_count[1] > iteration_count[0]);
