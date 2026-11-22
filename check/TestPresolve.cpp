@@ -2417,8 +2417,8 @@ TEST_CASE("issue-3545", "[highs_test_presolve]") {
 
 TEST_CASE("issue-3565", "[highs_test_presolve]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
-  std::string lp_file = test_name + ".lp";
-  FILE* file = fopen(lp_file.c_str(), "w");
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
   fprintf(file, "%s",
           "min\n obj: -28 x - y - 2.8 z \nst\n r0: x + y + 0.1 z = "
           "1\nbounds\n -inf <= x <= 1\n -1 <= y\n 1 <= z\nend\n");
@@ -2457,11 +2457,32 @@ TEST_CASE("issue-3565", "[highs_test_presolve]") {
   // 0. Restore z = 10 @BS => x = 1 @ZE with dual 0
   Highs h;
   h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  std::remove(lp_file.c_str());
+  std::remove(model_file.c_str());
 
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3772", "[highs_test_presolve]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".mps";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME g1\nROWS\n N obj\n G r\n L q\nCOLUMNS\n s obj 2 r 1\n x obj -1 r 1\n x q 1\n y obj 0.5 q -1\n w obj 0.1 r 1\nRHS\n RHS r 5 q 1\nRANGES\n RNG r 0.00000005\nBOUNDS\n LO BND s 1\n UP BND s 10\n MI BND x\n UP BND x 3\n LO BND w 1\n UP BND w 1.00000005\nENDATA\n");
+  fclose(file);
+
+    Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}
+
