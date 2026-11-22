@@ -9,8 +9,6 @@
  * @brief Class-independent utilities for HiGHS
  */
 
-#include <new>
-
 #include "HighsExternalApi.h"
 #include "ipm/IpxWrapper.h"
 #include "lp_data/HighsSolutionDebug.h"
@@ -20,71 +18,27 @@
 #include "pdlp/HiPdlpWrapper.h"
 #include "qpsolver/QpAsmWrapper.h"
 #include "simplex/HApp.h"
-#include "util/HighsAvailableMemory.h"
 #include "util/HighsSolverSelect.h"
 #include "util/HighsUndoStack.h"
 
-struct SolveExceptionRecord {
-  enum class Type { kNone, kException, kInterrupt };
-  Type type = Type::kNone;
-  std::string solver;
-  std::string what;
-  bool use_warning = false;
-};
+// Calls solve(), returning its status. Any exception is logged and
+// converted to kError, with model_status set accordingly
 template <typename Solve>
-bool solveCatchCall(const char* solve_string, HighsModelStatus& model_status,
-                    SolveExceptionRecord& record, Solve&& solve) {
-  record = SolveExceptionRecord();
+HighsStatus solveCatchCall(const HighsLogOptions& log_options,
+                           const char* solve_string,
+                           HighsModelStatus& model_status, Solve&& solve) {
   try {
-    solve();
-    return false;
+    return solve();
   } catch (const std::exception& exception) {
-    record.type = SolveExceptionRecord::Type::kException;
-    record.what = exception.what();
-    record.use_warning =
-        dynamic_cast<const HighsPredictedOutOfMemory*>(&exception) != nullptr;
-    model_status = dynamic_cast<const std::bad_alloc*>(&exception)
+    model_status = handleExceptionIsOom(log_options, solve_string, exception)
                        ? HighsModelStatus::kMemoryLimit
                        : HighsModelStatus::kSolveError;
   } catch (const HighsTask::Interrupt&) {
-    record.type = SolveExceptionRecord::Type::kInterrupt;
+    highsLogDev(log_options, HighsLogType::kError,
+                "HighsTask interrupt when solving with %s\n", solve_string);
     model_status = HighsModelStatus::kSolveError;
   }
-  record.solver = solve_string;
-  return true;
-}
-template <typename SolverObject, typename Solve>
-HighsStatus solveCatchCallLpQp(SolverObject& solver_object,
-                               const char* solve_string,
-                               SolveExceptionRecord& record, Solve&& solve) {
-  HighsStatus call_status = HighsStatus::kError;
-  solveCatchCall(solve_string, solver_object.model_status_, record,
-                 [&] { call_status = solve(); });
-  return call_status;
-}
-template <typename Solve>
-bool solveCatchCallMip(HighsMipSolver& solver, const char* solve_string,
-                       SolveExceptionRecord& record, Solve&& solve) {
-  return solveCatchCall(solve_string, solver.modelstatus_, record,
-                        [&] { solve(); });
-}
-static void reportSolveException(const HighsLogOptions& log_options,
-                                 const SolveExceptionRecord& record) {
-  switch (record.type) {
-    case SolveExceptionRecord::Type::kNone:
-      break;
-    case SolveExceptionRecord::Type::kException:
-      highsLogUser(
-          log_options,
-          record.use_warning ? HighsLogType::kWarning : HighsLogType::kError,
-          "Exception %s in %s\n", record.what.c_str(), record.solver.c_str());
-      break;
-    case SolveExceptionRecord::Type::kInterrupt:
-      highsLogDev(log_options, HighsLogType::kError,
-                  "HighsTask interrupt when solving with %s\n",
-                  record.solver.c_str());
-      break;
-  }
+  return HighsStatus::kError;
 }
 
 // Automatic solver selection. When called from Highs::run,
@@ -238,11 +192,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
   // lambda for solving LP by simplex
   auto simplexSolve = [&]() -> HighsStatus {
     return_status = HighsStatus::kOk;
-    SolveExceptionRecord exception_record;
-    call_status =
-        solveCatchCallLpQp(solver_object, "Simplex", exception_record,
-                           [&] { return solveLpSimplex(solver_object); });
-    reportSolveException(options.log_options, exception_record);
+    call_status = solveCatchCall(options.log_options, "Simplex",
+                                 solver_object.model_status_,
+                                 [&] { return solveLpSimplex(solver_object); });
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
@@ -262,21 +214,20 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
     if (return_status == HighsStatus::kError) return return_status;
   } else if (use_only_ipm || usePdlp(options.solver)) {
     // Use IPM or PDLP
-    SolveExceptionRecord exception_record;
     if (use_only_ipm) {
       // Use IPM to solve the LP
       if (use_hipo) {
         // Use HiPO to solve the LP
-        call_status =
-            solveCatchCallLpQp(solver_object, "HiPO(LP)", exception_record,
-                               [&] { return solveLpHipo(solver_object); });
+        call_status = solveCatchCall(
+            options.log_options, "HiPO(LP)", solver_object.model_status_,
+            [&] { return solveLpHipo(solver_object); });
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
       } else if (use_ipx) {
         // Use IPX to solve the LP
-        call_status =
-            solveCatchCallLpQp(solver_object, "IPX", exception_record,
-                               [&] { return solveLpIpx(solver_object); });
+        call_status = solveCatchCall(options.log_options, "IPX",
+                                     solver_object.model_status_,
+                                     [&] { return solveLpIpx(solver_object); });
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpIpx");
       }
@@ -284,19 +235,18 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
       // Use cuPDLP-C or HiPDLP to solve the LP
       profiling->start(kSubSolverPdlp);
       if (options.solver == kPdlpString) {
-        call_status =
-            solveCatchCallLpQp(solver_object, "cuPDLP-C", exception_record,
-                               [&] { return solveLpCupdlp(solver_object); });
+        call_status = solveCatchCall(
+            options.log_options, "cuPDLP-C", solver_object.model_status_,
+            [&] { return solveLpCupdlp(solver_object); });
       } else {
-        call_status =
-            solveCatchCallLpQp(solver_object, "HiPDLP", exception_record,
-                               [&] { return solveLpHiPdlp(solver_object); });
+        call_status = solveCatchCall(
+            options.log_options, "HiPDLP", solver_object.model_status_,
+            [&] { return solveLpHiPdlp(solver_object); });
       }
       profiling->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
                                           return_status, "solveLp-Pdlp");
     }
-    reportSolveException(options.log_options, exception_record);
     // Check for error return
     if (return_status == HighsStatus::kError) return return_status;
 
@@ -1054,7 +1004,6 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
   }
 
   HighsStatus call_status;
-  SolveExceptionRecord exception_record;
 
   // Choose solver
   bool use_hipo =
@@ -1072,9 +1021,9 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
     assert(!hessian.isOracle());
     // Run HiPO
     if (profiling) profiling->start(kSubSolverHipo);
-    call_status =
-        solveCatchCallLpQp(solver_object, "HiPO(QP)", exception_record,
-                           [&] { return solveQpHipo(solver_object); });
+    call_status = solveCatchCall(options.log_options, "HiPO(QP)",
+                                 solver_object.model_status_,
+                                 [&] { return solveQpHipo(solver_object); });
     if (profiling) profiling->stop(kSubSolverHipo);
     // Restore any oracle call;
     hessian.oracle_.call_ = oracle_call;
@@ -1082,12 +1031,11 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
   } else {
     // Run the active set QP solver
     if (profiling) profiling->start(kSubSolverQpAsm);
-    call_status = solveCatchCallLpQp(solver_object, "active set QP solver",
-                                     exception_record,
-                                     [&] { return solveQpAsm(solver_object); });
+    call_status = solveCatchCall(options.log_options, "active set QP solver",
+                                 solver_object.model_status_,
+                                 [&] { return solveQpAsm(solver_object); });
     if (profiling) profiling->stop(kSubSolverQpAsm);
   }
-  reportSolveException(options.log_options, exception_record);
   HighsStatus return_status = call_status;
   if (return_status == HighsStatus::kError) return return_status;
 
@@ -1186,11 +1134,11 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   HighsMipSolver solver(callback, options, mip, solution);
   solver.setProfiling(profiling);
   profiling->start(kSubSolverMip);
-  SolveExceptionRecord exception_record;
-  solveCatchCallMip(solver, "MIP solver", exception_record,
-                    [&] { solver.run(); });
+  solveCatchCall(options.log_options, "MIP solver", solver.modelstatus_, [&] {
+    solver.run();
+    return HighsStatus::kOk;
+  });
   profiling->stop(kSubSolverMip);
-  reportSolveException(options.log_options, exception_record);
   options_undo.reset();
   // Set the return_status, model status and, for completeness, scaled
   // model status

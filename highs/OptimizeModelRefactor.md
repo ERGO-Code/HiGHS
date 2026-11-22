@@ -32,7 +32,7 @@ fixes and changes in behaviour.
 | `highs/Highs.h` | `Context`, `LpState`, declarations of the new private methods, flags `optimize_model_running_` and `model_mods_applied_`, overloads |
 | `highs/util/HighsUndoStack.h` | New |
 | `cmake/sources.cmake` | Lists `util/HighsUndoStack.h` |
-| `highs/lp_data/HighsSolve.cpp` | The `SOLVE_CATCH_CALL` macros replaced by the function templates `solveCatchCall()`, `solveCatchCallLpQp()` and `solveCatchCallMip()`, the last replacing the inline `try`/`catch` around the MIP solver. They don't log: a caught exception is stored in a `SolveExceptionRecord` and the caller logs it with `reportSolveException()`. `HighsUndoStack` for option changes |
+| `highs/lp_data/HighsSolve.cpp` | The `SOLVE_CATCH_CALL` macro and the inline `try`/`catch` around the MIP solver replaced by the function template `solveCatchCall()`, which logs through `handleExceptionIsOom()` as before. `HighsUndoStack` for option changes |
 | `highs/lp_data/HighsInterface.cpp` | `HighsUndoStack` for option changes, `has_infinite_cost_` kept up to date in multi-objective solves |
 | `highs/simplex/HApp.h` | `HighsUndoStack` for option changes |
 | `highs/HighsRun.md` | Describes where the mods are now applied, and drops the ToDo for moving them |
@@ -318,7 +318,6 @@ before.
 | B10 | **Raised `highs_debug_level`** is undone at the end of the solve. | None in practice: it only applies when the option is below its minimum, which option checks prevent. |
 | B11 | **Unscaling after an error in `Highs::run()`** (F8). | `userUnscale()` calls `userScaleSolution(data, true)`. When nothing was solved (a `model_.assess()` failure, or an error from `optimizeHighs()` before `info_` is invalidated, such as a refused re-entry), it multiplies the stale `info_.objective_function_value` by the unscaling factor, although `userScale()` never scaled it. It also reruns the KKT check on the stale solution and logs "After solving the user-scaled model...". On these paths, only the model scaling should be undone, or `userScaleSolution()` called without `update_kkt`. |
 | B12 | **MIP debug checks with the restored tolerance** (F1). | With `highs_debug_level` at least cheap, `debugHighsSolution()` in `returnFromOptimizeModel()` now recomputes the MIP solution's infeasibilities with `primal_feasibility_tolerance`, not `mip_feasibility_tolerance`. An optimal MIP with violations between the two (1e-7 and 1e-6 with defaults) now gives "primal infeasibilities but model status is Optimal" and `kError`. The clobbered tolerance used to hide this. |
-| B13 | **Order of exception messages in the log.** | In the IPM and PDLP paths of `solveLp()`, the exception message is now printed after the error from `interpretCallStatus()`. In `solveMip()`, it is printed after the profiling clock is stopped. |
 
 ## Other points for the review
 
