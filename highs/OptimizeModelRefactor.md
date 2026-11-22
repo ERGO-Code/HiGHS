@@ -262,6 +262,13 @@ values.
 - The new flag `model_mods_applied_` stops the nested `optimizeModel()`
   call made by `completeSolutionFromDiscreteAssignment()` from applying
   or undoing them a second time.
+- When `model_mods_applied_` is false, `optimizeModelApplyMods()`
+  starts by clearing `model_.lp_.mods_`. Entries there were copied by
+  `passModel()` from an LP whose mods were applied, as the MIP solver
+  does for the LP relaxation and the repair LP. Without the clear, a
+  child instance that makes a mod of its own also undoes the inherited
+  ones, indexing into the wrong LP: the out-of-bounds access in
+  `restoreInfCost()` of #3756.
 
 ### Presolve and postsolve on any LP
 

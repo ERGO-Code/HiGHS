@@ -1523,6 +1523,9 @@ bool Highs::optimizeModelApplyMods(OptimizeModelContext& context) {
     return false;
   }
   HighsLp& lp = model_.lp_;
+  // Discard any mods records copied by passModel(), for example by
+  // the MIP solver's LP relaxation, so they aren't undone here (#3756)
+  lp.mods_.clear();
   // Lambda to record that the mods have been applied, so must be
   // undone
   auto recordMods = [&]() {
