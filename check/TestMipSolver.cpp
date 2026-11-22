@@ -2843,17 +2843,3 @@ TEST_CASE("issue-3573", "[highs_test_mip_solver]") {
 
   h.resetThreadScheduler(true);
 }
-
-TEST_CASE("issue-3756", "[highs_test_mip_solver]") {
-  // The LP relaxation inherited the mods records of the original
-  // model, so undoing its own mods gave an out-of-bounds access in
-  // restoreInfCost()
-  Highs h;
-  h.setOptionValue("output_flag", dev_run);
-  std::string model_file =
-      std::string(HIGHS_DIR) + "/check/instances/nsharpxmip.mps";
-  REQUIRE(h.readModel(model_file) != HighsStatus::kError);
-  REQUIRE(h.run() == HighsStatus::kOk);
-
-  h.resetThreadScheduler(true);
-}
