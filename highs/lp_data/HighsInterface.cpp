@@ -4192,7 +4192,7 @@ HighsStatus Highs::multiobjectiveSolve() {
 }
 
 bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
-                           const HighsInfo& presolved_lp_info) const {
+                           const HighsInt presolved_lp_pdlp_iteration_count) const {
   // Primal/dual infeasibilities/residuals can be magnified in
   // postsolve after PDLP, and IPX without crossover can fail,
   // both leading to model_status_ == HighsModelStatus::kUnknown.
@@ -4245,10 +4245,10 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
   }
   //
   // Force PDLP to be used with an iteration limit
-  if (presolved_lp_info.pdlp_iteration_count > 0) {
+  if (presolved_lp_pdlp_iteration_count > 0) {
     // PDLP was used, so allow 10% of the iterations to clean up
     HighsInt ten_percent_pdlp_iteration_count =
-        presolved_lp_info.pdlp_iteration_count / 10;
+        presolved_lp_pdlp_iteration_count / 10;
     pdlp_cleanup_iteration_limit =
         std::max(HighsInt(10000), ten_percent_pdlp_iteration_count);
   } else {

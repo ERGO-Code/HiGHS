@@ -2093,7 +2093,6 @@ bool Highs::lpSolveReduced(Context& context,
       context.status = interpretCallStatus(options_.log_options, call_status,
                                            context.status, "callSolveLp");
       if (context.status == HighsStatus::kError) return true;
-      lp_state.presolved_lp_pdlp_iteration_count = info_.pdlp_iteration_count;
       lp_state.no_incumbent_lp_solution_or_basis =
           model_status_ == HighsModelStatus::kInfeasible ||
           model_status_ == HighsModelStatus::kUnbounded ||
@@ -2160,10 +2159,10 @@ bool Highs::lpPostsolve(Context& context, PresolveComponent& presolve,
   const bool have_unknown_reduced_solution =
       presolve_status == HighsPresolveStatus::kReduced &&
       model_status_ == HighsModelStatus::kUnknown;
-  // Take a copy of the HighsInfo and HighsModelStatus for the
+  // Record the PDLP iteration count and HighsModelStatus for the
   // presolved LP to determine whether a PDLP clean-up should be
   // carried out
-  lp_state.presolved_lp_info = this->info_;
+  lp_state.presolved_lp_pdlp_iteration_count = info_.pdlp_iteration_count;
   const HighsModelStatus presolved_lp_model_status = this->model_status_;
   if (have_optimal_reduced_solution || have_unknown_reduced_solution) {
     // ToDo Put this in a separate method
@@ -2330,7 +2329,7 @@ bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
   if (consider_pdlp_cleanup) {
     HighsInt pdlp_cleanup_iteration_limit = 0;
     if (tryPdlpCleanup(pdlp_cleanup_iteration_limit,
-                       lp_state.presolved_lp_info)) {
+                       lp_state.presolved_lp_pdlp_iteration_count)) {
       // Primal/dual infeasibilities/residuals can be magnified in
       // postsolve after PDLP, and IPX without crossover can fail,
       // both leading to model_status_ == HighsModelStatus::kUnknown,

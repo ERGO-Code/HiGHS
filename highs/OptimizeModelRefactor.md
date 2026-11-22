@@ -152,12 +152,15 @@ iteration count that used to be locals, `min_highs_debug_level`,
 debug logging set-up, `solver_will_use_basis`,
 `may_require_basis_postsolve`, `no_incumbent_lp_solution_or_basis`,
 the pivot threshold from the presolved solve, the PDLP iteration count
-of the presolved solve, `postsolve_recovered_basis` and
-`presolved_lp_info`.
+of the presolved solve and `postsolve_recovered_basis`.
 
-Two fields exist because postsolve was split from the simplex hot
-start and the PDLP clean-up. `presolved_lp_info` was a local of the
-presolve block. `postsolve_recovered_basis` is new: it replaces the
+Postsolve was split from the simplex hot start and the PDLP clean-up.
+The copy of `info_` that `latest` kept for the PDLP clean-up
+(`presolved_lp_info`) is replaced by
+`presolved_lp_pdlp_iteration_count`, the only field that
+`tryPdlpCleanup()` read. It is now set in `lpPostsolve()`, where the
+copy was taken, rather than after solving the reduced LP.
+`postsolve_recovered_basis` is new: it replaces the
 nesting of the hot start inside the branch of postsolve that recovered
 a basis. Nothing ran between setting the recovered basis and the hot
 start, and `LpState` is created fresh for each call, so the flag can't

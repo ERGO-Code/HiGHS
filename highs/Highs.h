@@ -1725,10 +1725,6 @@ class Highs {
     // Postsolve recovered a solution and basis, so the simplex
     // solver is hot-started on the original LP
     bool postsolve_recovered_basis = false;
-
-    // Copy of the HighsInfo for the presolved LP to determine whether
-    // a PDLP clean-up should be carried out
-    HighsInfo presolved_lp_info;
   };
 
   // Phases of calledOptimizeModel
@@ -2018,7 +2014,7 @@ class Highs {
       const HighsLinearObjective* linear_objective = nullptr) const;
 
   bool tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
-                      const HighsInfo& presolved_lp_info) const;
+                      const HighsInt presolved_lp_pdlp_iteration_count) const;
 };
 
 // Start of deprecated methods not in the Highs class
