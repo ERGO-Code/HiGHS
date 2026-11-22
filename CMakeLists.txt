@@ -53,6 +53,12 @@ if((GIT) AND(EXISTS ${PROJECT_SOURCE_DIR}/.git))
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
   # string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+  if(DEFINED HIGHS_BUILD_GITHASH)
+    message(STATUS "Ignoring HIGHS_BUILD_GITHASH=${HIGHS_BUILD_GITHASH}: using git describe from ${PROJECT_SOURCE_DIR}/.git")
+  endif()
+elseif(NOT "${HIGHS_BUILD_GITHASH}" STREQUAL "")
+  # Source archives have no .git, so packagers can pass the revision in
+  set(GITHASH "${HIGHS_BUILD_GITHASH}")
 else()
   set(GITHASH "n/a")
 endif()
@@ -75,6 +81,32 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
   else()
     add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-fp-model=precise>")
   endif()
+endif()
+
+# The error terms in HighsCDouble require that double arithmetic is exactly
+# IEEE double arithmetic. The third-party code in extern (e.g. OpenBLAS)
+# removes these options again.
+set(HIGHS_FLOATING_POINT_OPTIONS "")
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  # GCC and Clang contract multiplications and additions into fused
+  # multiply-adds when the target supports them (e.g. gcc 15 enables FMA by
+  # default on some x86-64 platforms). GCC ignores
+  # "#pragma STDC FP_CONTRACT OFF", so the flag is required.
+  list(APPEND HIGHS_FLOATING_POINT_OPTIONS
+       "$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
+
+  # on 32-bit x86, GCC and Clang use the x87 unit with 80-bit intermediate
+  # results by default. SSE2 gives double arithmetic as on x86-64 (and as
+  # MSVC uses by default for 32-bit x86).
+  if (CMAKE_SIZEOF_VOID_P EQUAL 4 AND
+      CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86|i[3-6]86|x86_64|AMD64|amd64)$" AND
+      NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    list(APPEND HIGHS_FLOATING_POINT_OPTIONS
+         "$<$<COMPILE_LANGUAGE:C,CXX>:-msse2>"
+         "$<$<COMPILE_LANGUAGE:C,CXX>:-mfpmath=sse>")
+  endif()
+
+  add_compile_options(${HIGHS_FLOATING_POINT_OPTIONS})
 endif()
 
 # MSVC
@@ -676,6 +708,24 @@ if(ZLIB AND NOT TARGET ZLIB::ZLIB)
   find_package(ZLIB 1.2.3)
 endif()
 
+# Private dependencies of a static highs for highs.pc. Shared builds list none
+# because a missing Requires.private module makes every pkg-config query fail.
+# For the same reason macOS uses -lz: its SDK has zlib but may have no zlib.pc
+set(HIGHS_PC_LIBS_PRIVATE "")
+set(HIGHS_PC_REQUIRES_PRIVATE "")
+if(NOT BUILD_SHARED_LIBS)
+  if(FAST_BUILD AND NOT BUILD_SHARED_EXTRAS_LIB)
+    set(HIGHS_PC_LIBS_PRIVATE "-lhighs_extras")
+  endif()
+  if(ZLIB AND ZLIB_FOUND)
+    if(APPLE)
+      string(APPEND HIGHS_PC_LIBS_PRIVATE " -lz")
+    else()
+      set(HIGHS_PC_REQUIRES_PRIVATE "zlib")
+    endif()
+  endif()
+endif()
+
 if (NOT CMAKE_INSTALL_DOCDIR STREQUAL "" AND BUILD_CXX)
   install(FILES
       README.md
@@ -1030,6 +1080,14 @@ if (HIPO_PYTHON)
   add_subdirectory(highspy)
 else()
   add_subdirectory(extern)
+  if(FAST_BUILD AND BUILD_CXX)
+    # After extern, which adds the private dependencies of a static highs_extras
+    configure_file(${PROJECT_SOURCE_DIR}/highs.pc.in
+      "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+    install(FILES "${HIGHS_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc"
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+  endif()
 endif()
 
 # Prevent nested directory structure in the archive

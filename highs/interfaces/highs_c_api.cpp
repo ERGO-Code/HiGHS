@@ -1642,10 +1642,7 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in) {
 // * Deprecated methods*
 // *********************
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
 const char* Highs_compilationDate(void) { return "Deprecated"; }
-#pragma GCC diagnostic pop
 
 HighsInt Highs_call(const HighsInt num_col, const HighsInt num_row,
                     const HighsInt num_nz, const double* col_cost,
@@ -1828,4 +1825,10 @@ HighsInt Highs_getScaledModelStatus(const void* highs) {
 // Cannot call deprecationMessage here.
 void Highs_resetGlobalScheduler(HighsInt blocking) {
   Highs::resetGlobalScheduler(blocking != 0);
+}
+
+HighsInt Highs_initializeExtras(const char* directory,
+                                HighsInt search_if_empty) {
+  std::string dir((directory != nullptr) ? directory : "");
+  return (HighsInt)Highs::initializeExtras(dir, search_if_empty != 0);
 }

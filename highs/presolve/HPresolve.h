@@ -587,6 +587,12 @@ class HPresolve {
 
   HighsPresolveStatus getPresolveStatus() const { return presolve_status_; }
 
+  bool failed() const {
+    return presolve_status_ == HighsPresolveStatus::kOutOfMemory ||
+           presolve_status_ == HighsPresolveStatus::kException ||
+           presolve_status_ == HighsPresolveStatus::kMatrixValueError;
+  }
+
   bool zeroRowActivityFeasible() const;
 
   HighsInt debugGetCheckCol() const;
@@ -599,6 +605,12 @@ class HPresolve {
   Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestAggregator(HighsPostsolveStack& postsolve_stack);
+  Result presolveTestTransformColumn(HighsPostsolveStack& postsolve_stack,
+                                     HighsInt col, double scale,
+                                     double constant);
+  Result presolveTestSubstitute(HighsPostsolveStack& postsolve_stack,
+                                HighsInt substcol, HighsInt staycol,
+                                double offset, double scale);
 
   /*
   // Methods defined and used in HPresolveDebug, and only executed if

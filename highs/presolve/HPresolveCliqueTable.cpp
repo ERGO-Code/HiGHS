@@ -44,6 +44,7 @@ void HPresolveCliqueTable::checkCompactClique(const HighsInt cliqueId,
 
 bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
                                   std::vector<CliqueVar>& impliedFixings) {
+  if (!isActive()) return true;
   const ColState state = colStates[col];
   if (!state.isActive()) {
     if (state.isEliminated()) return true;
@@ -94,7 +95,7 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
         const ColState otherState = colStates[v2.col];
         if (otherState.isFixedTo(v2.val)) return false;
         if (otherState.isActive()) {
-          fixingQueue.emplace_back(static_cast<HighsUInt>(v2.col), 1 - v2.val);
+          fixingQueue.emplace_back(static_cast<HighsInt>(v2.col), 1 - v2.val);
         }
       }
       table->removeClique(cliqueId);
@@ -135,6 +136,7 @@ bool HPresolveCliqueTable::fixCol(HighsInt col, bool val,
 }
 
 void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
+  if (!isActive()) return;
   if (colStates[col].isEliminated()) return;
   colStates[col] = ColState(ColState::kEliminated);
   if (table->colDeleted[col]) return;
@@ -180,6 +182,7 @@ void HPresolveCliqueTable::eliminateCol(const HighsInt col) {
 bool HPresolveCliqueTable::substituteCol(
     const HighsInt substCol, const CliqueVar replacement,
     std::vector<CliqueVar>& impliedFixings) {
+  if (!isActive()) return true;
   if (substCol == static_cast<HighsInt>(replacement.col)) {
     // Substituting itself is either redundant or infeasible
     return replacement.val == 1;
@@ -306,33 +309,4 @@ bool HPresolveCliqueTable::substituteCol(
   }
 
   return true;
-}
-
-void HPresolveCliqueTable::recordLiteralNeighbourhood(
-    const HighsInt literal, const int64_t weight,
-    std::vector<int64_t>& removedWeight,
-    std::vector<HighsInt>& lastLiteralSource, std::vector<HighsInt>& candidates,
-    const HighsInt maxCliqueSize) const {
-  if (table->colDeleted[literal / 2]) return;
-  auto scanNeighbourhood = [&](const HighsInt cliqueId) {
-    const Clique& clique = table->cliques[cliqueId];
-    if (clique.start == -1 || clique.end - clique.start > maxCliqueSize) return;
-    for (HighsInt i = clique.start; i < clique.end; ++i) {
-      const CliqueVar& v = table->cliqueentries[i];
-      if (v.col != literal / 2 && !table->colDeleted[v.col]) {
-        const HighsInt vLiteral = v.index();
-        if (vLiteral == literal || lastLiteralSource[vLiteral] == literal) {
-          continue;
-        }
-        lastLiteralSource[vLiteral] = literal;
-        if (removedWeight[vLiteral] == 0) candidates.push_back(vLiteral);
-        removedWeight[vLiteral] += weight;
-      }
-    }
-  };
-  table->invertedHashListSizeTwo[literal].for_each(scanNeighbourhood);
-  table->invertedHashList[literal].for_each(
-      [&](const HighsInt cliqueId, HighsInt) {
-        return scanNeighbourhood(cliqueId);
-      });
 }

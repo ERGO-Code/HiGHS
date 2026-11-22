@@ -14,8 +14,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <sstream>
 #include <vector>
 
+#include "util/HighsAvailableMemory.h"
 #include "util/HighsSort.h"
 
 HighsInt create(HighsIndexCollection& index_collection, const HighsInt from_col,
@@ -404,13 +406,16 @@ void analyseVectorValues(const HighsLogOptions* log_options,
   // If there are no nonzeros, min_abs_value retains its starting
   // value of inf
   if (!nNz) min_abs_value = 0;
+  std::stringstream ss;
+  ss.str(std::string());
+  ss << message << " of dimension " << vecDim;
+  if (nNz < vecDim)
+    ss << message << " with " << nNz << " nonzeros ("
+       << int(1e2 * double(nNz) / double(vecDim)) << "%%)";
   highsReportDevInfo(
       log_options,
-      highsFormatToString(
-          "%s of dimension %" HIGHSINT_FORMAT " with %" HIGHSINT_FORMAT
-          " nonzeros (%3d%%) in [%11.4g, %11.4g]\n",
-          message.c_str(), vecDim, nNz, int(1e2 * double(nNz) / double(vecDim)),
-          min_abs_value, max_abs_value));
+      highsFormatToString("%s: values in [%.2g, %.2g]\n", ss.str().c_str(),
+                          min_abs_value, max_abs_value));
   if (nNegInfV > 0)
     highsReportDevInfo(
         log_options, highsFormatToString(
@@ -1269,7 +1274,10 @@ bool highsPause(const bool pause_condition, const std::string& message) {
 bool handleExceptionIsOom(const HighsLogOptions& log_options,
                           const std::string& source,
                           const std::exception& exception) {
-  highsLogUser(log_options, HighsLogType::kError, "Exception %s in %s\n",
-               exception.what(), source.c_str());
+  const bool planned =
+      dynamic_cast<const HighsPredictedOutOfMemory*>(&exception);
+  highsLogUser(log_options,
+               planned ? HighsLogType::kWarning : HighsLogType::kError,
+               "Exception %s in %s\n", exception.what(), source.c_str());
   return dynamic_cast<const std::bad_alloc*>(&exception);
 }

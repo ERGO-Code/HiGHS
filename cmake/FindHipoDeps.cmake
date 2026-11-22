@@ -80,7 +80,8 @@ macro(highs_export_blas_state)
             HIGHS_BLAS_COMPILE_DEFINITION
             HIGHS_BLAS_VENDOR
             HIGHS_BLAS_VERSION
-            HIGHS_BLAS_LICENSE)
+            HIGHS_BLAS_LICENSE
+            BLA_VENDOR)
         if(DEFINED ${_highs_blas_var})
             set(${_highs_blas_var} "${${_highs_blas_var}}" PARENT_SCOPE)
         else()
@@ -546,7 +547,6 @@ function(highs_configure_blas)
 
         set(OpenBLAS_FOUND TRUE)
         set(HIGHS_BLAS_TARGET ${_openblas_target})
-        set(HIGHS_BLAS_INCLUDE_DIRS "${CMAKE_BINARY_DIR}/_deps/openblas-src/include")
         highs_configure_blas_metadata()
 
         set(HIGHS_BLAS_CONFIGURED TRUE)
@@ -736,14 +736,65 @@ function(highs_link_blas target_name)
         message(FATAL_ERROR "BLAS not found for ${target_name}.")
     endif()
 
-    if(BUILD_OPENBLAS AND NOT TARGET ${HIGHS_BLAS_TARGET})
+    if(BUILD_OPENBLAS AND NOT TARGET "${HIGHS_BLAS_TARGET}")
         message(FATAL_ERROR "OpenBLAS target not found for ${target_name}.")
     endif()
 
-    target_link_libraries(${target_name} PUBLIC ${HIGHS_BLAS_TARGET})
+    # PRIVATE: a shared highs_extras is loaded at run time, so a consumer never
+    # links to its BLAS, and a static one still passes BLAS on for linking only
+    target_link_libraries(${target_name} PRIVATE ${HIGHS_BLAS_TARGET})
 
     if(HIGHS_BLAS_INCLUDE_DIRS)
-        target_include_directories(${target_name} PUBLIC
-            $<BUILD_INTERFACE:${HIGHS_BLAS_INCLUDE_DIRS}>)
+        target_include_directories(${target_name} PRIVATE ${HIGHS_BLAS_INCLUDE_DIRS})
     endif()
 endfunction()
+
+# Lets highs-config.cmake make available the BLAS that a static highs_extras
+# passes on to the consumer's link. Nothing is needed for a shared highs_extras,
+# a library path, or highs_openblas, which HiGHS exports.
+function(highs_export_blas_dependency)
+    set(_dependency "")
+    if(NOT BUILD_SHARED_EXTRAS_LIB)
+        if(HIGHS_BLAS_TARGET STREQUAL "BLAS::BLAS")
+            set(_dependency "if(NOT BLA_VENDOR)\n  set(BLA_VENDOR \"${BLA_VENDOR}\")\nendif()\n")
+            # FindBLAS takes a library given by the user without searching for
+            # one, but only from the cache: it clears the normal variable
+            if(DEFINED CACHE{BLAS_LIBRARIES})
+                string(APPEND _dependency
+                    "set(BLAS_LIBRARIES \"${BLAS_LIBRARIES}\" CACHE STRING \"BLAS library HiGHS was built with\")\n")
+            endif()
+            string(APPEND _dependency "find_dependency(BLAS)\n")
+        elseif(HIGHS_BLAS_TARGET STREQUAL "OpenBLAS::OpenBLAS")
+            set(_dependency "find_dependency(OpenBLAS CONFIG HINTS \"${OpenBLAS_DIR}\")\n")
+        elseif(BUILD_OPENBLAS AND NOT HIGHS_BLAS_TARGET STREQUAL "highs_openblas")
+            # Built by FetchContent: installed with its own CMake package next to
+            # the one for HiGHS, whereas a build tree gets it from the export below
+            string(CONCAT _dependency
+                "if(EXISTS \"\${CMAKE_CURRENT_LIST_DIR}/../OpenBLAS/OpenBLASConfig.cmake\")\n"
+                "  find_dependency(OpenBLAS CONFIG NO_DEFAULT_PATH PATHS \"\${CMAKE_CURRENT_LIST_DIR}/../OpenBLAS\")\n"
+                "endif()\n")
+            export(TARGETS ${HIGHS_BLAS_TARGET}
+                APPEND FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+        endif()
+    endif()
+
+    set(_file "${HIGHS_BINARY_DIR}/highs-blas-dependency.cmake")
+    file(WRITE "${_file}" "${_dependency}")
+    install(FILES "${_file}"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/highs"
+        COMPONENT Devel)
+endfunction()
+
+# A macro so that PARENT_SCOPE reaches the top level, which configures highs.pc
+macro(highs_export_blas_pkgconfig)
+    if(NOT BUILD_SHARED_EXTRAS_LIB AND NOT BUILD_SHARED_LIBS)
+        # shortcut: BLAS entry only for Accelerate and a system OpenBLAS, add others when someone links them through pkg-config
+        if(HIGHS_BLAS_VENDOR STREQUAL "Apple Accelerate")
+            set(HIGHS_PC_LIBS_PRIVATE "${HIGHS_PC_LIBS_PRIVATE} -framework Accelerate" PARENT_SCOPE)
+        # Only library paths set with -D are visible here, and may have no openblas.pc
+        elseif(HIGHS_BLAS_VENDOR STREQUAL "OpenBLAS" AND NOT BUILD_OPENBLAS
+                AND NOT OPENBLAS_LIB AND NOT DEFINED CACHE{BLAS_LIBRARIES})
+            set(HIGHS_PC_REQUIRES_PRIVATE "${HIGHS_PC_REQUIRES_PRIVATE} openblas" PARENT_SCOPE)
+        endif()
+    endif()
+endmacro()

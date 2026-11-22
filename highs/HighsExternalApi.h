@@ -10,6 +10,8 @@
  */
 #ifndef HIGHS_EXTERNAL_API_H_
 #define HIGHS_EXTERNAL_API_H_
+#include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <tuple>
@@ -19,6 +21,7 @@
 #include "HighsExternalDeps.h"
 #include "HighsExtrasApi.h"
 #include "io/HighsIO.h"
+#include "lp_data/HighsStatus.h"
 #include "util/HighsDynamicLibrary.h"
 #include "util/HighsType.h"
 #include "util/stringutil.h"
@@ -129,8 +132,12 @@ struct HighsExternalApi {
   HighsExtras::HighsExtrasApi api_;
   const HighsExtrasFeatureInfo* extras_feature_info_ = nullptr;
 
-  static void unload();
-  static bool tryLoad(const std::string& path = "");
+  static void unload();  // unloads but does not allow reloading without reset()
+  static void reset();   // resets the cached initialization attempt for
+                         // dynamically loaded extras
+  static bool tryLoad(const std::string& directory = "",
+                      bool search_if_empty = true);
+
   static const std::string getLoadStatus() { return instance().status_; }
 
   // define <feature> functions, e.g. isAvailable<Feature1, Feature2, ...>()
@@ -187,10 +194,12 @@ struct HighsExternalApi {
         vsnprintf(msgbuffer.data(), msgbuffer.size(), format, argptr);
     va_end(argptr);
 
+    const std::string load_failure = tryLoad() ? "" : ". " + getLoadStatus();
     highsLogUser(log_options, type,
-                 "%s%sThe following features are unavailable: %s\n",
+                 "%s%sThe following features are unavailable: %s%s\n",
                  msgbuffer.data(), (len > 0) ? " " : "",
-                 getMissingFeatures<Feature, Features...>().c_str());
+                 getMissingFeatures<Feature, Features...>().c_str(),
+                 load_failure.c_str());
   }
 
  private:
@@ -198,11 +207,19 @@ struct HighsExternalApi {
 
 #ifdef HIGHS_SHARED_EXTRAS_LIBRARY
   HighsDynamicLibrary library_;
+  std::unique_ptr<std::once_flag> initialized_{new std::once_flag};
   bool available_ = false;
 #endif
 };
 
 namespace HighsExtras {
+
+inline HighsStatus initialize(const std::string& path,
+                              bool search_default_dirs = true) {
+  return HighsExternalApi::tryLoad(path, search_default_dirs)
+             ? HighsStatus::kOk
+             : HighsStatus::kError;
+}
 
 // allows static access to feature APIs via
 // HighsExtras::<feature>::<method>(...)

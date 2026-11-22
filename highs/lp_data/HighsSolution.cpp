@@ -490,8 +490,8 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
   if (have_dual_solution) {
     // Determine the primal-dual objective error
     //
-    // IPX computes objective_gap = (pobjective-dobjective) / (1.0 +
-    // 0.5*std::fabs(pobjective+dobjective));
+    // IPX computes pdgap = (pobj-dobj) / (1.0 +
+    // 0.5*std::fabs(pobj+dobj-2*offset));
     //
     // PDLP computes dRelObjGap = fabs(dPrimalObj - dDualObj) / (1.0 +
     // fabs(dPrimalObj) + fabs(dDualObj));
@@ -503,16 +503,20 @@ void getKktFailures(const HighsOptions& options, const bool is_qp,
     // -(1/2)(g-c)^Tx = (1/2)(c-g)^Tx, so pass a pointer to the
     // gradient data if this is necessary
     const double* gradient_p = is_qp ? gradient.data() : nullptr;
+    const double primal_objective_value = highs_info.objective_function_value;
     double dual_objective_value;
     bool dual_objective_status = computeDualObjectiveValue(
         gradient_p, lp, solution, dual_objective_value);
     assert(dual_objective_status);
     const double abs_objective_difference =
-        std::fabs(highs_info.objective_function_value - dual_objective_value);
+        std::fabs(primal_objective_value - dual_objective_value);
     primal_dual_objective_error = abs_objective_difference;
-    const double denominator = 1.0 +
-                               std::fabs(highs_info.objective_function_value) +
-                               std::fabs(dual_objective_value);
+    const double primal_objective_value_less_offset =
+        primal_objective_value - lp.offset_;
+    const double dual_objective_value_less_offset =
+        dual_objective_value - lp.offset_;
+    double denominator = 1.0 + std::fabs(primal_objective_value_less_offset) +
+                         std::fabs(dual_objective_value_less_offset);
     primal_dual_objective_error = primal_dual_objective_error / denominator;
   }
 
@@ -2272,6 +2276,123 @@ bool reportKktFailures(const HighsLp& lp, const HighsOptions& options,
            info.primal_dual_objective_error);
   }
   return has_kkt_failures;
+}
+
+HighsStatus assessUserColValues(const HighsLp& lp, const HighsOptions& options,
+                                const HighsInt num_entries,
+                                const HighsInt* index, const double* value,
+                                const bool perform_feasibility_check) {
+  const bool packed = index != nullptr;
+  if (packed) {
+    if (num_entries < 0) {
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "assessUserColValues: packed solution has num_entries = %d < 0\n",
+          int(num_entries));
+      return HighsStatus::kError;
+    }
+    if (num_entries == 0) {
+      // No solution provided, which suggests a user error so, rather
+      // than going on to define a completely undefined start
+      // solution, issue a warning amd return
+      highsLogUser(options.log_options, HighsLogType::kWarning,
+                   "assessUserColValues: packed solution has num_entries = 0, "
+                   "so no user solution is defined\n");
+      return HighsStatus::kWarning;
+    }
+  } else {
+    // lp.num_col_ entries of value will be used, so num_entries
+    // should reflect this
+    if (num_entries != lp.num_col_) {
+      highsLogUser(options.log_options, HighsLogType::kError,
+                   "assessUserColValues: full solution has num_entries (%d) "
+                   "not equal to num_col (%d)\n",
+                   int(num_entries), int(lp.num_col_));
+      return HighsStatus::kError;
+    }
+  }
+  HighsStatus return_status = HighsStatus::kOk;
+  const HighsInt to_ix = packed ? num_entries : lp.num_col_;
+  HighsInt num_duplicates = 0;
+  std::vector<HighsBool> is_set;
+  is_set.assign(lp.num_col_, false);
+  HighsInt num_infeasible_value = 0;
+  const HighsInt max_warning = 10;
+  const bool has_integrality = lp.integrality_.size() > 0;
+  const bool assess_as_mip = lp.isMip() && !options.solve_relaxation;
+  const double kPrimalFeasibilityTolerance =
+      assess_as_mip ? options.mip_feasibility_tolerance
+                    : options.primal_feasibility_tolerance;
+  for (HighsInt iX = 0; iX < to_ix; iX++) {
+    HighsInt iCol = packed ? index[iX] : iX;
+    if (iCol < 0 || iCol >= lp.num_col_) {
+      assert(packed);
+      highsLogUser(
+          options.log_options, HighsLogType::kError,
+          "assessUserColValues: Entry %d of user solution has index %d out of "
+          "range [0, %d)\n",
+          int(iX), int(iCol), int(lp.num_col_));
+      return HighsStatus::kError;
+    }
+    // Count duplicates, and record that this value has been set, so
+    // future duplicates can be spotted
+    if (is_set[iCol]) num_duplicates++;
+    is_set[iCol] = true;
+    // Don't test undefined values for feasibility!
+    if (!perform_feasibility_check || value[iX] == kHighsUndefined) continue;
+    double col_infeasibility;
+    double integer_infeasibility;
+    HighsVarType type =
+        has_integrality ? lp.integrality_[iCol] : HighsVarType::kContinuous;
+    assessColPrimalSolution(assess_as_mip, options, value[iX],
+                            lp.col_lower_[iCol], lp.col_upper_[iCol], type,
+                            col_infeasibility, integer_infeasibility);
+    if (col_infeasibility > kPrimalFeasibilityTolerance ||
+        integer_infeasibility > options.mip_feasibility_tolerance) {
+      num_infeasible_value++;
+      if (num_infeasible_value <= max_warning)
+        highsLogUser(options.log_options, HighsLogType::kWarning,
+                     "assessUserColValues: Entry %d of user solution has value "
+                     "%g: infeasible "
+                     "for bounds [%g, %g]%s%s\n",
+                     int(iX), value[iX], lp.col_lower_[iCol],
+                     lp.col_upper_[iCol], has_integrality ? " and type " : "",
+                     has_integrality ? highsVarTypeToString(type).c_str() : "");
+      return_status = HighsStatus::kWarning;
+    }
+  }
+  if (num_duplicates > 0) {
+    assert(packed);
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "assessUserColValues: Set of user solution indices has %d "
+                 "duplicate%s: last "
+                 "value used\n",
+                 int(num_duplicates), num_duplicates == 1 ? "" : "s");
+    return_status = HighsStatus::kWarning;
+  }
+  if (num_infeasible_value > max_warning) {
+    assert(return_status == HighsStatus::kWarning);
+    highsLogUser(
+        options.log_options, HighsLogType::kWarning,
+        "assessUserColValues: %d entries of user solution are infeasible\n",
+        int(num_infeasible_value));
+    return_status = HighsStatus::kWarning;
+  }
+  return return_status;
+}
+
+void assignUserColValues(const HighsInt num_col, std::vector<double>& col_value,
+                         const HighsInt num_entries, const HighsInt* index,
+                         const double* value) {
+  assert(num_col >= 0);
+  const bool packed = index != nullptr;
+  if (!packed) assert(num_entries == num_col);
+  const HighsInt to_ix = packed ? num_entries : num_col;
+  col_value.assign(num_col, kHighsUndefined);
+  for (HighsInt iX = 0; iX < to_ix; iX++) {
+    HighsInt iCol = packed ? index[iX] : iX;
+    col_value[iCol] = value[iX];
+  }
 }
 
 bool HighsSolution::hasUndefined() const {

@@ -13,6 +13,8 @@ HiGHS can be used via AMPL, see the [AMPL Documentation](https://dev.ampl.com/so
 
 The interface is available at [GAMSlinks](https://github.com/coin-or/GAMSlinks/),
 including [pre-build libraries](https://github.com/coin-or/GAMSlinks/releases).
+The last release was in February 2023, so it does not include recent versions of
+HiGHS.
 
 ## Javascript
 
@@ -20,7 +22,8 @@ including [pre-build libraries](https://github.com/coin-or/GAMSlinks/releases).
    [highs-js](https://github.com/lovasoa/highs-js). See the [demo](https://lovasoa.github.io/highs-js/)
    and the [npm package](https://www.npmjs.com/package/highs).
  * Alternatively, HiGHS also has a [native Node.js](https://www.npmjs.com/package/highs-solver)
-   interface.
+   interface. The last release was in August 2025, so it may not include recent
+   versions of HiGHS.
 
 ## MATLAB
 

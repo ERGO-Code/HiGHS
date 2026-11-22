@@ -87,6 +87,7 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::emptyCol(
   assert(fixval != kHighsInf);
   postsolve_stack.removedModelFixedCol(col, fixval, cost, col_nnz, nullptr,
                                        nullptr);
+  lp_.offset_ += cost * fixval;
   if (col == lp_.fme_obj_col_) lp_.fme_obj_col_ = -1;
   return Result::kOk;
 }
