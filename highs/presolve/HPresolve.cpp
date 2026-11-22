@@ -1549,9 +1549,17 @@ HPresolve::Result HPresolve::checkColBounds(HighsInt col, bool* isFixed) {
   assert(!colDeleted[col]);
   double boundDiff = model->col_upper_[col] - model->col_lower_[col];
   if (isFixed != nullptr) *isFixed = false;
-  if (boundDiff <= primal_feastol &&
-      (boundDiff <= options->small_matrix_value ||
-       getMaxAbsColVal(col) * boundDiff <= primal_feastol)) {
+  // With reference to #3768, fixing variables by rounding like this
+  //
+  // if (boundDiff <= primal_feastol &&
+  //    (boundDiff <= options->small_matrix_value ||
+  //     getMaxAbsColVal(col) * boundDiff <= primal_feastol)) {
+  //
+  // can lead to a feasible MIP being declared infeasible
+  //
+  // Requiring the bound difference to be non-positive cannot be
+  // incorrect. It just fixes fewer variables
+  if (boundDiff <= 0) {
     // check for primal infeasibility
     if (boundDiff < -primal_feastol) return Result::kPrimalInfeasible;
     // check for unboundedness
