@@ -230,12 +230,13 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
 
 bool gcdAllButOne(std::vector<int64_t>& weights, int64_t& b,
                   const HighsInt numTerms) {
+  if (numTerms <= 2) return false;
   HighsInt numOnes = 0;
   HighsInt numZeros = 0;
   HighsInt numMaxWeight = 0;
   for (const int64_t& weight : weights) {
     if (weight == 1) {
-      numOnes++;
+      if (++numOnes == 2) return false;
     } else if (weight == 0) {
       numZeros++;
     }
@@ -243,30 +244,33 @@ bool gcdAllButOne(std::vector<int64_t>& weights, int64_t& b,
       numMaxWeight++;
     }
   }
-  if (numOnes >= 2 || numZeros + numMaxWeight + numOnes >= numTerms - 2) {
+  if (numZeros + numMaxWeight + numOnes >= numTerms - 2) {
     return false;
   }
-  int64_t gcd = 0;
-  HighsInt candidate = -1;
-  HighsInt firstSeen = -1;
-  HighsInt numSeen = 0;
-  for (HighsInt i = 0; i != numTerms; ++i) {
-    if (weights[i] == b || weights[i] == 0) continue;
-    if (++numSeen == 1) firstSeen = i;
-    const int64_t oldGcd = gcd;
-    gcd = HighsIntegers::gcd(gcd, weights[i]);
-    if (gcd != 1) continue;
-    if (candidate == -1) {
-      candidate = i;
-      gcd = oldGcd;
-    } else if (numSeen == 3 && candidate != firstSeen) {
-      // Excluding the second term failed, so try and exclude the first term
-      gcd = HighsIntegers::gcd(weights[candidate], weights[i]);
-      if (gcd == 1) return false;
-      candidate = firstSeen;
-    } else {
-      return false;
+  std::vector<int64_t> suffixGcd(weights.size() + 1, 1);
+  suffixGcd.back() = 0;
+  for (HighsInt i = numTerms - 1; i >= 0; --i) {
+    suffixGcd[i] = suffixGcd[i + 1];
+    if (weights[i] != b && weights[i] != 0) {
+      suffixGcd[i] = HighsIntegers::gcd(suffixGcd[i], weights[i]);
     }
+    if (suffixGcd[i] == 1) break;
+  }
+
+  int64_t gcd = suffixGcd[0];
+  HighsInt candidate = -1;
+  if (gcd == 1) {
+    int64_t prefixGcd = 0;
+    for (HighsInt i = 0; i != numTerms && prefixGcd != 1; ++i) {
+      if (weights[i] == b || weights[i] == 0) continue;
+      gcd = HighsIntegers::gcd(prefixGcd, suffixGcd[i + 1]);
+      if (gcd > 1) {
+        candidate = i;
+        break;
+      }
+      prefixGcd = HighsIntegers::gcd(prefixGcd, weights[i]);
+    }
+    if (candidate == -1) return false;
   }
   assert(gcd > 1);
   const int64_t remainderCapacity = b % gcd;
@@ -377,8 +381,8 @@ void gcdRemoveTail(std::vector<int64_t>& weights, int64_t& b,
   }
 }
 
-void gcdSimplify(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
-                 const double feastol, bool& changed) {
+bool gcdSimplify(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
+                 const double feastol) {
   // Heuristically try recursive all-but-one GCD calls
   const HighsInt numTerms = static_cast<HighsInt>(knapsack.terms.size());
   std::vector<int64_t> weights;
@@ -400,8 +404,9 @@ void gcdSimplify(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
     }
     knapsack.weightSum = newWeightSum;
     knapsack.capacity = static_cast<double>(b);
-    changed = true;
+    return true;
   }
+  return false;
 }
 
 bool tryNormaliseConditionalKnapsack(KnapsackRow& knapsack,
@@ -814,7 +819,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
 
     if (allIntCoefficients && knapsack.capacity < kHighsIInf) {
       // Simplify constraint (or strengthen) using GCD arguments
-      gcdSimplify(knapsack, order, primal_feastol, changed);
+      changed |= gcdSimplify(knapsack, order, primal_feastol);
       // Knapsack may now be redundant
       if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
         postsolve_stack.redundantRow(row);
@@ -831,7 +836,25 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     changed |= lifted;
     // Recognise whether the knapsack can be upgraded
     if (!cliqueUpgraded) {
-      if (lifted) pdqsort(order.begin(), order.end(), isItemLarger);
+      if (lifted) {
+        pdqsort(order.begin(), order.end(), isItemLarger);
+        if (allIntCoefficients && knapsack.capacity < kHighsIInf) {
+          // Simplify constraint (or strengthen) using GCD arguments
+          // Lifted coefficients may have enabled new reductions
+          const bool gcdSimplified =
+              gcdSimplify(knapsack, order, primal_feastol);
+          // Knapsack may now be redundant
+          if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
+            postsolve_stack.redundantRow(row);
+            removeRow(row);
+            continue;
+          }
+          if (gcdSimplified) {
+            clearKnapSackStatistics(stats);
+            computeKnapsackStatistics(knapsack, order, primal_feastol, stats);
+          }
+        }
+      }
       if (!tryNormaliseKnapsack(knapsack, order, stats, primal_feastol,
                                 changed) &&
           !tryNormaliseConditionalKnapsack(knapsack, order, stats,
