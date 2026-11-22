@@ -34,11 +34,6 @@ HPresolveInitialSweep::HPresolveInitialSweep(
 HPresolveInitialSweep::Result HPresolveInitialSweep::checkColBounds(
     HighsInt col, bool& isFixed) {
   double boundDiff = lp_.col_upper_[col] - lp_.col_lower_[col];
-  double max_abs_col_value = 0;
-  for (HighsInt iEl = lp_.a_matrix_.start_[col];
-       iEl < lp_.a_matrix_.start_[col + 1]; iEl++)
-    max_abs_col_value =
-        std::max(std::abs(lp_.a_matrix_.value_[iEl]), max_abs_col_value);
   isFixed = false;
   // Check for simple infeasibility in the original LP should
   // already have been carried out in
@@ -145,7 +140,7 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::singletonRow(
   bool lowerTightened, upperTightened;
   SingletonRowResult sr = computeSingletonRowBounds(
       val, lp_.row_lower_[row], lp_.row_upper_[row], lp_.col_lower_[col],
-      lp_.col_upper_[col], primal_feastol_, getMaxAbsColVal(col),
+      lp_.col_upper_[col], primal_feastol_,
       lp_.integrality_[col] != HighsVarType::kContinuous, lb, ub,
       lowerTightened, upperTightened);
   if (sr == SingletonRowResult::kRedundant) {

@@ -22,8 +22,8 @@ PresolveProbingScope::~PresolveProbingScope() {
 
 SingletonRowResult computeSingletonRowBounds(
     double val, double rowLower, double rowUpper, double colLower,
-    double colUpper, double primalFeastol, double maxAbsColVal, bool isIntegral,
-    double& lb, double& ub, bool& lowerTightened, bool& upperTightened) {
+    double colUpper, double primalFeastol, bool isIntegral, double& lb,
+    double& ub, bool& lowerTightened, bool& upperTightened) {
   if (val > 0) {
     if (colUpper * val <= rowUpper + primalFeastol &&
         colLower * val >= rowLower - primalFeastol)

@@ -2375,7 +2375,6 @@ HPresolve::Result HPresolve::singletonRow(HighsPostsolveStack& postsolve_stack,
   SingletonRowResult sr = computeSingletonRowBounds(
       val, model->row_lower_[row], model->row_upper_[row],
       model->col_lower_[col], model->col_upper_[col], primal_feastol,
-      getMaxAbsColVal(col),
       model->integrality_[col] != HighsVarType::kContinuous, lb, ub,
       lowerTightened, upperTightened);
   if (sr == SingletonRowResult::kRedundant) {
