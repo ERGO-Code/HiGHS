@@ -1757,6 +1757,8 @@ class Highs {
                                const HighsBasis& basis);
 
   PresolveComponent presolve_;
+  // The overloads taking a PresolveComponent and an LP are preparatory,
+  // for running presolve on an LP other than model_.lp_ (e.g. LP folding)
   HighsPresolveStatus runPresolve(const bool force_lp_presolve,
                                   const bool force_presolve = false) {
     return runPresolve(presolve_, model_.lp_, force_lp_presolve,
