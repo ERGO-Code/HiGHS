@@ -2862,8 +2862,8 @@ TEST_CASE("issue-3742", "[highs_test_mip_solver]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kWarning);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kSolutionLimit);
-  // Code coverate for writing objective bound and MIP rel gap whnever
-  // a primal solution is available
+  // Code coverate for writing objective bound and MIP rel gap
+  // whenever a primal solution is available
   h.writeSolution("");
   h.writeSolution("", 1);
   std::remove(model_file.c_str());
