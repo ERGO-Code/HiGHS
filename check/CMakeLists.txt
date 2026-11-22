@@ -93,13 +93,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       list(APPEND TEST_SOURCES TestHipo.cpp)
   endif()
 
-  set(OPT_LEVEL_CHANGED OFF)
-
-  if(CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3")
-    # message(MESSAGE "User has overridden the default optimization level for Release mode.")
-    set(OPT_LEVEL_CHANGED ON)
-  endif()
-
   if (BUILD_EXTRA_UNIT_TESTS)
       list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
       message(STATUS "${PROJECT_SOURCE_DIR}/check/highs-unit-tests")
@@ -383,6 +376,26 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endif()
 
 
+  # The --presolve=off instance tests can check the exact number of simplex
+  # iterations. That number depends on the compiler, its flags and the
+  # target, so it is only checked for the builds the tables were made for.
+  # Distributions that build with their own flags (e.g. Debian:
+  # CMAKE_BUILD_TYPE=None, CMAKE_CXX_FLAGS="-O2 ...", -march=x86-64-v3)
+  # check the model status and the objective value only, and run the
+  # instance tests on every architecture.
+  set(HIGHS_TEST_EXACT_ITERATIONS_DEFAULT ON)
+  if (CMAKE_BUILD_TYPE STREQUAL "None" OR
+      CMAKE_CXX_FLAGS MATCHES "-O[0-9sgz]|-march=|-mtune=|-mfma|-ffast-math|-ffp-contract" OR
+      (CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3") OR
+      CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM" OR
+      IS_32)
+    set(HIGHS_TEST_EXACT_ITERATIONS_DEFAULT OFF)
+  endif()
+  option(HIGHS_TEST_EXACT_ITERATIONS
+         "Check exact simplex iteration counts in the instance tests"
+         ${HIGHS_TEST_EXACT_ITERATIONS_DEFAULT})
+  message(STATUS "Check exact iteration counts: ${HIGHS_TEST_EXACT_ITERATIONS}")
+
   # define a macro to add tests
   #
   # add_instancetests takes an instance group and a status
@@ -423,17 +436,23 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                   "Model status        : ${solutionstatus}")
 
           if(${solutionstatus} STREQUAL "Optimal")
-              if(${setting} STREQUAL "--presolve=off" AND 
-                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND
-                (NOT OPT_LEVEL_CHANGED) AND
-                (CMAKE_SIZEOF_VOID_P EQUAL 8))
+              if(${setting} STREQUAL "--presolve=off" AND
+                HIGHS_TEST_EXACT_ITERATIONS)
                   set_tests_properties (${name}${setting} PROPERTIES
                           PASS_REGULAR_EXPRESSION
                           "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
-              else()
+              elseif(HIGHS_TEST_EXACT_ITERATIONS)
                   set_tests_properties (${name}${setting} PROPERTIES
                           PASS_REGULAR_EXPRESSION
                           "Objective value     : ${optval}")
+              else()
+                  # the last digits of the printed objective can differ
+                  # between targets: compare 7 decimal places
+                  string(REGEX REPLACE "^( *-?[0-9]+\\.[0-9][0-9][0-9][0-9][0-9][0-9][0-9]).*$"
+                         "\\1" optval_7 "${optval}")
+                  set_tests_properties (${name}${setting} PROPERTIES
+                          PASS_REGULAR_EXPRESSION
+                          "Objective value     : ${optval_7}")
               endif()
           endif()
       endforeach(setting)
@@ -441,7 +460,10 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endmacro(add_instancetests)
 
   # add tests for success and fail instances
-  if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
+  if (NOT HIGHS_TEST_EXACT_ITERATIONS)
+    # only status and objective are checked, which hold on every target
+    add_instancetests(successInstances "Optimal")
+  elseif (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
     # without floating-point contraction (see the top-level CMakeLists.txt),
     # macOS on arm64 gives the same iteration counts as x86-64
     add_instancetests(successInstances "Optimal")
@@ -516,7 +538,9 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       endforeach(instance)
   endforeach(strategy)
 
-  if(FAST_BUILD)
+  # PDLP stops at a relative tolerance, so the printed objective depends on
+  # the target and flags: only run these tests where the values were made
+  if(FAST_BUILD AND HIGHS_TEST_EXACT_ITERATIONS)
     foreach(instance_pdlp ${pdlpInstances})
         # add default tests
         # treat the instance as a tuple (list) of two values
