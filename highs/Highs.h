@@ -1725,17 +1725,17 @@ class Highs {
     // Postsolve recovered a solution and basis, so the simplex
     // solver is hot-started on the original LP
     bool postsolve_recovered_basis = false;
-  };
 
-  // Phases of calledOptimizeModel
-  struct Context {
     double initial_time = -1;
     double presolve_time = -1;
     double solve_presolved_lp_time = -1;
     double postsolve_time = -1;
     double solve_original_lp_time = -1;
     HighsInt postsolve_iteration_count = -1;
+  };
 
+  // Phases of calledOptimizeModel
+  struct Context {
     HighsInt min_highs_debug_level = kHighsDebugLevelMin;
 
     bool undo_mods = false;
@@ -1778,7 +1778,7 @@ class Highs {
   HighsStatus lpTimedSolve(Context& context, HighsLp& lp,
                            const std::string& description, double& time);
   HighsStatus lpICrash();
-  void lpReportTimes(const Context& context);
+  void lpReportTimes(const LpState& lp_state);
 
   HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
   HighsStatus callSolveMip(HighsLp& lp, const std::string& message);

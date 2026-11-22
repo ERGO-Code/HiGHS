@@ -145,9 +145,8 @@ name and the message.
 ### `Context` and `LpState`
 
 `Highs::Context` is created in `optimizeModelTryCatch()` and passed
-down by reference. It holds the status, the timings and the postsolve
-iteration count that used to be locals, `min_highs_debug_level`,
-`undo_mods` (see [Mods](#mods)),
+down by reference. It holds the control shared by all the steps: the
+status, `min_highs_debug_level`, `undo_mods` (see [Mods](#mods)),
 `options_undo` (only for option changes that last the whole solve) and
 `lp_state`.
 
@@ -155,7 +154,8 @@ iteration count that used to be locals, `min_highs_debug_level`,
 debug logging set-up, `solver_will_use_basis`,
 `may_require_basis_postsolve`, `no_incumbent_lp_solution_or_basis`,
 the pivot threshold from the presolved solve, the PDLP iteration count
-of the presolved solve and `postsolve_recovered_basis`.
+of the presolved solve, `postsolve_recovered_basis`, and the timings
+and postsolve iteration count that used to be locals.
 
 Postsolve was split from the simplex hot start and the PDLP clean-up.
 The copy of `info_` that `latest` kept for the PDLP clean-up
