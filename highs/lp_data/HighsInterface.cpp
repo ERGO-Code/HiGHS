@@ -4192,8 +4192,9 @@ HighsStatus Highs::multiobjectiveSolve() {
                                              original_lp_num_row);
 }
 
-bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
-                           const HighsInt presolved_lp_pdlp_iteration_count) const {
+bool Highs::tryPdlpCleanup(
+    HighsInt& pdlp_cleanup_iteration_limit,
+    const HighsInt presolved_lp_pdlp_iteration_count) const {
   // Primal/dual infeasibilities/residuals can be magnified in
   // postsolve after PDLP, and IPX without crossover can fail,
   // both leading to model_status_ == HighsModelStatus::kUnknown.
