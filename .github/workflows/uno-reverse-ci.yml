@@ -36,7 +36,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout HiGHS (current branch)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: HiGHS
 
@@ -77,7 +77,7 @@ jobs:
           echo "Uno release ref: $ref"
 
       - name: Checkout Uno (latest release)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.inputs.uno_repository || 'cvanaret/Uno' }}
           ref: ${{ steps.uno_release.outputs.ref }}
@@ -124,7 +124,7 @@ jobs:
             extras: "ON"
     steps:
       - name: Checkout HiGHS (current branch)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: HiGHS
 
@@ -152,7 +152,7 @@ jobs:
           cmake --install HiGHS/build
 
       - name: Checkout Uno (main)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.inputs.uno_repository || 'cvanaret/Uno' }}
           ref: ${{ github.event.inputs.uno_hipo_ref || 'main' }}
