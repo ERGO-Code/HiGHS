@@ -2853,7 +2853,7 @@ TEST_CASE("issue-3756", "[highs_test_mip_solver]") {
   std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/nsharpxmip.mps";
   REQUIRE(h.readModel(model_file) != HighsStatus::kError);
-  REQUIRE(h.run() == HighsStatus::kError);
+  REQUIRE(h.run() == HighsStatus::kOk);
 
   h.resetThreadScheduler(true);
 }
