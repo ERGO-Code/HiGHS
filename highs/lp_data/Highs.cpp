@@ -1606,7 +1606,6 @@ bool Highs::returnFromOptimizeModelBeforeRunning(
   invalidateRunData();
   invalidateSolution();
   invalidateBasis();
-  context.status = HighsStatus::kError;
   optimizeModelUndoMods(context, context.status);
   context.status = HighsStatus::kError;
   return true;
