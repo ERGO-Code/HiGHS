@@ -1707,7 +1707,9 @@ class Highs {
   struct LpState;
   struct OptimizeModelContext;
 
-  // Phases of calledOptimizeModel
+  // Phases of calledOptimizeModel and optimizeModelLp. Those returning
+  // bool (except lpUsePresolve) return true if the solve stops, with
+  // context.status set
   HighsStatus calledOptimizeModel(OptimizeModelContext& context);
   bool optimizeModelPreChecks(OptimizeModelContext& context);
   bool optimizeModelApplyMods(OptimizeModelContext& context);
