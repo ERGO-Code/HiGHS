@@ -44,9 +44,17 @@ HPresolveInitialSweep::Result HPresolveInitialSweep::checkColBounds(
   // already have been carried out in
   // HPresolve::checkOriginalLpBounds()
   assert(boundDiff >= 0);
-  if (boundDiff <= primal_feastol_ &&
-      (boundDiff <= options_.small_matrix_value ||
-       max_abs_col_value * boundDiff <= primal_feastol_)) {
+  // With reference to #3768, fixing variables by rounding like this
+  //
+  // if (boundDiff <= primal_feastol &&
+  //    (boundDiff <= options->small_matrix_value ||
+  //     getMaxAbsColVal(col) * boundDiff <= primal_feastol)) {
+  //
+  // can lead to a feasible MIP being declared infeasible
+  //
+  // Requiring the bound difference to be non-positive cannot be
+  // incorrect. It just fixes fewer variables
+  if (boundDiff <= 0) {
     // check for unboundedness
     if (std::abs(lp_.col_lower_[col]) == kHighsInf)
       return Result::kDualInfeasible;
