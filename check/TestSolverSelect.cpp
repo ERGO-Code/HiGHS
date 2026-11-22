@@ -262,7 +262,8 @@ TEST_CASE("solver-select-basis-needs-crossover", "[solver_select]") {
 // models' size threshold
 TEST_CASE("solver-select-small-model-uses-dual-simplex", "[solver_select]") {
   for (const SolverSelectStrategy strategy :
-       {SolverSelectStrategy::kColsRowsNnz, SolverSelectStrategy::kRankedFeatures,
+       {SolverSelectStrategy::kColsRowsNnz,
+        SolverSelectStrategy::kRankedFeatures,
         SolverSelectStrategy::kIpxIfLarge, SolverSelectStrategy::kHipoIfLarge})
     REQUIRE(selectSolver(exampleLp(), strategy) ==
             HighsSolverSelect::kDualSimplex);
