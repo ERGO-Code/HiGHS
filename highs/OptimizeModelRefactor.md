@@ -12,8 +12,8 @@
   changes options has its own local one, so changes don't outlive the
   function that makes them.
 - All modifications ("mods") of the incumbent model are applied in one
-  place and undone in one place. This now includes the corrections of
-  bounds with small inconsistencies, which used to be permanent.
+  place and undone in one place. Bounds with small inconsistencies
+  are still corrected permanently, as before.
 - `runPresolve()` and `runPostsolve()` take the `PresolveComponent`
   and the LP as arguments, so that later LP phases (for example LP
   folding) can run them on an LP other than `model_.lp_`.
@@ -29,15 +29,13 @@ fixes and changes in behaviour.
 | File | Change |
 |---|---|
 | `highs/lp_data/Highs.cpp` | Split of `calledOptimizeModel()`, mods, single exit, `runPresolve`/`runPostsolve` overloads, `callRunPostsolve` error path, `run()` unscaling |
-| `highs/Highs.h` | `Context`, `LpState`, declarations of the new private methods, flags `optimize_model_running_` and `model_mods_applied_`, overloads, `bool&` argument of the private `processedBoundsFindsInfeasibility()` |
-| `highs/lp_data/HStruct.h` | `HighsLpMods` records the corrected column and row bounds |
-| `highs/lp_data/HighsLp.cpp` | `unapplyMods()` restores the corrected bounds; `hasMods()`, `HighsLpMods::clear()` and `HighsLpMods::isClear()` cover them |
+| `highs/Highs.h` | `Context`, `LpState`, declarations of the new private methods, flags `optimize_model_running_` and `model_mods_applied_`, overloads |
 | `highs/util/HighsUndoStack.h` | New |
 | `cmake/sources.cmake` | Lists `util/HighsUndoStack.h` |
 | `highs/lp_data/HighsSolve.cpp` | The `SOLVE_CATCH_CALL` macros replaced by the function templates `solveCatchCall()`, `solveCatchCallLpQp()` and `solveCatchCallMip()`, the last replacing the inline `try`/`catch` around the MIP solver. They don't log: a caught exception is stored in a `SolveExceptionRecord` and the caller logs it with `reportSolveException()`. `HighsUndoStack` for option changes |
-| `highs/lp_data/HighsInterface.cpp` | `HighsUndoStack` for option changes, `has_infinite_cost_` kept up to date in multi-objective solves, `processedBoundsFindsInfeasibility()` records its bound corrections as mods |
+| `highs/lp_data/HighsInterface.cpp` | `HighsUndoStack` for option changes, `has_infinite_cost_` kept up to date in multi-objective solves |
 | `highs/simplex/HApp.h` | `HighsUndoStack` for option changes |
-| `highs/HighsRun.md` | Describes where the mods are now applied, lists the bound corrections as a mod, and drops the ToDo for them |
+| `highs/HighsRun.md` | Describes where the mods are now applied, and drops the ToDo for moving them |
 
 ## Before
 
@@ -80,12 +78,12 @@ flowchart TD
 
     called --> preChecks["optimizeModelPreChecks()<br/>re-entry check, debug level,<br/>name hashes, warm start, exactResizeModel(),<br/>model_.assess() assert"]
     preChecks -->|"called while running"| refuse["return kError,<br/>nothing touched"]
-    preChecks --> applyMods["optimizeModelApplyMods()<br/>infinite costs, semi-variables,<br/>bound corrections;<br/>sets context.bounds_infeasible"]
-    applyMods --> complete["optimizeModelCompleteSolution()<br/>MIP with a (partial) solution and feasible bounds:<br/>completeSolutionFromDiscreteAssignment(),<br/>may call optimizeModel() again"]
+    preChecks --> applyMods["optimizeModelApplyMods()<br/>infinite costs, semi-variables"]
+    applyMods --> complete["optimizeModelCompleteSolution()<br/>MIP with a (partial) solution:<br/>completeSolutionFromDiscreteAssignment(),<br/>may call optimizeModel() again"]
     applyMods -->|error| early["returnFromOptimizeModelBeforeRunning()<br/>invalidate data, undo mods"]
     complete -->|error| early
     complete --> running["optimize_model_running_ = true"]
-    running --> prepare["optimizeModelPrepare()<br/>reset info and timer; empty model,<br/>bound infeasibility (from context), debug assessLp"]
+    running --> prepare["optimizeModelPrepare()<br/>reset info and timer; empty model,<br/>bounds, debug assessLp"]
 
     prepare -->|QP| qp["optimizeModelQp()<br/>MIQP and convexity checks, callSolveQp()"]
     prepare -->|MIP| mip["optimizeModelMip()"]
@@ -146,7 +144,7 @@ solve goes through `lpTimedSolve()`, which replaces the
 `Highs::Context` is created in `optimizeModelTryCatch()` and passed
 down by reference. It holds the status, the timings and the postsolve
 iteration count that used to be locals, `min_highs_debug_level`,
-`undo_mods`, `bounds_infeasible` (see [Mods](#mods)),
+`undo_mods` (see [Mods](#mods)),
 `options_undo` (only for option changes that last the whole solve) and
 `lp_state`.
 
@@ -238,9 +236,11 @@ values.
 ### Mods
 
 - `optimizeModelApplyMods()` makes all changes to the incumbent model,
-  in this order: infinite costs, assessing or (with
-  `solve_relaxation`) relaxing semi-variables, and correcting bounds
-  with small inconsistencies.
+  in this order: infinite costs, then assessing or (with
+  `solve_relaxation`) relaxing semi-variables. Bounds with small
+  inconsistencies are corrected permanently by
+  `processedBoundsFindsInfeasibility()` in `optimizeModelPrepare()`,
+  as before, so they are not a mod.
 - Everything needed to undo a mod is recorded in `model_.lp_.mods_`
   (`HighsLpMods`). The flags that say whether mods are applied live
   elsewhere: `HighsLp::has_infinite_cost_`, `model_mods_applied_` and
@@ -248,51 +248,13 @@ values.
 - `optimizeModelUndoMods()` undoes them. It is called from
   `returnFromOptimizeModel()`, `returnFromOptimizeModelBeforeRunning()`
   and `handleCatch`. It calls `restoreInfCost()`, then
-  `HighsLp::unapplyMods()`, which restores the corrected bounds and
-  then the semi-variables. The bound corrections never touch a column
-  changed by another mod:
-  - A column with an infinite cost always has consistent bounds after
-    `handleInfCost()`.
-  - Semi-variables are skipped. Some semi-variables are made
-    continuous or integer by `assessSemiVariables()`, so they are no
-    longer skipped, but their bounds are then [0, u] with u >= 0, or
-    [0, 0], so they are never corrected.
+  `HighsLp::unapplyMods()`, which restores the semi-variables.
 - This undo order is not the reverse of the apply order, since
   infinite costs are applied first but restored first. See
   [Known limitations](#known-limitations-not-introduced-here).
 - The new flag `model_mods_applied_` stops the nested `optimizeModel()`
   call made by `completeSolutionFromDiscreteAssignment()` from applying
   or undoing them a second time.
-- When `model_mods_applied_` is false, `optimizeModelApplyMods()`
-  starts by clearing `model_.lp_.mods_`. Any entries there were either
-  left by an exception while applying mods (see "Exception while
-  correcting bounds" below), or copied by `passModel()` with an LP
-  whose mods were applied. The MIP solver does this when it builds the repair LP
-  (`fixedModel`, a copy of `orig_model_`) and the LP relaxation (a copy
-  of `mipsolver.model_`). Without the clear, a child instance that
-  makes any mod of its own would also undo the inherited ones: it
-  would restore the parent's infinite costs, and index the
-  semi-variable records into an `integrality_` that it has cleared.
-
-#### Bound corrections
-
-- `processedBoundsFindsInfeasibility()` is called by
-  `optimizeModelApplyMods()`, after the semi-variable mods, instead of
-  by `optimizeModelPrepare()`. It records the original bounds of each
-  column and row that it corrects in `HighsLpMods`, and reports
-  whether it changed anything through a new `bool&` argument.
-- Bounds with an inconsistency larger than the primal feasibility
-  tolerance don't make `optimizeModelApplyMods()` stop, since that
-  would give an error. They set `context.bounds_infeasible`. Then:
-  - `optimizeModelCompleteSolution()` does nothing. Its nested
-    `optimizeModel()` call skips the mods, so it would no longer
-    detect the infeasibility.
-  - `optimizeModelPrepare()` checks the flag where it used to call
-    `processedBoundsFindsInfeasibility()`, after the empty-model
-    check, and returns `kInfeasible` with status `kOk`, as before.
-    The solve still goes through `returnFromOptimizeModel()`, so
-    `restoreInfCost()` still turns `kInfeasible` into `kUnknown` when
-    infinite costs were fixed.
 
 ### Presolve and postsolve on any LP
 
@@ -324,10 +286,9 @@ same for `model_.lp_`. (`HighsLp::isEmpty()` tests `<= 0` rather than
 | F5 | Failure of `completeSolutionFromDiscreteAssignment()` | Returned without undoing infinite-cost mods | Undone |
 | F6 | Errors before the solve runs: infinite costs that can't be handled, failure to complete the solution | Infinite costs: `info_.valid` set to `true` over stale info from an earlier solve, run data not invalidated. Failure to complete: returned with whatever the nested call left. (An invalid semi-variable already invalidated everything, through `returnFromOptimizeModel()` with `kSolveError`.) | Info, run data, solution and basis invalidated |
 | F7 | `callRunPostsolve()` errors | Called `returnFromOptimizeModel()` outside a solve, which hit its assert in debug | Own clean-up: invalidates info, run data, solution and basis |
-| F8 | `Highs::run()` with an error from `optimizeHighs()` or from `model_.assess()` | Returned without `userUnscale()`, leaving the model scaled | Unscaled, then the error is returned (but see B14) |
+| F8 | `Highs::run()` with an error from `optimizeHighs()` or from `model_.assess()` | Returned without `userUnscale()`, leaving the model scaled | Unscaled, then the error is returned (but see B11) |
 | F9 | Multiple objectives (`multiobjectiveSolve()`, `returnFromLexicographicOptimization()`) | `col_cost_` replaced without updating `has_infinite_cost_`: an assert in debug, or infinite costs reaching the solvers | Flag recomputed whenever the costs change |
 | F10 | Option changes in `HApp.h`, `HighsInterface.cpp`, `HighsSolve.cpp` and the LP pipeline | Not restored if an exception was thrown in between | Restored |
-| F11 | Bounds with inconsistencies less than the primal feasibility tolerance | Corrected permanently in the incumbent model, so the user's bounds were lost after the first solve | Corrected for the solve, then restored |
 
 The handling of exceptions in `optimizeModelTryCatch()` was already
 fixed in `latest` (3dde8fdc93): `handleCatch` keeps the model status
@@ -352,13 +313,9 @@ before.
 | B8 | **`run_data_.valid`** in `Highs::run()` is set after unscaling. | Stays `false` if `userUnscale()` returns an error. Before, it was `true`. |
 | B9 | **`assessLp` warning** in `optimizeModelPrepare()` no longer reaches the QP/MIP status. | None in practice: it is asserted never to happen, and the assert in `returnFromOptimizeModel()` rejected it anyway. |
 | B10 | **Raised `highs_debug_level`** is undone at the end of the solve. | None in practice: it only applies when the option is below its minimum, which option checks prevent. |
-| B11 | **Bounds are processed before `completeSolutionFromDiscreteAssignment()`** (F11). | The completion step sees the corrected bounds, so which discrete variables are fixed at the user's values can change. With bounds that are infeasible, the completion step is skipped: before, it ran, including its nested `optimizeModel()` call. The model status is still `kInfeasible`, and the user's solution is cleared as before. |
-| B12 | **Restored bounds after the solve** (F11). | The model returned to the user has the bounds the user gave. The solution, basis and info were computed with the corrected bounds, so the solution can violate the restored bounds by less than the primal feasibility tolerance. The next solve corrects them again. |
-| B13 | **Bound messages in the log** (F11). | "Model has %d small inconsistent bound(s): rectified" is printed on every solve, not only the first. The bound messages now come before any output from the completion step. For a model with no columns, they are now printed, and the model status is still `kModelEmpty`. |
-| B14 | **Unscaling after an error in `Highs::run()`** (F8). | `userUnscale()` calls `userScaleSolution(data, true)`. When nothing was solved (a `model_.assess()` failure, or an error from `optimizeHighs()` before `info_` is invalidated, such as a refused re-entry), it multiplies the stale `info_.objective_function_value` by the unscaling factor, although `userScale()` never scaled it. It also reruns the KKT check on the stale solution and logs "After solving the user-scaled model...". On these paths, only the model scaling should be undone, or `userScaleSolution()` called without `update_kkt`. |
-| B15 | **MIP debug checks with the restored tolerance** (F1). | With `highs_debug_level` at least cheap, `debugHighsSolution()` in `returnFromOptimizeModel()` now recomputes the MIP solution's infeasibilities with `primal_feasibility_tolerance`, not `mip_feasibility_tolerance`. An optimal MIP with violations between the two (1e-7 and 1e-6 with defaults) now gives "primal infeasibilities but model status is Optimal" and `kError`. The clobbered tolerance used to hide this. |
-| B16 | **Order of exception messages in the log.** | In the IPM and PDLP paths of `solveLp()`, the exception message is now printed after the error from `interpretCallStatus()`. In `solveMip()`, it is printed after the profiling clock is stopped. |
-| B17 | **Bound corrections in MIP sub-solvers** (F11). | The LP relaxation and the repair LP (`fixedModel`) are solved with `optimizeLp()`, so any small bound inconsistency in them is now corrected on every solve and restored afterwards, and their models keep the inconsistent bounds between solves. Rare, but worth a MIP benchmark. |
+| B11 | **Unscaling after an error in `Highs::run()`** (F8). | `userUnscale()` calls `userScaleSolution(data, true)`. When nothing was solved (a `model_.assess()` failure, or an error from `optimizeHighs()` before `info_` is invalidated, such as a refused re-entry), it multiplies the stale `info_.objective_function_value` by the unscaling factor, although `userScale()` never scaled it. It also reruns the KKT check on the stale solution and logs "After solving the user-scaled model...". On these paths, only the model scaling should be undone, or `userScaleSolution()` called without `update_kkt`. |
+| B12 | **MIP debug checks with the restored tolerance** (F1). | With `highs_debug_level` at least cheap, `debugHighsSolution()` in `returnFromOptimizeModel()` now recomputes the MIP solution's infeasibilities with `primal_feasibility_tolerance`, not `mip_feasibility_tolerance`. An optimal MIP with violations between the two (1e-7 and 1e-6 with defaults) now gives "primal infeasibilities but model status is Optimal" and `kError`. The clobbered tolerance used to hide this. |
+| B13 | **Order of exception messages in the log.** | In the IPM and PDLP paths of `solveLp()`, the exception message is now printed after the error from `interpretCallStatus()`. In `solveMip()`, it is printed after the profiling clock is stopped. |
 
 ## Other points for the review
 
@@ -366,10 +323,6 @@ before.
   public section of `Highs` (under "advanced methods: only for internal
   use"). It is now private and takes a `Context&`. Nothing in the
   repository calls it.
-- **`HighsLpMods` layout.** `HighsLpMods` (in the installed header
-  `lp_data/HStruct.h`) is a member of the public `HighsLp`. It gains
-  six vectors for the corrected bounds, so the layout of `HighsLp`
-  changes (an ABI change). No existing field or method changes.
 - **Installed header.** `Highs.h` now includes `util/HighsUndoStack.h`,
   so the new header has to be installed with it. It is listed in
   `cmake/sources.cmake`. `highs/meson.build` lists no headers, so
@@ -378,19 +331,6 @@ before.
   is still disabled by `consider_pdlp_cleanup = false`, and
   `possibly_use_log_dev_level_2` is still `false`. Both were moved
   without change.
-- **Exception while correcting bounds.** If an exception (in practice
-  `bad_alloc`) is thrown inside `processedBoundsFindsInfeasibility()`:
-  - If no earlier mod was applied, the bounds it has already corrected
-    are not undone, since `context.undo_mods` is only set once it
-    returns. The entries it recorded are cleared at the start of the
-    next solve. `handleInfCost()` and `assessSemiVariables()` have the
-    same weakness.
-  - If an infinite-cost or semi-variable mod was applied first,
-    `context.undo_mods` is already set, so the corrections recorded so
-    far are undone. A `bad_alloc` between the three `push_back` calls
-    for one column or row would leave the index, lower and upper
-    vectors with different lengths, which `unapplyMods()` asserts
-    against and would otherwise read past.
 
 ### Known limitations (not introduced here)
 
@@ -405,13 +345,17 @@ model is returned unchanged.
   to 0. Undoing restores [l, u], then sets the lower bound back to u,
   so the user's bounds end up as [u, u]. Swapping the two calls isn't
   enough, since `unapplyMods()` ends by clearing all of `mods_`,
-  including the infinite-cost records. The comment in `unapplyMods()`
-  that the bound corrections are "the first to be undone" is only true
-  within that function.
+  including the infinite-cost records.
 - **Rounded bounds for infinite costs.** For an integer column,
   `handleInfCost()` records the rounded bounds (`ceil` of the lower,
   `floor` of the upper), so `restoreInfCost()` writes the rounded
   values back into the user's model.
+- **Corrected bounds are permanent.** Bounds with inconsistencies less
+  than the primal feasibility tolerance are changed in the user's
+  model by `processedBoundsFindsInfeasibility()`, and not restored.
+  Restoring them is left for a separate PR, since the kept simplex
+  basis, `presolve()` after `run()` and the MIP sub-LPs would all have
+  to handle the restored bounds.
 
 ## Where each part went
 
@@ -424,7 +368,7 @@ option save/restore becoming `HighsUndoStack`.
 | Old part of `calledOptimizeModel()` | Now |
 |---|---|
 | Re-entry check, debug level, name hashes, warm start, `exactResizeModel()`, `model_.assess()` assert (added in `latest`, moved here so that it checks the model before any mods) | `optimizeModelPreChecks()` |
-| `handleInfCost()`, `assessSemiVariables()`, `relaxSemiVariables()` (in the QP and MIP branches), and the bound changes in `processedBoundsFindsInfeasibility()` | `optimizeModelApplyMods()`, undone by `optimizeModelUndoMods()` |
+| `handleInfCost()`, `assessSemiVariables()`, `relaxSemiVariables()` (in the QP and MIP branches) | `optimizeModelApplyMods()`, undone by `optimizeModelUndoMods()` |
 | Call of `completeSolutionFromDiscreteAssignment()` | `optimizeModelCompleteSolution()` |
 | Reset info and timer, empty model, infeasible bounds, `assessLp` (the large-value check was removed in `latest`, which checks the model with `model_.assess()` in `run()`) | `optimizeModelPrepare()` |
 | QP branch | `optimizeModelQp()` |
