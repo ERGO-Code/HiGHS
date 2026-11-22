@@ -34,6 +34,49 @@
 #include "simplex/HSimplexDebug.h"
 #include "util/HighsMatrixPic.h"
 #include "util/HighsSort.h"
+#include "util/HighsUndoStack.h"
+
+// State shared by the phases of optimizeModelLp
+struct Highs::LpState {
+  bool possibly_use_log_dev_level_2 = false;
+  HighsInt use_log_dev_level = 0;
+  bool use_output_flag = false;
+
+  bool solver_will_use_basis = false;
+  bool may_require_basis_postsolve = false;
+  bool no_incumbent_lp_solution_or_basis = false;
+
+  // Pivot threshold resulting from solving the presolved LP with
+  // simplex: illegal value unless updated
+  double factor_pivot_threshold = -1;
+
+  // Number of iterations when PDLP is used to solve the presolved
+  // problem, since the iteration count is reset to zero if PDLP is
+  // used to clean up after postsolve
+  HighsInt presolved_lp_pdlp_iteration_count = 0;
+
+  // Postsolve recovered a solution and basis, so the simplex
+  // solver is hot-started on the original LP
+  bool postsolve_recovered_basis = false;
+
+  double initial_time = -1;
+  double presolve_time = -1;
+  double solve_presolved_lp_time = -1;
+  double postsolve_time = -1;
+  double solve_original_lp_time = -1;
+  HighsInt postsolve_iteration_count = -1;
+};
+
+// State shared by the phases of calledOptimizeModel
+struct Highs::OptimizeModelContext {
+  HighsInt min_highs_debug_level = kHighsDebugLevelMin;
+
+  bool undo_mods = false;
+  HighsStatus status = HighsStatus::kOk;
+  HighsUndoStack options_undo;
+
+  LpState lp_state;
+};
 
 #define STRINGFY(s) STRINGFY0(s)
 #define STRINGFY0(s) #s
@@ -1345,7 +1388,7 @@ HighsStatus Highs::optimizeModelTryCatch() {
   // must last until the end of the optimization. Changes recorded in
   // context.options_undo are undone when context is destroyed, after
   // returnFromOptimizeModel()
-  Context context;
+  OptimizeModelContext context;
   HighsStatus status;
   auto handleCatch = [&]() {
     // The exception may have been thrown while optimizeModel() was
@@ -1385,7 +1428,7 @@ HighsStatus Highs::optimizeModelTryCatch() {
 // Checks the options calls presolve and postsolve if needed.
 //
 // LP solvers are called with callSolveLp(..)
-HighsStatus Highs::calledOptimizeModel(Context& context) {
+HighsStatus Highs::calledOptimizeModel(OptimizeModelContext& context) {
   this->logHeader();
   // Level 2b of Highs::run()
 
@@ -1420,7 +1463,7 @@ HighsStatus Highs::calledOptimizeModel(Context& context) {
   return returnFromOptimizeModel(context);
 }
 
-bool Highs::optimizeModelPreChecks(Context& context) {
+bool Highs::optimizeModelPreChecks(OptimizeModelContext& context) {
   // Prevent optimizeModel() being called from within optimizeModel(),
   // before anything is changed. Don't use
   // returnFromOptimizeModelBeforeRunning(), since the data of the
@@ -1461,7 +1504,7 @@ bool Highs::optimizeModelPreChecks(Context& context) {
   return false;
 }
 
-bool Highs::optimizeModelApplyMods(Context& context) {
+bool Highs::optimizeModelApplyMods(OptimizeModelContext& context) {
   // HiGHS solvers require models with no infinite costs, and
   // semi-variables that have either been relaxed or assessed. All
   // such modifications of the incumbent model are made here, and
@@ -1529,7 +1572,7 @@ bool Highs::optimizeModelApplyMods(Context& context) {
   return false;
 }
 
-bool Highs::optimizeModelCompleteSolution(Context& context) {
+bool Highs::optimizeModelCompleteSolution(OptimizeModelContext& context) {
   if (!model_.isMip() || !solution_.value_valid) return false;
   // Determine whether the current (partial) solution of a MIP is
   // feasible and, if not, try to complete the assignment with
@@ -1549,7 +1592,7 @@ bool Highs::optimizeModelCompleteSolution(Context& context) {
 }
 
 bool Highs::returnFromOptimizeModelBeforeRunning(
-    Context& context, const HighsModelStatus model_status) {
+    OptimizeModelContext& context, const HighsModelStatus model_status) {
   // Error return from calledOptimizeModel() before
   // optimize_model_running_ is set, so returnFromOptimizeModel() isn't
   // reached. Leave the Highs object in a consistent state: nothing
@@ -1569,7 +1612,7 @@ bool Highs::returnFromOptimizeModelBeforeRunning(
   return true;
 }
 
-void Highs::optimizeModelUndoMods(Context& context,
+void Highs::optimizeModelUndoMods(OptimizeModelContext& context,
                                   HighsStatus& return_status) {
   if (!context.undo_mods) return;
   // Restore any infinite costs
@@ -1580,7 +1623,7 @@ void Highs::optimizeModelUndoMods(Context& context,
   context.undo_mods = false;
 }
 
-bool Highs::optimizeModelPrepare(Context& context) {
+bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
   auto returnAndStop = [&](HighsStatus return_status) {
     context.status = return_status;
     return true;
@@ -1639,7 +1682,7 @@ bool Highs::optimizeModelPrepare(Context& context) {
   return false;
 }
 
-void Highs::optimizeModelQp(Context& context) {
+void Highs::optimizeModelQp(OptimizeModelContext& context) {
   // Any semi-variables have been relaxed by optimizeModelApplyMods()
   // if solving the relaxation
   if (model_.isMip() && !options_.solve_relaxation) {
@@ -1662,7 +1705,7 @@ void Highs::optimizeModelQp(Context& context) {
                                        context.status, "callSolveQp");
 }
 
-void Highs::optimizeModelMip(Context& context) {
+void Highs::optimizeModelMip(OptimizeModelContext& context) {
   if (options_.solve_relaxation) {
     // Solving just the relaxation, with any semi-variables relaxed by
     // optimizeModelApplyMods()
@@ -1678,7 +1721,7 @@ void Highs::optimizeModelMip(Context& context) {
                                        context.status, "callSolveMip");
 }
 
-void Highs::optimizeModelLp(Context& context) {
+void Highs::optimizeModelLp(OptimizeModelContext& context) {
   if (lpSetup(context)) return;
 
   HighsLp& incumbent_lp = model_.lp_;
@@ -1697,7 +1740,7 @@ void Highs::optimizeModelLp(Context& context) {
   lpFinish(context, incumbent_lp);
 }
 
-bool Highs::lpSetup(Context& context) {
+bool Highs::lpSetup(OptimizeModelContext& context) {
   LpState& lp_state = context.lp_state;
 
   lp_state.possibly_use_log_dev_level_2 = false;
@@ -1801,8 +1844,8 @@ HighsStatus Highs::lpICrash() {
   return HighsStatus::kOk;
 }
 
-bool Highs::lpUsePresolve(const Context& context, const HighsLp& lp,
-                          std::string& lp_solve_msg) const {
+bool Highs::lpUsePresolve(const OptimizeModelContext& context,
+                          const HighsLp& lp, std::string& lp_solve_msg) const {
   const bool unconstrained_lp = lp.numNz() == 0;
   assert(lp.num_row_ || unconstrained_lp);
   const bool has_basis = basis_.useful;
@@ -1833,7 +1876,7 @@ bool Highs::lpUsePresolve(const Context& context, const HighsLp& lp,
   return false;
 }
 
-bool Highs::lpSolveUnreduced(Context& context, HighsLp& lp,
+bool Highs::lpSolveUnreduced(OptimizeModelContext& context, HighsLp& lp,
                              const std::string& lp_solve_msg) {
   // If there is a valid HiGHS basis, refine any status values that
   // are simply HighsBasisStatus::kNonbasic
@@ -1841,7 +1884,7 @@ bool Highs::lpSolveUnreduced(Context& context, HighsLp& lp,
   return lpSolveOriginal(context, lp, lp_solve_msg, lp_solve_msg);
 }
 
-bool Highs::lpSolveOriginal(Context& context, HighsLp& lp,
+bool Highs::lpSolveOriginal(OptimizeModelContext& context, HighsLp& lp,
                             const std::string& lp_name,
                             const std::string& message) {
   LpState& lp_state = context.lp_state;
@@ -1854,8 +1897,8 @@ bool Highs::lpSolveOriginal(Context& context, HighsLp& lp,
   return context.status == HighsStatus::kError;
 }
 
-bool Highs::lpPresolve(Context& context, PresolveComponent& presolve,
-                       HighsLp*& lp) {
+bool Highs::lpPresolve(OptimizeModelContext& context,
+                       PresolveComponent& presolve, HighsLp*& lp) {
   LpState& lp_state = context.lp_state;
   // Possibly presolve - according to option_.presolve
   //
@@ -1894,7 +1937,7 @@ bool Highs::lpPresolve(Context& context, PresolveComponent& presolve,
   return false;
 }
 
-bool Highs::lpHandlePresolveStatus(Context& context,
+bool Highs::lpHandlePresolveStatus(OptimizeModelContext& context,
                                    const HighsPresolveStatus presolve_status) {
   const HighsLogOptions& log_options = options_.log_options;
   switch (presolve_status) {
@@ -1962,7 +2005,8 @@ bool Highs::lpHandlePresolveStatus(Context& context,
   }
 }
 
-void Highs::lpResolveUnboundedOrInfeasible(Context& context, HighsLp& lp) {
+void Highs::lpResolveUnboundedOrInfeasible(OptimizeModelContext& context,
+                                           HighsLp& lp) {
   LpState& lp_state = context.lp_state;
   // Presolve has returned kUnboundedOrInfeasible, but HiGHS
   // can't return this. Use primal simplex solver on the original
@@ -2001,7 +2045,7 @@ void Highs::lpResolveUnboundedOrInfeasible(Context& context, HighsLp& lp) {
   }
 }
 
-bool Highs::lpPrepareReducedLp(Context& context, HighsLp& lp) {
+bool Highs::lpPrepareReducedLp(OptimizeModelContext& context, HighsLp& lp) {
   lp.origin_name_ = "Reduced LP";
   lp.setMatrixDimensions();
   if (kAllowDeveloperAssert) {
@@ -2051,7 +2095,7 @@ void Highs::lpSetReducedToEmptySolution() {
   model_status_ = HighsModelStatus::kOptimal;
 }
 
-bool Highs::lpSolveReduced(Context& context,
+bool Highs::lpSolveReduced(OptimizeModelContext& context,
                            const HighsPresolveStatus presolve_status,
                            HighsLp& lp) {
   LpState& lp_state = context.lp_state;
@@ -2111,7 +2155,7 @@ bool Highs::lpSolveReduced(Context& context,
   return false;
 }
 
-HighsStatus Highs::lpTimedSolve(Context& context, HighsLp& lp,
+HighsStatus Highs::lpTimedSolve(OptimizeModelContext& context, HighsLp& lp,
                                 const std::string& description, double& time) {
   const LpState& lp_state = context.lp_state;
   time = -timer_.read(timer_.solve_clock);
@@ -2128,7 +2172,8 @@ HighsStatus Highs::lpTimedSolve(Context& context, HighsLp& lp,
   return call_status;
 }
 
-bool Highs::lpPostsolve(Context& context, PresolveComponent& presolve,
+bool Highs::lpPostsolve(OptimizeModelContext& context,
+                        PresolveComponent& presolve,
                         const HighsPresolveStatus presolve_status,
                         HighsLp& lp) {
   LpState& lp_state = context.lp_state;
@@ -2236,7 +2281,8 @@ bool Highs::lpPostsolve(Context& context, PresolveComponent& presolve,
   return false;
 }
 
-bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
+bool Highs::lpCleanupOriginal(OptimizeModelContext& context,
+                              HighsLp& incumbent_lp) {
   LpState& lp_state = context.lp_state;
   HighsStatus call_status;
   HighsLogOptions& log_options = options_.log_options;
@@ -2360,7 +2406,7 @@ bool Highs::lpCleanupOriginal(Context& context, HighsLp& incumbent_lp) {
   return false;
 }
 
-void Highs::lpFinish(Context& context, const HighsLp& lp) {
+void Highs::lpFinish(OptimizeModelContext& context, const HighsLp& lp) {
   // Cycling can yield model_status_ == HighsModelStatus::kNotset,
   //  assert(model_status_ != HighsModelStatus::kNotset);
 
@@ -5032,7 +5078,7 @@ HighsStatus Highs::returnFromWriteSolution(FILE* file,
 }
 
 // Applies checks before returning from optimizeModel()
-HighsStatus Highs::returnFromOptimizeModel(Context& context) {
+HighsStatus Highs::returnFromOptimizeModel(OptimizeModelContext& context) {
   const HighsStatus run_return_status = context.status;
   HighsStatus return_status = highsStatusFromHighsModelStatus(model_status_);
   if (return_status != run_return_status) {

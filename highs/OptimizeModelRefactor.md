@@ -5,7 +5,7 @@
 - `calledOptimizeModel()` was a single function of 926 lines, with 34
   `return` statements (29 of them through `returnFromOptimizeModel()`). It is now a short driver that calls one
   function per phase. The LP part is a pipeline of `lp*` functions.
-- The phases share their state through a `Context` struct, instead of
+- The phases share their state through an `OptimizeModelContext` struct, instead of
   through locals.
 - Option changes go through a new `HighsUndoStack`, which undoes them
   on every return path, including exceptions. Each function that
@@ -29,7 +29,7 @@ fixes and changes in behaviour.
 | File | Change |
 |---|---|
 | `highs/lp_data/Highs.cpp` | Split of `calledOptimizeModel()`, mods, single exit, `runPresolve`/`runPostsolve` overloads, `callRunPostsolve` error path, `run()` unscaling |
-| `highs/Highs.h` | `Context`, `LpState`, declarations of the new private methods, flags `optimize_model_running_` and `model_mods_applied_`, overloads |
+| `highs/Highs.h` | Forward declarations of `OptimizeModelContext` and `LpState` (defined in `Highs.cpp`), declarations of the new private methods, flags `optimize_model_running_` and `model_mods_applied_`, overloads |
 | `highs/util/HighsUndoStack.h` | New |
 | `cmake/sources.cmake` | Lists `util/HighsUndoStack.h` |
 | `highs/lp_data/HighsSolve.cpp` | The `SOLVE_CATCH_CALL` macro and the inline `try`/`catch` around the MIP solver replaced by the function template `solveCatchCall()`, which logs through `handleExceptionIsOom()` as before. `HighsUndoStack` for option changes |
@@ -71,7 +71,7 @@ flowchart TD
     optimizeHighs -->|single objective| optimizeModel["optimizeModel()<br/>initializeMultiThreading(), profiling"]
     multi -->|once per objective| optimizeModel
 
-    optimizeModel --> tryCatch["optimizeModelTryCatch()<br/>creates Context"]
+    optimizeModel --> tryCatch["optimizeModelTryCatch()<br/>creates OptimizeModelContext"]
     optimizeLp["optimizeLp()<br/>(LP-only entry point)"] --> tryCatch
     tryCatch --> called["calledOptimizeModel(context)"]
     tryCatch -.->|exception| catch["handleCatch:<br/>clearSolver() keeping model status,<br/>optimizeModelUndoMods()"]
@@ -102,7 +102,7 @@ Any change to `options_` during the solve is made through a
 `HighsUndoStack`: a local one in the function that makes the change,
 or `context.options_undo` for a change that must last until the end
 of the solve. Anything still recorded in `context.options_undo` is
-undone when the `Context` is destroyed at the end of
+undone when the `OptimizeModelContext` is destroyed at the end of
 `optimizeModelTryCatch()`.
 
 ## After: `optimizeModelLp()`
@@ -142,9 +142,10 @@ name and the message.
 
 ## New mechanisms
 
-### `Context` and `LpState`
+### `OptimizeModelContext` and `LpState`
 
-`Highs::Context` is created in `optimizeModelTryCatch()` and passed
+`Highs::OptimizeModelContext` is defined in `Highs.cpp`, created in
+`optimizeModelTryCatch()` and passed
 down by reference. It holds the control shared by all the steps: the
 status, `min_highs_debug_level`, `undo_mods` (see [Mods](#mods)),
 `options_undo` (only for option changes that last the whole solve) and
@@ -326,12 +327,13 @@ before.
 
 - **Public API.** `HighsStatus calledOptimizeModel();` was in the
   public section of `Highs` (under "advanced methods: only for internal
-  use"). It is now private and takes a `Context&`. Nothing in the
+  use"). It is now private and takes an `OptimizeModelContext&`. Nothing in the
   repository calls it.
-- **Installed header.** `Highs.h` now includes `util/HighsUndoStack.h`,
-  so the new header has to be installed with it. It is listed in
-  `cmake/sources.cmake`. `highs/meson.build` lists no headers, so
-  nothing is needed there.
+- **Installed header.** `Highs.h` only forward-declares
+  `OptimizeModelContext` and `LpState`, so it doesn't include
+  `util/HighsUndoStack.h`. The new header is still installed, since
+  `simplex/HApp.h` includes it. It is listed in `cmake/sources.cmake`.
+  `highs/meson.build` lists no headers, so nothing is needed there.
 - **Unchanged dead code.** The PDLP clean-up in `lpCleanupOriginal()`
   is still disabled by `consider_pdlp_cleanup = false`, and
   `possibly_use_log_dev_level_2` is still `false`. Both were moved
@@ -366,7 +368,7 @@ model is returned unchanged.
 
 These are moves. Apart from the items listed under
 [Behaviour changes](#behaviour-changes), the only edits are locals
-becoming `Context`/`LpState` fields, `return
+becoming `OptimizeModelContext`/`LpState` fields, `return
 returnFromOptimizeModel(...)` becoming `return true`, and manual
 option save/restore becoming `HighsUndoStack`.
 

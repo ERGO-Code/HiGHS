@@ -20,6 +20,7 @@
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
+#include "util/HighsUndoStack.h"
 
 void Highs::reportModelStats() const {
   const HighsLp& lp = this->model_.lp_;
