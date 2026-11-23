@@ -123,16 +123,16 @@ void Diagnostics::centrality(const Iterate& it, IterationReport& report,
     num_finite += model.hasLb(j) + model.hasUb(j);
 
   const Int num_outliers = record.num_small_prod + record.num_large_prod;
-  const bool many_outliers = num_outliers > kPoorCentralityFraction * num_finite;
-  const bool short_step = std::min(record.alpha_primal, record.alpha_dual) <
-                          kPoorCentralityAlpha;
+  const bool many_outliers =
+      num_outliers > kPoorCentralityFraction * num_finite;
+  const bool short_step =
+      std::min(record.alpha_primal, record.alpha_dual) < kPoorCentralityAlpha;
 
   if (many_outliers && short_step) {
     report.add(IssueType::kPoorCentrality);
     log_stream << "Poor centrality, " << record.num_small_prod << " small and "
-               << record.num_large_prod << " large products of "
-               << num_finite << ", stepsizes "
-               << sci(record.alpha_primal, 0, 1) << " "
+               << record.num_large_prod << " large products of " << num_finite
+               << ", stepsizes " << sci(record.alpha_primal, 0, 1) << " "
                << sci(record.alpha_dual, 0, 1) << "\n";
   }
 }
@@ -186,8 +186,8 @@ bool Diagnostics::residualReductionTest(const Iterate& it,
   // this is just a safety measure.
   if (model.qp() && alpha_primal != alpha_dual) {
     std::vector<double> res4_corrected = it.res.r4;
-    model.Q().alphaProductPlusY(-model.sense() * (alpha_primal - alpha_dual),
-                                it.delta.x, res4_corrected);
+    model.Q().alphaProductPlusY(-(alpha_primal - alpha_dual), it.delta.x,
+                                res4_corrected);
     res_norm_new[3] = infNorm(res4_corrected);
   }
 

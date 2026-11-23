@@ -36,7 +36,6 @@ class Model {
   const HighsLp* lp_orig_ = nullptr;
   const HighsHessian* Q_orig_ = nullptr;
   double offset_;
-  ObjSense sense_ = ObjSense::kMinimize;
   std::vector<double> rhs_orig_;
   std::vector<char> constraints_orig_;
 
@@ -113,7 +112,6 @@ class Model {
   const std::vector<char>& constraintsOrig() const { return constraints_orig_; }
   bool qp() const { return !Q_.empty(); }
   bool nonSeparableQp() const { return qp() && !Q_.isDiagonal(); }
-  double sense() const { return (double)sense_; }
   const HighsSparseMatrix& A() const { return A_; }
   const HighsHessian& Q() const { return Q_; }
   const std::vector<double>& b() const { return b_; }

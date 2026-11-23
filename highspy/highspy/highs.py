@@ -1609,10 +1609,12 @@ class Highs(_Highs):
         if value:
             self.cbSimplexInterrupt += self.__user_interrupt_event
             self.cbIpmInterrupt += self.__user_interrupt_event
+            self.cbPdlpInterrupt += self.__user_interrupt_event
             self.cbMipInterrupt += self.__user_interrupt_event
         else:
             self.cbSimplexInterrupt -= self.__user_interrupt_event
             self.cbIpmInterrupt -= self.__user_interrupt_event
+            self.cbPdlpInterrupt -= self.__user_interrupt_event
             self.cbMipInterrupt -= self.__user_interrupt_event
 
     def __user_interrupt_event(self, e: HighsCallbackEvent):
@@ -1634,6 +1636,7 @@ class Highs(_Highs):
     cbLogging: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackLogging)  # type: ignore[assignment]
     cbSimplexInterrupt: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackSimplexInterrupt)  # type: ignore[assignment]
     cbIpmInterrupt: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackIpmInterrupt)  # type: ignore[assignment]
+    cbPdlpInterrupt: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackPdlpInterrupt)  # type: ignore[assignment]
     cbMipSolution: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipSolution)  # type: ignore[assignment]
     cbMipImprovingSolution: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipImprovingSolution)  # type: ignore[assignment]
     cbMipLogging: HighsCallback = _callbackDescriptor(cb.HighsCallbackType.kCallbackMipLogging)  # type: ignore[assignment]

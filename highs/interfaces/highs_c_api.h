@@ -127,6 +127,7 @@ static const HighsInt kHighsCallbackMipDefineLazyConstraints = 8;
 static const HighsInt kHighsCallbackCallbackMipUserSolution = 9;
 static const HighsInt kHighsCallbackQpFirstFeasiblePoint = 10;
 static const HighsInt kHighsCallbackQpInterrupt = 11;
+static const HighsInt kHighsCallbackPdlpInterrupt = 12;
 
 // Constants for Highs_getCallbackDataOutItem. These do not appear in the C++
 // API.
