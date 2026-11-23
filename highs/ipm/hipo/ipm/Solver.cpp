@@ -601,13 +601,14 @@ void Solver::recordFactorisationSignals() {
     for (Int el = A.start_[j]; el < A.start_[j + 1]; ++el)
       diag[A.index_[el]] += A.value_[el] * A.value_[el] / denom;
   }
-  record.num_absorbed_rows = 0;
+  absorbed_rows_.clear();
   for (Int i = 0; i < m_; ++i) {
     const double tol =
         options_.feasibility_tol * (1.0 + std::abs(model_.b()[i]));
     if (diag[i] < it_->Rd[i] && std::abs(it_->res.r1[i]) > tol)
-      ++record.num_absorbed_rows;
+      absorbed_rows_.push_back(i);
   }
+  record.num_absorbed_rows = absorbed_rows_.size();
 }
 
 void Solver::residualNorms(double* norms) const {
@@ -1285,23 +1286,43 @@ bool Solver::applyAction(IterationRecord& record) {
   // only the regularisation actions are applied for now; they take effect at
   // the next factorisation
   const char* name = actionProperties(record.action).name;
+  std::stringstream log_stream;
   switch (record.action) {
     case RecoveryAction::kIncreaseReg:
       controls_.reg_scale *= kRegScaleFactor;
+      log_stream << "Applied " << name << ", regularisation scale "
+                 << sci(controls_.reg_scale, 0, 1) << "\n";
       break;
-    case RecoveryAction::kDecreaseReg:
-      controls_.reg_scale /= kRegScaleFactor;
+
+    case RecoveryAction::kDecreaseReg: {
+      // only the dual regularisation of the absorbed rows, down to a floor
+      Int changed = 0;
+      for (Int i : absorbed_rows_) {
+        double& factor = controls_.reg_d_factor[i];
+        const double new_factor =
+            std::max(factor / kRegScaleFactor, kMinRegFactor);
+        if (new_factor < factor) {
+          factor = new_factor;
+          ++changed;
+        }
+      }
+      if (changed == 0) {
+        record.messages +=
+            std::string("Would apply ") + name + ", rows at minimum\n";
+        return false;
+      }
+      log_stream << "Applied " << name << " to " << changed << " rows\n";
       break;
+    }
+
     case RecoveryAction::kNone:
       return false;
+
     default:
       record.messages += std::string("Would apply ") + name + "\n";
       return false;
   }
 
-  std::stringstream log_stream;
-  log_stream << "Applied " << name << ", regularisation scale "
-             << sci(controls_.reg_scale, 0, 1) << "\n";
   if (record.reset_to_best) {
     resetToBestIter(iter_);
     it_->diagnostics.clear(iter_);

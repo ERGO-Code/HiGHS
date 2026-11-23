@@ -55,6 +55,7 @@ const Int kActionPatience = 3;
 const Int kActionNumericalWindow = 5;
 const Int kMaxRegChanges = 3;
 const double kRegScaleFactor = 10.0;
+const double kMinRegFactor = 1e-3;
 
 // parameters for choice of AS or NE
 const double kSystemSpopsWeight = 30.0;

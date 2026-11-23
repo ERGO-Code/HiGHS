@@ -1,6 +1,7 @@
 #include "Recovery.h"
 
 #include <algorithm>
+#include <limits>
 
 #include "Parameters.h"
 
@@ -54,7 +55,8 @@ static const Rung kLadders[][kLadderSize] = {
      {RecoveryAction::kTerminate, 1},
      {RecoveryAction::kNone, 0}},
     // absorbed rows
-    {{RecoveryAction::kDecreaseReg, kMaxRegChanges},
+    // each row has a floor on its regularisation, so no limit is needed
+    {{RecoveryAction::kDecreaseReg, std::numeric_limits<Int>::max()},
      {RecoveryAction::kNone, 0}},
 };
 
@@ -126,11 +128,10 @@ Recovery::Proposal Recovery::propose(const IterationReport& report,
     reset_to_best = action != RecoveryAction::kNone;
   }
 
-  // 3: numerical trouble
-  if (action == RecoveryAction::kNone && numerical_now)
-    action = climb(kNumericalLadder, numerical_entry, can_switch);
+  // Numerical trouble without stagnation is not acted upon: the ipm is still
+  // progressing, and changing the regularisation can stop it.
 
-  // 4: absorbed rows
+  // 3: absorbed rows
   if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbedRows))
     action = climb(kAbsorbedLadder, 0, can_switch);
 

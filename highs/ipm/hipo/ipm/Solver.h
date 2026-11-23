@@ -69,6 +69,9 @@ class Solver {
   HighsSolution prev_point_;
   bool prev_point_valid_ = false;
 
+  // rows absorbed by the regularisation at the last factorisation
+  std::vector<Int> absorbed_rows_;
+
  public:
   // ===================================================================================
   // Load an LP or QP:

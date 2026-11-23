@@ -88,14 +88,14 @@ struct Recovery {
   //              with I or W
   //  stagnation: centre -> switch -> stop, entered at switch without C or
   //              with L
-  //  absorbed:   reg- (x kMaxRegChanges)
+  //  absorbed:   reg- on the absorbed rows, no limit
   // Issues are considered in decreasing order of priority, and the first one
   // with an action available is acted upon:
   //  1. stagnation, with I, W or G in the last kActionNumericalWindow
   //     iterations: numerical ladder;
   //  2. stagnation: stagnation ladder;
-  //  3. I, W or G: numerical ladder;
-  //  4. A: absorbed ladder.
+  //  3. A: absorbed ladder.
+  // I, W or G without stagnation are not acted upon.
   // No action is chosen within kActionPatience iterations of the previous one.
   // Each rung's action is chosen at most max_uses times in total, over all
   // ladders. switch is skipped if !can_switch. Actions chosen for stagnation
