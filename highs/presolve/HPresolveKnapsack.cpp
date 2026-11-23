@@ -128,6 +128,13 @@ void tightenRhs(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
   const HighsCDouble capacity = knapsack.capacity;
   if (isLargeKnapsackTerm(knapsack.terms[order[0]].weight, capacity, feastol)) {
     // Knapsack capacity is min(capacity, largest_item + small_sum)
+    // Consider the knapsack
+    // 13.5 x_1 + 12 x_2 + 11 x_3 + 3 x_4 + 2 x_5 ≤ 20
+    // The first three weights are all large, i.e., can't fit with one another.
+    // Assuming the worst-case that we can fit all the small items
+    // with the largest large item is then a bound on the capacity.
+    // In this example it is tighter than what's provided:
+    // 13.5 + 3 + 2 = 18.5 < 20
     tightenKnapsackCapacity(knapsack,
                             knapsack.terms[order[0]].weight + stats.smallSum,
                             feastol, changedRhs);
@@ -137,6 +144,14 @@ void tightenRhs(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
               capacity >
           feastol) {
     // At most two items above one third of the original capacity can fit.
+    // Consider the knapsack
+    // 8.5 x_1 + 8 x_2 + 7.5 x_3 + 7 x_4 + 2 x_5 <= 20
+    // The first four weights are all larger than 20/3, so no three
+    // of them can fit together. Take the largest two and assume that
+    // all the remaining smaller items are taken
+    // 8.5 + 8 + 2 = 18.5 < 20
+    // That lets us tighten the capacity. It's a generalisation of the above
+    // case
     tightenKnapsackCapacity(knapsack,
                             stats.outsideThirdSum +
                                 knapsack.terms[order[0]].weight +
@@ -160,6 +175,11 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
       knapsack.terms[order[stats.numLarge + stats.numSmall - 2]].weight;
   if (minWeight + secondMinWeight - knapsack.capacity > feastol) {
     // The row is a clique as no two items can be selected
+    // Consider
+    // 7 x_1 + 6.5 x_2 + 6 x_3 + 4.5 x_4 <= 10
+    // The two smallest items don't fit, i.e., 6 + 4.5 = 10.5 > 10
+    // The knapsack can therefore be
+    // x_1 + x_2 + x_3 + x_4 <= 1
     double newWeightSum = 0;
     for (auto& term : knapsack.terms) {
       if (term.weight == 0) continue;
@@ -178,6 +198,11 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
     if (term.weight + minWeight - knapsack.capacity > feastol) {
       // A large item cannot fit with the smallest item
       // Increase its weight to capacity
+      // Consider the knapsack
+      // 9.5 x_1 + 6 x_2 + 2 x_3 + 2 x_4 + 1 x_5 <= 10
+      // 9.5 + 1 = 10.5 > 10
+      // Change to
+      // 10 x_1 + 6 x_2 + 2 x_3 + 2 x_4 + 1 x_5 <= 10
       increaseKnapsackWeight(knapsack, term,
                              static_cast<double>(knapsack.capacity), feastol,
                              changed);
@@ -186,6 +211,13 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
                feastol) {
       // A large item cannot fit with the second-smallest unique value
       // Increase its weight to capacity - minWeight
+      // Consider the knapsack
+      // 8.5 x_1 + 6 x_2 + 3 x_3 + 1 x_4 + 1 x_5 <= 10
+      // 2 is the second-smallest possible value in the knapsack, which
+      // comes from selecting the two smallest items
+      // 8.5 + 2 = 10.5 > 10
+      // Change to
+      // 9 x_1 + 6 x_2 + 3 x_3 + 1 x_4 + 1 x_5 <= 10
       increaseKnapsackWeight(knapsack, term,
                              static_cast<double>(knapsack.capacity - minWeight),
                              feastol, changed);
@@ -199,6 +231,13 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
       // two small items can't be selected.
       // Increase its weight to capacity - smallSum + minWeight +
       // secondMinWeight (provided it's an improvement)
+      // Consider the knapsack
+      // 6.5 x_1 + 5.5 x_2 + 2.5 x_3 + 2.5 x_4 + 2 x_5 <= 10
+      // 6.5 + 2.5 + 2 = 11 > 10 (can't fit with small items excluding the
+      // largest small item)
+      // 10 - 2.5 = 7.5 > 6.5 (new proposed weight is larger)
+      // Change knapsack to
+      // 7.5 x_1 + 5.5 x_2 + 2.5 x_3 + 2.5 x_4 + 2 x_5 <= 10
       increaseKnapsackWeight(
           knapsack, term,
           static_cast<double>(knapsack.capacity - stats.smallSum + minWeight +
@@ -211,6 +250,14 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
       // fit with every small item but the smallest
       // Increase its weight to capacity - smallSum + minWeight (provided
       // it's an improvement)
+      // Consider the knapsack
+      // 6 x_1 + 5.5 x_2 + 2 x_3 + 2 x_4 + x_5 <= 10
+      // 5.5 + 2 + 2 + 1 = 10.5 > 10 (can't fit with all small items)
+      // 5.5 + 2 + 2 = 9.5 < 10 (can fit with all small items except
+      // the smallest)
+      // 10 - 2 - 2 = 6 > 5.5 (new weight is larger)
+      // Change knapsack to
+      // 6 x_1 + 6 x_2 + 2 x_3 + 2 x_4 + x_5 <= 10
       increaseKnapsackWeight(
           knapsack, term,
           static_cast<double>(knapsack.capacity - stats.smallSum + minWeight),
@@ -219,6 +266,11 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
       // A large item can fit with all small items
       // Increase its weight to capacity - smallSum (provided it's an
       // improvement)
+      // Consider the knapsack
+      // 8 x_1 + 7 x_2 + 6.5 x_3 + 2 x_4 + x_5 <= 10
+      // 6.5 + 2 + 1 = 9.5 < 10 (large item can co-exist with all small items)
+      // Change knapsack to
+      // 8 x_1 + 7 x_2 + 7 x_3 + 2 x_4 + x_5 <= 10
       increaseKnapsackWeight(
           knapsack, term,
           static_cast<double>(knapsack.capacity - stats.smallSum), feastol,
@@ -230,6 +282,14 @@ bool liftKnapsackWeights(KnapsackRow& knapsack,
 
 bool gcdAllButOne(std::vector<int64_t>& weights, int64_t& b,
                   const HighsInt numTerms) {
+  // Consider the knapsack
+  // 16 x_1 + 11 x_2 + 8 x_3 + 4 x_4 <= 21
+  // The GCD of the four terms is 1, but if we leave out 11 x_2,
+  // then the remaining three terms have a GCD of 4.
+  // We have that 11 % 4 = 3 and 21 % 4 = 1. We can therefore round up
+  // the weight 11 to 12 and round the capacity from 21 to 20.
+  // Dividing through by the GCD then gives the strictly stronger knapsack
+  // 4 x_1 + 3 x_2 + 2 x_3 + x_4 <= 5
   if (numTerms <= 2) return false;
   HighsInt numOnes = 0;
   HighsInt numZeros = 0;
@@ -315,24 +375,24 @@ bool gcdAllButOne(std::vector<int64_t>& weights, int64_t& b,
 
 void gcdRemoveTail(std::vector<int64_t>& weights, int64_t& b,
                    const HighsInt numTerms, const double feastol) {
-  // This function is uses the prefix and tail concept
+  // This function uses the prefix and tail concept
   // Given a sorted knapsack \sum a_i x_i <= b (larger weights first)
-  // The prefix are all weights before some point i, and the tail
-  // is all weights after
+  // The prefix are all weights before some item i, and the tail
+  // is all weights after and including item i
   // Concrete example:
   // 30 x_1 + 20 x_2 + 20 x_3 + 10 x_4 + 2 x_5 + x_6 <= 43
   // Prefix: 30 x_1 + 20 x_2 + 20 x_3 + 10 x_4
   // Tail: 2 x_5 + x_6
-  // We can see that the GCD for the prefix is 10. The remaining
-  // tail fits into capacity % GCD, and can therefore always
-  // fit into any knapsack, and are therefore redundant.
+  // We can see that the GCD for the prefix is 10. The
+  // tail fits into capacity modulo GCD, and can therefore fit alongside
+  // any prefix selection, and are therefore redundant.
   // Rewrite as: 3 x_1 + 2 x_2 + 2 x_3 + x_4 <= 4
   // Second example:
   // 9 x_1 + 8 x_2 + 7 x_3 + 6 x_4 + 2 x_5 + x_6 <= 20
   // Prefix: 9 x_1 + 8 x_2 + 7 x_3 + 6 x_4
   // Tail: 2 x_5 + x_6
   // Every pair of items in the prefix admit the entire tail,
-  // but no three items from the prefix can selected
+  // but no three items from the prefix can be selected
   // Rewrite as x_1 + x_2 + x_3 + x_4 <= 2
   std::vector<HighsCDouble> tailSum(numTerms + 1, 0);
   for (HighsInt i = numTerms; i > 0; --i) {
@@ -383,7 +443,7 @@ void gcdRemoveTail(std::vector<int64_t>& weights, int64_t& b,
 
 bool gcdSimplify(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
                  const double feastol) {
-  // Heuristically try recursive all-but-one GCD calls
+  // Turn all the weights and capacity into actual integer types
   const HighsInt numTerms = static_cast<HighsInt>(knapsack.terms.size());
   std::vector<int64_t> weights;
   weights.reserve(numTerms);
@@ -392,7 +452,10 @@ bool gcdSimplify(KnapsackRow& knapsack, const std::vector<HighsInt>& order,
   }
   int64_t b = static_cast<int64_t>(static_cast<double>(knapsack.capacity));
   const int64_t originalB = b;
+  // See if some smaller values can be eliminated via GCD arguments
   gcdRemoveTail(weights, b, numTerms, feastol);
+
+  // Try repeated-calls of all-but-one GCD calls until unsuccessful
   while (gcdAllButOne(weights, b, numTerms)) {
   }
   if (b != originalB) {
@@ -415,6 +478,23 @@ bool tryNormaliseConditionalKnapsack(KnapsackRow& knapsack,
                                      const double feastol, bool& changed) {
   // Determine if the knapsack's LP can be tightened and retain its solution
   // set by being represented by a knapsack with only weights {1, a}
+  // It does this by using the largest or smallest weight as a pivot
+  // and seeing if forced selecting or forced non-selection
+  // result in a fixed number of maximal items that can be subsequently selected
+  // Consider the knapsack
+  // 8 x_1 + 5 x_2 + 4 x_3 + 4 x_4 + 3 x_5 <= 13
+  // if x_1 = 0 -> any three remaining items fit, but no four items fit
+  // if x_1 = 1 -> any one item fits, but no two items fit
+  // The knapsack can be rewritten as
+  // 2 x_1 + x_2 + x_3 + x_4 + x_5 <= 3
+  // We only accept this if it dominates the LP of the original row
+  // The check selects a discrete fractional amounts of the
+  // pivot item, and then greedily packs in the largest items remaining.
+  // Why this is needed: Consider
+  // 8 x_1 + 5 x_2 + 5 x_3 + 3 x_4 + 3 x_5 <= 13
+  // It can also be transformed like above, but
+  // the solution (1/2, 1, 1, 0, 0) would now be valid, despite
+  // not being permitted in the original knapsack, i.e., no LP dominance.
 
   auto weight = [&](const HighsInt i) -> double& {
     return knapsack.terms[order[i]].weight;
@@ -498,6 +578,15 @@ bool tryNormaliseKnapsack(KnapsackRow& knapsack,
                           bool& changed) {
   // Determine if the knapsack's LP can be tightened and retain its solution
   // set by being represented by a knapsack with only weights {1, a}
+  // Consider the knapsack
+  // 11 x_1 + 5 x_2 + 5 x_3 + 4 x_4 + 4x_5 <= 11
+  // x_1 fills the knapsack by itself, and when it's not selected,
+  // the two largest "non-max-weight" items fit, but the three smallest
+  // "non-max-weight" items don't fit. A stronger knapsack is then
+  // 2 x_1 + x_2 + x_3 + x_4 + x_5 <= 2
+  // A cheap guard for checking LP dominance is whether the largest
+  // "non-max-weight" item can fit new-rhs many times into the
+  // old capacity, e.g., 2 * 5 <= 11
 
   auto weight = [&](const HighsInt i) -> double& {
     return knapsack.terms[order[i]].weight;
