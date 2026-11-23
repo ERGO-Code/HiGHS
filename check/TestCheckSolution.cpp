@@ -867,13 +867,24 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
 static void testStartSolution(Highs& h, const double required_objective) {
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
-  const double objective = h.getObjectiveValue();
-  REQUIRE(std::fabs(objective - required_objective) <=
+  const double optimal_objective = h.getObjectiveValue();
+  REQUIRE(std::fabs(optimal_objective - required_objective) <=
           1e-6 * (1 + std::fabs(required_objective)));
   const std::vector<double> col_value = h.getSolution().col_value;
   const double computed_objective = h.getLp().objectiveValue(col_value);
-  REQUIRE(std::fabs(computed_objective - objective) <=
-          1e-6 * (1 + std::fabs(objective)));
+  printf("testStartSolution: computed_objective = %g; optimal_objective = %g\n", computed_objective, optimal_objective);
+  REQUIRE(std::fabs(computed_objective - optimal_objective) <=
+          1e-6 * (1 + std::fabs(optimal_objective)));
+}
+
+static void printSolutionAndObjective(const std::string& message,
+				      const std::vector<double>& solution,
+				      const double objective) {
+  HighsInt num_col = solution.size();
+  printf("%s is\n   ", message.c_str());
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    printf("%2g%s", solution[iCol], iCol < num_col-1 ? " " : "\n");
+  printf("   with objective value %g\n", objective);
 }
 
 TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
@@ -893,17 +904,27 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   // Prevent the optimal solution from being found other than via the
   // image of the start solution
   h.setOptionValue("mip_heuristic_run_feasibility_jump", false);
-  h.setOptionValue("mip_max_nodes", 0);
   REQUIRE(h.readModel(model) == HighsStatus::kOk);
+  h.run();
+  const std::vector<double> optimal_col_value = h.getSolution().col_value;
+  const double optimal_objective = h.getLp().objectiveValue(optimal_col_value);
+  printSolutionAndObjective("Optimal solution", optimal_col_value, optimal_objective);
+
   HighsSolution solution;
   solution.col_value = start;
   solution.value_valid = true;
+  const double required_objective = optimal_objective;
+
+  REQUIRE(h.setSolution(solution) == HighsStatus::kOk);
+
   const double start_objective = h.getLp().objectiveValue(start);
-  const double required_objective = 6400000.258333333;
+  printSolutionAndObjective("Start solution", start, start_objective);
+
   // Sanity check that the start objective exceeds the required
   // objective
   REQUIRE(required_objective < start_objective);
-  REQUIRE(h.setSolution(solution) == HighsStatus::kOk);
+
+  h.setOptionValue("mip_max_nodes", 0);
   testStartSolution(h, required_objective);
 
   h.resetGlobalScheduler(true);
@@ -946,15 +967,6 @@ TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
   lp.a_matrix_.start_ = {0, 4, 7, 9};
   lp.a_matrix_.index_ = {1, 2, 3, 5, 0, 2, 4, 0, 3};
   lp.a_matrix_.value_ = {-1, 1, 1, -1, 1, 1, 1, 1, 1};
-
-  auto printSolutionAndObjective = [&] (const std::string& message,
-					const std::vector<double>& solution,
-					const double objective) {
-    printf("%s is (", message.c_str());
-    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++)
-      printf("%g%s", solution[iCol], iCol < lp.num_col_-1 ? ", " : ") with objective value ");
-    printf("%g\n", objective);
-  };
 
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
