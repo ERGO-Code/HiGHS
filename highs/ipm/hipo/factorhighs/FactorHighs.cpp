@@ -68,6 +68,8 @@ void FHsolver::setBlockSize(Int nb) {
 
 void FHsolver::setPivoting(bool pivoting) { options_.pivoting = pivoting; }
 
+void FHsolver::setDropBadPivots(bool drop) { options_.drop_bad_pivots = drop; }
+
 void FHsolver::setParallel(bool tree, bool node) {
   options_.parallel_tree = tree;
   options_.parallel_node = node;

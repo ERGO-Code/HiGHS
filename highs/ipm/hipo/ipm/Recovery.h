@@ -11,6 +11,7 @@ namespace hipo {
 enum class RecoveryAction {
   kNone,
   kMoreRefinement,
+  kDropBadPivots,
   kIncreaseReg,
   kDecreaseReg,
   kRecentre,
@@ -38,6 +39,8 @@ inline ActionProperties actionProperties(RecoveryAction action) {
       return {"none", ActionTiming::kImmediate, false, false};
     case RecoveryAction::kMoreRefinement:
       return {"refine", ActionTiming::kNextSolve, false, true};
+    case RecoveryAction::kDropBadPivots:
+      return {"drop", ActionTiming::kNextFactorisation, false, false};
     case RecoveryAction::kIncreaseReg:
       return {"reg+", ActionTiming::kNextFactorisation, false, false};
     case RecoveryAction::kDecreaseReg:
@@ -52,14 +55,20 @@ inline ActionProperties actionProperties(RecoveryAction action) {
   return {"?", ActionTiming::kImmediate, false, false};
 }
 
+// Actions that the current linear solver allows.
+struct SolverCapabilities {
+  bool can_switch = false;       // switch from up-looking to FactorHighs
+  bool can_drop_pivots = false;  // drop bad pivots: FactorHighs on NE, with G
+};
+
 // Keeps track of the actions chosen to recover from the issues detected, and
 // decides which action to take next.
 struct Recovery {
   // ===================================================================================
   // Choose the action for the issues in report, record it in proposed_actions
   // and return it; Solver::applyAction applies it. Ladders:
-  //  numerical:  refine -> reg+ (x kMaxRegChanges) -> switch, entered at reg+
-  //              with I or W
+  //  numerical:  refine -> drop -> reg+ (x kMaxRegChanges) -> switch, entered
+  //              at drop with I or W
   //  stagnation: centre -> switch -> stop, entered at switch without C or
   //              with L
   //  absorbed:   reg- on the absorbed rows, no limit
@@ -72,7 +81,8 @@ struct Recovery {
   // I, W or G without stagnation are not acted upon.
   // No action is chosen within kActionPatience iterations of the previous one.
   // Each rung's action is chosen at most max_uses times in total, over all
-  // ladders. switch is skipped if !can_switch. Actions chosen for stagnation
+  // ladders. switch and drop are skipped if capabilities do not allow them.
+  // Actions chosen for stagnation
   // (1 and 2), except centre, reset to the best iterate, as do those whose
   // properties say so.
   // ===================================================================================
@@ -81,7 +91,8 @@ struct Recovery {
     Int iter;
     bool reset_to_best;
   };
-  ProposedAction proposeAction(const IterationReport& report, bool can_switch);
+  ProposedAction proposeAction(const IterationReport& report,
+                               const SolverCapabilities& capabilities);
   std::vector<ProposedAction> proposed_actions;
 
  private:
@@ -102,7 +113,7 @@ struct Recovery {
   // action of the first rung, from start or from where the ladder got to, that
   // can be chosen; kNone if the ladder is exhausted
   RecoveryAction climbLadder(Ladder ladder, RecoveryAction start,
-                             bool can_switch);
+                             const SolverCapabilities& capabilities);
 
   // fewer than kActionPatience iterations since the previous action
   bool waitingForPreviousAction(Int iter) const;

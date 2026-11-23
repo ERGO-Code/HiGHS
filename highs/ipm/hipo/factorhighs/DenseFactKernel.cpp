@@ -112,8 +112,9 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
     staticReg(A[j + lda * j], sign_c, reg_c, totalreg[j], unreg_pivots[j]);
 
     if (std::max(std::abs(Acc), gamma_c) < thresh) {
-      // perturbe pivot
-      A[j + lda * j] = sign_c * thresh;
+      // perturbe pivot, or drop it
+      A[j + lda * j] =
+          sign_c * (options.drop_bad_pivots ? kDroppedPivot : thresh);
     }
     totalreg[j] = A[j + lda * j] - old_pivot;
 

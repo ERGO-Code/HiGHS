@@ -155,6 +155,11 @@ class FHsolver {
   // regularisation is applied.
   void setPivoting(bool pivoting);
 
+  // With pivoting, replace a pivot that dynamic regularisation would perturb
+  // by a huge value, which drops its component of the solution. Off by
+  // default.
+  void setDropBadPivots(bool drop);
+
   void setParallel(bool tree, bool node);
   void setParallelSolve(bool forward, bool backward, bool diag);
 

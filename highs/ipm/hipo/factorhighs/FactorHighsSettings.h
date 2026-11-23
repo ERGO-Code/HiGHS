@@ -41,6 +41,7 @@ const Int kMinConsecutiveSums = 1;
 
 // regularisation
 const double kDynamicDiagCoeff = 1e-24;
+const double kDroppedPivot = 1e128;
 
 // parallel solve
 const double kLargeTaskRelativeThresh = 0.01;

@@ -16,10 +16,11 @@ struct Rung {
 };
 
 // Ladders, ended by kNone.
-static const Int kLadderSize = 4;
+static const Int kLadderSize = 5;
 static const Rung kLadders[][kLadderSize] = {
     // numerical
     {{RecoveryAction::kMoreRefinement, 1},
+     {RecoveryAction::kDropBadPivots, 1},
      {RecoveryAction::kIncreaseReg, kMaxRegChanges},
      {RecoveryAction::kSwitchFactorisation, 1},
      {RecoveryAction::kNone, 0}},
@@ -42,7 +43,7 @@ Int Recovery::timesProposed(RecoveryAction action) const {
 }
 
 RecoveryAction Recovery::climbLadder(Ladder ladder, RecoveryAction start,
-                                     bool can_switch) {
+                                     const SolverCapabilities& capabilities) {
   const Rung* rungs = kLadders[ladder];
 
   // move up to start, unless the ladder is already past it
@@ -56,9 +57,12 @@ RecoveryAction Recovery::climbLadder(Ladder ladder, RecoveryAction start,
   for (; rung < kLadderSize && rungs[rung].action != RecoveryAction::kNone;
        ++rung) {
     const RecoveryAction action = rungs[rung].action;
+    const bool allowed = (action != RecoveryAction::kSwitchFactorisation ||
+                          capabilities.can_switch) &&
+                         (action != RecoveryAction::kDropBadPivots ||
+                          capabilities.can_drop_pivots);
     const bool can_choose =
-        timesProposed(action) < rungs[rung].max_uses &&
-        (action != RecoveryAction::kSwitchFactorisation || can_switch);
+        allowed && timesProposed(action) < rungs[rung].max_uses;
     if (can_choose) return action;
   }
   return RecoveryAction::kNone;
@@ -76,8 +80,8 @@ bool Recovery::waitingForPreviousAction(Int iter) const {
          iter - proposed_actions.back().iter < kActionPatience;
 }
 
-Recovery::ProposedAction Recovery::proposeAction(const IterationReport& report,
-                                                 bool can_switch) {
+Recovery::ProposedAction Recovery::proposeAction(
+    const IterationReport& report, const SolverCapabilities& capabilities) {
   const Int iter = report.iter;
 
   if (hasNumericalTrouble(report)) {
@@ -98,7 +102,7 @@ Recovery::ProposedAction Recovery::proposeAction(const IterationReport& report,
       report.has(IssueType::kVeryInaccurateSolve) ||
       report.has(IssueType::kWrongInertia);
   const RecoveryAction numerical_start = unreliable_direction
-                                             ? RecoveryAction::kIncreaseReg
+                                             ? RecoveryAction::kDropBadPivots
                                              : RecoveryAction::kMoreRefinement;
   const bool try_recentre = report.has(IssueType::kPoorCentrality) &&
                             !report.has(IssueType::kLargeResIncrease);
@@ -116,9 +120,9 @@ Recovery::ProposedAction Recovery::proposeAction(const IterationReport& report,
   // current point, which is the one poorly centred.
   if (report.stagnation()) {
     if (recent_numerical_trouble)
-      action = climbLadder(kNumericalLadder, numerical_start, can_switch);
+      action = climbLadder(kNumericalLadder, numerical_start, capabilities);
     if (action == RecoveryAction::kNone)
-      action = climbLadder(kStagnationLadder, stagnation_start, can_switch);
+      action = climbLadder(kStagnationLadder, stagnation_start, capabilities);
     reset_to_best =
         action != RecoveryAction::kNone && action != RecoveryAction::kRecentre;
   }
@@ -128,8 +132,8 @@ Recovery::ProposedAction Recovery::proposeAction(const IterationReport& report,
 
   // 3: absorbed rows
   if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbedRows))
-    action =
-        climbLadder(kAbsorbedLadder, RecoveryAction::kDecreaseReg, can_switch);
+    action = climbLadder(kAbsorbedLadder, RecoveryAction::kDecreaseReg,
+                         capabilities);
 
   // some actions always reset
   if (actionProperties(action).reset_to_best) reset_to_best = true;

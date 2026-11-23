@@ -1273,10 +1273,16 @@ void Solver::runDiagnostics() {
   }
   it_->diagnostics.divergence(*it_, iter_, record.report);
 
-  const bool can_switch = LS_ && LS_->type() == kUpLookingType &&
-                          options_.factor == kHighsChooseString;
+  // dropping acts only on pivots perturbed by dynamic regularisation, so it
+  // needs some in the last factorisation (kDynamicReg)
+  SolverCapabilities capabilities;
+  capabilities.can_switch = LS_ && LS_->type() == kUpLookingType &&
+                            options_.factor == kHighsChooseString;
+  capabilities.can_drop_pivots = LS_ && LS_->type() == kFactorHighsType &&
+                                 options_.nla == kHipoNormalEqString &&
+                                 record.report.has(IssueType::kDynamicReg);
   const Recovery::ProposedAction proposed =
-      recovery_.proposeAction(record.report, can_switch);
+      recovery_.proposeAction(record.report, capabilities);
   record.action = proposed.action;
   record.reset_to_best = proposed.reset_to_best;
 
@@ -1293,6 +1299,15 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
       controls_.refine_max_iter = kRecoveryRefineMaxIter;
       controls_.refine_tol = kRecoveryRefineTol;
       log_stream << "Applied " << name << "\n";
+      break;
+
+    case RecoveryAction::kDropBadPivots:
+      // proposed only if the linear solver supports it
+      if (!LS_->dropBadPivots()) {
+        record.messages += "Could not apply drop\n";
+        return false;
+      }
+      log_stream << "Applied " << name << " bad pivots\n";
       break;
 
     case RecoveryAction::kRecentre:

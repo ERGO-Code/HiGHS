@@ -17,6 +17,7 @@ struct FHoptions {
   double reg_d = 0.0;
   Int nb = kBlockSize;
   bool pivoting = true;
+  bool drop_bad_pivots = false;
   bool one_indexing = false;
   bool parallel_tree = false;
   bool parallel_node = false;
