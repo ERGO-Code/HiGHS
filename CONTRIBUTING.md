@@ -16,9 +16,9 @@ Note that, under the terms of the MIT license, by contributing to HiGHS you assi
 
 ## AI generated contributions
 
-The number of AI generated issues has increased dramatically since the summer of 2026. Relatively few will lead to practical contributions to the codebase, partly due to the nature of the issues, but also due to the resources available to address them. If you want to submit an AI generated issue, please email hello@highs.dev to indicate the nature of the issue and include your GitHub username so that we can recognise the source of the issue. AI generated issues submitted without going through this process may be deleted without discussion.
+The number of AI generated issues has increased dramatically since the summer of 2026. Relatively few will lead to practical contributions to the codebase, partly due to the nature of the issues, but also due to the resources available to address them. If you want to submit an AI generated issue, please email hello@highs.dev to indicate the nature of the issue and include your GitHub username so that we can recognise the source of the issue and invite a submisison. AI generated issues submitted without going through this process, or before we have invited them to be made, may be deleted without discussion.
 
-Whilst AI may be valuable for generating and communicating suggestions for code and build system developments, AI-generated pull requests (other than the most trivial) require review resources that we don't have and therefore will not be accepted. If the suggestions are good, they will be implemented by HiGHS developers without the use of AI.
+Whilst AI may be valuable for generating and communicating suggestions for code and build system developments, AI-generated pull requests (other than the most trivial) require review resources that we don't have and therefore will not be accepted. If the suggestions are good, they will be implemented by HiGHS developers without.
 
 ## Contact the HiGHS team
 
