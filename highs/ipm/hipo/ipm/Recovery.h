@@ -10,7 +10,6 @@ namespace hipo {
 
 enum class RecoveryAction {
   kNone,
-  kMoreRefinement,
   kDropBadPivots,
   kIncreaseReg,
   kDecreaseReg,
@@ -20,7 +19,6 @@ enum class RecoveryAction {
 };
 
 enum class ActionTiming {
-  kNextSolve,
   kNextFactorisation,
   kNextIteration,
   kImmediate,
@@ -37,8 +35,6 @@ inline ActionProperties actionProperties(RecoveryAction action) {
   switch (action) {
     case RecoveryAction::kNone:
       return {"none", ActionTiming::kImmediate, false, false};
-    case RecoveryAction::kMoreRefinement:
-      return {"refine", ActionTiming::kNextSolve, false, true};
     case RecoveryAction::kDropBadPivots:
       return {"drop", ActionTiming::kNextFactorisation, false, false};
     case RecoveryAction::kIncreaseReg:
@@ -67,8 +63,7 @@ struct Recovery {
   // ===================================================================================
   // Choose the action for the issues in report, record it in proposed_actions
   // and return it; Solver::applyAction applies it. Ladders:
-  //  numerical:  refine -> drop -> reg+ (x kMaxRegChanges) -> switch, entered
-  //              at drop with I or W
+  //  numerical:  drop -> reg+ (x kMaxRegChanges) -> switch
   //  stagnation: centre -> switch -> stop, entered at switch without C or
   //              with L
   //  absorbed:   reg- on the absorbed rows, no limit
@@ -82,9 +77,8 @@ struct Recovery {
   // No action is chosen within kActionPatience iterations of the previous one.
   // Each rung's action is chosen at most max_uses times in total, over all
   // ladders. switch and drop are skipped if capabilities do not allow them.
-  // Actions chosen for stagnation
-  // (1 and 2), except centre, reset to the best iterate, as do those whose
-  // properties say so.
+  // Only the actions whose properties say so (switch, stop) reset to the best
+  // iterate.
   // ===================================================================================
   struct ProposedAction {
     RecoveryAction action;

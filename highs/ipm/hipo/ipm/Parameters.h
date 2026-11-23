@@ -57,12 +57,6 @@ const Int kMaxRegChanges = 3;
 const double kRegScaleFactor = 10.0;
 const double kMinRegFactor = 1e-3;
 
-// refine: more steps and a tighter tolerance, reverted after some iterations
-// without inaccurate solves or dynamic regularisation
-const Int kRecoveryRefineMaxIter = 10;
-const double kRecoveryRefineTol = 1e-14;
-const Int kRefineRevertCleanIter = 3;
-
 // centre: lower bound on sigma for a fixed number of iterations
 const double kRecentreSigmaMin = 0.5;
 const Int kRecentreIter = 2;

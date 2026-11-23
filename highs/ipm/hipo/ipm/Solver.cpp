@@ -1295,12 +1295,6 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
   const char* name = actionProperties(record.action).name;
   std::stringstream log_stream;
   switch (record.action) {
-    case RecoveryAction::kMoreRefinement:
-      controls_.refine_max_iter = kRecoveryRefineMaxIter;
-      controls_.refine_tol = kRecoveryRefineTol;
-      log_stream << "Applied " << name << "\n";
-      break;
-
     case RecoveryAction::kDropBadPivots:
       // proposed only if the linear solver supports it
       if (!LS_->dropBadPivots()) {
@@ -1364,7 +1358,7 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
   }
 
   if (actionProperties(record.action).temporary)
-    temporary_actions_.push_back({record.action, iter_, 0});
+    temporary_actions_.push_back({record.action, iter_});
 
   if (record.reset_to_best) {
     resetToBestIter(iter_);
@@ -1377,23 +1371,11 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
 
 void Solver::revertTemporaryActions(IterationRecord& record) {
   const SolverControls defaults{};
-  const bool clean_solve =
-      !record.report.has(IssueType::kInaccurateSolve) &&
-      !record.report.has(IssueType::kVeryInaccurateSolve) &&
-      !record.report.has(IssueType::kDynamicReg);
 
   std::vector<TemporaryAction> still_active;
-  for (TemporaryAction& active : temporary_actions_) {
+  for (const TemporaryAction& active : temporary_actions_) {
     bool revert = false;
     switch (active.action) {
-      case RecoveryAction::kMoreRefinement:
-        active.clean_iters = clean_solve ? active.clean_iters + 1 : 0;
-        revert = active.clean_iters >= kRefineRevertCleanIter;
-        if (revert) {
-          controls_.refine_max_iter = defaults.refine_max_iter;
-          controls_.refine_tol = defaults.refine_tol;
-        }
-        break;
       case RecoveryAction::kRecentre:
         revert = iter_ - active.applied_iter >= kRecentreIter;
         if (revert) controls_.sigma_min = defaults.sigma_min;

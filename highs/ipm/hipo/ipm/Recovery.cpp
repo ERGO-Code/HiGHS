@@ -16,11 +16,10 @@ struct Rung {
 };
 
 // Ladders, ended by kNone.
-static const Int kLadderSize = 5;
+static const Int kLadderSize = 4;
 static const Rung kLadders[][kLadderSize] = {
     // numerical
-    {{RecoveryAction::kMoreRefinement, 1},
-     {RecoveryAction::kDropBadPivots, 1},
+    {{RecoveryAction::kDropBadPivots, 1},
      {RecoveryAction::kIncreaseReg, kMaxRegChanges},
      {RecoveryAction::kSwitchFactorisation, 1},
      {RecoveryAction::kNone, 0}},
@@ -95,15 +94,8 @@ Recovery::ProposedAction Recovery::proposeAction(
   if (waitingForPreviousAction(iter))
     return {RecoveryAction::kNone, iter, false};
 
-  // Where to start on each ladder. With I or W the direction is unreliable, so
-  // refinement cannot help. Recentring helps only if the point is poorly
-  // centred, and L is too urgent for it.
-  const bool unreliable_direction =
-      report.has(IssueType::kVeryInaccurateSolve) ||
-      report.has(IssueType::kWrongInertia);
-  const RecoveryAction numerical_start = unreliable_direction
-                                             ? RecoveryAction::kDropBadPivots
-                                             : RecoveryAction::kMoreRefinement;
+  // Where to start on the stagnation ladder: recentring helps only if the point
+  // is poorly centred, and L is too urgent for it.
   const bool try_recentre = report.has(IssueType::kPoorCentrality) &&
                             !report.has(IssueType::kLargeResIncrease);
   const RecoveryAction stagnation_start =
@@ -113,18 +105,14 @@ Recovery::ProposedAction Recovery::proposeAction(
   // Issues in decreasing order of priority; the first one for which an action
   // can be chosen is acted upon.
   RecoveryAction action = RecoveryAction::kNone;
-  bool reset_to_best = false;
 
-  // 1, 2: stagnation. No progress was made since the best iterate, so an
-  // action for stagnation restarts from it; recentring instead acts on the
-  // current point, which is the one poorly centred.
+  // 1, 2: stagnation
   if (report.stagnation()) {
     if (recent_numerical_trouble)
-      action = climbLadder(kNumericalLadder, numerical_start, capabilities);
+      action = climbLadder(kNumericalLadder, RecoveryAction::kDropBadPivots,
+                           capabilities);
     if (action == RecoveryAction::kNone)
       action = climbLadder(kStagnationLadder, stagnation_start, capabilities);
-    reset_to_best =
-        action != RecoveryAction::kNone && action != RecoveryAction::kRecentre;
   }
 
   // Numerical trouble without stagnation is not acted upon: the ipm is still
@@ -135,10 +123,8 @@ Recovery::ProposedAction Recovery::proposeAction(
     action = climbLadder(kAbsorbedLadder, RecoveryAction::kDecreaseReg,
                          capabilities);
 
-  // some actions always reset
-  if (actionProperties(action).reset_to_best) reset_to_best = true;
-
-  const ProposedAction proposed{action, iter, reset_to_best};
+  const ProposedAction proposed{action, iter,
+                                actionProperties(action).reset_to_best};
   if (action != RecoveryAction::kNone) proposed_actions.push_back(proposed);
   return proposed;
 }

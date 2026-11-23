@@ -76,7 +76,6 @@ class Solver {
   struct TemporaryAction {
     RecoveryAction action;
     Int applied_iter;
-    Int clean_iters;
   };
   std::vector<TemporaryAction> temporary_actions_;
 
@@ -326,8 +325,7 @@ class Solver {
 
   // ===================================================================================
   // Revert the temporary actions that are no longer needed, restoring the
-  // default controls: refine after kRefineRevertCleanIter iterations without
-  // i, I or G; centre after kRecentreIter iterations.
+  // default controls: centre after kRecentreIter iterations.
   // ===================================================================================
   void revertTemporaryActions(IterationRecord& record);
 
