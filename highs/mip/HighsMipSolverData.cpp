@@ -866,7 +866,10 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
       // Reset the solution objecive and clear the saved solution
       mipsolver.solution_objective_ = kHighsInf;
       mipsolver.solution_.clear();
-      // The following values should not yet have been changed from
+      mipsolver.bound_violation_ = 0;
+      mipsolver.integrality_violation_ = 0;
+      mipsolver.row_violation_ = 0;
+     // The following values should not yet have been changed from
       // their values corresponding to no start solution
       assert(lower_bound == -kHighsInf);
       assert(upper_bound == kHighsInf);
@@ -884,6 +887,8 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
 	assert(num_col1 == num_col);
       }
       HighsInt num_differences = 0;
+      double max_difference = 0;
+      double sum_differences = 0;
       const HighsInt max_logged_differences = 3;
       bool logged_header = false;
 
@@ -894,31 +899,36 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
 	logged_header = true;
       };
       
-      double abs_dl = std::fabs(v0-v1);
-      double rel_dl = abs_dl / (1+0.5*(std::fabs(v0) + fabs(v1)));
-      if (rel_dl > 1e-6) {
+      double abs_difference = std::fabs(v0-v1);
+      double rel_difference = abs_difference / (1+0.5*(std::fabs(v0) + fabs(v1)));
+      if (rel_difference > 1e-6) {
 	logHeader();
 	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
 		     "   Obj     %12.12g       %12.12g         %12.12g\n",
-		     v0, v1, abs_dl);
+		     v0, v1, abs_difference);
       }
       for (HighsInt iCol = 0; iCol < num_col; iCol++) {
-	double abs_dl = std::fabs(s0[iCol]-s1[iCol]);
-	double rel_dl = abs_dl / (1+0.5*(std::fabs(s0[iCol]) + std::fabs(s1[iCol])));
-	if (rel_dl > 1e-6) {
+	double abs_difference = std::fabs(s0[iCol]-s1[iCol]);
+	double rel_difference = abs_difference / (1+0.5*(std::fabs(s0[iCol]) + std::fabs(s1[iCol])));
+	if (rel_difference > 1e-6) {
 	  num_differences++;
+	  max_difference = std::max(abs_difference, max_difference);
+	  sum_differences += abs_difference;
 	  if (!logged_header) logHeader();
 	  if (num_differences <= max_logged_differences)
 	    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
 			 "   %3d     %12.12g       %12.12g         %12.12g\n",
-			 int(iCol), s0[iCol], s1[iCol], abs_dl);
+			 int(iCol), s0[iCol], s1[iCol], abs_difference);
 	}
       }
       HighsInt num_unlogged_differences = num_differences - max_logged_differences;
-      if (num_unlogged_differences > 0)
+      if (num_unlogged_differences > 0) 
       highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
 		   "   Further %d unlogged difference%s\n", int(num_unlogged_differences),
 		   highsIntToPlural(num_unlogged_differences).c_str());
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		   "   Num / max / sum differences of %d / %.12g / %.12g\n", 
+		   int(num_differences),  max_difference, sum_differences);
     };
 
     // Perform checking and logging of the current MIP solution
@@ -974,6 +984,9 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
 				original_space_solution.col_value, original_space_objective_value);
     mipsolver.solution_objective_ = original_space_objective_value;
     mipsolver.solution_ = original_space_solution.col_value;
+    original_space_violation.copy(mipsolver.bound_violation_,
+				  mipsolver.row_violation_,
+				  mipsolver.integrality_violation_);
     // The objective used by the MIP solver in the reduced space may
     // have changed
     solobj = mipsolver_reduced_objective_value;

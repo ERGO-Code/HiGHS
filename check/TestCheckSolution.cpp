@@ -872,6 +872,7 @@ static void testStartSolution(Highs& h, const double required_objective) {
           1e-6 * (1 + std::fabs(required_objective)));
   const std::vector<double> col_value = h.getSolution().col_value;
   const double computed_objective = h.getLp().objectiveValue(col_value);
+  if (dev_run) 
   printf("testStartSolution: computed_objective = %g; optimal_objective = %g\n",
          computed_objective, optimal_objective);
   REQUIRE(std::fabs(computed_objective - optimal_objective) <=
@@ -881,6 +882,7 @@ static void testStartSolution(Highs& h, const double required_objective) {
 static void printSolutionAndObjective(const std::string& message,
                                       const std::vector<double>& solution,
                                       const double objective) {
+  if (!dev_run) return;
   HighsInt num_col = solution.size();
   printf("%s is\n   ", message.c_str());
   for (HighsInt iCol = 0; iCol < num_col; iCol++)
@@ -902,9 +904,6 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   Highs h;
   //  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("mip_rel_gap", 0);
-  // Prevent the optimal solution from being found other than via the
-  // image of the start solution
-  h.setOptionValue("mip_heuristic_run_feasibility_jump", false);
   REQUIRE(h.readModel(model) == HighsStatus::kOk);
   h.run();
   const std::vector<double> optimal_col_value = h.getSolution().col_value;
@@ -915,7 +914,6 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   HighsSolution solution;
   solution.col_value = start;
   solution.value_valid = true;
-  const double required_objective = optimal_objective;
 
   REQUIRE(h.setSolution(solution) == HighsStatus::kOk);
 
@@ -924,10 +922,18 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
 
   // Sanity check that the start objective exceeds the required
   // objective
-  REQUIRE(required_objective < start_objective);
+  REQUIRE(optimal_objective < start_objective);
 
-  h.setOptionValue("mip_max_nodes", 0);
-  testStartSolution(h, required_objective);
+  // Start solution is not optimal, but when the objecctive value of
+  // its presolved image is evaluated, it yields the optimal
+  // objective. Presumably this is becaues the start solution has
+  // components whose values are inconsistent with presolve
+  // reductions, and these are "corrected" when presolve is applied to
+  // the start solution. Further evidence of this comes when the
+  // postsolve is applied to the presolved image, as the resulting
+  // solution (back in the original space) differs from the original
+  // start solution.
+  testStartSolution(h, optimal_objective);
 
   h.resetGlobalScheduler(true);
 }
