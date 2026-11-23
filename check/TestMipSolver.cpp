@@ -2843,3 +2843,63 @@ TEST_CASE("issue-3573", "[highs_test_mip_solver]") {
 
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3618", "[highs_test_mip_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s",
+          "Minimize\n obj: x0 + x1\nSubject To\n c1: x0 + x1 >= "
+          "2.00000011\nBounds\n 1 <= x0 <= 1.00000007\n 1 <= x1 <= "
+          "1.00000005\nEnd\n");
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3742", "[highs_test_mip_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s",
+          "Maximize\n obj: + 77 x1 + 59 x2 + 49 x3 + 30 x4 + 39 x5 + 76 x6 + "
+          "24 x7\nSubject To\n c1: + 76 x1 + 72 x2 + 22 x3 + 29 x4 + 23 x5 + "
+          "75 x6 + 18 x7 <= 157\n c2: + 67 x1 + 27 x2 + 87 x3 + 42 x4 + 86 x5 "
+          "+ 39 x6 + 21 x7 <= 184\nBinary\n x1 x2 x3 x4 x5 x6 x7\nEnd\n");
+
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue(kPresolveString, kHighsOffString);
+  h.setOptionValue("mip_max_nodes", 1);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kWarning);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kSolutionLimit);
+  // Code coverate for writing objective bound and MIP rel gap
+  // whenever a primal solution is available
+  h.writeSolution("");
+  h.writeSolution("", 1);
+
+  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3768", "[highs_test_mip_solver]") {
+  const std::string model = "3768";
+  const std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  h.resetThreadScheduler(true);
+}
