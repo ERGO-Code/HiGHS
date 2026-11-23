@@ -3965,7 +3965,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
   if (style == kSolutionStyleSparse)
     return returnFromWriteSolution(file, return_status);
   if (style == kSolutionStyleRaw) {
-    fprintf(file, "\n# Basis\n");
+    highsFprintfString(file, options_.log_options, "\n# Basis\n");
     writeBasisFile(file, options_, model_.lp_, basis_);
   }
   if (options_.ranging == kHighsOnString) {
@@ -3980,7 +3980,7 @@ HighsStatus Highs::writeSolution(const std::string& filename,
                             return_status, "getRangingInterface");
     if (return_status == HighsStatus::kError)
       return returnFromWriteSolution(file, return_status);
-    fprintf(file, "\n# Ranging\n");
+    highsFprintfString(file, options_.log_options, "\n# Ranging\n");
     writeRangingFile(file, model_.lp_, info_.objective_function_value, basis_,
                      solution_, ranging_, style);
   }

@@ -22,13 +22,6 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
-      - name: Install LLVM and Clang (needed by bindgen)
-        if: runner.os == 'Windows'
-        uses: KyleMayes/install-llvm-action@v1.9.0
-        with:
-          version: "17"
-          directory: ${{ runner.temp }}/llvm
-
       - name: Set LIBCLANG_PATH
         if: runner.os == 'Windows'
         run: echo "LIBCLANG_PATH=$((gcm clang).source -replace "clang.exe")" >> $env:GITHUB_ENV

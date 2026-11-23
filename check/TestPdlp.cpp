@@ -325,3 +325,54 @@ TEST_CASE("pdlp-restart-add-row", "[pdlp]") {
   if (dev_run) h.writeSolution("", 1);
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("pdlp-small-row-coefficient", "[pdlp]") {
+  // #3679: max x s.t. 1e-8 x <= 1, 1e8 x >= 1, x >= 0 has optimal value 1e8.
+  // PDLP used to report unbounded or infeasible after one iteration.
+  // Solving to optimality takes ~8e7 iterations, so only check the status
+  // after a limited number of iterations.
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("solver", kPdlpString);
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("pdlp_iteration_limit", 1000);
+  highs.changeObjectiveSense(ObjSense::kMaximize);
+  double cost = 1.0, lower = 0.0, upper = inf;
+  REQUIRE(highs.addCols(1, &cost, &lower, &upper, 0, nullptr, nullptr,
+                        nullptr) == HighsStatus::kOk);
+  double row_lower[2] = {-inf, 1.0};
+  double row_upper[2] = {1.0, inf};
+  HighsInt start[2] = {0, 1};
+  HighsInt index[2] = {0, 0};
+  double value[2] = {1e-8, 1e8};
+  REQUIRE(highs.addRows(2, row_lower, row_upper, 2, start, index, value) ==
+          HighsStatus::kOk);
+  highs.run();
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kIterationLimit);
+
+  highs.resetThreadScheduler(true);
+
+  // Mirror image: min x s.t. 1e-8 x >= 1, x >= 0 has optimal value 1e8.
+  // PDLP used to report that the LP is infeasible/unbounded after a few
+  // iterations.
+  Highs mirror;
+  mirror.setOptionValue("output_flag", dev_run);
+  mirror.setOptionValue("solver", kPdlpString);
+  mirror.setOptionValue("presolve", kHighsOffString);
+  mirror.setOptionValue("kkt_tolerance", kkt_tolerance);
+  REQUIRE(mirror.addCols(1, &cost, &lower, &upper, 0, nullptr, nullptr,
+                         nullptr) == HighsStatus::kOk);
+  double mirror_row_lower = 1.0;
+  double mirror_row_upper = inf;
+  HighsInt mirror_start = 0;
+  HighsInt mirror_index = 0;
+  double mirror_value = 1e-8;
+  REQUIRE(mirror.addRows(1, &mirror_row_lower, &mirror_row_upper, 1,
+                         &mirror_start, &mirror_index,
+                         &mirror_value) == HighsStatus::kOk);
+  REQUIRE(mirror.run() == HighsStatus::kOk);
+  REQUIRE(mirror.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(std::abs(mirror.getInfo().objective_function_value - 1e8) <=
+          1e-6 * 1e8);
+  mirror.resetThreadScheduler(true);
+}
