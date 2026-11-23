@@ -861,6 +861,7 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
                         mipsolver.row_violation_ <=
                             mipsolver.options_mip_->mip_feasibility_tolerance;
   if (numRestarts == 0 && !from_cleanup_solve) {
+
     auto clearSavedSolution = [&]() {
       // Reset the solution objecive and clear the saved solution
       mipsolver.solution_objective_ = kHighsInf;
@@ -872,6 +873,54 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
       assert(upper_limit == kHighsInf);
       assert(optimality_limit == kHighsInf);
     };
+
+    auto compareSolutionAndObjective = [&](const std::vector<double>& s0, const double& v0,
+					   const std::vector<double>& s1, const double& v1) {
+      HighsInt num_col = s0.size();
+      HighsInt num_col1 = s1.size();
+      if (num_col1 != num_col) {
+	printf("\nERROR: compareSolutionAndObjective: s0 and s1 have sizes %d and %d\n",
+	       int(num_col), int(num_col1));
+	assert(num_col1 == num_col);
+      }
+      HighsInt num_differences = 0;
+      const HighsInt max_logged_differences = 3;
+      bool logged_header = false;
+
+      auto logHeader = [&]() {
+	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		     "MIP start solution and its postsolved reduced space image differ\n"
+		     "   Col   start solution   postsolved image               |diff|\n");
+	logged_header = true;
+      };
+      
+      double abs_dl = std::fabs(v0-v1);
+      double rel_dl = abs_dl / (1+0.5*(std::fabs(v0) + fabs(v1)));
+      if (rel_dl > 1e-6) {
+	logHeader();
+	highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		     "   Obj     %12.12g       %12.12g         %12.12g\n",
+		     v0, v1, abs_dl);
+      }
+      for (HighsInt iCol = 0; iCol < num_col; iCol++) {
+	double abs_dl = std::fabs(s0[iCol]-s1[iCol]);
+	double rel_dl = abs_dl / (1+0.5*(std::fabs(s0[iCol]) + std::fabs(s1[iCol])));
+	if (rel_dl > 1e-6) {
+	  num_differences++;
+	  if (!logged_header) logHeader();
+	  if (num_differences <= max_logged_differences)
+	    highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+			 "   %3d     %12.12g       %12.12g         %12.12g\n",
+			 int(iCol), s0[iCol], s1[iCol], abs_dl);
+	}
+      }
+      HighsInt num_unlogged_differences = num_differences - max_logged_differences;
+      if (num_unlogged_differences > 0)
+      highsLogUser(mipsolver.options_mip_->log_options, HighsLogType::kInfo,
+		   "   Further %d unlogged difference%s\n", int(num_unlogged_differences),
+		   highsIntToPlural(num_unlogged_differences).c_str());
+    };
+
     // Perform checking and logging of the current MIP solution
     if (!feasible || !checkSolution(incumbent)) {
       // A current solution that is infeasible in the original or
@@ -921,6 +970,8 @@ void HighsMipSolverData::checkAddSolution(const bool from_cleanup_solve) {
     const double previous_mipsolver_solution_objective =
         mipsolver.solution_objective_;
     // Update the saved objective and solution
+    compareSolutionAndObjective(mipsolver.solution_, mipsolver.solution_objective_,
+				original_space_solution.col_value, original_space_objective_value);
     mipsolver.solution_objective_ = original_space_objective_value;
     mipsolver.solution_ = original_space_solution.col_value;
     // The objective used by the MIP solver in the reduced space may
