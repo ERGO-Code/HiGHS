@@ -28,27 +28,26 @@ struct ActionProperties {
   const char* name;
   ActionTiming timing;
   bool reset_to_best;
-  bool temporary;
 };
 
 inline ActionProperties actionProperties(RecoveryAction action) {
   switch (action) {
     case RecoveryAction::kNone:
-      return {"none", ActionTiming::kImmediate, false, false};
+      return {"none", ActionTiming::kImmediate, false};
     case RecoveryAction::kDropBadPivots:
-      return {"drop", ActionTiming::kNextFactorisation, false, false};
+      return {"drop", ActionTiming::kNextFactorisation, false};
     case RecoveryAction::kIncreaseReg:
-      return {"reg+", ActionTiming::kNextFactorisation, false, false};
+      return {"reg+", ActionTiming::kNextFactorisation, false};
     case RecoveryAction::kDecreaseReg:
-      return {"reg-", ActionTiming::kNextFactorisation, false, false};
+      return {"reg-", ActionTiming::kNextFactorisation, false};
     case RecoveryAction::kRecentre:
-      return {"centre", ActionTiming::kNextIteration, false, true};
+      return {"centre", ActionTiming::kNextIteration, false};
     case RecoveryAction::kSwitchFactorisation:
-      return {"switch", ActionTiming::kNextIteration, true, false};
+      return {"switch", ActionTiming::kNextIteration, true};
     case RecoveryAction::kTerminate:
-      return {"stop", ActionTiming::kImmediate, true, false};
+      return {"stop", ActionTiming::kImmediate, true};
   }
-  return {"?", ActionTiming::kImmediate, false, false};
+  return {"?", ActionTiming::kImmediate, false};
 }
 
 // Actions that the current linear solver allows.

@@ -4,6 +4,7 @@
 #include <string>
 
 #include "Control.h"
+#include "Centring.h"
 #include "Diagnostics.h"
 #include "FactorHighsSolver.h"
 #include "Info.h"
@@ -72,12 +73,8 @@ class Solver {
   // rows absorbed by the regularisation at the last factorisation
   std::vector<Int> absorbed_rows_;
 
-  // temporary actions still in effect, see revertTemporaryActions
-  struct TemporaryAction {
-    RecoveryAction action;
-    Int applied_iter;
-  };
-  std::vector<TemporaryAction> temporary_actions_;
+  // centring mode, started by the centre action
+  Centring centring_{};
 
  public:
   // ===================================================================================
@@ -317,17 +314,10 @@ class Solver {
 
   // ===================================================================================
   // Apply the action chosen by recovery_ for the issues in record, resetting to
-  // the best iterate if record says so. Temporary actions are recorded, to be
-  // reverted by revertTemporaryActions. Return true if the ipm should terminate
+  // the best iterate if record says so. Return true if the ipm should terminate
   // (stop).
   // ===================================================================================
   shouldTerminate applyAction(IterationRecord& record);
-
-  // ===================================================================================
-  // Revert the temporary actions that are no longer needed, restoring the
-  // default controls: centre after kRecentreIter iterations.
-  // ===================================================================================
-  void revertTemporaryActions(IterationRecord& record);
 
   // ===================================================================================
   // Give up because of stagnation: accept the point if it passes the KKT check,

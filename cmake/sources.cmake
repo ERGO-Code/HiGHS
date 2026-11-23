@@ -272,6 +272,7 @@ set(hipo_sources
     ipm/hipo/ipm/UpLookingSolver.cpp)
 
 set(hipo_headers
+    ipm/hipo/ipm/Centring.h
     ipm/hipo/ipm/IterationHistory.h
     ipm/hipo/ipm/IterationReport.h
     ipm/hipo/ipm/FactorHighsSolver.h

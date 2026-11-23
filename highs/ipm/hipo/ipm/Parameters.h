@@ -57,9 +57,14 @@ const Int kMaxRegChanges = 3;
 const double kRegScaleFactor = 10.0;
 const double kMinRegFactor = 1e-3;
 
-// centre: lower bound on sigma for a fixed number of iterations
+// centre: lower bound on sigma for at most kRecentreIter iterations, stopping
+// earlier if the point is centred
 const double kRecentreSigmaMin = 0.5;
 const Int kRecentreIter = 2;
+
+// a point is centred if all products xj * zj / mu are within
+// [kCentredProductRatio, 1 / kCentredProductRatio]
+const double kCentredProductRatio = 0.1;
 
 // parameters for choice of AS or NE
 const double kSystemSpopsWeight = 30.0;
@@ -145,7 +150,6 @@ struct SolverControls {
 
   Int refine_max_iter = kRefineMaxIter;
   double refine_tol = kRefineTol;
-  double sigma_min = 0.0;
   double step_fraction = 0.9;
   double max_step = 1.0 - 1e-4;
   Int max_correctors = kMaxCorrectors;

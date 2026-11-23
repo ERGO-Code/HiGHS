@@ -135,8 +135,8 @@ void Solver::reset() {
   controls_ = SolverControls{};
   controls_.reg_p_factor.assign(n_, 1.0);
   controls_.reg_d_factor.assign(m_, 1.0);
-  temporary_actions_.clear();
   recovery_ = Recovery{};
+  centring_ = Centring{};
   prev_point_valid_ = false;
 
   LS_.reset();
@@ -1000,13 +1000,13 @@ void Solver::sigmaAffine() {
   const bool small_steps =
       std::min(alpha_primal_, alpha_dual_) < kSigmaAffineSmallStep;
   sigma_ = small_steps ? sigmaFromStepsizes() : kSigmaAffine;
-  sigma_ = std::max(sigma_, controls_.sigma_min);
+  sigma_ = centring_.apply(sigma_);
 
   it_->history.back().sigma_aff = sigma_;
 }
 
 void Solver::sigmaCorrectors() {
-  sigma_ = std::max(sigmaFromStepsizes(), controls_.sigma_min);
+  sigma_ = centring_.apply(sigmaFromStepsizes());
 
   it_->history.back().sigma = sigma_;
 }
@@ -1305,9 +1305,10 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
       break;
 
     case RecoveryAction::kRecentre:
-      controls_.sigma_min = kRecentreSigmaMin;
+      centring_.start(kRecentreSigmaMin, kRecentreIter, true);
       log_stream << "Applied " << name << ", sigma at least "
-                 << sci(kRecentreSigmaMin, 0, 1) << "\n";
+                 << sci(kRecentreSigmaMin, 0, 1) << " for up to "
+                 << kRecentreIter << " iterations\n";
       break;
 
     case RecoveryAction::kIncreaseReg:
@@ -1357,9 +1358,6 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
       return false;
   }
 
-  if (actionProperties(record.action).temporary)
-    temporary_actions_.push_back({record.action, iter_});
-
   if (record.reset_to_best) {
     resetToBestIter(iter_);
     it_->diagnostics.clear(iter_);
@@ -1369,33 +1367,10 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
   return false;
 }
 
-void Solver::revertTemporaryActions(IterationRecord& record) {
-  const SolverControls defaults{};
-
-  std::vector<TemporaryAction> still_active;
-  for (const TemporaryAction& active : temporary_actions_) {
-    bool revert = false;
-    switch (active.action) {
-      case RecoveryAction::kRecentre:
-        revert = iter_ - active.applied_iter >= kRecentreIter;
-        if (revert) controls_.sigma_min = defaults.sigma_min;
-        break;
-      default:
-        break;
-    }
-    if (revert)
-      record.messages += std::string("Reverted ") +
-                         actionProperties(active.action).name + "\n";
-    else
-      still_active.push_back(active);
-  }
-  temporary_actions_ = std::move(still_active);
-}
-
 shouldTerminate Solver::checkInfeasibilityOrStagnation() {
   IterationRecord& record = it_->history.back();
   if (handleInfeasible(record.report)) return true;
-  revertTemporaryActions(record);
+  if (centring_.step(record)) record.messages += "Centring finished\n";
   return applyAction(record);
 }
 
