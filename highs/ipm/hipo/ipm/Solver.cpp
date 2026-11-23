@@ -624,8 +624,10 @@ void Solver::recordFactorisationSignals() {
   // 2x2 pivots and inertia: n negative pivots for the augmented system, none
   // for the normal equations
   record.num_2x2 = info.num_2x2;
-  const Int expected_neg = options_.nla == kHipoNormalEqString ? 0 : n_;
+  const bool normal_eq = options_.nla == kHipoNormalEqString;
+  const Int expected_neg = normal_eq ? 0 : n_;
   record.wrong_inertia = std::abs(info.num_neg - expected_neg) + info.num_zero;
+  record.num_pivots = normal_eq ? m_ : n_ + m_;
 
   // pivot statistics, 1x1 pivots only
   record.num_dynamic_reg = 0;
@@ -1342,14 +1344,11 @@ void Solver::runDiagnostics() {
   }
   it_->diagnostics.divergence(*it_, iter_, record.report);
 
-  // dropping acts only on pivots perturbed by dynamic regularisation, so it
-  // needs some in the last factorisation (kDynamicReg)
   SolverCapabilities capabilities;
   capabilities.can_switch = LS_ && LS_->type() == kUpLookingType &&
                             options_.factor == kHighsChooseString;
   capabilities.can_drop_pivots = LS_ && LS_->type() == kFactorHighsType &&
-                                 options_.nla == kHipoNormalEqString &&
-                                 record.report.has(IssueType::kDynamicReg);
+                                 options_.nla == kHipoNormalEqString;
   const Recovery::ProposedAction proposed =
       recovery_.proposeAction(record.report, capabilities);
   record.action = proposed.action;

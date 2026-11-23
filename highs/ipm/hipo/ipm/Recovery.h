@@ -73,11 +73,14 @@ struct Recovery {
   // and the first action from there that capabilities allow and that is not
   // used up (chosen max_times already) is chosen. Entries, in decreasing order
   // of priority; the first issue with an action available is acted upon:
-  //  1. stagnation, with I, W or G in the last kActionNumericalWindow
-  //     iterations: drop;
+  //  1. stagnation, with I or W in the last kActionNumericalWindow iterations:
+  //     drop;
   //  2. stagnation: centre with C and without L, otherwise switch;
-  //  3. A: reg-.
-  // I, W or G without stagnation are not acted upon.
+  //  3. I or W without stagnation: drop only, since changing the regularisation
+  //     can stop an ipm that is still progressing;
+  //  4. A: reg-.
+  // F is not acted upon here: Solver::shortStepGuard deals with nearly free
+  // columns when they block the step.
   // No action is chosen within kActionPatience iterations of the previous one.
   // Only the actions whose properties say so (switch, stop) reset to the best
   // iterate.
@@ -92,9 +95,13 @@ struct Recovery {
   std::vector<ProposedAction> proposed_actions;
 
  private:
-  // last iteration with I, W or G
+  // last iteration with I or W
   bool numerical_trouble_seen = false;
   Int last_numerical_trouble_iter = 0;
+
+  // capabilities allow action and it is not used up
+  bool available(RecoveryAction action,
+                 const SolverCapabilities& capabilities) const;
 
   // first action from entry along the chain that capabilities allow and that
   // is not used up; kNone if there is none

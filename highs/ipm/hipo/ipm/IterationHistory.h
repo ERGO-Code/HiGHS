@@ -38,6 +38,7 @@ struct IterationRecord {
   double max_pivot = 0.0;  // largest |regularised pivot|
   Int num_2x2 = 0;
   Int wrong_inertia = 0;  // distance of the inertia from the expected one
+  Int num_pivots = 0;     // dimension of the factorised matrix
 
   double alpha_primal = 0.0;
   double alpha_dual = 0.0;

@@ -18,22 +18,25 @@ Int Recovery::timesProposed(RecoveryAction action) const {
   return count;
 }
 
+bool Recovery::available(RecoveryAction action,
+                         const SolverCapabilities& capabilities) const {
+  return allowedBy(action, capabilities) &&
+         timesProposed(action) < actionProperties(action).max_times;
+}
+
 RecoveryAction Recovery::firstAvailable(
     RecoveryAction entry, const SolverCapabilities& capabilities) const {
   for (RecoveryAction action = entry; action != RecoveryAction::kNone;
        action = actionProperties(action).next) {
-    if (allowedBy(action, capabilities) &&
-        timesProposed(action) < actionProperties(action).max_times)
-      return action;
+    if (available(action, capabilities)) return action;
   }
   return RecoveryAction::kNone;
 }
 
-// I, W or G: the linear solver is in trouble
+// I or W: the linear solver is in trouble
 static bool hasNumericalTrouble(const IterationReport& report) {
   return report.has(IssueType::kVeryInaccurateSolve) ||
-         report.has(IssueType::kWrongInertia) ||
-         report.has(IssueType::kDynamicReg);
+         report.has(IssueType::kWrongInertia);
 }
 
 bool Recovery::waitingForPreviousAction(Int iter) const {
@@ -71,12 +74,15 @@ Recovery::ProposedAction Recovery::proposeAction(
     else if (try_recentre)
       entry = RecoveryAction::kRecentre;
     action = firstAvailable(entry, capabilities);
+  } else if (hasNumericalTrouble(report)) {
+    // 3: numerical trouble without stagnation. The ipm is still progressing,
+    // and changing the regularisation can stop it, but bad pivots can be
+    // dropped.
+    if (available(RecoveryAction::kDropBadPivots, capabilities))
+      action = RecoveryAction::kDropBadPivots;
   }
 
-  // Numerical trouble without stagnation is not acted upon: the ipm is still
-  // progressing, and changing the regularisation can stop it.
-
-  // 3: absorbed rows
+  // 4: absorbed rows
   if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbedRows))
     action = firstAvailable(RecoveryAction::kDecreaseReg, capabilities);
 

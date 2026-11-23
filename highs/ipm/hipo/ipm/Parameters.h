@@ -45,6 +45,8 @@ const double kNearFreeRatio = 1e3;
 // parameters for numerical detectors
 const double kInaccurateSolveTol = 1e-6;
 const double kVeryInaccurateSolveTol = 1e-2;
+const Int kWrongInertiaMinPivots = 20;
+const double kWrongInertiaFraction = 1e-3;
 
 // parameters for centrality detector
 const double kPoorCentralityFraction = 0.01;

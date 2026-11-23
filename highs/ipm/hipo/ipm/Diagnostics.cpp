@@ -88,17 +88,14 @@ void Diagnostics::numerical(const Iterate& it, IterationReport& report,
                << sci(record.cw_error, 0, 1) << "\n";
   }
 
-  if (record.num_wrong_sign > 0 || record.wrong_inertia > 0) {
+  const double wrong_thresh =
+      std::max((double)kWrongInertiaMinPivots,
+               kWrongInertiaFraction * record.num_pivots);
+  if (std::max(record.num_wrong_sign, record.wrong_inertia) >= wrong_thresh) {
     report.add(IssueType::kWrongInertia);
     log_stream << "Wrong inertia, " << record.num_wrong_sign
                << " 1x1 pivots with wrong sign, inertia off by "
                << record.wrong_inertia << "\n";
-  }
-
-  if (record.num_dynamic_reg > 0) {
-    report.add(IssueType::kDynamicReg);
-    log_stream << record.num_dynamic_reg
-               << " pivots with dynamic regularisation\n";
   }
 
   if (record.num_absorbed_rows > 0) {

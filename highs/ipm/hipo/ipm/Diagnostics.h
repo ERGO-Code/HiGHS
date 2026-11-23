@@ -61,9 +61,9 @@ struct Diagnostics {
   // iteration, from its record, and add to report:
   // - kVeryInaccurateSolve, if cw_error > kVeryInaccurateSolveTol, otherwise
   //   kInaccurateSolve, if cw_error > kInaccurateSolveTol;
-  // - kWrongInertia, if a 1x1 pivot has the wrong sign or the inertia differs
-  //   from the expected one;
-  // - kDynamicReg, if a pivot was perturbed beyond the static regularisation;
+  // - kWrongInertia, if at least max(kWrongInertiaMinPivots,
+  //   kWrongInertiaFraction * num_pivots) 1x1 pivots have the wrong sign, or
+  //   the inertia is off by as much;
   // - kAbsorbedRows, if a row has its residual absorbed by the regularisation;
   // - kManyNearFree, for LPs, if there are more nearly free columns than rows
   //   (near optimality, up to m basic columns are nearly free).
