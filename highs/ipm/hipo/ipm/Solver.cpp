@@ -1343,6 +1343,7 @@ void Solver::runDiagnostics() {
     it_->diagnostics.centrality(*it_, record.report, log_stream);
   }
   it_->diagnostics.divergence(*it_, iter_, record.report);
+  record.report.alpha_min = std::min(record.alpha_primal, record.alpha_dual);
 
   SolverCapabilities capabilities;
   capabilities.can_switch = LS_ && LS_->type() == kUpLookingType &&

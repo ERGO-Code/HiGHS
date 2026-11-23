@@ -64,8 +64,11 @@ Recovery::ProposedAction Recovery::proposeAction(
   RecoveryAction action = RecoveryAction::kNone;
 
   // 1, 2: stagnation. Recentring helps only if the point is poorly centred,
-  // and L is too urgent for it.
-  if (report.stagnation()) {
+  // and L is too urgent for it. Numerical trouble with a short step counts as
+  // stagnation, without waiting for N.
+  const bool short_step_trouble =
+      recent_numerical_trouble && report.alpha_min < kShortStepAlpha;
+  if (report.stagnation() || short_step_trouble) {
     const bool try_recentre = report.has(IssueType::kPoorCentrality) &&
                               !report.has(IssueType::kLargeResIncrease);
     RecoveryAction entry = RecoveryAction::kSwitchFactorisation;

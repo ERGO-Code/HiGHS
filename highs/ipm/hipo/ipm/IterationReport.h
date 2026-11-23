@@ -79,6 +79,7 @@ inline const char* issueCodesLegend() {
 struct IterationReport {
   Int iter = 0;
   std::vector<IssueType> issues;
+  double alpha_min = 1.0;
 
   void add(IssueType type) { issues.push_back(type); }
 

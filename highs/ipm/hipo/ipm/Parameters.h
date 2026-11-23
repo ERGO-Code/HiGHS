@@ -55,8 +55,9 @@ const double kPoorCentralityAlpha = 0.1;
 // parameters for recovery policy
 const Int kActionPatience = 3;
 const Int kActionNumericalWindow = 5;
-const Int kMaxRegChanges = 3;
-const double kRegScaleFactor = 10.0;
+const Int kMaxRegChanges = 2;
+const double kShortStepAlpha = 0.1;
+const double kRegScaleFactor = 100.0;
 const double kMinRegFactor = 1e-3;
 
 // parameters for nearly free columns
