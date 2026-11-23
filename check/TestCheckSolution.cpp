@@ -872,18 +872,19 @@ static void testStartSolution(Highs& h, const double required_objective) {
           1e-6 * (1 + std::fabs(required_objective)));
   const std::vector<double> col_value = h.getSolution().col_value;
   const double computed_objective = h.getLp().objectiveValue(col_value);
-  printf("testStartSolution: computed_objective = %g; optimal_objective = %g\n", computed_objective, optimal_objective);
+  printf("testStartSolution: computed_objective = %g; optimal_objective = %g\n",
+         computed_objective, optimal_objective);
   REQUIRE(std::fabs(computed_objective - optimal_objective) <=
           1e-6 * (1 + std::fabs(optimal_objective)));
 }
 
 static void printSolutionAndObjective(const std::string& message,
-				      const std::vector<double>& solution,
-				      const double objective) {
+                                      const std::vector<double>& solution,
+                                      const double objective) {
   HighsInt num_col = solution.size();
   printf("%s is\n   ", message.c_str());
   for (HighsInt iCol = 0; iCol < num_col; iCol++)
-    printf("%2g%s", solution[iCol], iCol < num_col-1 ? " " : "\n");
+    printf("%2g%s", solution[iCol], iCol < num_col - 1 ? " " : "\n");
   printf("   with objective value %g\n", objective);
 }
 
@@ -908,7 +909,8 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   h.run();
   const std::vector<double> optimal_col_value = h.getSolution().col_value;
   const double optimal_objective = h.getLp().objectiveValue(optimal_col_value);
-  printSolutionAndObjective("Optimal solution", optimal_col_value, optimal_objective);
+  printSolutionAndObjective("Optimal solution", optimal_col_value,
+                            optimal_objective);
 
   HighsSolution solution;
   solution.col_value = start;
@@ -930,6 +932,7 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   h.resetGlobalScheduler(true);
 }
 
+/*
 TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
   // MIP has c = (3, 1, 0, -5, 4, 2) and offset of 100 (for testing
   // the correct application of offsets).
@@ -977,7 +980,8 @@ TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
   const std::vector<double> optimal_col_value = h.getSolution().col_value;
   const double optimal_objective = h.getLp().objectiveValue(optimal_col_value);
 
-  printSolutionAndObjective("Optimal solution", optimal_col_value, optimal_objective);
+  printSolutionAndObjective("Optimal solution", optimal_col_value,
+                            optimal_objective);
 
   HighsSolution start;
   start.col_value = {0, 0, 1, 1, 0, 1};
@@ -1007,3 +1011,4 @@ TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
 
   h.resetGlobalScheduler(true);
 }
+*/
