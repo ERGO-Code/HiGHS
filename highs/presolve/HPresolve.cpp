@@ -870,17 +870,29 @@ void HPresolve::resetRowDualImpliedBounds(HighsInt row, HighsInt col) {
   }
 }
 
-void HPresolve::resetColImpliedBoundsDerivedFromRow(HighsInt row) {
+  const bool apply_fix_3772 = true;
+
+  void HPresolve::resetColImpliedBoundsDerivedFromRow(HighsInt row, HighsInt skipCol) {
   // reset implied column bounds affected by a modification in a row
   // (removed / added non-zeros, etc.)
   if (colImplSourceByRow[row].empty()) return;
+  printImpliedColBounds("From resetColImpliedBoundsDerivedFromRow");
   std::set<HighsInt> affectedCols;
   affectedCols.swap(colImplSourceByRow[row]);
+  if (apply_fix_3772) {
+    if (skipCol != -1 && affectedCols.erase(skipCol))
+      colImplSourceByRow[row].insert(skipCol);
+  }
   for (const HighsInt& col : affectedCols) {
     // set implied bounds to infinite values if they were deduced from the
     // given row
+    double col_implColLower = implColLower[col];
+    double col_implColUpper = implColUpper[col];
     resetColImpliedBounds(col, row);
+    printf(" HPresolve::resetColImpliedBoundsDerivedFromRow row %1d; col %1d [%11.4g, %11.4g] -> [%11.4g, %11.4g]\n",
+	   int(row), int(col), col_implColLower, col_implColUpper, implColLower[col], implColUpper[col]);
   }
+  printf("\n");
 }
 
 void HPresolve::resetRowDualImpliedBoundsDerivedFromCol(HighsInt col) {
@@ -1495,6 +1507,13 @@ HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
                                      oldUpper);
     markChangedRow(nonzero.index());
   }
+  if (apply_fix_3772) {
+    // a relaxed bound invalidates the implied bounds of the other columns
+    // derived from its rows
+    if (newUpper > oldUpper)
+      for (const HighsSliceNonzero& nonzero : getColumnVector(col))
+	resetColImpliedBoundsDerivedFromRow(nonzero.index(), col);
+  }
   if (mipsolver != nullptr &&
       model->col_lower_[col] == model->col_upper_[col]) {
     HPRESOLVE_CHECKED_CALL(
@@ -1522,6 +1541,13 @@ HPresolve::Result HPresolve::changeColLower(HighsInt col, double newLower) {
     impliedRowBounds.updatedVarLower(nonzero.index(), col, nonzero.value(),
                                      oldLower);
     markChangedRow(nonzero.index());
+  }
+  if (apply_fix_3772) {
+    // a relaxed bound invalidates the implied bounds of the other columns
+    // derived from its rows
+    if (newLower < oldLower)
+      for (const HighsSliceNonzero& nonzero : getColumnVector(col))
+	resetColImpliedBoundsDerivedFromRow(nonzero.index(), col);
   }
   if (mipsolver != nullptr &&
       model->col_lower_[col] == model->col_upper_[col]) {
@@ -4065,6 +4091,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
     };
 
+    printImpliedColBounds("At start of presolve");
     // Need to check for time-out in checkLimits, so make sure that
     // the timer is well defined, and that its total time clock is
     // running
@@ -4512,6 +4539,15 @@ void HPresolve::computeColBounds(HighsInt col, HighsInt boundCol,
 
 bool HPresolve::silentLog() const {
   return mipsolver && mipsolver->mipdata_->numRestarts > 0;
+}
+
+void HPresolve::printImpliedColBounds(const std::string& message) const {
+  printf("\nImplied column bounds: %s\nCol        Lower        Upper\n", message.c_str());
+  for (HighsInt iCol = 0; iCol < model->num_col_; iCol++) {
+    if (colDeleted[iCol]) continue;
+    printf("%3d %12.12g %12.12g\n", int(iCol), implColLower[iCol], implColUpper[iCol]);
+  }
+    
 }
 
 void HPresolve::moveCutsToPool(HighsPostsolveStack& postsolve_stack) {

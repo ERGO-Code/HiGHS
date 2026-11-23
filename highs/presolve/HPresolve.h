@@ -223,7 +223,7 @@ class HPresolve {
 
   void resetRowDualImpliedBounds(HighsInt row, HighsInt col = -1);
 
-  void resetColImpliedBoundsDerivedFromRow(HighsInt row);
+  void resetColImpliedBoundsDerivedFromRow(HighsInt row, HighsInt skipCol = -1);
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
@@ -421,6 +421,8 @@ class HPresolve {
   }
 
   bool silentLog() const;
+
+  void printImpliedColBounds(const std::string& message) const;
 
  public:
   // for LP presolve
