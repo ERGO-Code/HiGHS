@@ -1,9 +1,11 @@
 #ifndef HIPO_RECOVERY_H
 #define HIPO_RECOVERY_H
 
+#include <limits>
 #include <vector>
 
 #include "IterationReport.h"
+#include "Parameters.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
@@ -18,42 +20,47 @@ enum class RecoveryAction {
   kTerminate,
 };
 
-enum class ActionTiming {
-  kNextFactorisation,
-  kNextIteration,
-  kImmediate,
-};
-
+// Properties of each action.
+// Following next from an action gives the chain of actions that recovery
+// escalates through:
+//  drop -> reg+ -> switch -> stop
+//                    ^
+//  centre -----------^
+//  reg-
 struct ActionProperties {
   const char* name;
-  ActionTiming timing;
   bool reset_to_best;
+  Int max_times;
+  RecoveryAction next;
 };
 
 inline ActionProperties actionProperties(RecoveryAction action) {
+  // each row has a floor on its regularisation, so reg- needs no limit
+  const Int no_limit = std::numeric_limits<Int>::max();
   switch (action) {
     case RecoveryAction::kNone:
-      return {"none", ActionTiming::kImmediate, false};
+      return {"none", false, 0, RecoveryAction::kNone};
     case RecoveryAction::kDropBadPivots:
-      return {"drop", ActionTiming::kNextFactorisation, false};
+      return {"drop", false, 1, RecoveryAction::kIncreaseReg};
     case RecoveryAction::kIncreaseReg:
-      return {"reg+", ActionTiming::kNextFactorisation, false};
+      return {"reg+", false, kMaxRegChanges,
+              RecoveryAction::kSwitchFactorisation};
     case RecoveryAction::kDecreaseReg:
-      return {"reg-", ActionTiming::kNextFactorisation, false};
+      return {"reg-", false, no_limit, RecoveryAction::kNone};
     case RecoveryAction::kRecentre:
-      return {"centre", ActionTiming::kNextIteration, false};
+      return {"centre", false, 1, RecoveryAction::kSwitchFactorisation};
     case RecoveryAction::kSwitchFactorisation:
-      return {"switch", ActionTiming::kNextIteration, true};
+      return {"switch", true, 1, RecoveryAction::kTerminate};
     case RecoveryAction::kTerminate:
-      return {"stop", ActionTiming::kImmediate, true};
+      return {"stop", true, 1, RecoveryAction::kNone};
   }
-  return {"?", ActionTiming::kImmediate, false};
+  return {"?", false, 0, RecoveryAction::kNone};
 }
 
 // Actions that the current linear solver allows.
 struct SolverCapabilities {
-  bool can_switch = false;       // switch from up-looking to FactorHighs
-  bool can_drop_pivots = false;  // drop bad pivots: FactorHighs on NE, with G
+  bool can_switch = false;
+  bool can_drop_pivots = false;
 };
 
 // Keeps track of the actions chosen to recover from the issues detected, and
@@ -62,21 +69,14 @@ struct Recovery {
   // ===================================================================================
   // Choose the action for the issues in report, record it in proposed_actions
   // and return it; Solver::applyAction applies it.
-  // Each issue has a ladder of rungs, an action each, with the number of times
-  // it can be chosen:
-  //  numerical:  drop (1) -> reg+ (kMaxRegChanges) -> switch (1)
-  //  stagnation: centre (1) -> switch (1) -> stop (1)
-  //  absorbed:   reg- on the absorbed rows (no limit)
-  // A ladder is entered at a given rung, or at the rung it got to if higher,
-  // and moves up past the rungs used up or not allowed by capabilities. The
-  // times are counted over all ladders: switch used on one is used on both.
-  // The stagnation ladder is entered at switch without C or with L.
-  // Issues are considered in decreasing order of priority, and the first one
-  // with an action available is acted upon:
+  // Each issue enters the chain of actions (see ActionProperties) at an entry,
+  // and the first action from there that capabilities allow and that is not
+  // used up (chosen max_times already) is chosen. Entries, in decreasing order
+  // of priority; the first issue with an action available is acted upon:
   //  1. stagnation, with I, W or G in the last kActionNumericalWindow
-  //     iterations: numerical ladder;
-  //  2. stagnation: stagnation ladder;
-  //  3. A: absorbed ladder.
+  //     iterations: drop;
+  //  2. stagnation: centre with C and without L, otherwise switch;
+  //  3. A: reg-.
   // I, W or G without stagnation are not acted upon.
   // No action is chosen within kActionPatience iterations of the previous one.
   // Only the actions whose properties say so (switch, stop) reset to the best
@@ -91,25 +91,15 @@ struct Recovery {
                                const SolverCapabilities& capabilities);
   std::vector<ProposedAction> proposed_actions;
 
-  enum Ladder {
-    kNumericalLadder,
-    kStagnationLadder,
-    kAbsorbedLadder,
-    kNumLadders
-  };
-
  private:
-  // rung each ladder got to
-  Int current_rung[kNumLadders]{};
-
   // last iteration with I, W or G
   bool numerical_trouble_seen = false;
   Int last_numerical_trouble_iter = 0;
 
-  // action of the first rung that can be chosen, from entry or from the rung
-  // the ladder got to; kNone if the ladder is used up
-  RecoveryAction climbLadder(Ladder ladder, RecoveryAction entry,
-                             const SolverCapabilities& capabilities);
+  // first action from entry along the chain that capabilities allow and that
+  // is not used up; kNone if there is none
+  RecoveryAction firstAvailable(RecoveryAction entry,
+                                const SolverCapabilities& capabilities) const;
 
   // fewer than kActionPatience iterations since the previous action
   bool waitingForPreviousAction(Int iter) const;

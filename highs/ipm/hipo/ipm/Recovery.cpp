@@ -1,56 +1,6 @@
 #include "Recovery.h"
 
-#include <algorithm>
-#include <cassert>
-#include <limits>
-
-#include "Parameters.h"
-
 namespace hipo {
-
-// A rung: an action, and how many times it can be chosen. The count is of the
-// action, whichever ladder chose it: switch is on two ladders, and once used up
-// on one it is used up on the other.
-struct Rung {
-  RecoveryAction action;
-  Int max_times;
-};
-
-static const std::vector<Rung> kNumericalRungs = {
-    {RecoveryAction::kDropBadPivots, 1},
-    {RecoveryAction::kIncreaseReg, kMaxRegChanges},
-    {RecoveryAction::kSwitchFactorisation, 1},
-};
-
-static const std::vector<Rung> kStagnationRungs = {
-    {RecoveryAction::kRecentre, 1},
-    {RecoveryAction::kSwitchFactorisation, 1},
-    {RecoveryAction::kTerminate, 1},
-};
-
-// each row has a floor on its regularisation, so no limit is needed
-static const std::vector<Rung> kAbsorbedRungs = {
-    {RecoveryAction::kDecreaseReg, std::numeric_limits<Int>::max()},
-};
-
-static const std::vector<Rung>& ladderRungs(Recovery::Ladder ladder) {
-  switch (ladder) {
-    case Recovery::kNumericalLadder:
-      return kNumericalRungs;
-    case Recovery::kStagnationLadder:
-      return kStagnationRungs;
-    case Recovery::kAbsorbedLadder:
-    default:
-      return kAbsorbedRungs;
-  }
-}
-
-static Int rungIndex(const std::vector<Rung>& rungs, RecoveryAction action) {
-  Int index = 0;
-  while (index < (Int)rungs.size() && rungs[index].action != action) ++index;
-  assert(index < (Int)rungs.size());
-  return index;
-}
 
 static bool allowedBy(RecoveryAction action,
                       const SolverCapabilities& capabilities) {
@@ -68,21 +18,13 @@ Int Recovery::timesProposed(RecoveryAction action) const {
   return count;
 }
 
-RecoveryAction Recovery::climbLadder(Ladder ladder, RecoveryAction entry,
-                                     const SolverCapabilities& capabilities) {
-  const std::vector<Rung>& rungs = ladderRungs(ladder);
-
-  // enter at entry, unless the ladder already got past it
-  Int& rung = current_rung[ladder];
-  rung = std::max(rung, rungIndex(rungs, entry));
-
-  // move past the rungs used up or not allowed; the ladder stays on the rung
-  // chosen, which can be chosen again while it is not used up
-  for (; rung < (Int)rungs.size(); ++rung) {
-    const Rung& r = rungs[rung];
-    if (allowedBy(r.action, capabilities) &&
-        timesProposed(r.action) < r.max_times)
-      return r.action;
+RecoveryAction Recovery::firstAvailable(
+    RecoveryAction entry, const SolverCapabilities& capabilities) const {
+  for (RecoveryAction action = entry; action != RecoveryAction::kNone;
+       action = actionProperties(action).next) {
+    if (allowedBy(action, capabilities) &&
+        timesProposed(action) < actionProperties(action).max_times)
+      return action;
   }
   return RecoveryAction::kNone;
 }
@@ -114,25 +56,21 @@ Recovery::ProposedAction Recovery::proposeAction(
   if (waitingForPreviousAction(iter))
     return {RecoveryAction::kNone, iter, false};
 
-  // Where to enter the stagnation ladder: recentring helps only if the point is
-  // poorly centred, and L is too urgent for it.
-  const bool try_recentre = report.has(IssueType::kPoorCentrality) &&
-                            !report.has(IssueType::kLargeResIncrease);
-  const RecoveryAction stagnation_entry =
-      try_recentre ? RecoveryAction::kRecentre
-                   : RecoveryAction::kSwitchFactorisation;
-
   // Issues in decreasing order of priority; the first one for which an action
   // can be chosen is acted upon.
   RecoveryAction action = RecoveryAction::kNone;
 
-  // 1, 2: stagnation
+  // 1, 2: stagnation. Recentring helps only if the point is poorly centred,
+  // and L is too urgent for it.
   if (report.stagnation()) {
+    const bool try_recentre = report.has(IssueType::kPoorCentrality) &&
+                              !report.has(IssueType::kLargeResIncrease);
+    RecoveryAction entry = RecoveryAction::kSwitchFactorisation;
     if (recent_numerical_trouble)
-      action = climbLadder(kNumericalLadder, RecoveryAction::kDropBadPivots,
-                           capabilities);
-    if (action == RecoveryAction::kNone)
-      action = climbLadder(kStagnationLadder, stagnation_entry, capabilities);
+      entry = RecoveryAction::kDropBadPivots;
+    else if (try_recentre)
+      entry = RecoveryAction::kRecentre;
+    action = firstAvailable(entry, capabilities);
   }
 
   // Numerical trouble without stagnation is not acted upon: the ipm is still
@@ -140,8 +78,7 @@ Recovery::ProposedAction Recovery::proposeAction(
 
   // 3: absorbed rows
   if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbedRows))
-    action = climbLadder(kAbsorbedLadder, RecoveryAction::kDecreaseReg,
-                         capabilities);
+    action = firstAvailable(RecoveryAction::kDecreaseReg, capabilities);
 
   const ProposedAction proposed{action, iter,
                                 actionProperties(action).reset_to_best};
