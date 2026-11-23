@@ -2,7 +2,6 @@
 #define HIPO_ITERATION_REPORT_H
 
 #include <algorithm>
-#include <cassert>
 #include <string>
 #include <vector>
 
@@ -99,15 +98,6 @@ struct IterationReport {
     std::string s;
     for (IssueType type : issues) s += issueCode(type);
     return s;
-  }
-
-  // stagnation issue with the highest priority; requires stagnation()
-  IssueType mainStagnationIssue() const {
-    assert(stagnation());
-    IssueType main = IssueType::kOscillation;
-    for (IssueType type : issues)
-      if (isStagnation(type) && type < main) main = type;
-    return main;
   }
 };
 

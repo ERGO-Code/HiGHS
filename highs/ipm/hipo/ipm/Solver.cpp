@@ -1274,17 +1274,17 @@ void Solver::runDiagnostics() {
 
   const bool can_switch = LS_ && LS_->type() == kUpLookingType &&
                           options_.factor == kHighsChooseString;
-  const Recovery::Proposal proposal =
-      recovery_.propose(record.report, can_switch);
-  record.action = proposal.action;
-  record.reset_to_best = proposal.reset_to_best;
+  const Recovery::ProposedAction proposed =
+      recovery_.proposeAction(record.report, can_switch);
+  record.action = proposed.action;
+  record.reset_to_best = proposed.reset_to_best;
 
   record.messages = log_stream.str();
 }
 
-bool Solver::applyAction(IterationRecord& record) {
-  // only the regularisation actions are applied for now; they take effect at
-  // the next factorisation
+shouldTerminate Solver::applyAction(IterationRecord& record) {
+  // changes of regularisation take effect at the next factorisation, the
+  // switch at the next iteration
   const char* name = actionProperties(record.action).name;
   std::stringstream log_stream;
   switch (record.action) {
@@ -1315,6 +1315,22 @@ bool Solver::applyAction(IterationRecord& record) {
       break;
     }
 
+    case RecoveryAction::kSwitchFactorisation:
+      // proposed only if possible; otherwise give up, as for stop
+      if (!switchToMultifrontal()) {
+        record.messages += "Could not apply switch, applied stop\n";
+        terminateStagnation();
+        return true;
+      }
+      logger_.printInfo("Switching to FactorHighs because of no progress\n");
+      log_stream << "Applied " << name << " to FactorHighs\n";
+      break;
+
+    case RecoveryAction::kTerminate:
+      record.messages += std::string("Applied ") + name + "\n";
+      terminateStagnation();
+      return true;
+
     case RecoveryAction::kNone:
       return false;
 
@@ -1329,19 +1345,13 @@ bool Solver::applyAction(IterationRecord& record) {
     log_stream << "Reset to the best iterate\n";
   }
   record.messages += log_stream.str();
-  return true;
+  return false;
 }
 
 shouldTerminate Solver::checkInfeasibilityOrStagnation() {
   IterationRecord& record = it_->history.back();
-  const IterationReport report = record.report;
-
-  if (handleInfeasible(report)) return true;
-
-  if (applyAction(record)) return false;
-
-  if (report.stagnation()) return handleStagnation(report);
-  return false;
+  if (handleInfeasible(record.report)) return true;
+  return applyAction(record);
 }
 
 shouldTerminate Solver::handleInfeasible(const IterationReport& report) {
@@ -1581,22 +1591,7 @@ double Solver::checkDualRay(const HighsSolution& point) const {
   return radius < threshold ? 0.0 : radius;
 }
 
-shouldTerminate Solver::handleStagnation(const IterationReport& report) {
-  RecoveryAction action = recovery_.nextAction(report);
-
-  if (action == RecoveryAction::kSwitchFactorisation) {
-    recovery_.applied(action, report);
-    if (switchToMultifrontal()) {
-      logger_.printInfo("Switching to FactorHighs because of no progress\n");
-      resetToBestIter(iter_);
-    } else {
-      // switch not possible, give up
-      action = RecoveryAction::kTerminate;
-    }
-  }
-
-  if (action != RecoveryAction::kTerminate) return false;
-
+void Solver::terminateStagnation() {
   if (getStatus1() == kStatusOptimal) {
     assert(crossoverIsOn());
     setStatus2(kStatusNoProgress);
@@ -1612,8 +1607,6 @@ shouldTerminate Solver::handleStagnation(const IterationReport& report) {
       resetToBestIter(iter_);
     }
   }
-
-  return true;
 }
 
 shouldTerminate Solver::checkTermination() {

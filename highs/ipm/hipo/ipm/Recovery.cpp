@@ -1,38 +1,12 @@
 #include "Recovery.h"
 
 #include <algorithm>
+#include <cassert>
 #include <limits>
 
 #include "Parameters.h"
 
 namespace hipo {
-
-RecoveryAction Recovery::nextAction(const IterationReport& report) const {
-  if (!report.stagnation()) return RecoveryAction::kNone;
-
-  // For now, the same sequence of actions is used for any issue: switch to
-  // FactorHighs once, then terminate.
-  if (!tried(RecoveryAction::kSwitchFactorisation))
-    return RecoveryAction::kSwitchFactorisation;
-
-  return RecoveryAction::kTerminate;
-}
-
-void Recovery::applied(RecoveryAction action, const IterationReport& report) {
-  records.push_back({action, report.mainStagnationIssue(), report.iter});
-}
-
-bool Recovery::tried(RecoveryAction action) const {
-  for (const Record& record : records)
-    if (record.action == action) return true;
-  return false;
-}
-
-bool Recovery::tried(RecoveryAction action, IssueType issue) const {
-  for (const Record& record : records)
-    if (record.action == action && record.issue == issue) return true;
-  return false;
-}
 
 // A rung of a ladder: its action, and how many times it can be chosen in total,
 // over all ladders, before moving to the next rung.
@@ -62,69 +36,89 @@ static const Rung kLadders[][kLadderSize] = {
 
 Int Recovery::timesProposed(RecoveryAction action) const {
   Int count = 0;
-  for (const Proposal& proposal : proposals)
-    if (proposal.action == action) ++count;
+  for (const ProposedAction& proposed : proposed_actions)
+    if (proposed.action == action) ++count;
   return count;
 }
 
-RecoveryAction Recovery::climb(Ladder ladder, Int entry, bool can_switch) {
+RecoveryAction Recovery::climbLadder(Ladder ladder, RecoveryAction start,
+                                     bool can_switch) {
+  const Rung* rungs = kLadders[ladder];
+
+  // move up to start, unless the ladder is already past it
+  Int start_rung = 0;
+  while (start_rung < kLadderSize && rungs[start_rung].action != start)
+    ++start_rung;
+  assert(start_rung < kLadderSize);
   Int& rung = next_rung[ladder];
-  rung = std::max(rung, entry);
-  while (rung < kLadderSize &&
-         kLadders[ladder][rung].action != RecoveryAction::kNone) {
-    const Rung& current = kLadders[ladder][rung];
-    const RecoveryAction action = current.action;
-    const bool available =
-        timesProposed(action) < current.max_uses &&
+  rung = std::max(rung, start_rung);
+
+  for (; rung < kLadderSize && rungs[rung].action != RecoveryAction::kNone;
+       ++rung) {
+    const RecoveryAction action = rungs[rung].action;
+    const bool can_choose =
+        actionProperties(action).available &&
+        timesProposed(action) < rungs[rung].max_uses &&
         (action != RecoveryAction::kSwitchFactorisation || can_switch);
-    if (available) return action;
-    ++rung;
+    if (can_choose) return action;
   }
   return RecoveryAction::kNone;
 }
 
-Recovery::Proposal Recovery::propose(const IterationReport& report,
-                                     bool can_switch) {
+// I, W or G: the linear solver is in trouble
+static bool hasNumericalTrouble(const IterationReport& report) {
+  return report.has(IssueType::kVeryInaccurateSolve) ||
+         report.has(IssueType::kWrongInertia) ||
+         report.has(IssueType::kDynamicReg);
+}
+
+bool Recovery::waitingForPreviousAction(Int iter) const {
+  return !proposed_actions.empty() &&
+         iter - proposed_actions.back().iter < kActionPatience;
+}
+
+Recovery::ProposedAction Recovery::proposeAction(const IterationReport& report,
+                                                 bool can_switch) {
   const Int iter = report.iter;
 
-  const bool numerical_now = report.has(IssueType::kVeryInaccurateSolve) ||
-                             report.has(IssueType::kWrongInertia) ||
-                             report.has(IssueType::kDynamicReg);
-  if (numerical_now) {
-    numerical_seen = true;
-    last_numerical_iter = iter;
+  if (hasNumericalTrouble(report)) {
+    numerical_trouble_seen = true;
+    last_numerical_trouble_iter = iter;
   }
-  const bool recent_numerical =
-      numerical_seen && iter - last_numerical_iter < kActionNumericalWindow;
+  const bool recent_numerical_trouble =
+      numerical_trouble_seen &&
+      iter - last_numerical_trouble_iter < kActionNumericalWindow;
 
-  // wait for the effect of the previous action
-  if (!proposals.empty() && iter - proposals.back().iter < kActionPatience)
+  if (waitingForPreviousAction(iter))
     return {RecoveryAction::kNone, iter, false};
 
-  // I and W make the direction unreliable, so refinement is skipped
-  const Int numerical_entry = report.has(IssueType::kVeryInaccurateSolve) ||
-                                      report.has(IssueType::kWrongInertia)
-                                  ? 1
-                                  : 0;
+  // Where to start on each ladder. With I or W the direction is unreliable, so
+  // refinement cannot help. Recentring helps only if the point is poorly
+  // centred, and L is too urgent for it.
+  const bool unreliable_direction =
+      report.has(IssueType::kVeryInaccurateSolve) ||
+      report.has(IssueType::kWrongInertia);
+  const RecoveryAction numerical_start = unreliable_direction
+                                             ? RecoveryAction::kIncreaseReg
+                                             : RecoveryAction::kMoreRefinement;
+  const bool try_recentre = report.has(IssueType::kPoorCentrality) &&
+                            !report.has(IssueType::kLargeResIncrease);
+  const RecoveryAction stagnation_start =
+      try_recentre ? RecoveryAction::kRecentre
+                   : RecoveryAction::kSwitchFactorisation;
 
-  // recentring helps only if the point is poorly centred; L is urgent
-  const Int stagnation_entry = report.has(IssueType::kPoorCentrality) &&
-                                       !report.has(IssueType::kLargeResIncrease)
-                                   ? 0
-                                   : 1;
-
-  // issues in decreasing order of priority; the first one for which an action
-  // is available is acted upon
+  // Issues in decreasing order of priority; the first one for which an action
+  // can be chosen is acted upon.
   RecoveryAction action = RecoveryAction::kNone;
   bool reset_to_best = false;
 
   // 1, 2: stagnation. No progress was made since the best iterate, so an
   // action for stagnation restarts from it.
   if (report.stagnation()) {
-    if (recent_numerical)
-      action = climb(kNumericalLadder, numerical_entry, can_switch);
+    if (recent_numerical_trouble)
+      action = climbLadder(kNumericalLadder, numerical_start, can_switch);
     if (action == RecoveryAction::kNone)
-      action = climb(kStagnationLadder, stagnation_entry, can_switch);
+      action = climbLadder(kStagnationLadder, stagnation_start, can_switch);
     reset_to_best = action != RecoveryAction::kNone;
   }
 
@@ -133,14 +127,15 @@ Recovery::Proposal Recovery::propose(const IterationReport& report,
 
   // 3: absorbed rows
   if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbedRows))
-    action = climb(kAbsorbedLadder, 0, can_switch);
+    action =
+        climbLadder(kAbsorbedLadder, RecoveryAction::kDecreaseReg, can_switch);
 
   // some actions always reset
   if (actionProperties(action).reset_to_best) reset_to_best = true;
 
-  const Proposal proposal{action, iter, reset_to_best};
-  if (action != RecoveryAction::kNone) proposals.push_back(proposal);
-  return proposal;
+  const ProposedAction proposed{action, iter, reset_to_best};
+  if (action != RecoveryAction::kNone) proposed_actions.push_back(proposed);
+  return proposed;
 }
 
 }  // namespace hipo

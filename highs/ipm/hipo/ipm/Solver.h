@@ -310,17 +310,21 @@ class Solver {
 
   // ===================================================================================
   // Apply the action chosen by recovery_ for the issues in record, resetting to
-  // the best iterate if record says so. Return true if it was applied; the
-  // others are only logged.
+  // the best iterate if record says so. Actions not yet available are only
+  // logged. Return true if the ipm should terminate (stop).
   // ===================================================================================
-  bool applyAction(IterationRecord& record);
+  shouldTerminate applyAction(IterationRecord& record);
+
+  // ===================================================================================
+  // Give up because of stagnation: accept the point if it passes the KKT check,
+  // otherwise reset to the best iterate, and set the status.
+  // ===================================================================================
+  void terminateStagnation();
 
   // ===================================================================================
   // Check for reasons to stop other than optimality: a verified certificate of
-  // primal or dual infeasibility (see handleInfeasible), or stagnation that the
-  // recovery actions cannot resolve (see handleStagnation), using the report
-  // stored by runDiagnostics. The action chosen by recovery_ is applied here
-  // (see applyAction); if it is, stagnation is not handled at this iteration.
+  // primal or dual infeasibility (see handleInfeasible), or the stop chosen by
+  // recovery_ (see applyAction), using the report stored by runDiagnostics.
   // Return true if the ipm should terminate.
   // ===================================================================================
   shouldTerminate checkInfeasibilityOrStagnation();
@@ -339,12 +343,6 @@ class Solver {
   double checkDualRay(const HighsSolution& point) const;
   double primalRayRadius(const std::vector<double>& ray) const;
   double dualRayRadius(const std::vector<double>& ray) const;
-
-  // ===================================================================================
-  // Take the recovery action chosen by recovery_ for the stagnation issues in
-  // report. Return true if the ipm should terminate.
-  // ===================================================================================
-  shouldTerminate handleStagnation(const IterationReport& report);
 
   // ===================================================================================
   // If report has divergence or stagnation issues, look for a certificate of

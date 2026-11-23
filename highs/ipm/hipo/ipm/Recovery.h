@@ -30,60 +30,35 @@ struct ActionProperties {
   ActionTiming timing;
   bool reset_to_best;
   bool temporary;
+  bool available;
 };
 
 inline ActionProperties actionProperties(RecoveryAction action) {
   switch (action) {
     case RecoveryAction::kNone:
-      return {"none", ActionTiming::kImmediate, false, false};
+      return {"none", ActionTiming::kImmediate, false, false, false};
     case RecoveryAction::kMoreRefinement:
-      return {"refine", ActionTiming::kNextSolve, false, true};
+      return {"refine", ActionTiming::kNextSolve, false, true, false};
     case RecoveryAction::kIncreaseReg:
-      return {"reg+", ActionTiming::kNextFactorisation, false, false};
+      return {"reg+", ActionTiming::kNextFactorisation, false, false, true};
     case RecoveryAction::kDecreaseReg:
-      return {"reg-", ActionTiming::kNextFactorisation, false, false};
+      return {"reg-", ActionTiming::kNextFactorisation, false, false, true};
     case RecoveryAction::kRecentre:
-      return {"centre", ActionTiming::kNextIteration, false, true};
+      return {"centre", ActionTiming::kNextIteration, false, true, false};
     case RecoveryAction::kSwitchFactorisation:
-      return {"switch", ActionTiming::kNextIteration, true, false};
+      return {"switch", ActionTiming::kNextIteration, true, false, true};
     case RecoveryAction::kTerminate:
-      return {"stop", ActionTiming::kImmediate, true, false};
+      return {"stop", ActionTiming::kImmediate, true, false, true};
   }
-  return {"?", ActionTiming::kImmediate, false, false};
+  return {"?", ActionTiming::kImmediate, false, false, false};
 }
 
-// Keeps track of the actions taken to recover from stagnation, and decides
-// which action to take next.
+// Keeps track of the actions chosen to recover from the issues detected, and
+// decides which action to take next.
 struct Recovery {
-  // An action that was applied, for which issue and at which iteration.
-  struct Record {
-    RecoveryAction action;
-    IssueType issue;
-    Int iter;
-  };
-
-  std::vector<Record> records;
-
   // ===================================================================================
-  // Decide the action to take, given the report of the latest iteration.
-  // ===================================================================================
-  RecoveryAction nextAction(const IterationReport& report) const;
-
-  // ===================================================================================
-  // Record that action was applied, because of the main stagnation issue in
-  // report.
-  // ===================================================================================
-  void applied(RecoveryAction action, const IterationReport& report);
-
-  // ===================================================================================
-  // Check if action was ever applied, for any issue or for a specific issue.
-  // ===================================================================================
-  bool tried(RecoveryAction action) const;
-  bool tried(RecoveryAction action, IssueType issue) const;
-
-  // ===================================================================================
-  // Choose the action for the issues in report, record it in proposals and
-  // return it. Nothing is applied. Ladders:
+  // Choose the action for the issues in report, record it in proposed_actions
+  // and return it; Solver::applyAction applies it. Ladders:
   //  numerical:  refine -> reg+ (x kMaxRegChanges) -> switch, entered at reg+
   //              with I or W
   //  stagnation: centre -> switch -> stop, entered at switch without C or
@@ -101,13 +76,13 @@ struct Recovery {
   // ladders. switch is skipped if !can_switch. Actions chosen for stagnation
   // (1 and 2) reset to the best iterate, as do those whose properties say so.
   // ===================================================================================
-  struct Proposal {
+  struct ProposedAction {
     RecoveryAction action;
     Int iter;
     bool reset_to_best;
   };
-  Proposal propose(const IterationReport& report, bool can_switch);
-  std::vector<Proposal> proposals;
+  ProposedAction proposeAction(const IterationReport& report, bool can_switch);
+  std::vector<ProposedAction> proposed_actions;
 
  private:
   enum Ladder {
@@ -121,12 +96,17 @@ struct Recovery {
   Int next_rung[kNumLadders]{};
 
   // last iteration with I, W or G
-  bool numerical_seen = false;
-  Int last_numerical_iter = 0;
+  bool numerical_trouble_seen = false;
+  Int last_numerical_trouble_iter = 0;
 
-  // first rung from entry onwards that can be chosen, or kNone if the ladder is
-  // exhausted
-  RecoveryAction climb(Ladder ladder, Int entry, bool can_switch);
+  // action of the first rung, from start or from where the ladder got to, that
+  // can be chosen; kNone if the ladder is exhausted
+  RecoveryAction climbLadder(Ladder ladder, RecoveryAction start,
+                             bool can_switch);
+
+  // fewer than kActionPatience iterations since the previous action
+  bool waitingForPreviousAction(Int iter) const;
+
   Int timesProposed(RecoveryAction action) const;
 };
 
