@@ -61,11 +61,16 @@ struct SolverCapabilities {
 struct Recovery {
   // ===================================================================================
   // Choose the action for the issues in report, record it in proposed_actions
-  // and return it; Solver::applyAction applies it. Ladders:
-  //  numerical:  drop -> reg+ (x kMaxRegChanges) -> switch
-  //  stagnation: centre -> switch -> stop, entered at switch without C or
-  //              with L
-  //  absorbed:   reg- on the absorbed rows, no limit
+  // and return it; Solver::applyAction applies it.
+  // Each issue has a ladder of rungs, an action each, with the number of times
+  // it can be chosen:
+  //  numerical:  drop (1) -> reg+ (kMaxRegChanges) -> switch (1)
+  //  stagnation: centre (1) -> switch (1) -> stop (1)
+  //  absorbed:   reg- on the absorbed rows (no limit)
+  // A ladder is entered at a given rung, or at the rung it got to if higher,
+  // and moves up past the rungs used up or not allowed by capabilities. The
+  // times are counted over all ladders: switch used on one is used on both.
+  // The stagnation ladder is entered at switch without C or with L.
   // Issues are considered in decreasing order of priority, and the first one
   // with an action available is acted upon:
   //  1. stagnation, with I, W or G in the last kActionNumericalWindow
@@ -74,8 +79,6 @@ struct Recovery {
   //  3. A: absorbed ladder.
   // I, W or G without stagnation are not acted upon.
   // No action is chosen within kActionPatience iterations of the previous one.
-  // Each rung's action is chosen at most max_uses times in total, over all
-  // ladders. switch and drop are skipped if capabilities do not allow them.
   // Only the actions whose properties say so (switch, stop) reset to the best
   // iterate.
   // ===================================================================================
@@ -88,7 +91,6 @@ struct Recovery {
                                const SolverCapabilities& capabilities);
   std::vector<ProposedAction> proposed_actions;
 
- private:
   enum Ladder {
     kNumericalLadder,
     kStagnationLadder,
@@ -96,16 +98,17 @@ struct Recovery {
     kNumLadders
   };
 
-  // next rung of each ladder
-  Int next_rung[kNumLadders]{};
+ private:
+  // rung each ladder got to
+  Int current_rung[kNumLadders]{};
 
   // last iteration with I, W or G
   bool numerical_trouble_seen = false;
   Int last_numerical_trouble_iter = 0;
 
-  // action of the first rung, from start or from where the ladder got to, that
-  // can be chosen; kNone if the ladder is exhausted
-  RecoveryAction climbLadder(Ladder ladder, RecoveryAction start,
+  // action of the first rung that can be chosen, from entry or from the rung
+  // the ladder got to; kNone if the ladder is used up
+  RecoveryAction climbLadder(Ladder ladder, RecoveryAction entry,
                              const SolverCapabilities& capabilities);
 
   // fewer than kActionPatience iterations since the previous action
