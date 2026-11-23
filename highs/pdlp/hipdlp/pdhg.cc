@@ -595,6 +595,19 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
       break;
     }
 
+    // check for user interrupt
+    if (highs_callback_p_ && highs_callback_p_->user_callback &&
+        highs_callback_p_->active[kCallbackPdlpInterrupt]) {
+      highs_callback_p_->clearHighsCallbackOutput();
+      highs_callback_p_->data_out.pdlp_iteration_count = final_iter_count_;
+      if (highs_callback_p_->callbackAction(kCallbackPdlpInterrupt,
+                                            "PDLP interrupt")) {
+        logger_.info("User interrupt.");
+        termination_status = TerminationStatus::INTERRUPT;
+        break;
+      }
+    }
+
     // -- Step 1 (Major, isolated for restart-FPE check) --
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
     GpuStepParams h_step_params{stepsize_.primal_step, stepsize_.dual_step,
@@ -711,6 +724,11 @@ void PDLPSolver::solve(std::vector<double>& x, std::vector<double>& y) {
     logger_.info("Iteration limit reached without convergence");
     termination_status = TerminationStatus::MAXITER;
   }
+
+  // The output vectors are only set on convergence, so if the solver
+  // stopped for any other reason (iteration limit, time limit, user
+  // interrupt), return the latest iterate rather than the initial point
+  if (termination_status != TerminationStatus::OPTIMAL) getLastIterate(x, y);
 
   solveReturn(termination_status);
 }
@@ -1120,6 +1138,37 @@ void PDLPSolver::performHalpernPdhgStepGpu(bool is_major, int k_offset) {
                                    rho, a_num_rows_, gpu_stream_);
 }
 #endif
+
+void PDLPSolver::getLastIterate(std::vector<double>& output_x,
+                                std::vector<double>& output_y) {
+  // The latest iterate is the one tested by the last call to
+  // runConvergenceCheck, which also computed its dual slacks. When
+  // using Halpern restart, and after the first iteration, that is the
+  // PDHG iterate; otherwise it is the current iterate
+  const bool use_pdhg_iterate =
+      params_.use_halpern_restart && final_iter_count_ > 0;
+#if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
+  const double* src_x = use_pdhg_iterate ? d_pdhg_primal_ : d_x_current_;
+  const double* src_y = use_pdhg_iterate ? d_pdhg_dual_ : d_y_current_;
+  output_x.resize(lp_.num_col_);
+  output_y.resize(lp_.num_row_);
+  GPU_CHECK(gpuMemcpy(output_x.data(), src_x, lp_.num_col_ * sizeof(double),
+                      gpuMemcpyDeviceToHost));
+  GPU_CHECK(gpuMemcpy(output_y.data(), src_y, lp_.num_row_ * sizeof(double),
+                      gpuMemcpyDeviceToHost));
+  dSlackPos_.resize(lp_.num_col_);
+  dSlackNeg_.resize(lp_.num_col_);
+  GPU_CHECK(gpuMemcpy(dSlackPos_.data(), d_dSlackPos_,
+                      lp_.num_col_ * sizeof(double), gpuMemcpyDeviceToHost));
+  GPU_CHECK(gpuMemcpy(dSlackNeg_.data(), d_dSlackNeg_,
+                      lp_.num_col_ * sizeof(double), gpuMemcpyDeviceToHost));
+#else
+  // On the CPU, dSlackPos_ and dSlackNeg_ already hold the slacks of
+  // the latest iterate
+  output_x = use_pdhg_iterate ? x_next_ : x_current_;
+  output_y = use_pdhg_iterate ? y_next_ : y_current_;
+#endif
+}
 
 void PDLPSolver::solveReturn(const TerminationStatus term_code) {
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
@@ -1776,10 +1825,12 @@ double PDLPSolver::powerMethodGpu() {
 }
 #endif
 
-HighsStatus PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer) {
+HighsStatus PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer,
+                              HighsCallback& callback) {
   logger_.initialise(options.log_dev_level, options.log_options, &timer);
   logger_.printHeader();
   highs_timer_p_ = &timer;
+  highs_callback_p_ = &callback;
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Using HiPDLP first order PDLP solver on a %s\n",
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)

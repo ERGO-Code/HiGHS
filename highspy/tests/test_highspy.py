@@ -1425,6 +1425,7 @@ class TestHighsPy(unittest.TestCase):
         h.cbLogging += chk_callback
         h.cbSimplexInterrupt += do_nothing
         h.cbIpmInterrupt += do_nothing
+        h.cbPdlpInterrupt += do_nothing
         h.cbMipSolution += do_nothing
         h.cbMipImprovingSolution += do_nothing
         h.cbMipLogging += do_nothing
@@ -1451,6 +1452,7 @@ class TestHighsPy(unittest.TestCase):
         h.cbLogging -= chk_callback
         h.cbSimplexInterrupt -= do_nothing
         h.cbIpmInterrupt -= do_nothing
+        h.cbPdlpInterrupt -= do_nothing
         h.cbMipSolution -= do_nothing
         h.cbMipImprovingSolution -= do_nothing
         h.cbMipLogging -= do_nothing
@@ -1482,6 +1484,7 @@ class TestHighsPy(unittest.TestCase):
         self.assertRaises(HighsError, lambda: h.__setattr__("cbLogging", None))
         self.assertRaises(HighsError, lambda: h.__setattr__("cbSimplexInterrupt", None))
         self.assertRaises(HighsError, lambda: h.__setattr__("cbIpmInterrupt", None))
+        self.assertRaises(HighsError, lambda: h.__setattr__("cbPdlpInterrupt", None))
         self.assertRaises(HighsError, lambda: h.__setattr__("cbMipSolution", None))
         self.assertRaises(HighsError, lambda: h.__setattr__("cbMipImprovingSolution", None))
         self.assertRaises(HighsError, lambda: h.__setattr__("cbMipLogging", None))

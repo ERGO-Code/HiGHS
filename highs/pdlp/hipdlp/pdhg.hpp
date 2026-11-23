@@ -25,6 +25,7 @@
 
 #include "linalg.hpp"
 #include "logger.hpp"
+#include "lp_data/HighsCallback.h"
 #if PDLP_PROFILE
 #include "pdlp/HiPdlpTimer.h"
 #endif
@@ -44,7 +45,8 @@ struct StepSizeConfig;
 class PDLPSolver {
  public:
   // --- setup & Main Interface ---
-  HighsStatus setup(const HighsOptions& options, HighsTimer& timer);
+  HighsStatus setup(const HighsOptions& options, HighsTimer& timer,
+                    HighsCallback& callback);
   void passLp(const HighsLp* lp) { original_lp_ = lp; }
   void preprocessLp();
   void scaleProblem();
@@ -81,6 +83,10 @@ class PDLPSolver {
   bool runConvergenceCheck(size_t iter, std::vector<double>& output_x,
                            std::vector<double>& output_y,
                            TerminationStatus& status);
+  // Copies the latest iterate (and its dual slacks) to the output
+  // vectors when the solver stops without having converged
+  void getLastIterate(std::vector<double>& output_x,
+                      std::vector<double>& output_y);
   bool checkRestartCriteria(double current_fpe, double initial_fpe,
                             double last_trial_fpe, int halpern_iteration,
                             int final_iter_count);
@@ -220,6 +226,7 @@ class PDLPSolver {
       std::numeric_limits<double>::infinity();
 
   HighsTimer* highs_timer_p_;
+  HighsCallback* highs_callback_p_ = nullptr;
 
 #if PDLP_PROFILE
   HipdlpTimer hipdlp_timer_;
