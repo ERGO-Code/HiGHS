@@ -137,6 +137,7 @@ void Solver::reset() {
   controls_.reg_d_factor.assign(m_, 1.0);
   recovery_ = Recovery{};
   centring_ = Centring{};
+  guard_cols_.clear();
   prev_point_valid_ = false;
 
   LS_.reset();
@@ -186,9 +187,7 @@ void Solver::runIpm() {
 
   while (iter_ < options_.max_iter) {
     if (prepareIter()) break;
-    if (predictor() || correctors()) {
-      // The iteration is abandoned. If possible, start a new one with
-      // FactorHighs, from the best iterate.
+    if (computeDirection()) {
       if (restartWithMultifrontal()) continue;
       break;
     }
@@ -196,6 +195,13 @@ void Solver::runIpm() {
     runDiagnostics();
     printOutput();
   }
+}
+
+isFailure Solver::computeDirection() {
+  if (predictor()) return true;
+  for (Int pass = 0; pass < kGuardPasses && shortStepGuard(); ++pass)
+    if (predictor()) return true;
+  return correctors();
 }
 
 isFailure Solver::initialise() {
@@ -259,9 +265,72 @@ shouldTerminate Solver::prepareIter() {
   it_->history.back().factorisation_used = LS_->type();
 
   it_->computeScaling();
+  releaseGuardColumns();
 
   info_.times[kPrepareTime] += clock.stop();
   return false;
+}
+
+bool Solver::shortStepGuard() {
+  // Columns far from both bounds with tiny z can form directions in which
+  // A * dx is nearly zero. Their regularised pivots give them almost no
+  // curvature, so the direction moves them by many times their distance to
+  // the bounds and the step collapses. More primal regularisation on those
+  // columns only gives them curvature.
+  if (model_.qp()) return false;
+
+  double alpha_p, alpha_d;
+  stepsToBoundary(alpha_p, alpha_d, it_->delta);
+  if (std::min(alpha_p, alpha_d) >= kGuardAlpha) return false;
+
+  // nearly free columns, not guarded yet, that block the step
+  const NewtonDir& d = it_->delta;
+  const double near_free = kNearFreeRatio * controls_.baseRegP();
+  std::vector<HighsBool> guarded(n_, false);
+  for (Int j : guard_cols_) guarded[j] = true;
+
+  Int added = 0;
+  for (Int j = 0; j < n_; ++j) {
+    if (guarded[j] || !(it_->scaling[j] < near_free)) continue;
+    double ratio = 1.0;
+    if (model_.hasLb(j)) {
+      if (d.xl[j] < 0) ratio = std::min(ratio, -it_->xl[j] / d.xl[j]);
+      if (d.zl[j] < 0) ratio = std::min(ratio, -it_->zl[j] / d.zl[j]);
+    }
+    if (model_.hasUb(j)) {
+      if (d.xu[j] < 0) ratio = std::min(ratio, -it_->xu[j] / d.xu[j]);
+      if (d.zu[j] < 0) ratio = std::min(ratio, -it_->zu[j] / d.zu[j]);
+    }
+    if (ratio < kGuardRatio) {
+      guard_cols_.push_back(j);
+      controls_.reg_p_factor[j] *= kGuardRegFactor;
+      ++added;
+    }
+  }
+  if (added == 0) return false;
+
+  std::stringstream log_stream;
+  log_stream << "Short-step guard: steps " << sci(alpha_p, 0, 1) << " "
+             << sci(alpha_d, 0, 1) << ", primal regularisation of " << added
+             << " nearly free columns times " << sci(kGuardRegFactor, 0, 1)
+             << "\n";
+  it_->history.back().messages += log_stream.str();
+
+  // refactorise with the new regularisation
+  LS_->clear();
+  return true;
+}
+
+void Solver::releaseGuardColumns() {
+  const double near_free = kNearFreeRatio * controls_.baseRegP();
+  size_t kept = 0;
+  for (Int j : guard_cols_) {
+    if (it_->scaling[j] < near_free)
+      guard_cols_[kept++] = j;
+    else
+      controls_.reg_p_factor[j] /= kGuardRegFactor;
+  }
+  guard_cols_.resize(kept);
 }
 
 isFailure Solver::predictor() {
@@ -1286,7 +1355,8 @@ void Solver::runDiagnostics() {
   record.action = proposed.action;
   record.reset_to_best = proposed.reset_to_best;
 
-  record.messages = log_stream.str();
+  // the short-step guard may have added messages already
+  record.messages += log_stream.str();
 }
 
 shouldTerminate Solver::applyAction(IterationRecord& record) {

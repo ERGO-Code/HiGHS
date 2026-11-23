@@ -76,6 +76,9 @@ class Solver {
   // centring mode, started by the centre action
   Centring centring_{};
 
+  // columns whose primal regularisation was increased by the short-step guard
+  std::vector<Int> guard_cols_;
+
  public:
   // ===================================================================================
   // Load an LP or QP:
@@ -129,7 +132,28 @@ class Solver {
   void runIpm();
   isFailure initialise();
   shouldTerminate prepareIter();
+
+  // ===================================================================================
+  // Compute the direction of the iteration: predictor, solved again if the
+  // short-step guard changes the regularisation, then correctors.
+  // ===================================================================================
+  isFailure computeDirection();
+
   isFailure predictor();
+
+  // ===================================================================================
+  // Short-step guard, for LPs: if the step of the predictor is below
+  // kGuardAlpha and nearly free columns block it, multiply their primal
+  // regularisation by kGuardRegFactor and return true, so that the predictor is
+  // solved again.
+  // ===================================================================================
+  bool shortStepGuard();
+
+  // ===================================================================================
+  // Give back the default primal regularisation to the columns of the guard
+  // that are no longer nearly free.
+  // ===================================================================================
+  void releaseGuardColumns();
   isFailure correctors();
 
   // ===================================================================================

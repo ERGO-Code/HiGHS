@@ -57,13 +57,15 @@ const Int kMaxRegChanges = 3;
 const double kRegScaleFactor = 10.0;
 const double kMinRegFactor = 1e-3;
 
-// centre: lower bound on sigma for at most kRecentreIter iterations, stopping
-// earlier if the point is centred
+// parameters for nearly free columns
+const double kGuardAlpha = 0.01;
+const double kGuardRatio = 0.1;
+const double kGuardRegFactor = 30.0;
+const Int kGuardPasses = 2;
+
+// parameters for centring
 const double kRecentreSigmaMin = 0.5;
 const Int kRecentreIter = 2;
-
-// a point is centred if all products xj * zj / mu are within
-// [kCentredProductRatio, 1 / kCentredProductRatio]
 const double kCentredProductRatio = 0.1;
 
 // parameters for choice of AS or NE
