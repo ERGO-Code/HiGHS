@@ -61,12 +61,12 @@ off.
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
 regularisation. If regularisation is already added to the matrix, ignore.
+Use setRegularisationEntries(reg,n) to give a value for each pivot instead.
 
 The expected sign of a pivot is used to determine which static regularisation to
 apply. Pivots with negative expected sign are regularised with -reg_p, pivots
 with positive expected sign are regularised with +reg_d. If the sign is unknown,
-the computed sign of the pivot is used to determine which regularisation to
-apply.
+the pivot is regularised with reg_d, in the direction of its computed sign.
 
 Notice that this sign convention corresponds to a saddle point system with
 negative (1,1) block and positive (2,2) block.
@@ -95,6 +95,9 @@ class FHsolver {
 
  private:
   FHoptions options_{};
+
+  // static regularisation of each pivot, empty if not used
+  std::vector<double> static_reg_;
 
   // Columns of factorisation, stored by supernode.
   // This memory is allocated the first time that it is used. Subsequent
@@ -128,6 +131,13 @@ class FHsolver {
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p = 0.0, double reg_d = 0.0);
+
+  // Set static regularisation for each pivot, in the original order of the
+  // matrix: pivot j gets -reg[j] if its sign is negative, +reg[j] if positive.
+  // It replaces the values of setRegularisation, until that is called again;
+  // reg == nullptr goes back to them. With setRegularisation, pivots of
+  // unknown sign get reg_d.
+  void setRegularisationEntries(const double* reg, Int n);
 
   // Extract the regularisation values used, including static and dynamic.
   void getRegularisation(double* reg);

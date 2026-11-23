@@ -110,6 +110,11 @@ Int UpLookingSolver::factor(const std::vector<Int>& ptr,
   // number of entries of L scanned since the last check of the time limit
   Int64 work = 0;
 
+  // static regularisation, in the permuted order
+  std::vector<double> static_reg;
+  kkt_.staticReg(static_reg);
+  permuteVectorInverse(static_reg, kkt_.iperm());
+
   for (Int row = 0; row < n_; ++row) {
     if (work >= kUplookTimeCheckWork) {
       work = 0;
@@ -178,9 +183,9 @@ Int UpLookingSolver::factor(const std::vector<Int>& ptr,
     double old_pivot = d;
     unreg_pivots_[row] = d;
     if (signs_[row] > 0)
-      d += controls_.reg_d;
+      d += static_reg[row];
     else
-      d -= controls_.reg_p;
+      d -= static_reg[row];
 
     const double pivot_scale = std::max(1.0, std::abs(orig_diag));
     if (d * signs_[row] < reg_threshold_ * pivot_scale) {
@@ -326,7 +331,7 @@ void UpLookingSolver::getReg(std::vector<double>& Rp, std::vector<double>& Rd) {
     assert(kkt_.isNE());
     // Primal regularisation is added to Theta^-1 when forming the normal
     // equations.
-    Rp.assign(n, controls_.reg_p);
+    Rp = controls_.reg_p;
     Rd = std::move(reg);
   }
 }

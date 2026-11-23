@@ -16,6 +16,7 @@ namespace hipo {
 
 Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
                      const Int* ptrM, const double* valM,
+                     const std::vector<double>& static_reg,
                      const FHoptions& FH_opt, const Logger* logger,
                      DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
@@ -55,6 +56,18 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   // Permute the matrix.
   // This also removes any entry not in the lower triangle.
   permute(S_.iperm());
+
+  // static regularisation in the same order as the permuted matrix: the given
+  // values, or reg_p for negative pivots and reg_d for the others
+  if (!static_reg.empty()) {
+    static_reg_ = static_reg;
+    permuteVectorInverse(static_reg_, S_.iperm());
+  } else {
+    const std::vector<Int>& sign = S_.pivotSign();
+    static_reg_.resize(n_);
+    for (Int i = 0; i < n_; ++i)
+      static_reg_[i] = sign[i] < 0 ? FH_opt_.reg_p : FH_opt_.reg_d;
+  }
 
   nzM_ = ptrM_.back();
 
@@ -223,7 +236,7 @@ void Factorise::processSupernode(Int sn) {
   // threshold for regularisation
   const double reg_thresh = M_norm1_ * kDynamicDiagCoeff;
 
-  if (Int flag = FH->denseFactorise(reg_thresh)) {
+  if (Int flag = FH->denseFactorise(reg_thresh, &static_reg_[S_.snStart(sn)])) {
     flag_stop_.store(true, std::memory_order_relaxed);
 
     if (logger_ && flag == kRetInvalidInput)

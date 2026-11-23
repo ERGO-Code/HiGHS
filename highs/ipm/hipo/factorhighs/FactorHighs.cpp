@@ -18,6 +18,14 @@ FHsolver::~FHsolver() {
 void FHsolver::setRegularisation(double reg_p, double reg_d) {
   options_.reg_p = reg_p;
   options_.reg_d = reg_d;
+  static_reg_.clear();
+}
+
+void FHsolver::setRegularisationEntries(const double* reg, Int n) {
+  if (reg)
+    static_reg_.assign(reg, reg + n);
+  else
+    static_reg_.clear();
 }
 
 Int FHsolver::analyse(Symbolic& S, Int n, Int nz, const Int* rows,
@@ -28,8 +36,10 @@ Int FHsolver::analyse(Symbolic& S, Int n, Int nz, const Int* rows,
 
 Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
                         const Int* ptr, const double* vals) {
-  Factorise fact_obj(S, n, nz, rows, ptr, vals, options_, logger_, data_,
-                     sn_columns_, &serial_stack_);
+  if (!static_reg_.empty() && static_cast<Int>(static_reg_.size()) != n)
+    return kRetInvalidInput;
+  Factorise fact_obj(S, n, nz, rows, ptr, vals, static_reg_, options_, logger_,
+                     data_, sn_columns_, &serial_stack_);
   return fact_obj.run(N_);
 }
 
@@ -152,9 +162,9 @@ Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
 
   std::vector<Int> iperm(n);
 
-  Int status =
-      HighsExtras::metis::nodeND(&n, full_ptr, full_rows, nullptr, options,
-                                 perm, iperm.data(), options_.should_stop, options_.stop_data);
+  Int status = HighsExtras::metis::nodeND(
+      &n, full_ptr, full_rows, nullptr, options, perm, iperm.data(),
+      options_.should_stop, options_.stop_data);
 
   if (options_.one_indexing)
     for (Int i = 0; i < n; ++i) perm[i]++;

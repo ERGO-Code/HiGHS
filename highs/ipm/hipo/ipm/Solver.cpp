@@ -133,6 +133,8 @@ void Solver::reset() {
   alpha_dual_ = 0.0;
   sigma_ = 0.0;
   controls_ = SolverControls{};
+  controls_.reg_p.assign(n_, kStaticRegPrimal);
+  controls_.reg_d.assign(m_, kStaticRegDual);
   recovery_ = Recovery{};
   prev_point_valid_ = false;
 
@@ -470,7 +472,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
 
     // Deltax = (Theta^-1+Rp+Q)^-1 * Deltax
     for (Int i = 0; i < n_; ++i) {
-      double denom = theta_inv[i] + controls_.reg_p;
+      double denom = theta_inv[i] + controls_.reg_p[i];
       if (model_.qp()) denom += model_.Q().diag(i);
       delta.x[i] /= denom;
     }
@@ -577,9 +579,9 @@ void Solver::recordFactorisationSignals() {
   };
 
   for (Int i = 0; i < (Int)Px.size(); ++i)
-    addPivot(Px[i], it_->Rp[i], controls_.reg_p);
+    addPivot(Px[i], it_->Rp[i], controls_.reg_p[i]);
   for (Int i = 0; i < (Int)Py.size(); ++i)
-    addPivot(Py[i], it_->Rd[i], controls_.reg_d);
+    addPivot(Py[i], it_->Rd[i], controls_.reg_d[i]);
 
   // nearly free columns, only for LPs: the bound m used by the detector holds
   // only at a vertex
@@ -1686,8 +1688,8 @@ isFailure Solver::initialiseLinearSolver() {
   LS_->checkMemory();
 
   if (do_switch) {
-    LS_.reset(
-        new UpLookingSolver(*kkt_, info_, it_->history, controls_, model_, control_));
+    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->history, controls_, model_,
+                                  control_));
     LS_->setup();
     LS_->clear();
   }
@@ -1754,9 +1756,9 @@ void Solver::printOutput(bool reset) const {
         record.correctors, record.num_solves,
         LinearSolverTypeToString((LinearSolverType)record.factorisation_used)
             .front(),
-        controls_.reg_p, controls_.reg_d, record.min_theta, record.max_theta,
-        record.min_prod, record.max_prod, record.num_small_prod,
-        record.num_large_prod, record.bw_error);
+        infNorm(controls_.reg_p), infNorm(controls_.reg_d), record.min_theta,
+        record.max_theta, record.min_prod, record.max_prod,
+        record.num_small_prod, record.num_large_prod, record.bw_error);
     logger_.print(" %8.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d %s",
                   record.cw_error, (int)record.num_dynamic_reg,
                   (int)record.num_wrong_sign, (int)record.num_reg_dominated,

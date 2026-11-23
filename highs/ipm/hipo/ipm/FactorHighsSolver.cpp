@@ -106,7 +106,10 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   kkt_.buildASvalues(scaling);
 
   // set static regularisation, since it may have changed
-  FH_.setRegularisation(controls_.reg_p, controls_.reg_d);
+  std::vector<double> static_reg;
+  kkt_.staticReg(static_reg);
+  FH_.setRegularisationEntries(static_reg.data(),
+                               static_cast<Int>(static_reg.size()));
 
   Clock clock;
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
@@ -126,7 +129,10 @@ Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   kkt_.buildNEvalues(scaling);
 
   // set static regularisation, since it may have changed
-  FH_.setRegularisation(controls_.reg_p, controls_.reg_d);
+  std::vector<double> static_reg;
+  kkt_.staticReg(static_reg);
+  FH_.setRegularisationEntries(static_reg.data(),
+                               static_cast<Int>(static_reg.size()));
 
   Clock clock;
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
@@ -756,7 +762,7 @@ void FactorHighsSolver::getReg(std::vector<double>& Rp,
     assert(kkt_.isNE());
     // Primal regularisation is added to Theta^-1 when forming the normal
     // equations.
-    Rp.assign(n, controls_.reg_p);
+    Rp = controls_.reg_p;
     Rd.resize(m);
     FH_.getRegularisation(Rd.data());
   }

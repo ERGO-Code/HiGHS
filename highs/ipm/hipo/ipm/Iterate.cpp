@@ -282,7 +282,7 @@ std::vector<double> Iterate::residual8(const Residuals& r,
 
   // temp = (Theta^-1+Rp+Q)^-1 * res7
   for (Int i = 0; i < model.n(); ++i) {
-    double denom = scaling[i] + controls.reg_p;
+    double denom = scaling[i] + controls.reg_p[i];
     if (model.qp()) denom += model.Q().diag(i);
     temp[i] /= denom;
   }

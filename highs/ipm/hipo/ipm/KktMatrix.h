@@ -51,6 +51,9 @@ struct KktMatrix {
   bool isNE() const;
   bool isAS() const;
   const std::vector<Int>& iperm() const;
+
+  // static regularisation of each pivot, in the order of the system
+  void staticReg(std::vector<double>& reg) const;
 };
 
 }  // namespace hipo

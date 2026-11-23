@@ -59,6 +59,9 @@ class Factorise {
   // 1x1 pivots before regularisation, infinite for 2x2 pivots
   std::vector<double> unreg_pivots_{};
 
+  // static regularisation of each pivot, permuted
+  std::vector<double> static_reg_{};
+
   // flag to stop computation
   std::atomic<bool> flag_stop_{false};
 
@@ -75,7 +78,8 @@ class Factorise {
 
  public:
   Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM, const Int* ptrM,
-            const double* valM, const FHoptions& FH_opt, const Logger* logger,
+            const double* valM, const std::vector<double>& static_reg,
+            const FHoptions& FH_opt, const Logger* logger,
             DataCollector& data, std::vector<std::vector<double>>& sn_columns,
             CliqueStack* stack);
 

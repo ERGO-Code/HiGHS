@@ -58,8 +58,8 @@ class FormatHandler {
   FormatHandler(const Symbolic& S, Int sn, std::vector<double>& frontal,
                 double* clique_ptr, const FHoptions& FH_opt);
   void terminate(std::vector<double>& clique, std::vector<double>& total_reg,
-                 std::vector<double>& total_unreg_pivots, std::vector<Int>& swaps,
-                 std::vector<double>& pivot_2x2);
+                 std::vector<double>& total_unreg_pivots,
+                 std::vector<Int>& swaps, std::vector<double>& pivot_2x2);
 
   // avoid copies
   FormatHandler(const FormatHandler&) = delete;
@@ -76,7 +76,8 @@ class FormatHandler {
   virtual void initClique() = 0;
   virtual void assembleFrontal(Int i, Int j, double val) = 0;
   virtual void assembleChild(Int child_sn, const double* child) = 0;
-  virtual Int denseFactorise(double reg_thresh) = 0;
+  // static_reg: static regularisation of the pivots of the supernode
+  virtual Int denseFactorise(double reg_thresh, const double* static_reg) = 0;
 };
 
 const Int extra_space_frontal = 10;

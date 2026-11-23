@@ -11,9 +11,10 @@ namespace hipo {
 // Factorisation with "hybrid formats".
 
 Int denseFactFH(char format, Int n, Int k, double* A, double* B,
-                const Int* pivot_sign, double thresh, double* totalreg,
-                double* unreg_pivots, Int* swaps, double* pivot_2x2,
-                DataCollector& data, const FHoptions& options) {
+                const Int* pivot_sign, const double* static_reg, double thresh,
+                double* totalreg, double* unreg_pivots, Int* swaps,
+                double* pivot_2x2, DataCollector& data,
+                const FHoptions& options) {
   // ===========================================================================
   // Partial blocked factorisation
   // Matrix A is in format FH
@@ -97,10 +98,14 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
     double* unreg_pivots_current = &unreg_pivots[j * nb];
     std::vector<Int> pivot_sign_current(&pivot_sign[j * nb],
                                         &pivot_sign[j * nb] + jb);
+    // local copy, swapped by the kernel together with the pivots
+    std::vector<double> static_reg_current(&static_reg[j * nb],
+                                           &static_reg[j * nb] + jb);
     Int* swaps_current = &swaps[j * nb];
     double* pivot_2x2_current = &pivot_2x2[j * nb];
-    Int info = denseFactK('U', jb, D, jb, pivot_sign_current.data(), thresh,
-                          regul_current, unreg_pivots_current, swaps_current,
+    Int info = denseFactK('U', jb, D, jb, pivot_sign_current.data(),
+                          static_reg_current.data(), thresh, regul_current,
+                          unreg_pivots_current, swaps_current,
                           pivot_2x2_current, data, options);
     if (info != 0) return info;
 

@@ -87,7 +87,8 @@ void HybridHybridFormatHandler::assembleFrontalMultiple(
   }
 }
 
-Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
+Int HybridHybridFormatHandler::denseFactorise(double reg_thresh,
+                                              const double* static_reg) {
   Int status;
 
   // either clique is valid, or clique is not needed
@@ -101,9 +102,9 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
   const Int* pivot_sign = &S_->pivotSign().data()[sn_start];
 
   status = denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_,
-                       pivot_sign, reg_thresh, local_reg_.data(),
-                       local_unreg_pivots_.data(), swaps_.data(), pivot_2x2_.data(),
-                       data_, FH_opt_);
+                       pivot_sign, static_reg, reg_thresh, local_reg_.data(),
+                       local_unreg_pivots_.data(), swaps_.data(),
+                       pivot_2x2_.data(), data_, FH_opt_);
 
   return status;
 }

@@ -1,6 +1,8 @@
 #ifndef HIPO_PARAMETERS_H
 #define HIPO_PARAMETERS_H
 
+#include <vector>
+
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
@@ -120,9 +122,13 @@ const double kParallelSolveMinSize = 1e4;
 const double kParallelForwardMinSpeedup = 2;
 const double kParallelBackwardMinSpeedup = 1.2;
 
+// default static regularisation
+const double kStaticRegPrimal = 1e-12;
+const double kStaticRegDual = 1e-10;
+
 struct SolverControls {
-  double reg_p = 1e-12;
-  double reg_d = 1e-10;
+  std::vector<double> reg_p;
+  std::vector<double> reg_d;
   Int refine_max_iter = kRefineMaxIter;
   double refine_tol = kRefineTol;
   double sigma_min = 0.0;
