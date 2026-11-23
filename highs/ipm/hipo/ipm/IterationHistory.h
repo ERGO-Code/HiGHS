@@ -53,6 +53,7 @@ struct IterationRecord {
   std::string messages;
 
   RecoveryAction action = RecoveryAction::kNone;
+  bool reset_to_best = false;
 };
 
 struct IterationHistory {

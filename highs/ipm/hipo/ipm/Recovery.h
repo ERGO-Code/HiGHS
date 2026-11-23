@@ -39,9 +39,9 @@ inline ActionProperties actionProperties(RecoveryAction action) {
     case RecoveryAction::kMoreRefinement:
       return {"refine", ActionTiming::kNextSolve, false, true};
     case RecoveryAction::kIncreaseReg:
-      return {"reg+", ActionTiming::kNextFactorisation, false, true};
+      return {"reg+", ActionTiming::kNextFactorisation, false, false};
     case RecoveryAction::kDecreaseReg:
-      return {"reg-", ActionTiming::kNextFactorisation, false, true};
+      return {"reg-", ActionTiming::kNextFactorisation, false, false};
     case RecoveryAction::kRecentre:
       return {"centre", ActionTiming::kNextIteration, false, true};
     case RecoveryAction::kSwitchFactorisation:
@@ -97,15 +97,16 @@ struct Recovery {
   //  3. I, W or G: numerical ladder;
   //  4. A: absorbed ladder.
   // No action is chosen within kActionPatience iterations of the previous one.
-  // An action that is not temporary is chosen at most once. switch is skipped
-  // if !can_switch.
+  // Each rung's action is chosen at most max_uses times in total, over all
+  // ladders. switch is skipped if !can_switch. Actions chosen for stagnation
+  // (1 and 2) reset to the best iterate, as do those whose properties say so.
   // ===================================================================================
-  RecoveryAction propose(const IterationReport& report, bool can_switch);
-
   struct Proposal {
     RecoveryAction action;
     Int iter;
+    bool reset_to_best;
   };
+  Proposal propose(const IterationReport& report, bool can_switch);
   std::vector<Proposal> proposals;
 
  private:
@@ -116,9 +117,8 @@ struct Recovery {
     kNumLadders
   };
 
-  // next rung of each ladder, and how many times it was chosen
+  // next rung of each ladder
   Int next_rung[kNumLadders]{};
-  Int rung_uses[kNumLadders]{};
 
   // last iteration with I, W or G
   bool numerical_seen = false;
@@ -127,7 +127,7 @@ struct Recovery {
   // first rung from entry onwards that can be chosen, or kNone if the ladder is
   // exhausted
   RecoveryAction climb(Ladder ladder, Int entry, bool can_switch);
-  bool proposed(RecoveryAction action) const;
+  Int timesProposed(RecoveryAction action) const;
 };
 
 }  // namespace hipo

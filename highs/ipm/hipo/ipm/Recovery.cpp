@@ -33,8 +33,8 @@ bool Recovery::tried(RecoveryAction action, IssueType issue) const {
   return false;
 }
 
-// A rung of a ladder: its action, and how many times it can be chosen before
-// moving to the next rung.
+// A rung of a ladder: its action, and how many times it can be chosen in total,
+// over all ladders, before moving to the next rung.
 struct Rung {
   RecoveryAction action;
   Int max_uses;
@@ -58,39 +58,31 @@ static const Rung kLadders[][kLadderSize] = {
      {RecoveryAction::kNone, 0}},
 };
 
-bool Recovery::proposed(RecoveryAction action) const {
+Int Recovery::timesProposed(RecoveryAction action) const {
+  Int count = 0;
   for (const Proposal& proposal : proposals)
-    if (proposal.action == action) return true;
-  return false;
+    if (proposal.action == action) ++count;
+  return count;
 }
 
 RecoveryAction Recovery::climb(Ladder ladder, Int entry, bool can_switch) {
   Int& rung = next_rung[ladder];
-  Int& uses = rung_uses[ladder];
-  if (rung < entry) {
-    rung = entry;
-    uses = 0;
-  }
+  rung = std::max(rung, entry);
   while (rung < kLadderSize &&
          kLadders[ladder][rung].action != RecoveryAction::kNone) {
     const Rung& current = kLadders[ladder][rung];
     const RecoveryAction action = current.action;
     const bool available =
-        uses < current.max_uses &&
-        (action != RecoveryAction::kSwitchFactorisation || can_switch) &&
-        (actionProperties(action).temporary || !proposed(action));
-    if (available) {
-      ++uses;
-      return action;
-    }
+        timesProposed(action) < current.max_uses &&
+        (action != RecoveryAction::kSwitchFactorisation || can_switch);
+    if (available) return action;
     ++rung;
-    uses = 0;
   }
   return RecoveryAction::kNone;
 }
 
-RecoveryAction Recovery::propose(const IterationReport& report,
-                                 bool can_switch) {
+Recovery::Proposal Recovery::propose(const IterationReport& report,
+                                     bool can_switch) {
   const Int iter = report.iter;
 
   const bool numerical_now = report.has(IssueType::kVeryInaccurateSolve) ||
@@ -105,7 +97,7 @@ RecoveryAction Recovery::propose(const IterationReport& report,
 
   // wait for the effect of the previous action
   if (!proposals.empty() && iter - proposals.back().iter < kActionPatience)
-    return RecoveryAction::kNone;
+    return {RecoveryAction::kNone, iter, false};
 
   // I and W make the direction unreliable, so refinement is skipped
   const Int numerical_entry = report.has(IssueType::kVeryInaccurateSolve) ||
@@ -122,17 +114,32 @@ RecoveryAction Recovery::propose(const IterationReport& report,
   // issues in decreasing order of priority; the first one for which an action
   // is available is acted upon
   RecoveryAction action = RecoveryAction::kNone;
-  if (report.stagnation() && recent_numerical)
-    action = climb(kNumericalLadder, numerical_entry, can_switch);
-  if (action == RecoveryAction::kNone && report.stagnation())
-    action = climb(kStagnationLadder, stagnation_entry, can_switch);
+  bool reset_to_best = false;
+
+  // 1, 2: stagnation. No progress was made since the best iterate, so an
+  // action for stagnation restarts from it.
+  if (report.stagnation()) {
+    if (recent_numerical)
+      action = climb(kNumericalLadder, numerical_entry, can_switch);
+    if (action == RecoveryAction::kNone)
+      action = climb(kStagnationLadder, stagnation_entry, can_switch);
+    reset_to_best = action != RecoveryAction::kNone;
+  }
+
+  // 3: numerical trouble
   if (action == RecoveryAction::kNone && numerical_now)
     action = climb(kNumericalLadder, numerical_entry, can_switch);
+
+  // 4: absorbed rows
   if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbedRows))
     action = climb(kAbsorbedLadder, 0, can_switch);
 
-  if (action != RecoveryAction::kNone) proposals.push_back({action, iter});
-  return action;
+  // some actions always reset
+  if (actionProperties(action).reset_to_best) reset_to_best = true;
+
+  const Proposal proposal{action, iter, reset_to_best};
+  if (action != RecoveryAction::kNone) proposals.push_back(proposal);
+  return proposal;
 }
 
 }  // namespace hipo

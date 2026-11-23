@@ -1273,18 +1273,52 @@ void Solver::runDiagnostics() {
 
   const bool can_switch = LS_ && LS_->type() == kUpLookingType &&
                           options_.factor == kHighsChooseString;
-  record.action = recovery_.propose(record.report, can_switch);
-  if (record.action != RecoveryAction::kNone)
-    log_stream << "Would apply " << actionProperties(record.action).name
-               << "\n";
+  const Recovery::Proposal proposal =
+      recovery_.propose(record.report, can_switch);
+  record.action = proposal.action;
+  record.reset_to_best = proposal.reset_to_best;
 
   record.messages = log_stream.str();
 }
 
+bool Solver::applyAction(IterationRecord& record) {
+  // only the regularisation actions are applied for now; they take effect at
+  // the next factorisation
+  const char* name = actionProperties(record.action).name;
+  switch (record.action) {
+    case RecoveryAction::kIncreaseReg:
+      controls_.reg_scale *= kRegScaleFactor;
+      break;
+    case RecoveryAction::kDecreaseReg:
+      controls_.reg_scale /= kRegScaleFactor;
+      break;
+    case RecoveryAction::kNone:
+      return false;
+    default:
+      record.messages += std::string("Would apply ") + name + "\n";
+      return false;
+  }
+
+  std::stringstream log_stream;
+  log_stream << "Applied " << name << ", regularisation scale "
+             << sci(controls_.reg_scale, 0, 1) << "\n";
+  if (record.reset_to_best) {
+    resetToBestIter(iter_);
+    it_->diagnostics.clear(iter_);
+    log_stream << "Reset to the best iterate\n";
+  }
+  record.messages += log_stream.str();
+  return true;
+}
+
 shouldTerminate Solver::checkInfeasibilityOrStagnation() {
-  const IterationReport report = it_->history.back().report;
+  IterationRecord& record = it_->history.back();
+  const IterationReport report = record.report;
 
   if (handleInfeasible(report)) return true;
+
+  if (applyAction(record)) return false;
+
   if (report.stagnation()) return handleStagnation(report);
   return false;
 }

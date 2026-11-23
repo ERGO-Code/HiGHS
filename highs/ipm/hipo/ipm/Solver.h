@@ -306,10 +306,19 @@ class Solver {
   void runDiagnostics();
 
   // ===================================================================================
+  // Apply the action chosen by recovery_ for the issues in record, resetting to
+  // the best iterate if record says so. Return true if it was applied; the
+  // others are only logged.
+  // ===================================================================================
+  bool applyAction(IterationRecord& record);
+
+  // ===================================================================================
   // Check for reasons to stop other than optimality: a verified certificate of
   // primal or dual infeasibility (see handleInfeasible), or stagnation that the
   // recovery actions cannot resolve (see handleStagnation), using the report
-  // stored by runDiagnostics. Return true if the ipm should terminate.
+  // stored by runDiagnostics. The action chosen by recovery_ is applied here
+  // (see applyAction); if it is, stagnation is not handled at this iteration.
+  // Return true if the ipm should terminate.
   // ===================================================================================
   shouldTerminate checkInfeasibilityOrStagnation();
 
