@@ -127,8 +127,16 @@ const double kStaticRegPrimal = 1e-12;
 const double kStaticRegDual = 1e-10;
 
 struct SolverControls {
-  std::vector<double> reg_p;
-  std::vector<double> reg_d;
+  // static regularisation: the defaults times reg_scale, times a factor for
+  // each row/column
+  double reg_scale = 1.0;
+  std::vector<double> reg_p_factor;
+  std::vector<double> reg_d_factor;
+  double baseRegP() const { return reg_scale * kStaticRegPrimal; }
+  double baseRegD() const { return reg_scale * kStaticRegDual; }
+  double regP(Int j) const { return baseRegP() * reg_p_factor[j]; }
+  double regD(Int i) const { return baseRegD() * reg_d_factor[i]; }
+
   Int refine_max_iter = kRefineMaxIter;
   double refine_tol = kRefineTol;
   double sigma_min = 0.0;

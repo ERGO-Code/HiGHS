@@ -133,8 +133,8 @@ void Solver::reset() {
   alpha_dual_ = 0.0;
   sigma_ = 0.0;
   controls_ = SolverControls{};
-  controls_.reg_p.assign(n_, kStaticRegPrimal);
-  controls_.reg_d.assign(m_, kStaticRegDual);
+  controls_.reg_p_factor.assign(n_, 1.0);
+  controls_.reg_d_factor.assign(m_, 1.0);
   recovery_ = Recovery{};
   prev_point_valid_ = false;
 
@@ -472,7 +472,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
 
     // Deltax = (Theta^-1+Rp+Q)^-1 * Deltax
     for (Int i = 0; i < n_; ++i) {
-      double denom = theta_inv[i] + controls_.reg_p[i];
+      double denom = theta_inv[i] + controls_.regP(i);
       if (model_.qp()) denom += model_.Q().diag(i);
       delta.x[i] /= denom;
     }
@@ -579,9 +579,9 @@ void Solver::recordFactorisationSignals() {
   };
 
   for (Int i = 0; i < (Int)Px.size(); ++i)
-    addPivot(Px[i], it_->Rp[i], controls_.reg_p[i]);
+    addPivot(Px[i], it_->Rp[i], controls_.regP(i));
   for (Int i = 0; i < (Int)Py.size(); ++i)
-    addPivot(Py[i], it_->Rd[i], controls_.reg_d[i]);
+    addPivot(Py[i], it_->Rd[i], controls_.regD(i));
 
   // nearly free columns, only for LPs: the bound m used by the detector holds
   // only at a vertex
@@ -1756,7 +1756,7 @@ void Solver::printOutput(bool reset) const {
         record.correctors, record.num_solves,
         LinearSolverTypeToString((LinearSolverType)record.factorisation_used)
             .front(),
-        infNorm(controls_.reg_p), infNorm(controls_.reg_d), record.min_theta,
+        controls_.baseRegP(), controls_.baseRegD(), record.min_theta,
         record.max_theta, record.min_prod, record.max_prod,
         record.num_small_prod, record.num_large_prod, record.bw_error);
     logger_.print(" %8.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d %s",

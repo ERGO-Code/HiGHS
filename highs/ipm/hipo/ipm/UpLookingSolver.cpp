@@ -331,7 +331,8 @@ void UpLookingSolver::getReg(std::vector<double>& Rp, std::vector<double>& Rd) {
     assert(kkt_.isNE());
     // Primal regularisation is added to Theta^-1 when forming the normal
     // equations.
-    Rp = controls_.reg_p;
+    Rp.resize(n);
+    for (Int j = 0; j < n; ++j) Rp[j] = controls_.regP(j);
     Rd = std::move(reg);
   }
 }

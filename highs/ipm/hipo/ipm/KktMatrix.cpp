@@ -260,7 +260,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
       Int corr = corr_A[el];
 
       double denom = scaling.empty() ? 1.0 : scaling[col];
-      denom += controls.reg_p[col];
+      denom += controls.regP(col);
       if (model.qp()) denom += Q.diag(col);
 
       const double mult = 1.0 / denom;
@@ -346,12 +346,12 @@ std::string KktMatrix::nla() const {
 }
 
 void KktMatrix::staticReg(std::vector<double>& reg) const {
-  if (isAS()) {
-    reg = controls.reg_p;
-    reg.insert(reg.end(), controls.reg_d.begin(), controls.reg_d.end());
-  } else {
-    reg = controls.reg_d;
-  }
+  const Int n = model.n();
+  const Int m = model.m();
+  reg.clear();
+  if (isAS())
+    for (Int j = 0; j < n; ++j) reg.push_back(controls.regP(j));
+  for (Int i = 0; i < m; ++i) reg.push_back(controls.regD(i));
 }
 
 bool KktMatrix::isAS() const { return AS_ready && !NE_ready; }
