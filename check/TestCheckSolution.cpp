@@ -872,9 +872,10 @@ static void testStartSolution(Highs& h, const double required_objective) {
           1e-6 * (1 + std::fabs(required_objective)));
   const std::vector<double> col_value = h.getSolution().col_value;
   const double computed_objective = h.getLp().objectiveValue(col_value);
-  if (dev_run) 
-  printf("testStartSolution: computed_objective = %g; optimal_objective = %g\n",
-         computed_objective, optimal_objective);
+  if (dev_run)
+    printf(
+        "testStartSolution: computed_objective = %g; optimal_objective = %g\n",
+        computed_objective, optimal_objective);
   REQUIRE(std::fabs(computed_objective - optimal_objective) <=
           1e-6 * (1 + std::fabs(optimal_objective)));
 }
@@ -902,7 +903,7 @@ TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
   start[16] = 19;
   start[17] = 23;
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   h.setOptionValue("mip_rel_gap", 0);
   REQUIRE(h.readModel(model) == HighsStatus::kOk);
   h.run();
@@ -977,7 +978,7 @@ TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
   lp.a_matrix_.value_ = {-1, 1, 1, -1, 1, 1, 1, 1, 1};
 
   Highs h;
-  //  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.passModel(lp) == HighsStatus::kOk);
   //  h.writeModel("");
 
