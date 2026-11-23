@@ -83,6 +83,19 @@ class PDLPSolver {
   bool runConvergenceCheck(size_t iter, std::vector<double>& output_x,
                            std::vector<double>& output_y,
                            TerminationStatus& status);
+
+  // Builds the solution of the original LP from a (scaled) PDLP iterate,
+  // without modifying the solver state
+  void buildOriginalSolution(const std::vector<double>& x,
+                             const std::vector<double>& y,
+                             const std::vector<double>& slack_pos,
+                             const std::vector<double>& slack_neg,
+                             HighsSolution& solution) const;
+  // Returns true if HiGHS would accept the iterate as optimal for the
+  // original LP, according to its KKT check
+  bool highsKktCheck(const std::vector<double>& x, const std::vector<double>& y,
+                     const std::vector<double>& slack_pos,
+                     const std::vector<double>& slack_neg);
   // Copies the latest iterate (and its dual slacks) to the output
   // vectors when the solver stops without having converged
   void getLastIterate(std::vector<double>& output_x,
@@ -227,6 +240,8 @@ class PDLPSolver {
 
   HighsTimer* highs_timer_p_;
   HighsCallback* highs_callback_p_ = nullptr;
+  // Copy of the HiGHS options, used for the KKT check
+  HighsOptions highs_options_;
 
 #if PDLP_PROFILE
   HipdlpTimer hipdlp_timer_;

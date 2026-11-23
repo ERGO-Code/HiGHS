@@ -11,8 +11,10 @@
 #include "pdhg.hpp"
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <random>
+#include <sstream>
 #include <tuple>
 
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)
@@ -22,6 +24,7 @@
 #include "defs.hpp"
 #include "linalg.hpp"
 #include "lp_data/HConst.h"
+#include "lp_data/HighsSolution.h"
 #include "pdhg_kernels.hpp"
 #include "pdlp/cupdlp/cupdlp.h"  // For pdlpLogging
 #include "pdlp_gpu_debug.hpp"
@@ -900,6 +903,18 @@ bool PDLPSolver::runConvergenceCheck(size_t iter, std::vector<double>& output_x,
     }
 #endif
 
+    // PDLP's termination test has passed, but only accept the iterate if
+    // HiGHS's KKT check of the original LP also passes. If not, keep
+    // iterating
+    if (!highsKktCheck(output_x, output_y, dSlackPos_, dSlackNeg_)) {
+      logger_.detailed(
+          "PDLP termination test passed, but HiGHS KKT check failed: "
+          "continuing");
+      logger_.printIterationStats(iter, current_results, primal_weight_);
+      results_ = current_results;
+      return false;
+    }
+
     final_iter_count_ = iter;
     results_ = prefer_avg ? average_results : current_results;
     // Final logging on optimality
@@ -918,6 +933,72 @@ bool PDLPSolver::runConvergenceCheck(size_t iter, std::vector<double>& output_x,
 
   results_ = current_results;
   return false;
+}
+
+void PDLPSolver::buildOriginalSolution(const std::vector<double>& x,
+                                       const std::vector<double>& y,
+                                       const std::vector<double>& slack_pos,
+                                       const std::vector<double>& slack_neg,
+                                       HighsSolution& solution) const {
+  const HighsLp& lp = *original_lp_;
+  const bool scaled = scaling_.isScaled();
+  const std::vector<double>& col_scale = scaling_.getColScaling();
+  const std::vector<double>& row_scale = scaling_.getRowScaling();
+
+  solution.col_value.assign(lp.num_col_, 0.0);
+  solution.col_dual.assign(lp.num_col_, 0.0);
+  solution.row_value.assign(lp.num_row_, 0.0);
+  solution.row_dual.assign(lp.num_row_, 0.0);
+
+  // Primal values, and reduced costs, which are the dual slacks, in the
+  // original space
+  for (HighsInt iCol = 0; iCol < lp.num_col_; ++iCol) {
+    const double scale = scaled ? col_scale[iCol] : 1.0;
+    solution.col_value[iCol] = x[iCol] / scale;
+    solution.col_dual[iCol] =
+        (slack_pos[iCol] - slack_neg[iCol]) * scale * sense_origin_;
+  }
+  // Dual values: free rows were removed and rows were reordered
+  for (HighsInt iRow = 0; iRow < lp.num_row_; ++iRow) {
+    if (constraint_types_[iRow] == FREE) continue;
+    const HighsInt new_row = constraint_new_idx_[iRow];
+    double dual = y[new_row];
+    if (scaled) dual /= row_scale[new_row];
+    solution.row_dual[iRow] = constraint_types_[iRow] == LEQ
+                                  ? -dual * sense_origin_
+                                  : dual * sense_origin_;
+  }
+  lp.a_matrix_.product(solution.row_value, solution.col_value);
+  solution.value_valid = true;
+  solution.dual_valid = true;
+}
+
+bool PDLPSolver::highsKktCheck(const std::vector<double>& x,
+                               const std::vector<double>& y,
+                               const std::vector<double>& slack_pos,
+                               const std::vector<double>& slack_neg) {
+  HighsSolution solution;
+  buildOriginalSolution(x, y, slack_pos, slack_neg, solution);
+  HighsModelStatus model_status = HighsModelStatus::kOptimal;
+  HighsInfo info;
+  // The KKT check reports failures if it was told the model is optimal, so
+  // silence it, since failure is not an error here
+  highs_options_.output_flag = false;
+  lpNoBasisKktCheck(model_status, info, *original_lp_, solution, highs_options_,
+                    "During HiPDLP solve");
+  const bool kkt_ok = model_status == HighsModelStatus::kOptimal;
+  // Report the measures that decided the outcome, as Highs::callLpKktCheck
+  // would, so it is clear why HiPDLP carries on
+  std::stringstream ss;
+  ss << std::scientific << std::setprecision(2) << "HiGHS KKT check "
+     << (kkt_ok ? "passed" : "failed") << ": relative primal infeasibility "
+     << info.max_relative_primal_infeasibility << ", dual infeasibility "
+     << info.max_relative_dual_infeasibility << ", primal residual "
+     << info.max_relative_primal_residual_error << ", dual residual "
+     << info.max_relative_dual_residual_error << ", P-D objective error "
+     << info.primal_dual_objective_error;
+  logger_.detailed(ss.str());
+  return kkt_ok;
 }
 
 bool PDLPSolver::checkRestartCriteria(double current_fpe, double initial_fpe,
@@ -1831,6 +1912,7 @@ HighsStatus PDLPSolver::setup(const HighsOptions& options, HighsTimer& timer,
   logger_.printHeader();
   highs_timer_p_ = &timer;
   highs_callback_p_ = &callback;
+  highs_options_ = options;
   highsLogUser(options.log_options, HighsLogType::kInfo,
                "Using HiPDLP first order PDLP solver on a %s\n",
 #if defined(CUPDLP_GPU) || defined(HIPDLP_GPU)

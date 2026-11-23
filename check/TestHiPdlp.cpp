@@ -62,6 +62,9 @@ TEST_CASE("hi-pdlp-feasibility-tolerances", "[hipdlp]") {
       h.setOptionValue("pdlp_optimality_tolerance", loose_tolerance);
       h.setOptionValue("primal_feasibility_tolerance", feasibility_tolerance);
       h.setOptionValue("dual_feasibility_tolerance", feasibility_tolerance);
+      h.setOptionValue("primal_residual_tolerance", loose_tolerance);
+      h.setOptionValue("dual_residual_tolerance", loose_tolerance);
+      h.setOptionValue("optimality_tolerance", loose_tolerance);
       REQUIRE(h.run() != HighsStatus::kError);
       iteration_count[k] = h.getInfo().pdlp_iteration_count;
       if (dev_run)
@@ -71,6 +74,26 @@ TEST_CASE("hi-pdlp-feasibility-tolerances", "[hipdlp]") {
     }
     REQUIRE(iteration_count[1] > iteration_count[0]);
   }
+}
+
+TEST_CASE("hi-pdlp-highs-kkt-check", "[hipdlp]") {
+  std::string model = "afiro";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  const double optimality_tolerance = 1e-10;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve", kHighsOffString);
+  REQUIRE(h.readModel(model_file) != HighsStatus::kError);
+  h.setOptionValue("solver", kHiPdlpString);
+  h.setOptionValue("optimality_tolerance", optimality_tolerance);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  // HiGHS accepts a relative violation of the tolerance of up to 100
+  const double max_allowed_relative_violation = 1e2;
+  REQUIRE(h.getInfo().primal_dual_objective_error <=
+          max_allowed_relative_violation * optimality_tolerance);
+  h.resetThreadScheduler(true);
 }
 
 TEST_CASE("hi-pdlp-maximize", "[hipdlp]") {
