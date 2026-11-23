@@ -72,6 +72,14 @@ class Solver {
   // rows absorbed by the regularisation at the last factorisation
   std::vector<Int> absorbed_rows_;
 
+  // temporary actions still in effect, see revertTemporaryActions
+  struct TemporaryAction {
+    RecoveryAction action;
+    Int applied_iter;
+    Int clean_iters;
+  };
+  std::vector<TemporaryAction> temporary_actions_;
+
  public:
   // ===================================================================================
   // Load an LP or QP:
@@ -310,10 +318,18 @@ class Solver {
 
   // ===================================================================================
   // Apply the action chosen by recovery_ for the issues in record, resetting to
-  // the best iterate if record says so. Actions not yet available are only
-  // logged. Return true if the ipm should terminate (stop).
+  // the best iterate if record says so. Temporary actions are recorded, to be
+  // reverted by revertTemporaryActions. Return true if the ipm should terminate
+  // (stop).
   // ===================================================================================
   shouldTerminate applyAction(IterationRecord& record);
+
+  // ===================================================================================
+  // Revert the temporary actions that are no longer needed, restoring the
+  // default controls: refine after kRefineRevertCleanIter iterations without
+  // i, I or G; centre after kRecentreIter iterations.
+  // ===================================================================================
+  void revertTemporaryActions(IterationRecord& record);
 
   // ===================================================================================
   // Give up because of stagnation: accept the point if it passes the KKT check,

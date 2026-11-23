@@ -57,7 +57,6 @@ RecoveryAction Recovery::climbLadder(Ladder ladder, RecoveryAction start,
        ++rung) {
     const RecoveryAction action = rungs[rung].action;
     const bool can_choose =
-        actionProperties(action).available &&
         timesProposed(action) < rungs[rung].max_uses &&
         (action != RecoveryAction::kSwitchFactorisation || can_switch);
     if (can_choose) return action;
@@ -113,13 +112,15 @@ Recovery::ProposedAction Recovery::proposeAction(const IterationReport& report,
   bool reset_to_best = false;
 
   // 1, 2: stagnation. No progress was made since the best iterate, so an
-  // action for stagnation restarts from it.
+  // action for stagnation restarts from it; recentring instead acts on the
+  // current point, which is the one poorly centred.
   if (report.stagnation()) {
     if (recent_numerical_trouble)
       action = climbLadder(kNumericalLadder, numerical_start, can_switch);
     if (action == RecoveryAction::kNone)
       action = climbLadder(kStagnationLadder, stagnation_start, can_switch);
-    reset_to_best = action != RecoveryAction::kNone;
+    reset_to_best =
+        action != RecoveryAction::kNone && action != RecoveryAction::kRecentre;
   }
 
   // Numerical trouble without stagnation is not acted upon: the ipm is still

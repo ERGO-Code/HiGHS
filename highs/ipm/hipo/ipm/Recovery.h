@@ -30,27 +30,26 @@ struct ActionProperties {
   ActionTiming timing;
   bool reset_to_best;
   bool temporary;
-  bool available;
 };
 
 inline ActionProperties actionProperties(RecoveryAction action) {
   switch (action) {
     case RecoveryAction::kNone:
-      return {"none", ActionTiming::kImmediate, false, false, false};
+      return {"none", ActionTiming::kImmediate, false, false};
     case RecoveryAction::kMoreRefinement:
-      return {"refine", ActionTiming::kNextSolve, false, true, false};
+      return {"refine", ActionTiming::kNextSolve, false, true};
     case RecoveryAction::kIncreaseReg:
-      return {"reg+", ActionTiming::kNextFactorisation, false, false, true};
+      return {"reg+", ActionTiming::kNextFactorisation, false, false};
     case RecoveryAction::kDecreaseReg:
-      return {"reg-", ActionTiming::kNextFactorisation, false, false, true};
+      return {"reg-", ActionTiming::kNextFactorisation, false, false};
     case RecoveryAction::kRecentre:
-      return {"centre", ActionTiming::kNextIteration, false, true, false};
+      return {"centre", ActionTiming::kNextIteration, false, true};
     case RecoveryAction::kSwitchFactorisation:
-      return {"switch", ActionTiming::kNextIteration, true, false, true};
+      return {"switch", ActionTiming::kNextIteration, true, false};
     case RecoveryAction::kTerminate:
-      return {"stop", ActionTiming::kImmediate, true, false, true};
+      return {"stop", ActionTiming::kImmediate, true, false};
   }
-  return {"?", ActionTiming::kImmediate, false, false, false};
+  return {"?", ActionTiming::kImmediate, false, false};
 }
 
 // Keeps track of the actions chosen to recover from the issues detected, and
@@ -74,7 +73,8 @@ struct Recovery {
   // No action is chosen within kActionPatience iterations of the previous one.
   // Each rung's action is chosen at most max_uses times in total, over all
   // ladders. switch is skipped if !can_switch. Actions chosen for stagnation
-  // (1 and 2) reset to the best iterate, as do those whose properties say so.
+  // (1 and 2), except centre, reset to the best iterate, as do those whose
+  // properties say so.
   // ===================================================================================
   struct ProposedAction {
     RecoveryAction action;

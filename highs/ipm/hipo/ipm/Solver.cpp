@@ -135,6 +135,7 @@ void Solver::reset() {
   controls_ = SolverControls{};
   controls_.reg_p_factor.assign(n_, 1.0);
   controls_.reg_d_factor.assign(m_, 1.0);
+  temporary_actions_.clear();
   recovery_ = Recovery{};
   prev_point_valid_ = false;
 
@@ -1284,10 +1285,22 @@ void Solver::runDiagnostics() {
 
 shouldTerminate Solver::applyAction(IterationRecord& record) {
   // changes of regularisation take effect at the next factorisation, the
-  // switch at the next iteration
+  // others at the next iteration
   const char* name = actionProperties(record.action).name;
   std::stringstream log_stream;
   switch (record.action) {
+    case RecoveryAction::kMoreRefinement:
+      controls_.refine_max_iter = kRecoveryRefineMaxIter;
+      controls_.refine_tol = kRecoveryRefineTol;
+      log_stream << "Applied " << name << "\n";
+      break;
+
+    case RecoveryAction::kRecentre:
+      controls_.sigma_min = kRecentreSigmaMin;
+      log_stream << "Applied " << name << ", sigma at least "
+                 << sci(kRecentreSigmaMin, 0, 1) << "\n";
+      break;
+
     case RecoveryAction::kIncreaseReg:
       controls_.reg_scale *= kRegScaleFactor;
       log_stream << "Applied " << name << ", regularisation scale "
@@ -1333,11 +1346,10 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
 
     case RecoveryAction::kNone:
       return false;
-
-    default:
-      record.messages += std::string("Would apply ") + name + "\n";
-      return false;
   }
+
+  if (actionProperties(record.action).temporary)
+    temporary_actions_.push_back({record.action, iter_, 0});
 
   if (record.reset_to_best) {
     resetToBestIter(iter_);
@@ -1348,9 +1360,45 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
   return false;
 }
 
+void Solver::revertTemporaryActions(IterationRecord& record) {
+  const SolverControls defaults{};
+  const bool clean_solve =
+      !record.report.has(IssueType::kInaccurateSolve) &&
+      !record.report.has(IssueType::kVeryInaccurateSolve) &&
+      !record.report.has(IssueType::kDynamicReg);
+
+  std::vector<TemporaryAction> still_active;
+  for (TemporaryAction& active : temporary_actions_) {
+    bool revert = false;
+    switch (active.action) {
+      case RecoveryAction::kMoreRefinement:
+        active.clean_iters = clean_solve ? active.clean_iters + 1 : 0;
+        revert = active.clean_iters >= kRefineRevertCleanIter;
+        if (revert) {
+          controls_.refine_max_iter = defaults.refine_max_iter;
+          controls_.refine_tol = defaults.refine_tol;
+        }
+        break;
+      case RecoveryAction::kRecentre:
+        revert = iter_ - active.applied_iter >= kRecentreIter;
+        if (revert) controls_.sigma_min = defaults.sigma_min;
+        break;
+      default:
+        break;
+    }
+    if (revert)
+      record.messages += std::string("Reverted ") +
+                         actionProperties(active.action).name + "\n";
+    else
+      still_active.push_back(active);
+  }
+  temporary_actions_ = std::move(still_active);
+}
+
 shouldTerminate Solver::checkInfeasibilityOrStagnation() {
   IterationRecord& record = it_->history.back();
   if (handleInfeasible(record.report)) return true;
+  revertTemporaryActions(record);
   return applyAction(record);
 }
 
