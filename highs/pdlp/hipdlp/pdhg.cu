@@ -44,6 +44,11 @@ __device__ __forceinline__ double gpuReduce(double val) {
 // Helper function to calculate launch configuration
 static dim3 GetLaunchConfig(int n, int block_size = 256) {
   int num_blocks = (n + block_size - 1) / block_size;
+  // A launch with no blocks is an invalid configuration. This happens for the
+  // dual vector when all the rows are free and have been removed, and inside a
+  // graph capture it invalidates the capture. The kernels use grid-stride
+  // loops, so one block with no work is harmless
+  if (num_blocks < 1) num_blocks = 1;
   return dim3(num_blocks, 1, 1);
 }
 
