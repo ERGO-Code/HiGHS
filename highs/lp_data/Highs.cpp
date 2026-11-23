@@ -1617,7 +1617,8 @@ bool Highs::returnFromOptimizeModelBeforeRunning(
   invalidateRunData();
   invalidateSolution();
   invalidateBasis();
-  optimizeModelUndoMods(context, context.status);
+  HighsStatus undo_status = HighsStatus::kOk;
+  optimizeModelUndoMods(context, undo_status);
   context.status = HighsStatus::kError;
   return true;
 }
@@ -1657,7 +1658,7 @@ bool Highs::optimizeModelPrepare(OptimizeModelContext& context) {
   // Process the bounds, performing inward rounding of bounds on any
   // integer variables and modifying any bounds with inconsistencies
   // less than the primal feasibility tolerance, but returning
-  // infeasibility if the model is has any bounds with larger
+  // infeasibility if the model has any bounds with larger
   // inconsistencies
   if (processedBoundsFindsInfeasibility()) {
     setHighsModelStatusAndClearSolutionAndBasis(HighsModelStatus::kInfeasible);
@@ -1738,7 +1739,9 @@ void Highs::optimizeModelLp(OptimizeModelContext& context) {
 
   std::string lp_solve_msg;
   if (!lpUsePresolve(context, incumbent_lp, lp_solve_msg)) {
-    if (lpSolveUnreduced(context, incumbent_lp, lp_solve_msg)) return;
+    if (basis_.useful) refineBasis(incumbent_lp, solution_, basis_);
+    if (lpSolveOriginal(context, incumbent_lp, lp_solve_msg, lp_solve_msg))
+      return;
   } else {
     HighsLp* lp = &incumbent_lp;
     if (lpPresolve(context, presolve_, lp)) return;
@@ -1884,14 +1887,6 @@ bool Highs::lpUsePresolve(const OptimizeModelContext& context,
     lp_solve_msg = "Solving LP without presolve or useful basis";
   }
   return false;
-}
-
-bool Highs::lpSolveUnreduced(OptimizeModelContext& context, HighsLp& lp,
-                             const std::string& lp_solve_msg) {
-  // If there is a valid HiGHS basis, refine any status values that
-  // are simply HighsBasisStatus::kNonbasic
-  if (basis_.useful) refineBasis(lp, solution_, basis_);
-  return lpSolveOriginal(context, lp, lp_solve_msg, lp_solve_msg);
 }
 
 bool Highs::lpSolveOriginal(OptimizeModelContext& context, HighsLp& lp,
@@ -2207,9 +2202,8 @@ bool Highs::lpPostsolve(OptimizeModelContext& context,
   const bool have_unknown_reduced_solution =
       presolve_status == HighsPresolveStatus::kReduced &&
       model_status_ == HighsModelStatus::kUnknown;
-  // Record the PDLP iteration count and HighsModelStatus for the
-  // presolved LP to determine whether a PDLP clean-up should be
-  // carried out
+  // Record the PDLP iteration count for the presolved LP to
+  // determine whether a PDLP clean-up should be carried out
   lp_state.presolved_lp_pdlp_iteration_count = info_.pdlp_iteration_count;
   const HighsModelStatus presolved_lp_model_status = this->model_status_;
   if (have_optimal_reduced_solution || have_unknown_reduced_solution) {

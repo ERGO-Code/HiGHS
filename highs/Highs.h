@@ -1726,8 +1726,6 @@ class Highs {
   bool lpSetup(OptimizeModelContext& context);
   bool lpUsePresolve(const OptimizeModelContext& context, const HighsLp& lp,
                      std::string& lp_solve_msg) const;
-  bool lpSolveUnreduced(OptimizeModelContext& context, HighsLp& lp,
-                        const std::string& lp_solve_msg);
   bool lpSolveOriginal(OptimizeModelContext& context, HighsLp& lp,
                        const std::string& lp_name, const std::string& message);
   bool lpPresolve(OptimizeModelContext& context, PresolveComponent& presolve,
