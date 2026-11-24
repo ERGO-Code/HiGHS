@@ -104,7 +104,8 @@ void UpLookingSolver::factor(const std::vector<Int>& ptr,
     //  Sparsity pattern of row of L
     // ===================================================================
     // Compute the sparsity pattern of current row of L by traversing the row
-    // subtree (see ereach in Davis' book)
+    // subtree, following the algorithm of ereach in T. Davis, "Direct Methods
+    // for Sparse Linear Systems", SIAM, 2006
 
     Int rowcount = 0;
 

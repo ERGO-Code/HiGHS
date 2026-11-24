@@ -82,7 +82,9 @@ void Analyse::permute(const std::vector<Int>& iperm) {
 }
 
 void Analyse::eTree() {
-  // Find elimination tree.
+  // Find elimination tree, following the algorithms in J. Liu, "A compact row
+  // storage scheme for Cholesky factors using elimination trees", ACM TOMS,
+  // 1986, and T. Davis, "Direct Methods for Sparse Linear Systems", SIAM, 2006.
   // It works only for upper triangular matrices.
   // The tree is stored in the vector parent:
   //  parent[i] = j
@@ -156,12 +158,14 @@ void Analyse::postorder() {
 }
 
 void Analyse::colCount() {
-  // Column counts of L via row subtrees, see Gilbert, Ng, Peyton, "An efficient
-  // algorithm to compute row and column counts for sparse Cholesky
-  // factorization", SIAM J. Matrix Anal. Appl., 1994. Requires a postordered
-  // etree. Each row subtree contributes +1 at its leaves, -1 at the lca of
-  // consecutive leaves and -1 at the parent of its root; summing these over
-  // etree subtrees gives the number of row subtrees containing each node.
+  // Column counts of L via row subtrees, following the algorithms in Gilbert,
+  // Ng, Peyton, "An efficient algorithm to compute row and column counts for
+  // sparse Cholesky factorization", SIAM J. Matrix Anal. Appl., 1994, and
+  // T. Davis, "Direct Methods for Sparse Linear Systems", SIAM, 2006. Requires
+  // a postordered etree. Each row subtree contributes +1 at its leaves, -1 at
+  // the lca of consecutive leaves and -1 at the parent of its root; summing
+  // these over etree subtrees gives the number of row subtrees containing each
+  // node.
 
   std::vector<Int> first_desc;
   firstDescendant(parent_, first_desc);
