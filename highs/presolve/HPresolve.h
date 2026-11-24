@@ -223,7 +223,10 @@ class HPresolve {
 
   void resetRowDualImpliedBounds(HighsInt row, HighsInt col = -1);
 
-  void resetColImpliedBoundsDerivedFromRow(HighsInt row, HighsInt skipCol = -1);
+  void resetColImpliedBoundsDerivedFromRow(HighsInt row);
+
+  void resetColImpliedBoundsDerivedFromRowSide(HighsInt row, bool isLowerSide,
+                                               HighsInt skipCol = -1);
 
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 

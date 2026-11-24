@@ -870,21 +870,41 @@ void HPresolve::resetRowDualImpliedBounds(HighsInt row, HighsInt col) {
   }
 }
 
-void HPresolve::resetColImpliedBoundsDerivedFromRow(HighsInt row,
-                                                    HighsInt skipCol) {
+void HPresolve::resetColImpliedBoundsDerivedFromRow(HighsInt row) {
   // reset implied column bounds affected by a modification in a row
   // (removed / added non-zeros, etc.)
   if (colImplSourceByRow[row].empty()) return;
   std::set<HighsInt> affectedCols;
   affectedCols.swap(colImplSourceByRow[row]);
-  if (skipCol != -1 && affectedCols.erase(skipCol))
-    colImplSourceByRow[row].insert(skipCol);
   for (const HighsInt& col : affectedCols) {
     // set implied bounds to infinite values if they were deduced from the
     // given row
-    double col_implColLower = implColLower[col];
-    double col_implColUpper = implColUpper[col];
     resetColImpliedBounds(col, row);
+  }
+}
+
+void HPresolve::resetColImpliedBoundsDerivedFromRowSide(HighsInt row,
+                                                        bool isLowerSide,
+                                                        HighsInt skipCol) {
+  // the lower (upper) side of a row, row_lower <= sum_j a_ij x_j (sum_j a_ij
+  // x_j <= row_upper), yields lower (upper) bounds on x_j for positive
+  // coefficients and upper (lower) bounds for negative coefficients, using the
+  // maximal (minimal) activity of the other columns. when the row bound or
+  // this activity is relaxed, e.g. because the bound of a column in the row is
+  // relaxed, the implied column bounds derived from this side are reset. the
+  // implied bounds of the column skipCol, whose bound was relaxed, do not
+  // depend on its own bound and remain valid.
+  if (colImplSourceByRow[row].empty()) return;
+  // walk the row rather than colImplSourceByRow[row], since the sign of the
+  // coefficient is needed
+  for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+    HighsInt col = nonzero.index();
+    if (col == skipCol) continue;
+    if ((nonzero.value() > 0) == isLowerSide) {
+      if (colLowerSource[col] == row) changeImplColLower(col, -kHighsInf, -1);
+    } else {
+      if (colUpperSource[col] == row) changeImplColUpper(col, kHighsInf, -1);
+    }
   }
 }
 
@@ -988,9 +1008,9 @@ void HPresolve::changeRowLower(HighsInt row, double newLower,
     }
   }
 
-  // tightening preserves validity of column implied bounds; only reset on
-  // loosening
-  if (newLower < oldLower) resetColImpliedBoundsDerivedFromRow(row);
+  // tightening preserves validity of column implied bounds; on loosening, only
+  // the implied bounds derived from the lower side of the row are reset
+  if (newLower < oldLower) resetColImpliedBoundsDerivedFromRowSide(row, true);
   if (mipsolver != nullptr) mipsolver->mipdata_->implications.rowModified(row);
   markChangedRow(row);
 }
@@ -1017,9 +1037,9 @@ void HPresolve::changeRowUpper(HighsInt row, double newUpper,
     }
   }
 
-  // tightening preserves validity of column implied bounds; only reset on
-  // loosening
-  if (newUpper > oldUpper) resetColImpliedBoundsDerivedFromRow(row);
+  // tightening preserves validity of column implied bounds; on loosening, only
+  // the implied bounds derived from the upper side of the row are reset
+  if (newUpper > oldUpper) resetColImpliedBoundsDerivedFromRowSide(row, false);
   if (mipsolver != nullptr) mipsolver->mipdata_->implications.rowModified(row);
   markChangedRow(row);
 }
@@ -1498,13 +1518,15 @@ HPresolve::Result HPresolve::changeColUpper(HighsInt col, double newUpper) {
   for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
     impliedRowBounds.updatedVarUpper(nonzero.index(), col, nonzero.value(),
                                      oldUpper);
+    // a relaxed upper bound increases (decreases) the maximal (minimal)
+    // activity of the row for a positive (negative) coefficient, which
+    // invalidates the implied bounds of the other columns derived from the
+    // lower (upper) side of the row
+    if (newUpper > oldUpper)
+      resetColImpliedBoundsDerivedFromRowSide(nonzero.index(),
+                                              nonzero.value() > 0, col);
     markChangedRow(nonzero.index());
   }
-  // a relaxed bound invalidates the implied bounds of the other columns
-  // derived from its rows
-  if (newUpper > oldUpper)
-    for (const HighsSliceNonzero& nonzero : getColumnVector(col))
-      resetColImpliedBoundsDerivedFromRow(nonzero.index(), col);
   if (mipsolver != nullptr &&
       model->col_lower_[col] == model->col_upper_[col]) {
     HPRESOLVE_CHECKED_CALL(
@@ -1531,13 +1553,15 @@ HPresolve::Result HPresolve::changeColLower(HighsInt col, double newLower) {
   for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
     impliedRowBounds.updatedVarLower(nonzero.index(), col, nonzero.value(),
                                      oldLower);
+    // a relaxed lower bound decreases (increases) the minimal (maximal)
+    // activity of the row for a positive (negative) coefficient, which
+    // invalidates the implied bounds of the other columns derived from the
+    // upper (lower) side of the row
+    if (newLower < oldLower)
+      resetColImpliedBoundsDerivedFromRowSide(nonzero.index(),
+                                              nonzero.value() < 0, col);
     markChangedRow(nonzero.index());
   }
-  // a relaxed bound invalidates the implied bounds of the other columns
-  // derived from its rows
-  if (newLower < oldLower)
-    for (const HighsSliceNonzero& nonzero : getColumnVector(col))
-      resetColImpliedBoundsDerivedFromRow(nonzero.index(), col);
   if (mipsolver != nullptr &&
       model->col_lower_[col] == model->col_upper_[col]) {
     HPRESOLVE_CHECKED_CALL(
