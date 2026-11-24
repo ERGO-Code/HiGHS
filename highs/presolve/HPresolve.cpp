@@ -889,11 +889,13 @@ void HPresolve::resetColImpliedBoundsDerivedFromRowSide(HighsInt row,
   // the lower (upper) side of a row, row_lower <= sum_j a_ij x_j (sum_j a_ij
   // x_j <= row_upper), yields lower (upper) bounds on x_j for positive
   // coefficients and upper (lower) bounds for negative coefficients, using the
-  // maximal (minimal) activity of the other columns. when the row bound or
-  // this activity is relaxed, e.g. because the bound of a column in the row is
-  // relaxed, the implied column bounds derived from this side are reset. the
-  // implied bounds of the column skipCol, whose bound was relaxed, do not
-  // depend on its own bound and remain valid.
+  // maximal (minimal) activity of the other columns. when this activity is
+  // relaxed because the bound of the column skipCol is relaxed, the implied
+  // column bounds derived from this side are reset. this also holds for an
+  // implied equation, which uses the same activity with the other row bound.
+  // the implied bounds of skipCol do not depend on its own bound and remain
+  // valid. a relaxed row bound is not handled here, since for an implied
+  // equation it affects both sides of the row.
   if (colImplSourceByRow[row].empty()) return;
   // walk the row rather than colImplSourceByRow[row], since the sign of the
   // coefficient is needed
@@ -1008,9 +1010,10 @@ void HPresolve::changeRowLower(HighsInt row, double newLower,
     }
   }
 
-  // tightening preserves validity of column implied bounds; on loosening, only
-  // the implied bounds derived from the lower side of the row are reset
-  if (newLower < oldLower) resetColImpliedBoundsDerivedFromRowSide(row, true);
+  // tightening preserves validity of column implied bounds; only reset on
+  // loosening. all implied bounds derived from the row are reset, since an
+  // implied equation uses the lower bound for both sides of the row
+  if (newLower < oldLower) resetColImpliedBoundsDerivedFromRow(row);
   if (mipsolver != nullptr) mipsolver->mipdata_->implications.rowModified(row);
   markChangedRow(row);
 }
@@ -1037,9 +1040,10 @@ void HPresolve::changeRowUpper(HighsInt row, double newUpper,
     }
   }
 
-  // tightening preserves validity of column implied bounds; on loosening, only
-  // the implied bounds derived from the upper side of the row are reset
-  if (newUpper > oldUpper) resetColImpliedBoundsDerivedFromRowSide(row, false);
+  // tightening preserves validity of column implied bounds; only reset on
+  // loosening. all implied bounds derived from the row are reset, since an
+  // implied equation uses the upper bound for both sides of the row
+  if (newUpper > oldUpper) resetColImpliedBoundsDerivedFromRow(row);
   if (mipsolver != nullptr) mipsolver->mipdata_->implications.rowModified(row);
   markChangedRow(row);
 }
