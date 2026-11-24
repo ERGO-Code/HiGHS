@@ -15,7 +15,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
         shell: bash
@@ -43,7 +42,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
         shell: bash
@@ -96,7 +94,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
         shell: bash
@@ -133,7 +130,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build sdist
         shell: bash
