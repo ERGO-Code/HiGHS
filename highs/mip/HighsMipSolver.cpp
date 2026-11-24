@@ -161,6 +161,9 @@ void HighsMipSolver::run() {
         bound_violation_ <= options_mip_->mip_feasibility_tolerance &&
         integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
         row_violation_ <= options_mip_->mip_feasibility_tolerance) {
+      // Fix for cases such as #3118(a) when the MIP is found
+      // infeasible in presolve, but a start solution is feasible
+      // within the tolerances
       presolveStatus = HighsModelStatus::kOptimal;
     }
     highsLogUser(options_mip_->log_options, HighsLogType::kInfo,
@@ -1240,7 +1243,11 @@ void HighsMipSolver::cleanupSolve() {
         integrality_violation_ <= options_mip_->mip_feasibility_tolerance &&
         row_violation_ <= options_mip_->mip_feasibility_tolerance;
     if (feasible && mipdata_->upper_bound == kHighsInf) {
-      mipdata_->checkAddSolution();
+      // Fix for cases such as #3118(a) when the MIP is found
+      // infeasible in presolve, but a start solution is feasible
+      // within the tolerances
+      const bool from_cleanup_solve = true;
+      mipdata_->checkAddSolution(from_cleanup_solve);
       if (modelstatus_ == HighsModelStatus::kInfeasible &&
           mipdata_->upper_bound != kHighsInf) {
         mipdata_->lower_bound = mipdata_->upper_bound;

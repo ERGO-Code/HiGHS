@@ -158,15 +158,15 @@ void writeModelBoundSolution(
     ss.str(std::string());
     std::string var_status_string =
         have_basis ? statusToString(status[ix], lower[ix], upper[ix]) : "";
-    ss << highsFormatToString("%9" HIGHSINT_FORMAT "   %4s %12.12g %12.12g", ix,
+    ss << highsFormatToString("%9" HIGHSINT_FORMAT "   %4s %12.6g %12.6g", ix,
                               var_status_string.c_str(), lower[ix], upper[ix]);
     if (have_primal) {
-      ss << highsFormatToString(" %12.12g", primal[ix]);
+      ss << highsFormatToString(" %12.6g", primal[ix]);
     } else {
       ss << "             ";
     }
     if (have_dual) {
-      ss << highsFormatToString(" %12.12g", dual[ix]);
+      ss << highsFormatToString(" %12.6g", dual[ix]);
     } else {
       ss << "             ";
     }
