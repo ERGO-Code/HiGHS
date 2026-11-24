@@ -4084,7 +4084,6 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
-    bool tryKnapsack = mipsolver != nullptr;
 
     // Start of main presolve loop
     //
@@ -4200,10 +4199,9 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
 
       // Knapsack specific techniques
-      if (this->allow_rule_[kPresolveRuleKnapsack] && tryKnapsack) {
+      if (mipsolver != nullptr && this->allow_rule_[kPresolveRuleKnapsack]) {
         HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockKnapsack,
                                      strengthenKnapsacks(postsolve_stack));
-        tryKnapsack = false;
         HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
       }
 

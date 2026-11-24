@@ -748,9 +748,24 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
   const HighsInt maxRowSize =
       std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
   const HighsInt numRows = model->num_row_;
+  HighsInt numRedundantRows = 0;
+  HighsInt numFixedCols = 0;
+  HighsInt numStrengthenedRows = 0;
   std::vector<HighsInt> oldRowPositions;
 
+  auto checkRedundantKnapsack = [&](const KnapsackRow& knapsack,
+                                    const HighsInt row) -> bool {
+    if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
+      postsolve_stack.redundantRow(row);
+      removeRow(row);
+      ++numRedundantRows;
+      return true;
+    }
+    return false;
+  };
+
   auto changeRow = [&](const KnapsackRow& knapsack) {
+    ++numStrengthenedRows;
     // Replace the knapsack row with a tightened row in the matrix
     oldRowPositions.clear();
     const auto row = getRowVector(knapsack.row);
@@ -854,11 +869,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       if (knapsack.capacity < -primal_feastol) return Result::kPrimalInfeasible;
       continue;
     }
-    if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
-      postsolve_stack.redundantRow(row);
-      removeRow(row);
-      continue;
-    }
+    if (checkRedundantKnapsack(knapsack, row)) continue;
 
     if (allIntCoefficients) {
       // Round capacity to be integer if all coefficients are integer
@@ -868,8 +879,8 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     // Fix any columns with coefficients that are too large
     for (auto& term : knapsack.terms) {
       if (term.weight - knapsack.capacity <= primal_feastol) continue;
+      ++numFixedCols;
       const HighsInt col = term.literal / 2;
-      // TODO: Eliminate column from clique table to stop the weird propagation?
       if (term.literal % 2 != 0) {
         HPRESOLVE_CHECKED_CALL(changeColUpper(col, 0.0));
       } else {
@@ -879,12 +890,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       term.weight = 0;
     }
 
-    // Knapsack may now be redundant
-    if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
-      postsolve_stack.redundantRow(row);
-      removeRow(row);
-      continue;
-    }
+    if (checkRedundantKnapsack(knapsack, row)) continue;
 
     // If a column's absence makes a row redundant then its weight
     // can be reduced
@@ -909,12 +915,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
     if (allIntCoefficients && knapsack.capacity < kHighsIInf) {
       // Simplify constraint (or strengthen) using GCD arguments
       changed |= gcdSimplify(knapsack, order, primal_feastol);
-      // Knapsack may now be redundant
-      if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
-        postsolve_stack.redundantRow(row);
-        removeRow(row);
-        continue;
-      }
+      if (checkRedundantKnapsack(knapsack, row)) continue;
     }
 
     KnapsackStatistics stats;
@@ -932,12 +933,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
           // Lifted coefficients may have enabled new reductions
           const bool gcdSimplified =
               gcdSimplify(knapsack, order, primal_feastol);
-          // Knapsack may now be redundant
-          if (knapsack.weightSum - knapsack.capacity <= primal_feastol) {
-            postsolve_stack.redundantRow(row);
-            removeRow(row);
-            continue;
-          }
+          if (checkRedundantKnapsack(knapsack, row)) continue;
           if (gcdSimplified) {
             clearKnapSackStatistics(stats);
             computeKnapsackStatistics(knapsack, order, primal_feastol, stats);
@@ -957,6 +953,14 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       changeRow(knapsack);
     }
   }
+
+  highsLogDev(options->log_options, HighsLogType::kInfo,
+              "Removed %" HIGHSINT_FORMAT
+              " rows, "
+              "fixed %" HIGHSINT_FORMAT
+              " cols, "
+              "strengthened %" HIGHSINT_FORMAT " rows\n",
+              numRedundantRows, numFixedCols, numStrengthenedRows);
 
   return Result::kOk;
 }
