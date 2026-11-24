@@ -422,8 +422,6 @@ class HPresolve {
 
   bool silentLog() const;
 
-  void printImpliedColBounds(const std::string& message) const;
-
  public:
   // for LP presolve
   void setInput(HighsLp& model_, const HighsOptions& options_,

@@ -2471,10 +2471,13 @@ TEST_CASE("issue-3772", "[highs_test_presolve]") {
   std::string model_file = test_name + ".mps";
   FILE* file = fopen(model_file.c_str(), "w");
   fprintf(file, "%s",
-          "NAME g1\nROWS\n N obj\n G r\n L q\nCOLUMNS\n s obj 2 r 1\n x obj -1 r 1\n x q 1\n y obj 0.5 q -1\n w obj 0.1 r 1\nRHS\n RHS r 5 q 1\nRANGES\n RNG r 0.00000005\nBOUNDS\n LO BND s 1\n UP BND s 10\n MI BND x\n UP BND x 3\n LO BND w 1\n UP BND w 1.00000005\nENDATA\n");
+          "NAME g1\nROWS\n N obj\n G r\n L q\nCOLUMNS\n s obj 2 r 1\n x obj -1 "
+          "r 1\n x q 1\n y obj 0.5 q -1\n w obj 0.1 r 1\nRHS\n RHS r 5 q "
+          "1\nRANGES\n RNG r 0.00000005\nBOUNDS\n LO BND s 1\n UP BND s 10\n "
+          "MI BND x\n UP BND x 3\n LO BND w 1\n UP BND w 1.00000005\nENDATA\n");
   fclose(file);
 
-    Highs h;
+  Highs h;
   h.setOptionValue("output_flag", dev_run);
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
 
@@ -2485,4 +2488,3 @@ TEST_CASE("issue-3772", "[highs_test_presolve]") {
 
   h.resetThreadScheduler(true);
 }
-
