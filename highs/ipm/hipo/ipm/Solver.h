@@ -70,8 +70,9 @@ class Solver {
   HighsSolution prev_point_;
   bool prev_point_valid_ = false;
 
-  // rows absorbed by the regularisation at the last factorisation
+  // rows and columns absorbed by the regularisation at the last factorisation
   std::vector<Int> absorbed_rows_;
+  std::vector<Int> absorbed_cols_;
 
   // centring mode, started by the centre action
   Centring centring_{};
@@ -222,8 +223,8 @@ class Solver {
 
   // ===================================================================================
   // Signals collected in it_->history, to detect numerical trouble:
-  // - pivot statistics, nearly free columns and absorbed rows, after each
-  //   factorisation (needs it_->Rp, it_->Rd);
+  // - pivot statistics, nearly free columns, absorbed rows and columns, after
+  //   each factorisation (needs it_->Rp, it_->Rd, it_->res);
   // - infinity norms of r1, r2, r3, r4 of it_->res.
   // ===================================================================================
   void recordFactorisationSignals();

@@ -681,6 +681,18 @@ void Solver::recordFactorisationSignals() {
       absorbed_rows_.push_back(i);
   }
   record.num_absorbed_rows = absorbed_rows_.size();
+
+  // columns with a large dual residual absorbed by the regularisation
+  absorbed_cols_.clear();
+  const double dual_tol =
+      options_.feasibility_tol * (1.0 + model_.normScaledObj());
+  for (Int j = 0; j < n_; ++j) {
+    double diag_j = theta_inv[j];
+    if (model_.qp()) diag_j += model_.Q().diag(j);
+    if (diag_j < it_->Rp[j] && std::abs(it_->res.r4[j]) > dual_tol)
+      absorbed_cols_.push_back(j);
+  }
+  record.num_absorbed_cols = absorbed_cols_.size();
 }
 
 void Solver::residualNorms(double* norms) const {
@@ -1389,28 +1401,36 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
                  << sci(controls_.reg_d_scale, 0, 1) << "\n";
       break;
 
-    case RecoveryAction::kDecreaseReg: {
-      // only the dual regularisation of the absorbed rows, down to a floor
-      Int changed = 0;
-      for (Int i : absorbed_rows_) {
-        double& factor = controls_.reg_d_factor[i];
-        const double new_factor =
-            std::max(factor / kRegScaleFactor, kMinRegFactor);
-        if (new_factor < factor) {
-          factor = new_factor;
-          ++changed;
+    case RecoveryAction::kDecreaseLocalReg: {
+      // dual regularisation of the absorbed rows and primal regularisation of
+      // the absorbed columns, down to a floor
+      auto decrease = [](std::vector<double>& factors,
+                         const std::vector<Int>& indices) {
+        Int changed = 0;
+        for (Int k : indices) {
+          double& factor = factors[k];
+          const double new_factor =
+              std::max(factor / kRegScaleFactor, kMinRegFactor);
+          if (new_factor < factor) {
+            factor = new_factor;
+            ++changed;
+          }
         }
-      }
-      if (changed == 0) {
-        record.messages +=
-            std::string("Would apply ") + name + ", rows at minimum\n";
+        return changed;
+      };
+      const Int rows = decrease(controls_.reg_d_factor, absorbed_rows_);
+      const Int cols = decrease(controls_.reg_p_factor, absorbed_cols_);
+      if (rows + cols == 0) {
+        record.messages += std::string("Would apply ") + name +
+                           ", rows and columns at minimum\n";
         return false;
       }
-      log_stream << "Applied " << name << " to " << changed << " rows\n";
+      log_stream << "Applied " << name << " to " << rows << " rows and " << cols
+                 << " columns\n";
       break;
     }
 
-    case RecoveryAction::kRestoreReg:
+    case RecoveryAction::kDecreaseReg:
       controls_.reg_p_scale =
           std::max(1.0, controls_.reg_p_scale / kRegScaleFactor);
       log_stream << "Applied " << name << ", primal regularisation scale "
@@ -1865,9 +1885,9 @@ void Solver::printHeader() const {
       logger_.print(" %13s %13s %5s %5s %5s %17s %17s %27s", "alpha p/d",
                     "sigma af/co", "cor", "solv", "fact", "static reg p/d",
                     "min/max Theta", "(xj * zj / mu)_range_&_num");
-      logger_.print(" %17s %17s %17s %8s %5s %5s %6s %6s %s", "bw/cw error",
+      logger_.print(" %17s %17s %17s %8s %5s %5s %6s %13s %s", "bw/cw error",
                     "piv dyn/sgn/dom", "min/max pivot", "max reg", "2x2",
-                    "inert", "free", "absorb", "issues");
+                    "inert", "free", "absorb r/c", "issues");
     }
     logger_.print("\n");
   }
@@ -1906,12 +1926,13 @@ void Solver::printOutput(bool reset) const {
         controls_.baseRegP(), controls_.baseRegD(), record.min_theta,
         record.max_theta, record.min_prod, record.max_prod,
         record.num_small_prod, record.num_large_prod, record.bw_error);
-    logger_.print(" %8.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d %s",
+    logger_.print(" %8.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d %6d %s",
                   record.cw_error, (int)record.num_dynamic_reg,
                   (int)record.num_wrong_sign, (int)record.num_reg_dominated,
                   record.min_pivot, record.max_pivot, record.max_reg,
                   (int)record.num_2x2, (int)record.wrong_inertia,
                   (int)record.num_near_free, (int)record.num_absorbed_rows,
+                  (int)record.num_absorbed_cols,
                   issuesAndAction(record).c_str());
   }
   logger_.print("\n");

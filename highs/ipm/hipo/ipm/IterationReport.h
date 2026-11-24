@@ -28,8 +28,9 @@ enum class IssueType {
   kInaccurateSolve,      // componentwise backward error after refinement large
   kVeryInaccurateSolve,  // ... so large that the direction is unreliable
   kWrongInertia,         // pivots with the wrong sign
-  kAbsorbedRows,  // rows whose residual is absorbed by the regularisation
-  kManyNearFree,  // more nearly free columns than rows
+  kAbsorbed,             // rows or columns whose residual is absorbed by the
+                         // regularisation
+  kManyNearFree,         // more nearly free columns than rows
 };
 
 inline bool isStagnation(IssueType type) {
@@ -57,7 +58,7 @@ inline char issueCode(IssueType type) {
       return 'I';
     case IssueType::kWrongInertia:
       return 'W';
-    case IssueType::kAbsorbedRows:
+    case IssueType::kAbsorbed:
       return 'A';
     case IssueType::kManyNearFree:
       return 'F';
@@ -71,7 +72,7 @@ inline const char* issueCodesLegend() {
          "O oscillation,\n"
          "D divergence, C poor centrality, i/I (very) inaccurate solve, "
          "W wrong inertia,\n"
-         "A absorbed rows, F many nearly free "
+         "A absorbed rows or columns, F many nearly free "
          "columns\n";
 }
 

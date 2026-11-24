@@ -47,6 +47,7 @@ struct IterationRecord {
 
   Int num_near_free = 0;
   Int num_absorbed_rows = 0;
+  Int num_absorbed_cols = 0;
 
   // issues detected at the end of the iteration, and the detectors' messages,
   // one per line

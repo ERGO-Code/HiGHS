@@ -14,8 +14,8 @@ enum class RecoveryAction {
   kNone,
   kDropBadPivots,
   kIncreaseReg,
+  kDecreaseLocalReg,
   kDecreaseReg,
-  kRestoreReg,
   kRecentre,
   kSwitchFactorisation,
   kTerminate,
@@ -26,11 +26,11 @@ enum class RecoveryAction {
 // escalates through:
 //   drop   -> reg+ -> switch -> stop             (numerical issues)
 //   centre ->         switch -> (reg+) -> stop   (stagnation)
-//   reg-                                         (absorbed rows)
+//   lreg-                                        (absorbed rows or columns)
 // proposeAction chooses reg+ instead of stop while reg+ is not used up, so that
 // reg+ is always tried before stopping.
-// Primal regularisation can be restored to a lower value after reg+ with action
-// reg^, if enough "clean" iterations have been observed.
+// After reg+, reg- lowers the primal regularisation again, once enough "clean"
+// iterations have been observed.
 struct ActionProperties {
   const char* name;
   bool reset_to_best;
@@ -39,7 +39,8 @@ struct ActionProperties {
 };
 
 inline ActionProperties actionProperties(RecoveryAction action) {
-  // each row has a floor on its regularisation, so reg- needs no limit
+  // each row and column has a floor on its regularisation, so lreg- needs no
+  // limit
   const Int no_limit = std::numeric_limits<Int>::max();
   switch (action) {
     case RecoveryAction::kNone:
@@ -49,10 +50,10 @@ inline ActionProperties actionProperties(RecoveryAction action) {
     case RecoveryAction::kIncreaseReg:
       return {"reg+", false, kMaxRegChanges,
               RecoveryAction::kSwitchFactorisation};
+    case RecoveryAction::kDecreaseLocalReg:
+      return {"lreg-", false, no_limit, RecoveryAction::kNone};
     case RecoveryAction::kDecreaseReg:
-      return {"reg-", false, no_limit, RecoveryAction::kNone};
-    case RecoveryAction::kRestoreReg:
-      return {"reg^", false, 1, RecoveryAction::kNone};
+      return {"reg-", false, 1, RecoveryAction::kNone};
     case RecoveryAction::kRecentre:
       return {"centre", false, 1, RecoveryAction::kSwitchFactorisation};
     case RecoveryAction::kSwitchFactorisation:
@@ -86,11 +87,12 @@ struct Recovery {
   //     tried before stop;
   //  3. I or W without stagnation: drop only, since changing the regularisation
   //     can stop an ipm that is still progressing;
-  //  4. Enough clean iterations after reg+: reg^.
-  //  5. A: reg-.
+  //  4. Enough clean iterations after reg+: reg-.
+  //  5. A: lreg-.
   // F is not acted upon here: Solver::shortStepGuard deals with nearly free
   // columns when they block the step.
-  // No action is chosen within kActionPatience iterations of the previous one.
+  // No action is chosen within kActionPatience iterations of the previous one;
+  // lreg- only delays another lreg-.
   // Only the actions whose properties say so (switch, stop) reset to the best
   // iterate.
   // ===================================================================================
@@ -118,8 +120,9 @@ struct Recovery {
   RecoveryAction firstAvailable(RecoveryAction entry,
                                 const SolverCapabilities& capabilities) const;
 
-  // fewer than kActionPatience iterations since the previous action
-  bool waitingForPreviousAction(Int iter) const;
+  // fewer than kActionPatience iterations since the previous action that
+  // delays action; lreg- only delays another lreg-
+  bool waitingForPreviousAction(Int iter, RecoveryAction action) const;
 
   Int timesProposed(RecoveryAction action) const;
 };

@@ -100,10 +100,11 @@ void Diagnostics::numerical(const Iterate& it, IterationReport& report,
                << record.wrong_inertia << "\n";
   }
 
-  if (record.num_absorbed_rows > 0) {
-    report.add(IssueType::kAbsorbedRows);
-    log_stream << record.num_absorbed_rows
-               << " rows with residual absorbed by the regularisation\n";
+  if (record.num_absorbed_rows > 0 || record.num_absorbed_cols > 0) {
+    report.add(IssueType::kAbsorbed);
+    log_stream << record.num_absorbed_rows << " rows and "
+               << record.num_absorbed_cols
+               << " columns with residual absorbed by the regularisation\n";
   }
 
   if (record.num_near_free > model.m()) {

@@ -39,9 +39,16 @@ static bool hasNumericalTrouble(const IterationReport& report) {
          report.has(IssueType::kWrongInertia);
 }
 
-bool Recovery::waitingForPreviousAction(Int iter) const {
-  return !proposed_actions.empty() &&
-         iter - proposed_actions.back().iter < kActionPatience;
+bool Recovery::waitingForPreviousAction(Int iter, RecoveryAction action) const {
+  for (auto p = proposed_actions.rbegin(); p != proposed_actions.rend(); ++p) {
+    if (iter - p->iter >= kActionPatience) return false;
+
+    // p is within the window
+    if (p->action != RecoveryAction::kDecreaseLocalReg ||
+        action == RecoveryAction::kDecreaseLocalReg)
+      return true;
+  }
+  return false;
 }
 
 Recovery::ProposedAction Recovery::proposeAction(
@@ -60,9 +67,6 @@ Recovery::ProposedAction Recovery::proposeAction(
     ++streak_of_clean_iter;
   else
     streak_of_clean_iter = 0;
-
-  if (waitingForPreviousAction(iter))
-    return {RecoveryAction::kNone, iter, false};
 
   // Issues in decreasing order of priority; the first one for which an action
   // can be chosen is acted upon.
@@ -104,14 +108,17 @@ Recovery::ProposedAction Recovery::proposeAction(
   // time, so decrease regularisation
   if (action == RecoveryAction::kNone &&
       timesProposed(RecoveryAction::kIncreaseReg) > 0 &&
-      streak_of_clean_iter >= kCleanIterBeforeRegRestore) {
-    if (available(RecoveryAction::kRestoreReg, capabilities))
-      action = RecoveryAction::kRestoreReg;
+      streak_of_clean_iter >= kCleanIterBeforeRegDecrease) {
+    if (available(RecoveryAction::kDecreaseReg, capabilities))
+      action = RecoveryAction::kDecreaseReg;
   }
 
-  // 5: absorbed rows
-  if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbedRows))
-    action = firstAvailable(RecoveryAction::kDecreaseReg, capabilities);
+  // 5: absorbed rows or columns
+  if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbed))
+    action = firstAvailable(RecoveryAction::kDecreaseLocalReg, capabilities);
+
+  if (action != RecoveryAction::kNone && waitingForPreviousAction(iter, action))
+    action = RecoveryAction::kNone;
 
   const ProposedAction proposed{action, iter,
                                 actionProperties(action).reset_to_best};

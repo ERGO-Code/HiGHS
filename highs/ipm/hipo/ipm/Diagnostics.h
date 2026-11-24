@@ -69,7 +69,8 @@ struct Diagnostics {
   // - kWrongInertia, if at least max(kWrongInertiaMinPivots,
   //   kWrongInertiaFraction * num_pivots) 1x1 pivots have the wrong sign, or
   //   the inertia is off by as much;
-  // - kAbsorbedRows, if a row has its residual absorbed by the regularisation;
+  // - kAbsorbed, if a row or column has its residual absorbed by the
+  //   regularisation;
   // - kManyNearFree, for LPs, if there are more nearly free columns than rows
   //   (near optimality, up to m basic columns are nearly free).
   // ===================================================================================
