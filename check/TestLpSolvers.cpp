@@ -645,14 +645,14 @@ TEST_CASE("issue-3564", "[highs_lp_solver]") {
   h.resetThreadScheduler(true);
 }
 
-TEST_CASE("issue-3726", "[highs_lp_solver]") {
+TEST_CASE("issue-3726-lp", "[highs_lp_solver]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string model_file = test_name + ".lp";
   FILE* file = fopen(model_file.c_str(), "w");
   fprintf(file, "%s",
           "Maximize\nobj: 5 x + 4 y + 3 z\nSubject To\nc1: 2 x + 3 y + z <= "
-          "5\nc2: 4 x + y + 2 z <= 11\nc3: 3 x + 4 y + 2 z <= 8\nBounds\n0 <= "
-          "x <= 10\n0 <= y <= 10\n0 <= z <= 10\n"
+          "5\nc2: 4 x + y + 2 z <= 11\nc3: 3 x + 4 y + 2 z <= 8\nBounds\nx <= "
+          "10\ny <= 10\nz <= 10\n"
           "End\n");
 
   fclose(file);
@@ -686,27 +686,6 @@ TEST_CASE("issue-3726", "[highs_lp_solver]") {
                      HighsModelStatus::kObjectiveBound);
   text = "Solving max LP with unattainable objective bound of ";
   testObjectiveBound(unattainable_objective_bound, HighsModelStatus::kOptimal);
-
-  // Now solve the problem as a MIP, with objective_bound = -20
-  //
-  // objective_bound is designed for LPs, but (see #3726) solving a
-  // MIP with optimal objective 13 when objective_bound = -20 results
-  // in it being declared infeasible immediately since
-  // HighsMipSolver.cpp:206 mipdata_->getDomain().infeasible() is
-  // true!
-  const double mip_objective_bound = -20;
-  std::vector<HighsVarType> integrality = {
-      HighsVarType::kInteger, HighsVarType::kInteger, HighsVarType::kInteger};
-  REQUIRE(h.changeColsIntegrality(0, 2, integrality.data()) ==
-          HighsStatus::kOk);
-  REQUIRE(h.writeModel(model_file) == HighsStatus::kOk);
-
-  HighsModelStatus require_model_status =
-      HighsModelStatus::kInfeasible;  // HighsModelStatus::kOptimal;
-  text = "Solving max MIP with objective bound of ";
-  testObjectiveBound(mip_objective_bound, require_model_status);
-
-  std::remove(model_file.c_str());
 
   h.resetThreadScheduler(true);
 }

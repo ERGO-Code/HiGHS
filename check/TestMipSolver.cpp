@@ -2868,6 +2868,44 @@ TEST_CASE("issue-3618", "[highs_test_mip_solver]") {
   h.resetThreadScheduler(true);
 }
 
+TEST_CASE("issue-3726-mip", "[highs_test_mip_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s",
+          "Maximize\nobj: 5 x + 4 y + 3 z\nSubject To\nc1: 2 x + 3 y + z <= "
+          "5\nc2: 4 x + y + 2 z <= 11\nc3: 3 x + 4 y + 2 z <= 8\nBounds\nx <= "
+          "2\ny <= 2\nz <= 2\n"
+          "General\nx y z\nEnd\n");
+  fclose(file);
+
+  Highs h;
+  std::string text;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  // Solve the problem with objective_bound = -20
+  //
+  // objective_bound is designed for LPs, but (see #3726) solving a
+  // MIP with optimal objective 13 when objective_bound = -20 results
+  // in it being declared infeasible immediately since
+  // HighsMipSolver.cpp:206 mipdata_->getDomain().infeasible() is
+  // true!
+  //
+  // Current fix is just to reset objective_bound to kHighsInf if it's
+  // been changed when solving a MIP
+
+  const double objective_bound = -20;
+  h.setOptionValue("objective_bound", objective_bound);
+
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  h.writeSolution("", 1);
+
+  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}
+
 TEST_CASE("issue-3742", "[highs_test_mip_solver]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string model_file = test_name + ".lp";
