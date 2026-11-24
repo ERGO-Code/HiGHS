@@ -27,6 +27,7 @@ struct SolveSource {
   // y, e.g. what an earlier session of the same model returned. Both or neither; null: zero.
   const std::vector<double>* start_primal = nullptr;
   const std::vector<double>* start_dual = nullptr;
+  double start_omega = 0;  // > 0: the initial primal weight instead of omega0
 };
 
 struct DeviceLp {
@@ -64,6 +65,10 @@ struct DeviceState {
   int hold;  // HIPDLP_HOST_LOOP: a check is due, the iterate waits for the end of the chunk
   int64_t iterations, epoch, restarts, kkt_checks, certificate_checks, spmv_count, iteration_limit;
   double tolerance, remaining_seconds, omega, best_omega, integral;
+  double omega0 = 1;     // the initial primal weight
+  double kkt_guard = 0;  // > 0: L2 stop also needs the kkt measures <= kkt_guard * their tolerances
+  // Per-measure tolerances of the L2 and kkt criteria (SolveOptions; `tolerance` where it gives 0)
+  double primal_tolerance, dual_tolerance, residual_tolerance, l2_gap_tolerance, kkt_gap_tolerance;
   double cost_scale;  // dual residual denominator 1 + cost_scale (CostScale)
   int warm_start;  // Initialize starts from out_x / out_y (scaled by 1/dc, 1/dr), not from zero
   int stop_l2;     // OPTIMAL is decided by the L2 measures (StopCriterion::kPdlpL2)

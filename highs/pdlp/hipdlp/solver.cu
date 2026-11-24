@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "device.h"
 #include "kernel_types.h"
@@ -150,17 +151,17 @@ static __device__ void KktBounds(KktSums& s, double v, double mult, double l, do
 // is not near zero). Only a boxed variable of meaningful length has a two-sided sign rule: it
 // uses the multiplier sign that the side of the midpoint requires. `cost` is 0 for rows.
 static __device__ void KktRelative(KktRelSums& s, double v, double mult, double l, double u,
-                                   double cost, double tol, double active_bound,
+                                   double cost, double ptol, double dtol, double active_bound,
                                    double active_cost) {
   if (!isfinite(v) || !isfinite(mult)) return;
   double violation = fmax(fmax(l - v, v - u), 0.0);
-  bool near_bound = (l - v) * (l - v) <= tol || (v - u) * (v - u) <= tol;
+  bool near_bound = (l - v) * (l - v) <= ptol || (v - u) * (v - u) <= ptol;
   int side = 0;  // -1: below the midpoint (lower rule), +1: above (upper rule), 0: none
   double sign_violation = 0;
   if (l < u) {
     if (!isfinite(l) && !isfinite(u))
       sign_violation = fabs(mult);
-    else if ((u - l) * (u - l) > tol) {
+    else if ((u - l) * (u - l) > ptol) {
       side = v < 0.5 * (l + u) ? -1 : 1;
       sign_violation = side < 0 ? fmax(-mult, 0.0) : fmax(mult, 0.0);
     }
@@ -172,7 +173,7 @@ static __device__ void KktRelative(KktRelSums& s, double v, double mult, double 
   }
   if (sign_violation > 0) {
     double measure = active_cost;
-    if (cost != 0 && mult * mult >= tol) measure = fmax(fabs(cost), measure);
+    if (cost != 0 && mult * mult >= dtol) measure = fmax(fabs(cost), measure);
     s.rel_dual = fmax(s.rel_dual, sign_violation / (1 + measure));
   }
 }
@@ -204,7 +205,7 @@ __global__ void Begin(DeviceState* s) {
   s->iterations = s->epoch = s->restarts = s->kkt_checks = s->certificate_checks = s->spmv_count =
       0;
   s->feasible_valid = s->optimal = s->farkas_valid = s->ray_valid = s->restart = 0;
-  s->omega = s->best_omega = 1;
+  s->omega = s->best_omega = s->omega0;
   s->balance_epoch_limit = 0;
   s->balance_direction = 0;
   s->deviation = s->deviation_next = 0;
@@ -387,7 +388,9 @@ __global__ void Unscale(DeviceLp lp, Vectors v, DeviceState* s) {
   }
 }
 
-__global__ void KktStats(DeviceLp lp, Vectors v, KktSums* partial, double tol) {
+// ptol / dtol: how near a bound a value (ptol) or zero a multiplier (dtol) counts as active,
+// as lpKktCheck does with the primal / dual feasibility tolerances.
+__global__ void KktStats(DeviceLp lp, Vectors v, KktSums* partial, double ptol, double dtol) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   KktSums a;
   if (i < lp.n) {
@@ -399,16 +402,16 @@ __global__ void KktStats(DeviceLp lp, Vectors v, KktSums* partial, double tol) {
     a.p = lp.c[i] * v.out_x[i];
     if (!isfinite(raw_z) || !isfinite(a.p)) a.bad = 1;
     BoundMetrics(a, v.out_x[i], z, lp.lx[i], lp.ux[i], lp.m + i);
-    KktBounds(a, v.out_x[i], z, lp.lx[i], lp.ux[i], tol);
-    if (isfinite(z) && z * z < tol) a.active_cost = fabs(lp.c[i]);
+    KktBounds(a, v.out_x[i], z, lp.lx[i], lp.ux[i], ptol);
+    if (isfinite(z) && z * z < dtol) a.active_cost = fabs(lp.c[i]);
     double violation = fmax(fmax(lp.lx[i] - v.out_x[i], v.out_x[i] - lp.ux[i]), 0.0);
     a.l2_primal_sq = violation * violation;
     // L2 measures as cuPDLPx: its reduced cost is the primal projection's slack, i.e. nonzero only
     // on a bound the value sits at (here: within sqrt(tol), as KktBounds) and only with the sign
     // that bound allows; any other part of c - A'y is dual residual.
     double x = v.out_x[i];
-    bool at_lower = isfinite(lp.lx[i]) && (x - lp.lx[i]) * (x - lp.lx[i]) <= tol;
-    bool at_upper = isfinite(lp.ux[i]) && (x - lp.ux[i]) * (x - lp.ux[i]) <= tol;
+    bool at_lower = isfinite(lp.lx[i]) && (x - lp.lx[i]) * (x - lp.lx[i]) <= ptol;
+    bool at_upper = isfinite(lp.ux[i]) && (x - lp.ux[i]) * (x - lp.ux[i]) <= ptol;
     double zl2 = at_lower && at_upper ? raw_z
                  : at_lower           ? fmax(raw_z, 0.0)
                  : at_upper           ? fmin(raw_z, 0.0)
@@ -419,7 +422,7 @@ __global__ void KktStats(DeviceLp lp, Vectors v, KktSums* partial, double tol) {
   }
   if (i < lp.m) {
     BoundMetrics(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], i);
-    KktBounds(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], tol);
+    KktBounds(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], ptol);
     double violation = fmax(fmax(lp.lr[i] - v.out_ax[i], v.out_ax[i] - lp.ur[i]), 0.0);
     a.l2_primal_sq += violation * violation;
     if (isfinite(lp.lr[i]) && lp.lr[i] != lp.ur[i]) a.b_sq += lp.lr[i] * lp.lr[i];
@@ -432,19 +435,19 @@ __global__ void KktStats(DeviceLp lp, Vectors v, KktSums* partial, double tol) {
 // Pass 2 of the lpKktCheck measures; reads the norms ReduceKkt stored in `s`. out_aty
 // still holds A^T y of this check (nothing runs between the two passes).
 __global__ void KktRelativeStats(DeviceLp lp, Vectors v, const DeviceState* s,
-                                 KktRelSums* partial, double tol) {
+                                 KktRelSums* partial, double ptol, double dtol) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   KktRelSums a;
   double active_bound = s->active_bound_norm, active_cost = s->active_cost_norm;
   if (i < lp.n) {
-    KktRelative(a, v.out_x[i], v.out_z[i], lp.lx[i], lp.ux[i], lp.c[i], tol, active_bound,
-                active_cost);
+    KktRelative(a, v.out_x[i], v.out_z[i], lp.lx[i], lp.ux[i], lp.c[i], ptol, dtol,
+                active_bound, active_cost);
     double residual = fabs(lp.c[i] - v.out_aty[i] - v.out_z[i]);
     if (isfinite(residual)) a.rel_residual = residual / (1 + active_cost);
   }
   if (i < lp.m)
-    KktRelative(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], 0.0, tol, active_bound,
-                active_cost);
+    KktRelative(a, v.out_ax[i], v.out_y[i], lp.lr[i], lp.ur[i], 0.0, ptol, dtol,
+                active_bound, active_cost);
   StoreStats(a, partial);
 }
 __global__ void SaveFeasible(DeviceLp lp, Vectors v, DeviceState* s) {
@@ -608,6 +611,14 @@ __global__ void ReduceKkt(const KktSums* partial, int size, DeviceState* s) {
                        s->metrics.complementarity <= kDeviationLevel;
 }
 
+// The lpKktCheck measures within `factor` x their tolerances: the sign and residual parts of
+// kkt_dual have one each (HiGHS's dual feasibility and dual residual tolerances).
+static __device__ bool KktWithin(const DeviceState* s, const KktRelSums& a, double factor) {
+  return a.rel_primal <= factor * s->primal_tolerance &&
+         a.rel_dual <= factor * s->dual_tolerance &&
+         a.rel_residual <= factor * s->residual_tolerance &&
+         s->metrics.kkt_gap <= factor * s->kkt_gap_tolerance;
+}
 // Decides optimality.
 __global__ void ReduceKktRelative(const KktRelSums* partial, int size, DeviceState* s) {
   KktRelSums a = ReducePartials(partial, size);
@@ -621,12 +632,11 @@ __global__ void ReduceKktRelative(const KktRelSums* partial, int size, DeviceSta
                                                 k.dual <= s->tolerance &&
                                                 k.gap <= s->tolerance &&
                                                 k.complementarity <= s->tolerance
-                           : s->stop_l2   ? k.l2_primal <= s->tolerance &&
-                                                k.l2_dual <= s->tolerance &&
-                                                k.l2_gap <= s->tolerance
-                                          : k.kkt_primal <= s->tolerance &&
-                                                k.kkt_dual <= s->tolerance &&
-                                                k.kkt_gap <= s->tolerance);
+                           : s->stop_l2   ? k.l2_primal <= s->primal_tolerance &&
+                                                k.l2_dual <= s->dual_tolerance &&
+                                                k.l2_gap <= s->l2_gap_tolerance &&
+                                                (s->kkt_guard <= 0 || KktWithin(s, a, s->kkt_guard))
+                                          : KktWithin(s, a, 1));
 }
 
 // reference: the fixed-point error of the reference step instead of the trial step.
@@ -996,6 +1006,10 @@ static cudaGraphExec_t CaptureGraph(Resources& r, Body&& body) {
 #endif
 
 static std::string CheckOptions(const SolveOptions& options) {
+  for (double t : {options.primal_tolerance, options.dual_tolerance,
+                   options.dual_residual_tolerance, options.l2_gap_tolerance,
+                   options.kkt_gap_tolerance, options.kkt_guard})
+    if (!std::isfinite(t) || t < 0) return "Invalid tolerance or budget";
   if (!std::isfinite(options.tolerance) || options.tolerance <= 0 ||
       std::isnan(options.time_limit_seconds) || options.time_limit_seconds < 0 ||
       options.iteration_limit < 0)
@@ -1350,6 +1364,13 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     double* ab = r.Upload(constants);
     DeviceState initial{};
     initial.tolerance = options.tolerance;
+    auto or_tolerance = [&](double t) { return t > 0 ? t : options.tolerance; };
+    initial.primal_tolerance = or_tolerance(options.primal_tolerance);
+    initial.dual_tolerance = or_tolerance(options.dual_tolerance);
+    initial.residual_tolerance = or_tolerance(options.dual_residual_tolerance);
+    initial.l2_gap_tolerance = or_tolerance(options.l2_gap_tolerance);
+    initial.kkt_gap_tolerance = or_tolerance(options.kkt_gap_tolerance);
+    initial.kkt_guard = options.kkt_guard;
     initial.cost_scale = source.cost_scale >= 0 ? source.cost_scale : CostScale(host);
     initial.iteration_limit = options.iteration_limit;
     initial.fixed_weight = fixed_weight;
@@ -1357,6 +1378,20 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     initial.warm_start = source.start_primal && source.start_dual;
     initial.stop_l2 = options.stop == StopCriterion::kPdlpL2;
     initial.stop_strict = options.stop == StopCriterion::kStrict;
+    if (source.start_omega > 0) {
+      initial.omega0 = source.start_omega;  // a warm start continues
+    } else {
+      // The initial primal weight (|c|_2 + 1) / (|b|_2 + 1) of the input LP, b taking each row's
+      // finite bound (the lower one of a ranged row, 0 for a free row)
+      double c2 = 0, b2 = 0;
+      for (double c : host.cost) c2 += c * c;
+      for (int i = 0; i < host.rows; ++i) {
+        double l = host.row_lower[i], u = host.row_upper[i];
+        double b = std::isfinite(l) && l != u ? l : (std::isfinite(u) ? u : (std::isfinite(l) ? l : 0));
+        b2 += b * b;
+      }
+      initial.omega0 = (std::sqrt(c2) + 1) / (std::sqrt(b2) + 1);
+    }
     if (snapshot)
       initial.decisions = r.AllocateZero<Decision>(kDecisionCapacity);  // padding downloaded too
     DeviceState* s = r.Allocate<DeviceState>(1);  // overwritten by `initial` before the launch
@@ -1403,10 +1438,12 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
       Unscale<<<blocks, kBlock, 0, stream>>>(lp, v, s);
       Multiply(r, out_ax, ab);
       Multiply(r, out_aty, ab);
-      KktStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((KktSums*)0), options.tolerance);
+      KktStats<<<blocks, kBlock, 0, stream>>>(lp, v, partial_of((KktSums*)0),
+                                              initial.primal_tolerance, initial.dual_tolerance);
       ReduceKkt<<<1, kBlock, 0, stream>>>(partial_of((KktSums*)0), blocks, s);
       KktRelativeStats<<<blocks, kBlock, 0, stream>>>(lp, v, s, partial_of((KktRelSums*)0),
-                                                      options.tolerance);
+                                                      initial.primal_tolerance,
+                                                      initial.dual_tolerance);
       ReduceKktRelative<<<1, kBlock, 0, stream>>>(partial_of((KktRelSums*)0), blocks, s);
       SaveFeasible<<<Blocks(n), kBlock, 0, stream>>>(lp, v, s);
       Mark<<<1, 1, 0, stream>>>(s, 4);
@@ -1652,8 +1689,11 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     result.metrics = final.metrics;
     result.peak_device_bytes = r.Bytes();
     result.metrics_valid = !final.bad;
+    result.omega = final.omega;
     result.primal_valid =
-        !final.bad && PrimalMeasure(final.metrics, options.stop) <= options.tolerance;
+        !final.bad && PrimalMeasure(final.metrics, options.stop) <=
+                          (options.stop == StopCriterion::kStrict ? options.tolerance
+                                                                  : final.primal_tolerance);
     result.dual_valid = final.status == Status::kOptimal;
     result.certificate_valid = final.farkas_valid;
     result.ray_valid = final.ray_valid;
@@ -1743,6 +1783,14 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
 
 SolveResult Solve(const HostLp& lp, const SolveOptions& options) {
   return Run(SolveSource{&lp, nullptr}, options, nullptr, false, nullptr);
+}
+
+SolveResult Solve(const HostLp& lp, const SolveOptions& options, const StartPoint& start) {
+  SolveSource source{&lp, nullptr};
+  source.start_primal = start.primal;
+  source.start_dual = start.dual;
+  source.start_omega = start.omega;
+  return Run(source, options, nullptr, false, nullptr);
 }
 
 SolveResult SolveForTesting(const HostLp& lp, const SolveOptions& options, Snapshot* snapshot,

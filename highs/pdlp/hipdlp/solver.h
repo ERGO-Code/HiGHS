@@ -40,10 +40,30 @@ struct HostLp {
 // All are evaluated on the same point and always reported.
 enum class StopCriterion { kPdlpL2, kLpKktCheck, kStrict };
 struct SolveOptions {
+  // The single tolerance: kStrict, the feasible base of the certificates and SolveCpu use it, and
+  // every per-measure tolerance below that is 0 falls back to it.
   double tolerance = 1e-4;
+  // Per-measure tolerances of kPdlpL2 and kLpKktCheck, as HiGHS assigns its options: the primal
+  // feasibility tolerance bounds l2_primal and kkt_primal, the dual feasibility tolerance l2_dual
+  // and the sign part of kkt_dual, the dual residual tolerance the residual part of kkt_dual. The
+  // gap has one per criterion: l2_gap (cuPDLP's optimality tolerance) and kkt_gap (lpKktCheck's).
+  // They also set how near a bound a value must be to count as active.
+  double primal_tolerance = 0, dual_tolerance = 0, dual_residual_tolerance = 0;
+  double l2_gap_tolerance = 0, kkt_gap_tolerance = 0;
+  // > 0 with kPdlpL2: OPTIMAL also needs the kkt measures <= kkt_guard x their tolerances, so the
+  // L2 stop cannot end far outside what lpKktCheck accepts.
+  double kkt_guard = 0;
   double time_limit_seconds = std::numeric_limits<double>::infinity();
   int64_t iteration_limit = std::numeric_limits<int64_t>::max();
   StopCriterion stop = StopCriterion::kPdlpL2;
+};
+// Where a solve starts instead of zero: what an earlier Solve of the SAME model returned. primal is
+// SolveResult::primal; dual is the minimized-form y, i.e. SolveResult::dual times the model's
+// sense. Both or neither. omega > 0 replaces the initial primal weight (SolveResult::omega).
+struct StartPoint {
+  const std::vector<double>* primal = nullptr;
+  const std::vector<double>* dual = nullptr;
+  double omega = 0;
 };
 struct Metrics {
   // Strict element-wise report: each bound violation over 1 + |violated bound|, the dual residual
@@ -133,6 +153,7 @@ struct SolveResult {
   int rows = 0, columns = 0, nonzeros = 0;
   int reduced_rows = 0, reduced_columns = 0, reduced_nonzeros = 0;
   int64_t iterations = 0, restarts = 0, kkt_checks = 0, certificate_checks = 0, spmv_count = 0;
+  double omega = 0;  // primal weight at the end (GPU only): a StartPoint's omega to continue
   bool primal_valid = false, dual_valid = false, certificate_valid = false, ray_valid = false;
   std::vector<double> primal, dual, reduced_cost, row_activity;
   std::vector<double> farkas_row, farkas_column, ray, feasible_base;
@@ -150,6 +171,8 @@ struct SolveResult {
   size_t peak_device_bytes = 0;  // Bytes allocated by the largest single solve/validation
 };
 SolveResult Solve(const HostLp& lp, const SolveOptions& options = {});
+// The same from `start` (a warm start). SolveCpu has no warm start.
+SolveResult Solve(const HostLp& lp, const SolveOptions& options, const StartPoint& start);
 
 SolveResult SolveCpu(const HostLp& lp, const SolveOptions& options = {});
 
