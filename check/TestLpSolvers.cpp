@@ -754,3 +754,40 @@ TEST_CASE("issue-3715", "[highs_lp_solver]") {
 
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3756", "[highs_lp_solver]") {
+  // An LP passed with mods records left from another model (as the
+  // MIP solver's LP relaxation inherits them) must not have them
+  // undone when the solve makes mods of its own
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {kHighsInf, 1};
+  lp.col_lower_ = {1, 0};
+  lp.col_upper_ = {3, 4};
+  lp.row_lower_ = {2};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  // Stale infinite cost record for column 1
+  lp.mods_.save_inf_cost_variable_index = {1};
+  lp.mods_.save_inf_cost_variable_cost = {5};
+  lp.mods_.save_inf_cost_variable_lower = {-1};
+  lp.mods_.save_inf_cost_variable_upper = {-1};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const HighsLp& incumbent_lp = h.getLp();
+  REQUIRE(incumbent_lp.col_cost_[0] == kHighsInf);
+  REQUIRE(incumbent_lp.col_lower_[0] == 1);
+  REQUIRE(incumbent_lp.col_upper_[0] == 3);
+  REQUIRE(incumbent_lp.col_cost_[1] == 1);
+  REQUIRE(incumbent_lp.col_lower_[1] == 0);
+  REQUIRE(incumbent_lp.col_upper_[1] == 4);
+
+  h.resetThreadScheduler(true);
+}
