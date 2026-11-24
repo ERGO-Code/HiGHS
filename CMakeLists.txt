@@ -91,9 +91,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   # GCC and Clang contract multiplications and additions into fused
   # multiply-adds when the target supports them (e.g. gcc 15 enables FMA by
   # default on some x86-64 platforms). GCC ignores
-  # "#pragma STDC FP_CONTRACT OFF", so the flag is required.
+  # "#pragma STDC FP_CONTRACT OFF", so the flag is required. clang-cl ignores
+  # a bare -ffp-contract=off and contracts even under /fp:precise.
+  if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    set(HIGHS_FP_CONTRACT_OFF "/clang:-ffp-contract=off")
+  else()
+    set(HIGHS_FP_CONTRACT_OFF "-ffp-contract=off")
+  endif()
   list(APPEND HIGHS_FLOATING_POINT_OPTIONS
-       "$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
+       "$<$<COMPILE_LANGUAGE:C,CXX>:${HIGHS_FP_CONTRACT_OFF}>")
 
   # on 32-bit x86, GCC and Clang use the x87 unit with 80-bit intermediate
   # results by default. SSE2 gives double arithmetic as on x86-64 (and as
