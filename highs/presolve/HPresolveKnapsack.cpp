@@ -6,9 +6,9 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "../extern/pdqsort/pdqsort.h"
-#include "HighsIntegers.h"
 #include "presolve/HPresolve.h"
 #include "presolve/HPresolveUtils.h"
+#include "util/HighsIntegers.h"
 
 namespace presolve {
 
