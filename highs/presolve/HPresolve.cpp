@@ -349,19 +349,29 @@ bool HPresolve::yieldsImpliedUpperBound(HighsInt row, double val) const {
 }
 
 bool HPresolve::isImpliedEquationAtLower(HighsInt row) const {
-  // if the implied lower bound on a row dual is strictly positive then the row
-  // is an implied equation (using its lower bound) due to complementary
-  // slackness
+  return isImpliedEquationAtLower(row, implRowDualLower[row]);
+}
+
+bool HPresolve::isImpliedEquationAtLower(HighsInt row,
+                                         double implDualLower) const {
+  // if the given implied lower bound on a row dual is strictly positive then
+  // the row is an implied equation (using its lower bound) due to
+  // complementary slackness
   return model->row_lower_[row] != -kHighsInf &&
-         implRowDualLower[row] > options->dual_feasibility_tolerance;
+         implDualLower > options->dual_feasibility_tolerance;
 }
 
 bool HPresolve::isImpliedEquationAtUpper(HighsInt row) const {
-  // if the implied upper bound on a row dual is strictly negative then the row
-  // is an implied equation (using its upper bound) due to complementary
-  // slackness
+  return isImpliedEquationAtUpper(row, implRowDualUpper[row]);
+}
+
+bool HPresolve::isImpliedEquationAtUpper(HighsInt row,
+                                         double implDualUpper) const {
+  // if the given implied upper bound on a row dual is strictly negative then
+  // the row is an implied equation (using its upper bound) due to
+  // complementary slackness
   return model->row_upper_[row] != kHighsInf &&
-         implRowDualUpper[row] < -options->dual_feasibility_tolerance;
+         implDualUpper < -options->dual_feasibility_tolerance;
 }
 
 void HPresolve::chooseRules() {
@@ -1672,24 +1682,25 @@ void HPresolve::changeImplColUpper(HighsInt col, double newUpper,
   // update implied bound
   implColUpper[col] = newUpper;
 
-  // if the implied upper bound was relaxed, the upper bound may no longer be
-  // strictly implied; then the <= side of the dual constraint is lost
-  resetRowDualImpliedBoundsIfDualSideLost(col, false);
+  // update the primal activities unless the old and the new implied bound are
+  // not better than the upper bound
+  if (newImpliedFree ||
+      std::min(oldImplUpper, newUpper) < model->col_upper_[col]) {
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+      impliedRowBounds.updatedImplVarUpper(
+          nonzero.index(), col, nonzero.value(), oldImplUpper, oldUpperSource);
+      if (newImpliedFree && isDualImpliedFree(nonzero.index()))
+        substitutionOpportunities.emplace_back(nonzero.index(), col);
 
-  // if the old and the new implied bound are not better than the upper bound,
-  // nothing needs to be updated
-  if (!newImpliedFree &&
-      std::min(oldImplUpper, newUpper) >= model->col_upper_[col])
-    return;
-
-  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
-    impliedRowBounds.updatedImplVarUpper(nonzero.index(), col, nonzero.value(),
-                                         oldImplUpper, oldUpperSource);
-    if (newImpliedFree && isDualImpliedFree(nonzero.index()))
-      substitutionOpportunities.emplace_back(nonzero.index(), col);
-
-    markChangedRow(nonzero.index());
+      markChangedRow(nonzero.index());
+    }
   }
+
+  // if the implied upper bound was relaxed, the upper bound may no longer be
+  // strictly implied; then the <= side of the dual constraint is lost. this is
+  // done after the primal activities are updated, since the reset may change
+  // the implied column bounds again
+  resetRowDualImpliedBoundsIfDualSideLost(col, false);
 }
 
 void HPresolve::changeImplColLower(HighsInt col, double newLower,
@@ -1720,24 +1731,25 @@ void HPresolve::changeImplColLower(HighsInt col, double newLower,
   // update implied bound
   implColLower[col] = newLower;
 
-  // if the implied lower bound was relaxed, the lower bound may no longer be
-  // strictly implied; then the >= side of the dual constraint is lost
-  resetRowDualImpliedBoundsIfDualSideLost(col, true);
+  // update the primal activities unless the old and the new implied bound are
+  // not better than the lower bound
+  if (newImpliedFree ||
+      std::max(oldImplLower, newLower) > model->col_lower_[col]) {
+    for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
+      impliedRowBounds.updatedImplVarLower(
+          nonzero.index(), col, nonzero.value(), oldImplLower, oldLowerSource);
+      if (newImpliedFree && isDualImpliedFree(nonzero.index()))
+        substitutionOpportunities.emplace_back(nonzero.index(), col);
 
-  // if the old and the new implied bound are not better than the lower bound,
-  // nothing needs to be updated
-  if (!newImpliedFree &&
-      std::max(oldImplLower, newLower) <= model->col_lower_[col])
-    return;
-
-  for (const HighsSliceNonzero& nonzero : getColumnVector(col)) {
-    impliedRowBounds.updatedImplVarLower(nonzero.index(), col, nonzero.value(),
-                                         oldImplLower, oldLowerSource);
-    if (newImpliedFree && isDualImpliedFree(nonzero.index()))
-      substitutionOpportunities.emplace_back(nonzero.index(), col);
-
-    markChangedRow(nonzero.index());
+      markChangedRow(nonzero.index());
+    }
   }
+
+  // if the implied lower bound was relaxed, the lower bound may no longer be
+  // strictly implied; then the >= side of the dual constraint is lost. this is
+  // done after the primal activities are updated, since the reset may change
+  // the implied column bounds again
+  resetRowDualImpliedBoundsIfDualSideLost(col, true);
 }
 
 void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
@@ -1760,6 +1772,16 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
   bool newDualImplied =
       !isDualImpliedFree(row) && isDualImpliedLeq(row, newUpper);
 
+  // while the row is an implied equation at its upper bound, implied column
+  // bounds are also derived with the upper bound as the lower side of the row
+  // (see checkUpdateColImpliedBounds). when the row is no longer an implied
+  // equation, these bounds may be invalid and are reset at the end, after the
+  // dual activities are updated, since the reset may change the implied row
+  // dual bounds again
+  bool lostImpliedEquation = !isEquation(row) &&
+                             isImpliedEquationAtUpper(row) &&
+                             !isImpliedEquationAtUpper(row, newUpper);
+
   // remember the source of this upper bound, so that we can correctly identify
   // weak domination
   if (oldUpperSource != originCol) {
@@ -1773,18 +1795,19 @@ void HPresolve::changeImplRowDualUpper(HighsInt row, double newUpper,
   // update implied bound
   implRowDualUpper[row] = newUpper;
 
-  // nothing needs to be updated
-  if (!newDualImplied && std::min(oldImplUpper, newUpper) >= rowDualUpper[row])
-    return;
+  // update the dual activities unless nothing needs to be updated
+  if (newDualImplied || std::min(oldImplUpper, newUpper) < rowDualUpper[row]) {
+    for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+      impliedDualRowBounds.updatedImplVarUpper(
+          nonzero.index(), row, nonzero.value(), oldImplUpper, oldUpperSource);
+      markChangedCol(nonzero.index());
 
-  for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
-    impliedDualRowBounds.updatedImplVarUpper(
-        nonzero.index(), row, nonzero.value(), oldImplUpper, oldUpperSource);
-    markChangedCol(nonzero.index());
-
-    if (newDualImplied && isImpliedFree(nonzero.index()))
-      substitutionOpportunities.emplace_back(row, nonzero.index());
+      if (newDualImplied && isImpliedFree(nonzero.index()))
+        substitutionOpportunities.emplace_back(row, nonzero.index());
+    }
   }
+
+  if (lostImpliedEquation) resetColImpliedBoundsDerivedFromRow(row);
 }
 
 void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
@@ -1807,6 +1830,16 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
   bool newDualImplied =
       !isDualImpliedFree(row) && isDualImpliedGeq(row, newLower);
 
+  // while the row is an implied equation at its lower bound, implied column
+  // bounds are also derived with the lower bound as the upper side of the row
+  // (see checkUpdateColImpliedBounds). when the row is no longer an implied
+  // equation, these bounds may be invalid and are reset at the end, after the
+  // dual activities are updated, since the reset may change the implied row
+  // dual bounds again
+  bool lostImpliedEquation = !isEquation(row) &&
+                             isImpliedEquationAtLower(row) &&
+                             !isImpliedEquationAtLower(row, newLower);
+
   // remember the source of this lower bound, so that we can correctly identify
   // weak domination
   if (oldLowerSource != originCol) {
@@ -1820,18 +1853,19 @@ void HPresolve::changeImplRowDualLower(HighsInt row, double newLower,
   // update implied bound
   implRowDualLower[row] = newLower;
 
-  // nothing needs to be updated
-  if (!newDualImplied && std::max(oldImplLower, newLower) <= rowDualLower[row])
-    return;
+  // update the dual activities unless nothing needs to be updated
+  if (newDualImplied || std::max(oldImplLower, newLower) > rowDualLower[row]) {
+    for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
+      impliedDualRowBounds.updatedImplVarLower(
+          nonzero.index(), row, nonzero.value(), oldImplLower, oldLowerSource);
+      markChangedCol(nonzero.index());
 
-  for (const HighsSliceNonzero& nonzero : getRowVector(row)) {
-    impliedDualRowBounds.updatedImplVarLower(
-        nonzero.index(), row, nonzero.value(), oldImplLower, oldLowerSource);
-    markChangedCol(nonzero.index());
-
-    if (newDualImplied && isImpliedFree(nonzero.index()))
-      substitutionOpportunities.emplace_back(row, nonzero.index());
+      if (newDualImplied && isImpliedFree(nonzero.index()))
+        substitutionOpportunities.emplace_back(row, nonzero.index());
+    }
   }
+
+  if (lostImpliedEquation) resetColImpliedBoundsDerivedFromRow(row);
 }
 
 HPresolve::Result HPresolve::scaleMIP(HighsPostsolveStack& postsolve_stack) {

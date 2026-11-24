@@ -280,7 +280,11 @@ class HPresolve {
 
   bool isImpliedEquationAtLower(HighsInt row) const;
 
+  bool isImpliedEquationAtLower(HighsInt row, double implDualLower) const;
+
   bool isImpliedEquationAtUpper(HighsInt row) const;
+
+  bool isImpliedEquationAtUpper(HighsInt row, double implDualUpper) const;
 
   StatusResult isImpliedIntegral(HighsInt col);
 
