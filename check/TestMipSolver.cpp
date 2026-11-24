@@ -2902,8 +2902,8 @@ TEST_CASE("issue-3726-mip", "[highs_test_mip_solver]") {
   // HighsMipSolver.cpp:206 mipdata_->getDomain().infeasible() is
   // true!
   //
-  // Current fix (in #) is just to reset objective_bound to kHighsInf
-  // if it's been changed when solving a MIP
+  // Current fix (in #3787) is just to reset objective_bound to
+  // kHighsInf if it's been changed when solving a MIP
   //
   // MIP as a minimization has objective f = -5 x - 4 y - 3 z
   //
