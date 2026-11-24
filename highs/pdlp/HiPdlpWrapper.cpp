@@ -22,7 +22,8 @@ HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object) {
   return solveLpHiPdlp(solver_object.options_, solver_object.timer_,
                        solver_object.lp_, solver_object.basis_,
                        solver_object.solution_, solver_object.model_status_,
-                       solver_object.highs_info_, solver_object.callback_);
+                       solver_object.highs_info_, solver_object.callback_,
+                       nullptr, solver_object.hipdlp_omega_);
 }
 
 namespace {
@@ -57,18 +58,47 @@ hipdlp::HostLp toHostLp(const HighsLp& lp) {
 }
 
 hipdlp::SolveOptions toSolveOptions(const HighsOptions& options,
-                                    HighsTimer& timer) {
+                                    HighsTimer& timer,
+                                    const HiPdlpRestart* restart) {
   hipdlp::SolveOptions solve_options;
-  // The solver has a single tolerance. A user-set kkt_tolerance wins.
-  solve_options.tolerance = options.kkt_tolerance != kDefaultKktTolerance
-                                ? options.kkt_tolerance
-                                : options.pdlp_optimality_tolerance;
+  // Stop on the tolerances that HiGHS then checks the solution with
+  // (lpKktCheck): primal and dual feasibility, dual residual and optimality.
+  // A user-set kkt_tolerance replaces all of them, as it does there. The L2 gap
+  // keeps pdlp_optimality_tolerance, as cuPDLP-C does. (The primal residual
+  // needs no test: the row activities returned are A x.)
+  const bool uniform = options.kkt_tolerance != kDefaultKktTolerance;
+  // A restart scales each of them (see HiPdlpRestart)
+  const HiPdlpRestart none;
+  const HiPdlpRestart& scales = restart ? *restart : none;
+  auto tolerance = [&](double option, double scale) {
+    return scale * (uniform ? options.kkt_tolerance : option);
+  };
+  solve_options.primal_tolerance =
+      tolerance(options.primal_feasibility_tolerance, scales.primal_scale);
+  solve_options.dual_tolerance =
+      tolerance(options.dual_feasibility_tolerance, scales.dual_scale);
+  solve_options.dual_residual_tolerance =
+      tolerance(options.dual_residual_tolerance, scales.residual_scale);
+  solve_options.l2_gap_tolerance =
+      tolerance(options.pdlp_optimality_tolerance, scales.objective_scale);
+  solve_options.kkt_gap_tolerance =
+      tolerance(options.optimality_tolerance, scales.objective_scale);
+  // The single tolerance of the strict criterion, the certificates and the
+  // CPU solver, as before (a restart: at the tightest scale)
+  solve_options.tolerance = tolerance(
+      options.pdlp_optimality_tolerance,
+      std::min({scales.primal_scale, scales.dual_scale, scales.residual_scale,
+                scales.objective_scale}));
   // What decides "optimal" (see hipdlp::StopCriterion in hipdlp/solver.h):
-  //   kPdlpL2      the PDLP / cuPDLPx relative-L2 measures (the library
-  //   default) kLpKktCheck  the per-component measures of HiGHS lpKktCheck
-  //   kStrict      the strict element-wise measures
-  // Change this line to use another one.
+  // kPdlpL2, the PDLP / cuPDLPx relative-L2 measures (the library default);
+  // kLpKktCheck, the per-component measures of HiGHS lpKktCheck; kStrict, the
+  // strict element-wise measures. Change this line to use another one.
   solve_options.stop = hipdlp::StopCriterion::kPdlpL2;
+  // The L2 stop also needs the lpKktCheck measures within 10 times their
+  // tolerances, so that it cannot end far outside what lpKktCheck accepts
+  solve_options.kkt_guard = 10;
+  // A restart aims at what lpKktCheck measures
+  if (restart) solve_options.stop = hipdlp::StopCriterion::kLpKktCheck;
   // Remaining share of the global time limit
   solve_options.time_limit_seconds =
       options.time_limit >= kHighsInf
@@ -87,10 +117,12 @@ HighsStatus solveError(HighsModelStatus& model_status) {
 
 hipdlp::SolveResult solveHost(const HighsOptions& options,
                               const hipdlp::HostLp& host,
-                              const hipdlp::SolveOptions& solve_options) {
+                              const hipdlp::SolveOptions& solve_options,
+                              const hipdlp::StartPoint* start) {
 #ifdef HIGHS_HIPDLP_CUDA_DETECTED
   if (options.hipdlp_backend != kHiPdlpBackendCpuString)
-    return hipdlp::Solve(host, solve_options);
+    return start ? hipdlp::Solve(host, solve_options, *start)
+                 : hipdlp::Solve(host, solve_options);
 #else
   if (options.hipdlp_backend == kHiPdlpBackendCudaString ||
       options.hipdlp_backend == kHiPdlpBackendRocmString)
@@ -99,6 +131,7 @@ hipdlp::SolveResult solveHost(const HighsOptions& options,
                  "solver\n",
                  options.hipdlp_backend.c_str());
 #endif
+  // The CPU solver has no warm start: a restart starts from zero
   return hipdlp::SolveCpu(host, solve_options);
 }
 
@@ -108,14 +141,46 @@ HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
                           const HighsLp& lp, HighsBasis& highs_basis,
                           HighsSolution& highs_solution,
                           HighsModelStatus& model_status, HighsInfo& highs_info,
-                          HighsCallback& callback) {
+                          HighsCallback& callback,
+                          const HiPdlpRestart* restart, double* final_omega) {
   resetModelStatusAndHighsInfo(model_status, highs_info);
   highs_basis.valid = false;
+  if (final_omega) *final_omega = 0;
+  // Copy the start before highs_solution is cleared: it may be the same object.
+  // HiPDLP's dual is the minimized-form y: the HiGHS row dual times the sense.
+  std::vector<double> start_primal, start_dual;
+  hipdlp::StartPoint start;
+  if (restart && restart->start && restart->start->value_valid &&
+      restart->start->col_value.size() == static_cast<size_t>(lp.num_col_)) {
+    const HighsSolution& from = *restart->start;
+    start_primal = from.col_value;
+    start_dual.assign(lp.num_row_, 0.0);
+    if (from.dual_valid &&
+        from.row_dual.size() == static_cast<size_t>(lp.num_row_)) {
+      const double sense = static_cast<double>(lp.sense_);
+      for (HighsInt iRow = 0; iRow < lp.num_row_; iRow++)
+        start_dual[iRow] = sense * from.row_dual[iRow];
+    }
+    start.primal = &start_primal;
+    start.dual = &start_dual;
+    start.omega = restart->omega;
+  }
   highs_solution.clear();
 
   const hipdlp::HostLp host = toHostLp(lp);
+  const hipdlp::SolveOptions solve_options =
+      toSolveOptions(options, timer, restart);
+  if (restart)
+    highsLogUser(options.log_options, HighsLogType::kInfo,
+                 "HiPDLP: restart %s with tolerances %g (primal), %g (dual), "
+                 "%g (dual residual), %g (objective) and the KKT-check stop\n",
+                 start.primal ? "from the previous solution" : "from zero",
+                 solve_options.primal_tolerance, solve_options.dual_tolerance,
+                 solve_options.dual_residual_tolerance,
+                 solve_options.kkt_gap_tolerance);
   const hipdlp::SolveResult result =
-      solveHost(options, host, toSolveOptions(options, timer));
+      solveHost(options, host, solve_options, start.primal ? &start : nullptr);
+  if (final_omega) *final_omega = result.omega;
 
   highs_info.pdlp_iteration_count =
       static_cast<HighsInt>(std::min<int64_t>(result.iterations, kHighsIInf));

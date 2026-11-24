@@ -40,6 +40,8 @@ class HighsLpSolverObject {
   HighsTimer& timer_;
   HighsProfiling* profiling_ = nullptr;
   HighsModelStatus model_status_ = HighsModelStatus::kNotset;
+  // When not null, HiPDLP stores the primal weight it ended with here
+  double* hipdlp_omega_ = nullptr;
   void setProfiling(HighsProfiling* profiling) {
     assert(profiling);
     profiling_ = profiling;
