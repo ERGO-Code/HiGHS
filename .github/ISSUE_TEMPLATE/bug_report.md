@@ -3,7 +3,7 @@ name: Bug report
 about: Report unexpected behaviour or a crash
 ---
 
-Please provide the following information where possible/relevant and check out [CONTRIBUTING.md](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md).
+Please provide the following information where possible/relevant and check out [CONTRIBUTING.md](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md). If AI was used to find or write up this issue, please read [AI generated contributions](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md#ai-generated-contributions) before submitting.
 
 **What version of HiGHS and what language are you using?**
 Version: master/latest/v1.15.0/v1.14.0 etc.
