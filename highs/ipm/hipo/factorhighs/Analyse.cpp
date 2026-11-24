@@ -90,27 +90,26 @@ void Analyse::eTree() {
   //  parent[i] = j
   // means that j is the parent of i in the tree.
   // For the root(s) of the tree, parent[root] = -1.
+  // Processed nodes are kept in disjoint sets, one per subtree of the current
+  // forest; set_top is the root of each subtree. An entry (i,j), i < j, makes
+  // j the parent of the root of the subtree containing i.
 
-  parent_.resize(n_);
-  std::vector<Int> ancestor(n_);
-  Int next{};
+  parent_.assign(n_, -1);
+  HighsDisjointSets<> subtrees(n_);
+  std::vector<Int> set_top(n_);
+  std::iota(set_top.begin(), set_top.end(), 0);
 
   for (Int j = 0; j < n_; ++j) {
-    // initialise parent and ancestor, which are still unknown
-    parent_[j] = -1;
-    ancestor[j] = -1;
-
     for (Int el = ptr_upper_[j]; el < ptr_upper_[j + 1]; ++el) {
-      for (Int i = rows_upper_[el]; i != -1 && i < j; i = next) {
-        // next is used to move up the tree
-        next = ancestor[i];
+      const Int i = rows_upper_[el];
+      if (i >= j) continue;
 
-        // ancestor keeps track of the known part of the tree, to avoid
-        // repeating (aka path compression): from j there is a known path to i
-        ancestor[i] = j;
+      const Int root = set_top[subtrees.getSet(i)];
+      if (root == j) continue;
 
-        if (next == -1) parent_[i] = j;
-      }
+      parent_[root] = j;
+      subtrees.merge(root, j);
+      set_top[subtrees.getSet(j)] = j;
     }
   }
 }
