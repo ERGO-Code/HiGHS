@@ -860,3 +860,159 @@ TEST_CASE("lp-set-solution", "[highs_check_solution]") {
 
   h.resetThreadScheduler(true);
 }
+
+// Solve the model with the start solution, presolve on, and check
+// that the solver reaches the optimal objective value, and that this
+// is the objective value of the solution returned
+static void testStartSolution(Highs& h, const double required_objective) {
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const double optimal_objective = h.getObjectiveValue();
+  REQUIRE(std::fabs(optimal_objective - required_objective) <=
+          1e-6 * (1 + std::fabs(required_objective)));
+  const std::vector<double> col_value = h.getSolution().col_value;
+  const double computed_objective = h.getLp().objectiveValue(col_value);
+  if (dev_run)
+    printf(
+        "testStartSolution: computed_objective = %g; optimal_objective = %g\n",
+        computed_objective, optimal_objective);
+  REQUIRE(std::fabs(computed_objective - optimal_objective) <=
+          1e-6 * (1 + std::fabs(optimal_objective)));
+}
+
+static void printSolutionAndObjective(const std::string& message,
+                                      const std::vector<double>& solution,
+                                      const double objective) {
+  if (!dev_run) return;
+  HighsInt num_col = solution.size();
+  printf("%s is\n   ", message.c_str());
+  for (HighsInt iCol = 0; iCol < num_col; iCol++)
+    printf("%2g%s", solution[iCol], iCol < num_col - 1 ? " " : "\n");
+  printf("   with objective value %g\n", objective);
+}
+
+TEST_CASE("issue-3634", "[highs_test_mip_solver]") {
+  // The image of the start solution in the reduced space is feasible,
+  // and better than the start solution. The solution returned must
+  // be the postsolved image, not the start solution
+  const std::string model =
+      std::string(HIGHS_DIR) + "/check/instances/issue-3634.mps";
+  std::vector<double> start(96, 0);
+  for (HighsInt iCol : {0, 1, 3, 4, 6, 7, 8, 9, 11, 12, 13, 14, 18, 63, 93})
+    start[iCol] = 1;
+  start[16] = 19;
+  start[17] = 23;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("mip_rel_gap", 0);
+  REQUIRE(h.readModel(model) == HighsStatus::kOk);
+  h.run();
+  const std::vector<double> optimal_col_value = h.getSolution().col_value;
+  const double optimal_objective = h.getLp().objectiveValue(optimal_col_value);
+  printSolutionAndObjective("Optimal solution", optimal_col_value,
+                            optimal_objective);
+
+  HighsSolution solution;
+  solution.col_value = start;
+  solution.value_valid = true;
+
+  REQUIRE(h.setSolution(solution) == HighsStatus::kOk);
+
+  const double start_objective = h.getLp().objectiveValue(start);
+  printSolutionAndObjective("Start solution", start, start_objective);
+
+  // Sanity check that the start objective exceeds the required
+  // objective
+  REQUIRE(optimal_objective < start_objective);
+
+  // Start solution is not optimal, but when the objecctive value of
+  // its presolved image is evaluated, it yields the optimal
+  // objective. Presumably this is becaues the start solution has
+  // components whose values are inconsistent with presolve
+  // reductions, and these are "corrected" when presolve is applied to
+  // the start solution. Further evidence of this comes when the
+  // postsolve is applied to the presolved image, as the resulting
+  // solution (back in the original space) differs from the original
+  // start solution.
+  testStartSolution(h, optimal_objective);
+
+  h.resetGlobalScheduler(true);
+}
+
+TEST_CASE("issue-3642", "[highs_test_mip_solver]") {
+  // MIP has c = (3, 1, 0, -5, 4, 2) and offset of 100 (for testing
+  // the correct application of offsets).
+  //
+  // Hence the optimal solution x = (0, 1, 1, 1, 0, 0) has objective
+  // value of 96
+  //
+  // Key to the issue is r0
+  //
+  // -x1 + x2 + x3 - x5 <= 1
+  //
+  // Column x5 is parallel to x1 with a higher cost, so presolve
+  // removes it as the only reduction, leaving r0 as
+  //
+  // -x1 + x2 + x3 <= 1
+  //
+  // The start has x = (0, 0, 1, 1, 0, 1) satisfying r0, with
+  // objective value 97
+  //
+  // However, in the reduced space, the start is x = (0, 0, 1, 1, 0)
+  // violating r0, but its objective value 95 is below the optimal
+  // objective value of 96
+  //
+  HighsLp lp;
+  lp.offset_ = 100;
+  lp.num_col_ = 6;
+  lp.num_row_ = 3;
+  lp.col_cost_ = {3, 1, 0, -5, 4, 2};
+  lp.col_lower_.assign(lp.num_col_, 0);
+  lp.col_upper_.assign(lp.num_col_, 1);
+  lp.integrality_.assign(lp.num_col_, HighsVarType::kInteger);
+  lp.row_lower_ = {-inf, 1, -inf};
+  lp.row_upper_ = {1, 1, 1};
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.start_ = {0, 4, 7, 9};
+  lp.a_matrix_.index_ = {1, 2, 3, 5, 0, 2, 4, 0, 3};
+  lp.a_matrix_.value_ = {-1, 1, 1, -1, 1, 1, 1, 1, 1};
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  //  h.writeModel("");
+
+  h.run();
+  const std::vector<double> optimal_col_value = h.getSolution().col_value;
+  const double optimal_objective = h.getLp().objectiveValue(optimal_col_value);
+  printSolutionAndObjective("Optimal solution", optimal_col_value,
+                            optimal_objective);
+
+  HighsSolution start;
+  start.col_value = {0, 0, 1, 1, 0, 1};
+  start.value_valid = true;
+  const double start_objective = h.getLp().objectiveValue(start.col_value);
+
+  printSolutionAndObjective("Start solution", start.col_value, start_objective);
+
+  REQUIRE(h.setSolution(start) == HighsStatus::kOk);
+
+  // Prior to #3751, it was assumed that if the start solution was
+  // feasible in the original space, its presolved image would be
+  // feasible in the reduced space, but this instance demonstrates
+  // that this is not the case
+  //
+  // If the start solution is accepted as an integer feasible
+  // solution, with its objective given by its value for the reduced
+  // objective evaluated at its presolved image (95), then the true
+  // optimal solution of the problem is not found, since its objective
+  // is 96
+  //
+  // The correct fix is that the start solution can be accepted as an
+  // integer feasible solution, but if its objective in the reduced
+  // space is better, then it can only be accepted if the presolved
+  // image of start solution is feasible
+  testStartSolution(h, optimal_objective);
+
+  h.resetGlobalScheduler(true);
+}

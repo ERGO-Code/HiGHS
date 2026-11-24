@@ -17,7 +17,7 @@ jobs:
         extras: ["ON", "OFF"]
     steps:
       - name: Checkout HiGHS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install OpenBLAS (Linux)
         if: runner.os == 'Linux'
@@ -152,7 +152,7 @@ jobs:
         extras: ["ON", "OFF"]
     steps:
       - name: Checkout HiGHS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure, build and install (default BLAS -> Apple Accelerate)
         run: |
@@ -202,7 +202,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout HiGHS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check whether this SDK supports the new Accelerate LAPACK interface
         id: accel

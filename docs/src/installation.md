@@ -5,6 +5,8 @@
 HiGHS uses CMake as build system, and requires at least version
 3.15. Details about building from source using CMake can be found in `HiGHS/cmake/README.md`.
 
+When building from a source archive without a `.git` directory, the git hash reported by HiGHS is `n/a`. To set it, pass `-DHIGHS_BUILD_GITHASH=<sha>` to CMake, or `--config-settings=cmake.define.HIGHS_BUILD_GITHASH=<sha>` when building `highspy` with pip. In a git checkout, `git describe` is used instead.
+
 ### Bazel build
 
 Alternatively, building with Bazel is supported for Bazel-based projects. To build HiGHS, from the root directory, run

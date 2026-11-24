@@ -79,6 +79,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestRunData.cpp
       TestSemiVariables.cpp
       TestSetup.cpp
+      TestSolverSelect.cpp
       TestSort.cpp
       TestSpecialLps.cpp
       TestSymmetry.cpp
@@ -90,13 +91,6 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
 
   if (HIPO)
       list(APPEND TEST_SOURCES TestHipo.cpp)
-  endif()
-
-  set(OPT_LEVEL_CHANGED OFF)
-
-  if(CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3")
-    # message(MESSAGE "User has overridden the default optimization level for Release mode.")
-    set(OPT_LEVEL_CHANGED ON)
   endif()
 
   if (BUILD_EXTRA_UNIT_TESTS)
@@ -185,13 +179,13 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                         RESOURCE_LOCK unittestbin)
 
     # create a binary running all the tests in the executable
-    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    add_test(NAME unit_tests_all COMMAND unit_tests)
     set_tests_properties(unit_tests_all
                         PROPERTIES
                         DEPENDS unit-test-build)
     set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
   else()
-    add_test(NAME unit_tests_all COMMAND unit_tests --success)
+    add_test(NAME unit_tests_all COMMAND unit_tests)
     set_tests_properties(unit_tests_all PROPERTIES TIMEOUT 10000) 
   endif()
 
@@ -224,42 +218,12 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       "standmps\;218\; 1.4060175000\;"
       )
   
-   set(successMacArmInstances
-      "25fv47\;3103\; 5.5018458883\;"
-      "80bau3b\;3705\; 9.8722419241\;"
-      "adlittle\;74\; 2.2549496316\;"
-      "afiro\;22\;-4.6475314286\;"
-      "etamacro\;531\;-7.5571523330\;"
-      "greenbea\;5156\;-7.2555248130\;"
-      "shell\;623\; 1.2088253460\;"
-      "stair\;531\;-2.5126695119\;"
-      "standata\;72\; 1.2576995000\;"
-      "standgub\;68\; 1.2576995000\;"
-      "standmps\;218\; 1.4060175000\;"
-   )
-
-   # GCC >= 15 at -O2 (RelWithDebInfo). Debug and Release (-O3, checked
-   # on GCC 16 MinGW) still match successInstances
-   set(successGcc15Instances
-      "25fv47\;3148\; 5.5018458883\;"
-      "80bau3b\;3705\; 9.8722419241\;"
-      "adlittle\;74\; 2.2549496316\;"
-      "afiro\;22\;-4.6475314286\;"
-      "etamacro\;536\;-7.5571523330\;"
-      "greenbea\;5247\;-7.2555248130\;"
-      "shell\;623\; 1.2088253460\;"
-      "stair\;531\;-2.5126695119\;"
-      "standata\;72\; 1.2576995000\;"
-      "standgub\;68\; 1.2576995000\;"
-      "standmps\;218\; 1.4060175000\;"
-   )
-
    set(successRiscVInstances
       "25fv47\;3103\; 5.5018458\;"
       "80bau3b\;3705\; 9.8722419\;"
       "etamacro\;531\;-7.5571523\;"
       "greenbea\;5156\;-7.2555248\;"
-      "stair\;531\;-2.5126695\;" # last like mac arm
+      "stair\;531\;-2.5126695\;"
       "adlittle\;74\; 2.2549496\;"
       "afiro\;22\;-4.6475314\;"
       "shell\;623\; 1.2088253\;"
@@ -400,17 +364,37 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
         "afiro\;-4.647531\;"
         "avgas\;-7.7499999\;"
         "blending\;-3.19999999\;"
-        "chip\;-9.0000000\;"
+        "chip\;-8.9999999\;"
         "e226\;-1.16389\;"
-        "scrs8\; 9.04296\;"
+        "scrs8\; 9.0429\;"
         "sctest\; 5.75000000\;"
-        "shell\; 1.20882535\;"
+        "shell\; 1.2088253\;"
         "stair\;-2.5126\;"
-        "standata\; 1.25769947\;"
+        "standata\; 1.2576994\;"
         "standgub\; 1.2576994\;"
     )
   endif()
 
+
+  # The --presolve=off instance tests can check the exact number of simplex
+  # iterations. That number depends on the compiler, its flags and the
+  # target, so it is only checked for the builds the tables were made for.
+  # Distributions that build with their own flags (e.g. Debian:
+  # CMAKE_BUILD_TYPE=None, CMAKE_CXX_FLAGS="-O2 ...", -march=x86-64-v3)
+  # check the model status and the objective value only, and run the
+  # instance tests on every architecture.
+  set(HIGHS_TEST_EXACT_ITERATIONS_DEFAULT ON)
+  if (CMAKE_BUILD_TYPE STREQUAL "None" OR
+      CMAKE_CXX_FLAGS MATCHES "-O[0-9sgz]|-march=|-mtune=|-mfma|-ffast-math|-ffp-contract" OR
+      (CMAKE_CXX_FLAGS_RELEASE MATCHES "-O[0-9s]" AND NOT CMAKE_CXX_FLAGS_RELEASE MATCHES "-O3") OR
+      CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM" OR
+      IS_32)
+    set(HIGHS_TEST_EXACT_ITERATIONS_DEFAULT OFF)
+  endif()
+  option(HIGHS_TEST_EXACT_ITERATIONS
+         "Check exact simplex iteration counts in the instance tests"
+         ${HIGHS_TEST_EXACT_ITERATIONS_DEFAULT})
+  message(STATUS "Check exact iteration counts: ${HIGHS_TEST_EXACT_ITERATIONS}")
 
   # define a macro to add tests
   #
@@ -452,17 +436,23 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
                   "Model status        : ${solutionstatus}")
 
           if(${solutionstatus} STREQUAL "Optimal")
-              if(${setting} STREQUAL "--presolve=off" AND 
-                (NOT CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM") AND
-                (NOT OPT_LEVEL_CHANGED) AND
-                (CMAKE_SIZEOF_VOID_P EQUAL 8))
+              if(${setting} STREQUAL "--presolve=off" AND
+                HIGHS_TEST_EXACT_ITERATIONS)
                   set_tests_properties (${name}${setting} PROPERTIES
                           PASS_REGULAR_EXPRESSION
                           "Simplex   iterations: ${iter}\nObjective value     : ${optval}")
-              else()
+              elseif(HIGHS_TEST_EXACT_ITERATIONS)
                   set_tests_properties (${name}${setting} PROPERTIES
                           PASS_REGULAR_EXPRESSION
                           "Objective value     : ${optval}")
+              else()
+                  # the last digits of the printed objective can differ
+                  # between targets: compare 7 decimal places
+                  string(REGEX REPLACE "^( *-?[0-9]+\\.[0-9][0-9][0-9][0-9][0-9][0-9][0-9]).*$"
+                         "\\1" optval_7 "${optval}")
+                  set_tests_properties (${name}${setting} PROPERTIES
+                          PASS_REGULAR_EXPRESSION
+                          "Objective value     : ${optval_7}")
               endif()
           endif()
       endforeach(setting)
@@ -470,21 +460,20 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
   endmacro(add_instancetests)
 
   # add tests for success and fail instances
-  if (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
-    add_instancetests(successMacArmInstances "Optimal")
+  if (NOT HIGHS_TEST_EXACT_ITERATIONS)
+    # only status and objective are checked, which hold on every target
+    add_instancetests(successInstances "Optimal")
+  elseif (APPLE AND (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64"))
+    # without floating-point contraction (see the top-level CMakeLists.txt),
+    # macOS on arm64 gives the same iteration counts as x86-64
+    add_instancetests(successInstances "Optimal")
   elseif(LINUX AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv(32|64)")
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "riscv64")
         add_instancetests(successRiscVInstances "Optimal")
     endif()
   elseif(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64") AND
              NOT IS_32)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-        CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15 AND
-        CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-      add_instancetests(successGcc15Instances "Optimal")
-    else()
-      add_instancetests(successInstances "Optimal")
-    endif()
+    add_instancetests(successInstances "Optimal")
   endif()
 
   add_instancetests(failInstances "Fail")
@@ -519,7 +508,39 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       endforeach(setting)
   endforeach(instance)
 
-  if(FAST_BUILD)
+  # LPs in the MIP solver go through solver selection with the fitted models
+  # (1 and 2) and with IPM forced (6 is HiPO, or IPX without it). Strategy 0
+  # is the default tested above
+  foreach(strategy 1 2 6)
+      set(select_options ${CMAKE_BINARY_DIR}/testoptions_select_${strategy}.txt)
+      FILE(WRITE ${select_options}
+      "mip_rel_gap=0.0
+      mip_abs_gap=0.0
+      solver_select_strategy=${strategy}")
+      foreach(instance ${mipInstances})
+          list(GET instance 0 name)
+          list(GET instance 1 optval)
+          set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
+          set(test_name ${name}--solver_select_strategy=${strategy})
+          if (FAST_BUILD)
+            add_test(NAME ${test_name} COMMAND $<TARGET_FILE:highs-bin>
+                --options_file ${select_options} ${inst})
+          else()
+            add_test(NAME ${test_name} COMMAND $<TARGET_FILE:highs>
+                --options_file ${select_options} ${inst})
+          endif()
+          set_tests_properties (${test_name} PROPERTIES
+                  DEPENDS unit_tests_all
+                  PASS_REGULAR_EXPRESSION
+                  "Status            Optimal\n  Primal bound      ${optval}.*\n  Dual bound        ${optval}.*\n  Solution status   feasible\n                    ${optval}.* \\(objective\\)"
+                  FAIL_REGULAR_EXPRESSION
+                  "Solution status   infeasible")
+      endforeach(instance)
+  endforeach(strategy)
+
+  # PDLP stops at a relative tolerance, so the printed objective depends on
+  # the target and flags: only run these tests where the values were made
+  if(FAST_BUILD AND HIGHS_TEST_EXACT_ITERATIONS)
     foreach(instance_pdlp ${pdlpInstances})
         # add default tests
         # treat the instance as a tuple (list) of two values

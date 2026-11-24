@@ -2,12 +2,13 @@
 #include <iostream>
 #include <vector>
 
-#include "HConfig.h"
 #include "HCheckConfig.h"
+#include "HConfig.h"
 #include "Highs.h"
 #include "HighsExternalApi.h"
 #include "catch.hpp"
 #include "io/Filereader.h"
+#include "ipm/hipo/factorhighs/FactorHighs.h"
 #include "ipm/hipo/factorhighs/FactorHighs_c_api.h"
 #include "ipm/hipo/ipm/Solver.h"
 #include "ipm/hipo/ipm/Status.h"
@@ -166,6 +167,132 @@ TEST_CASE("issue-3369", "[highs_hipo]") {
   REQUIRE(h.getInfo().ipm_iteration_count < 10);
 }
 
+TEST_CASE("issue-3749", "[highs_hipo]") {
+  // max x0 + x1 - x0^2 - x1^2 - x0 x1
+  // s.t. x0 + x1 <= 10, 0 <= x <= 10
+  // optimum 1/3 at (1/3, 1/3)
+  HighsModel model1;
+  model1.lp_.num_col_ = 2;
+  model1.lp_.num_row_ = 1;
+  model1.lp_.col_cost_ = {1, 1};
+  model1.lp_.col_lower_ = {0, 0};
+  model1.lp_.col_upper_ = {10, 10};
+  model1.lp_.row_lower_ = {-kHighsInf};
+  model1.lp_.row_upper_ = {10};
+  model1.lp_.a_matrix_.start_ = {0, 1, 2};
+  model1.lp_.a_matrix_.index_ = {0, 0};
+  model1.lp_.a_matrix_.value_ = {1, 1};
+  model1.hessian_.dim_ = 2;
+  model1.hessian_.format_ = HessianFormat::kTriangular;
+  model1.hessian_.start_ = {0, 2, 3};
+  model1.hessian_.index_ = {0, 1, 1};
+  model1.hessian_.value_ = {-2, -1, -2};
+
+  // max x0 + 2 x1 - 0.5 x2 + 0.5 x'Qx, Q = [-2 -1 0; -1 -3 1; 0 1 -2]
+  // s.t. x0 + x1 + x2 <= 3, 0 <= x0, x1 <= 10, x2 = 2
+  // optimum -2.5 at (0, 1, 2)
+  HighsModel model2;
+  model2.lp_.num_col_ = 3;
+  model2.lp_.num_row_ = 1;
+  model2.lp_.col_cost_ = {1, 2, -0.5};
+  model2.lp_.col_lower_ = {0, 0, 2};
+  model2.lp_.col_upper_ = {10, 10, 2};
+  model2.lp_.row_lower_ = {-kHighsInf};
+  model2.lp_.row_upper_ = {3};
+  model2.lp_.a_matrix_.start_ = {0, 1, 2, 3};
+  model2.lp_.a_matrix_.index_ = {0, 0, 0};
+  model2.lp_.a_matrix_.value_ = {1, 1, 1};
+  model2.hessian_.dim_ = 3;
+  model2.hessian_.format_ = HessianFormat::kTriangular;
+  model2.hessian_.start_ = {0, 2, 4, 5};
+  model2.hessian_.index_ = {0, 1, 1, 2, 2};
+  model2.hessian_.value_ = {-2, -1, -3, 1, -2};
+
+  const std::vector<std::pair<HighsModel, double>> tests = {{model1, 1.0 / 3.0},
+                                                            {model2, -2.5}};
+  const double tol = 1e-6;
+
+  auto solve = [](const HighsModel& model, HighsSolution& solution, double& obj,
+                  HighsInt& iter) {
+    Highs h;
+    h.setOptionValue("output_flag", dev_run);
+    h.setOptionValue("solver", kHipoString);
+    h.setOptionValue("presolve", kHighsOffString);
+    h.setOptionValue("time_limit", 5);
+    REQUIRE(h.passModel(model) == HighsStatus::kOk);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+    solution = h.getSolution();
+    obj = h.getObjectiveValue();
+    iter = h.getInfo().ipm_iteration_count;
+    h.resetThreadScheduler(true);
+  };
+
+  for (const auto& test : tests) {
+    HighsModel max_model = test.first;
+    max_model.lp_.sense_ = ObjSense::kMaximize;
+
+    HighsModel min_model = test.first;
+    min_model.lp_.sense_ = ObjSense::kMinimize;
+    for (double& val : min_model.lp_.col_cost_) val = -val;
+    for (double& val : min_model.hessian_.value_) val = -val;
+
+    HighsSolution max_sol, min_sol;
+    double max_obj, min_obj;
+    HighsInt max_iter, min_iter;
+    solve(max_model, max_sol, max_obj, max_iter);
+    solve(min_model, min_sol, min_obj, min_iter);
+
+    REQUIRE(std::abs(max_obj - test.second) < tol);
+    REQUIRE(std::abs(max_obj + min_obj) < tol);
+    REQUIRE(max_iter == min_iter);
+
+    // primal values coincide, duals have opposite sign
+    for (HighsInt i = 0; i < max_model.lp_.num_col_; ++i) {
+      REQUIRE(std::abs(max_sol.col_value[i] - min_sol.col_value[i]) < tol);
+      REQUIRE(std::abs(max_sol.col_dual[i] + min_sol.col_dual[i]) < tol);
+    }
+    for (HighsInt i = 0; i < max_model.lp_.num_row_; ++i) {
+      REQUIRE(std::abs(max_sol.row_value[i] - min_sol.row_value[i]) < tol);
+      REQUIRE(std::abs(max_sol.row_dual[i] + min_sol.row_dual[i]) < tol);
+    }
+  }
+}
+
+// A stop callback that returns nonzero stops the METIS and AMD orderings,
+// which then fail. HiPO uses this for its time limit. The matrix is a grid
+// Laplacian, large enough that both orderings check the callback
+TEST_CASE("test-hipo-ordering-stop", "[highs_hipo]") {
+  if (!HighsExternalApi::isAvailable<HighsExtras::metis>() ||
+      !HighsExternalApi::isAvailable<HighsExtras::amd>())
+    return;
+  // Lower triangle, with the diagonal, in CSC format
+  const hipo::Int m = 300;
+  const hipo::Int n = m * m;
+  std::vector<hipo::Int> ptr = {0};
+  std::vector<hipo::Int> rows;
+  for (hipo::Int k = 0; k < n; k++) {
+    rows.push_back(k);
+    if (k % m < m - 1) rows.push_back(k + 1);
+    if (k + m < n) rows.push_back(k + m);
+    ptr.push_back(static_cast<hipo::Int>(rows.size()));
+  }
+  const hipo::Int nz = static_cast<hipo::Int>(rows.size());
+  std::vector<hipo::Int> perm(n);
+
+  hipo::FHsolver FH;
+  REQUIRE(FH.reorderMetis(n, nz, rows.data(), ptr.data(), perm.data(), false,
+                          0) == 0);
+  REQUIRE(FH.reorderAmd(n, nz, rows.data(), ptr.data(), perm.data(), false) ==
+          0);
+
+  FH.setStopCallback([](void*) { return 1; });
+  REQUIRE(FH.reorderMetis(n, nz, rows.data(), ptr.data(), perm.data(), false,
+                          0) != 0);
+  REQUIRE(FH.reorderAmd(n, nz, rows.data(), ptr.data(), perm.data(), false) !=
+          0);
+}
+
 TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   // problem size
   const HighsInt n = 5;
@@ -220,7 +347,8 @@ TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
   FactorHighs_symbolic_print(FH, S, verbose);
 
   // factorise the matrix
-  HighsInt factorise_status = FactorHighs_factorise(FH, S, n, nz, rows, ptr, vals);
+  HighsInt factorise_status =
+      FactorHighs_factorise(FH, S, n, nz, rows, ptr, vals);
   REQUIRE(factorise_status == 0);
 
   // compute the inertia of the factorisation
@@ -265,7 +393,8 @@ TEST_CASE("test-hipo-serial-blas", "[highs_hipo]") {
   // OpenBLAS may be limited to a single thread, in which case the opt-out
   // cannot be observed
   if (multiple_threads > 1) {
-    // With hipo_serial_blas false, HiPO leaves the number of threads unchanged
+    // With hipo_serial_blas false, HiPO leaves the number of threads
+    // unchanged
     REQUIRE(HighsExtras::blas::openblas_set_num_threads(2) == multiple_threads);
     highs.setOptionValue("hipo_serial_blas", false);
     highs.clearSolver();

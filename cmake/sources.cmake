@@ -463,11 +463,13 @@ set(highs_sources
     util/HFactorExtend.cpp
     util/HFactorRefactor.cpp
     util/HFactorUtils.cpp
+    util/HighsAvailableMemory.cpp
     util/HighsDynamicLibrary.cpp
     util/HighsHash.cpp
     util/HighsLinearSumBounds.cpp
     util/HighsMatrixPic.cpp
     util/HighsMatrixUtils.cpp
+    util/HighsSolverSelect.cpp
     util/HighsSort.cpp
     util/HighsSparseMatrix.cpp
     util/HighsUtils.cpp
@@ -623,6 +625,7 @@ set(highs_headers
     util/HFactor.h
     util/HFactorConst.h
     util/HFactorDebug.h
+    util/HighsAvailableMemory.h
     util/HighsCDouble.h
     util/HighsComponent.h
     util/HighsDataStack.h
@@ -640,11 +643,13 @@ set(highs_headers
     util/HighsMemoryAllocation.h
     util/HighsRandom.h
     util/HighsRbTree.h
+    util/HighsSolverSelect.h
     util/HighsSort.h
     util/HighsSparseMatrix.h
     util/HighsSparseVectorSum.h
     util/HighsSplay.h
     util/HighsTimer.h
+    util/HighsUndoStack.h
     util/HighsUtils.h
     util/HSet.h
     util/HVector.h
