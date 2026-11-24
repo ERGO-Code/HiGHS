@@ -75,7 +75,7 @@ struct Recovery {
   // of priority; the first issue with an action available is acted upon:
   //  1. stagnation, with I or W in the last kActionNumericalWindow iterations:
   //     drop; I or W in that window with a step below kShortStepAlpha counts
-  //     as stagnation;
+  //     as stagnation, but cannot lead to stop;
   //  2. stagnation: centre with C and without L, otherwise switch;
   //  3. I or W without stagnation: drop only, since changing the regularisation
   //     can stop an ipm that is still progressing;

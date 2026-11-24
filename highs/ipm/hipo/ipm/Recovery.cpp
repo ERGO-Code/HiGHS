@@ -77,6 +77,9 @@ Recovery::ProposedAction Recovery::proposeAction(
     else if (try_recentre)
       entry = RecoveryAction::kRecentre;
     action = firstAvailable(entry, capabilities);
+    // a short step alone is not enough to stop
+    if (action == RecoveryAction::kTerminate && !report.stagnation())
+      action = RecoveryAction::kNone;
   } else if (hasNumericalTrouble(report)) {
     // 3: numerical trouble without stagnation. The ipm is still progressing,
     // and changing the regularisation can stop it, but bad pivots can be
