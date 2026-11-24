@@ -56,6 +56,11 @@ Recovery::ProposedAction Recovery::proposeAction(
       numerical_trouble_seen &&
       iter - last_numerical_trouble_iter < kActionNumericalWindow;
 
+  if (report.clean())
+    ++streak_of_clean_iter;
+  else
+    streak_of_clean_iter = 0;
+
   if (waitingForPreviousAction(iter))
     return {RecoveryAction::kNone, iter, false};
 
@@ -95,13 +100,25 @@ Recovery::ProposedAction Recovery::proposeAction(
       action = RecoveryAction::kDropBadPivots;
   }
 
-  // 4: absorbed rows
+  // 4: regularisation was increased and iterations have been clean for some
+  // time, so decrease regularisation
+  if (action == RecoveryAction::kNone &&
+      timesProposed(RecoveryAction::kIncreaseReg) > 0 &&
+      streak_of_clean_iter >= kCleanIterBeforeRegRestore) {
+    if (available(RecoveryAction::kRestoreReg, capabilities))
+      action = RecoveryAction::kRestoreReg;
+  }
+
+  // 5: absorbed rows
   if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbedRows))
     action = firstAvailable(RecoveryAction::kDecreaseReg, capabilities);
 
   const ProposedAction proposed{action, iter,
                                 actionProperties(action).reset_to_best};
   if (action != RecoveryAction::kNone) proposed_actions.push_back(proposed);
+
+  if (action == RecoveryAction::kIncreaseReg) streak_of_clean_iter = 0;
+
   return proposed;
 }
 

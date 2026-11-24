@@ -1382,9 +1382,11 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
       break;
 
     case RecoveryAction::kIncreaseReg:
-      controls_.reg_scale *= kRegScaleFactor;
-      log_stream << "Applied " << name << ", regularisation scale "
-                 << sci(controls_.reg_scale, 0, 1) << "\n";
+      controls_.reg_p_scale *= kRegScaleFactor;
+      controls_.reg_d_scale *= kRegScaleFactor;
+      log_stream << "Applied " << name << ", regularisation scales "
+                 << sci(controls_.reg_p_scale, 0, 1) << " "
+                 << sci(controls_.reg_d_scale, 0, 1) << "\n";
       break;
 
     case RecoveryAction::kDecreaseReg: {
@@ -1407,6 +1409,13 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
       log_stream << "Applied " << name << " to " << changed << " rows\n";
       break;
     }
+
+    case RecoveryAction::kRestoreReg:
+      controls_.reg_p_scale =
+          std::max(1.0, controls_.reg_p_scale / kRegScaleFactor);
+      log_stream << "Applied " << name << ", primal regularisation scale "
+                 << sci(controls_.reg_p_scale, 0, 1) << "\n";
+      break;
 
     case RecoveryAction::kSwitchFactorisation:
       // proposed only if possible; otherwise give up, as for stop

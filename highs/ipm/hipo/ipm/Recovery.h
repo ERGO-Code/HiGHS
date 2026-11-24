@@ -15,6 +15,7 @@ enum class RecoveryAction {
   kDropBadPivots,
   kIncreaseReg,
   kDecreaseReg,
+  kRestoreReg,
   kRecentre,
   kSwitchFactorisation,
   kTerminate,
@@ -28,6 +29,8 @@ enum class RecoveryAction {
 //   reg-                                         (absorbed rows)
 // proposeAction chooses reg+ instead of stop while reg+ is not used up, so that
 // reg+ is always tried before stopping.
+// Primal regularisation can be restored to a lower value after reg+ with action
+// reg^, if enough "clean" iterations have been observed.
 struct ActionProperties {
   const char* name;
   bool reset_to_best;
@@ -48,6 +51,8 @@ inline ActionProperties actionProperties(RecoveryAction action) {
               RecoveryAction::kSwitchFactorisation};
     case RecoveryAction::kDecreaseReg:
       return {"reg-", false, no_limit, RecoveryAction::kNone};
+    case RecoveryAction::kRestoreReg:
+      return {"reg^", false, 1, RecoveryAction::kNone};
     case RecoveryAction::kRecentre:
       return {"centre", false, 1, RecoveryAction::kSwitchFactorisation};
     case RecoveryAction::kSwitchFactorisation:
@@ -81,7 +86,8 @@ struct Recovery {
   //     tried before stop;
   //  3. I or W without stagnation: drop only, since changing the regularisation
   //     can stop an ipm that is still progressing;
-  //  4. A: reg-.
+  //  4. Enough clean iterations after reg+: reg^.
+  //  5. A: reg-.
   // F is not acted upon here: Solver::shortStepGuard deals with nearly free
   // columns when they block the step.
   // No action is chosen within kActionPatience iterations of the previous one.
@@ -101,6 +107,7 @@ struct Recovery {
   // last iteration with I or W
   bool numerical_trouble_seen = false;
   Int last_numerical_trouble_iter = 0;
+  Int streak_of_clean_iter = 0;
 
   // capabilities allow action and it is not used up
   bool available(RecoveryAction action,

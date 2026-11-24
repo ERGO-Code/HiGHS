@@ -57,6 +57,7 @@ const double kPoorCentralityAlpha = 0.1;
 const Int kActionPatience = 3;
 const Int kActionNumericalWindow = 5;
 const Int kMaxRegChanges = 2;
+const Int kCleanIterBeforeRegRestore = 5;
 const double kShortStepAlpha = 0.1;
 const double kRegScaleFactor = 100.0;
 const double kMinRegFactor = 1e-3;
@@ -144,13 +145,14 @@ const double kStaticRegPrimal = 1e-12;
 const double kStaticRegDual = 1e-10;
 
 struct SolverControls {
-  // static regularisation: the defaults times reg_scale, times a factor for
+  // static regularisation: the defaults times reg_x_scale, times a factor for
   // each row/column
-  double reg_scale = 1.0;
+  double reg_p_scale = 1.0;
+  double reg_d_scale = 1.0;
   std::vector<double> reg_p_factor;
   std::vector<double> reg_d_factor;
-  double baseRegP() const { return reg_scale * kStaticRegPrimal; }
-  double baseRegD() const { return reg_scale * kStaticRegDual; }
+  double baseRegP() const { return reg_p_scale * kStaticRegPrimal; }
+  double baseRegD() const { return reg_d_scale * kStaticRegDual; }
   double regP(Int j) const { return baseRegP() * reg_p_factor[j]; }
   double regD(Int i) const { return baseRegD() * reg_d_factor[i]; }
 

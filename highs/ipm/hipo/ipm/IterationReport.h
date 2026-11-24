@@ -97,6 +97,12 @@ struct IterationReport {
     for (IssueType type : issues) s += issueCode(type);
     return s;
   }
+
+  bool clean() const {
+    // no stagnation, I or W
+    return !stagnation() && !has(IssueType::kWrongInertia) &&
+           !has(IssueType::kVeryInaccurateSolve);
+  }
 };
 
 }  // namespace hipo
