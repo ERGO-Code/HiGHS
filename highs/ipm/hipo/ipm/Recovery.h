@@ -21,12 +21,13 @@ enum class RecoveryAction {
 };
 
 // Properties of each action.
-// Following next from an action gives the chain of actions that recovery
+// Following next from an action gives the chains of actions that recovery
 // escalates through:
-//  drop -> reg+ -> switch -> stop
-//                    ^
-//  centre -----------^
-//  reg-
+//   drop   -> reg+ -> switch -> stop             (numerical issues)
+//   centre ->         switch -> (reg+) -> stop   (stagnation)
+//   reg-                                         (absorbed rows)
+// proposeAction chooses reg+ instead of stop while reg+ is not used up, so that
+// reg+ is always tried before stopping.
 struct ActionProperties {
   const char* name;
   bool reset_to_best;
@@ -76,7 +77,8 @@ struct Recovery {
   //  1. stagnation, with I or W in the last kActionNumericalWindow iterations:
   //     drop; I or W in that window with a step below kShortStepAlpha counts
   //     as stagnation, but cannot lead to stop;
-  //  2. stagnation: centre with C and without L, otherwise switch;
+  //  2. stagnation: centre with C and without L, otherwise switch; reg+ is
+  //     tried before stop;
   //  3. I or W without stagnation: drop only, since changing the regularisation
   //     can stop an ipm that is still progressing;
   //  4. A: reg-.

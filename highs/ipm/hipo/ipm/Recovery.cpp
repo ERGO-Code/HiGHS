@@ -77,6 +77,13 @@ Recovery::ProposedAction Recovery::proposeAction(
     else if (try_recentre)
       entry = RecoveryAction::kRecentre;
     action = firstAvailable(entry, capabilities);
+
+    // try reg+ before stop, e.g. for stagnation without numerical trouble when
+    // switch is unavailable or used up
+    if (action == RecoveryAction::kTerminate &&
+        available(RecoveryAction::kIncreaseReg, capabilities))
+      action = RecoveryAction::kIncreaseReg;
+
     // a short step alone is not enough to stop
     if (action == RecoveryAction::kTerminate && !report.stagnation())
       action = RecoveryAction::kNone;
