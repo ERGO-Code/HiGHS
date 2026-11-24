@@ -1363,8 +1363,12 @@ void HPresolve::addToMatrix(const HighsInt row, const HighsInt col,
     if (std::abs(sum) <= options->small_matrix_value) {
       unlink(pos);
     } else {
-      matrixNonZeroChanged(row, col, Avalue[pos], sum, false, false);
+      // store the new coefficient before the activities are updated, since
+      // the resets in matrixNonZeroChanged may update implied bounds in a
+      // cascade, which requires the modified matrix
+      const double oldCoef = Avalue[pos];
       Avalue[pos] = sum;
+      matrixNonZeroChanged(row, col, oldCoef, sum, false, false);
     }
   }
 }
@@ -2204,11 +2208,8 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
   rowDualLower[row] /= std::copysign(1.0, scale);
   rowDualUpper[row] /= std::copysign(1.0, scale);
 
-  for (size_t j = 0; j < rowpositions.size(); ++j) {
+  for (size_t j = 0; j < rowpositions.size(); ++j)
     Avalue[rowpositions[j]] *= scale;
-    if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
-      unlink(rowpositions[j]);
-  }
 
   impliedRowBounds.sumScaled(row, scale);
   if (scale < 0) {
@@ -2218,13 +2219,20 @@ void HPresolve::scaleStoredRow(HighsInt row, double scale, bool integral) {
     std::swap(model->row_lower_[row], model->row_upper_[row]);
   }
 
+  // remove tiny coefficients only after the row is completely scaled, since
+  // removing a non-zero updates the activities with the scaled coefficient
+  for (size_t j = 0; j < rowpositions.size(); ++j)
+    if (std::abs(Avalue[rowpositions[j]]) <= options->small_matrix_value)
+      unlink(rowpositions[j]);
+
+  // rounding the sides of a row with integral coefficients changes the row
+  // bounds of the scaled row (and may relax them within the tolerance), which
+  // is done using the utilities to keep the implied bounds consistent
   if (integral) {
     if (model->row_upper_[row] != kHighsInf)
-      model->row_upper_[row] =
-          std::floor(model->row_upper_[row] + primal_feastol);
+      changeRowUpper(row, std::floor(model->row_upper_[row] + primal_feastol));
     if (model->row_lower_[row] != -kHighsInf)
-      model->row_lower_[row] =
-          std::ceil(model->row_lower_[row] - primal_feastol);
+      changeRowLower(row, std::ceil(model->row_lower_[row] - primal_feastol));
   }
 }
 
