@@ -8,9 +8,9 @@
 #include "LinearSolver.h"
 #include "Model.h"
 
-// Up-looking factorisation, following the algorithms in T. Davis, "Direct
-// Methods for Sparse Linear Systems", SIAM, 2006, and the LDL, CHOLMOD and
-// QDLDL packages.
+// Up-looking factorisation, adapted from QDLDL (Apache 2.0 license, see
+// THIRD_PARTY_NOTICES.md). The algorithms are described in T. Davis, "Direct
+// Methods for Sparse Linear Systems", SIAM, 2006.
 
 namespace hipo {
 

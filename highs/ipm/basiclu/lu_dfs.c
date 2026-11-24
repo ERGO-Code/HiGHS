@@ -55,40 +55,44 @@ lu_int lu_dfs(
 /* ==========================================================================
  * dfs_end
  *
- * follows the algorithm of cs_dfs in T. Davis, CSPARSE
+ * The current node i and the position p in its list of neighbours are kept in
+ * local variables. When moving to a neighbour, (i,p) is saved in xi[depth],
+ * pstack[depth]. Nodes are marked when reached and moved to the output when
+ * all their neighbours have been processed.
  * ========================================================================== */
 
 static lu_int dfs_end(
     lu_int i, const lu_int *begin, const lu_int *end, const lu_int *index,
     lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M)
 {
-    lu_int inext, p, head = 0;
+    lu_int inext, p, depth = 0;
     assert(marked[i] != M);
 
-    xi[0] = i;
-    while (head >= 0)
+    marked[i] = M;
+    p = begin[i];
+    for (;;)
     {
-        i = xi[head];
-        if (marked[i] != M)     /* node i has not been visited */
+        if (p < end[i])
         {
-            marked[i] = M;
-            pstack[head] = begin[i];
-        }
-        /* continue dfs at node i */
-        for (p = pstack[head]; p < end[i]; p++)
-        {
-            inext = index[p];
-            if (marked[inext] != M) /* start dfs at unvisited node inext */
+            inext = index[p++];
+            if (marked[inext] != M) /* save node i and go to neighbour */
             {
-                pstack[head] = p+1;
-                xi[++head] = inext;
-                break;
+                marked[inext] = M;
+                xi[depth] = i;
+                pstack[depth] = p;
+                depth++;
+                i = inext;
+                p = begin[i];
             }
         }
-        if (p >= end[i])        /* node i has no unvisited neighbours */
+        else                    /* node i finished, go back */
         {
-            head--;
             xi[--top] = i;
+            if (depth == 0)
+                break;
+            depth--;
+            i = xi[depth];
+            p = pstack[depth];
         }
     }
 
@@ -99,39 +103,41 @@ static lu_int dfs_end(
 /* ==========================================================================
  * dfs
  *
- * follows the algorithm of cs_dfs in T. Davis, CSPARSE
+ * Same as dfs_end, but the neighbour lists are terminated by a negative index.
  * ========================================================================== */
 
 static lu_int dfs(
     lu_int i, const lu_int *begin, const lu_int *index,
     lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M)
 {
-    lu_int inext, p, head = 0;
+    lu_int inext, p, depth = 0;
     assert(marked[i] != M);
 
-    xi[0] = i;
-    while (head >= 0)
+    marked[i] = M;
+    p = begin[i];
+    for (;;)
     {
-        i = xi[head];
-        if (marked[i] != M)     /* node i has not been visited */
+        if ((inext = index[p]) >= 0)
         {
-            marked[i] = M;
-            pstack[head] = begin[i];
-        }
-        /* continue dfs at node i */
-        for (p = pstack[head]; (inext = index[p]) >= 0; p++)
-        {
-            if (marked[inext] != M) /* start dfs at unvisited node inext */
+            p++;
+            if (marked[inext] != M) /* save node i and go to neighbour */
             {
-                pstack[head] = p+1;
-                xi[++head] = inext;
-                break;
+                marked[inext] = M;
+                xi[depth] = i;
+                pstack[depth] = p;
+                depth++;
+                i = inext;
+                p = begin[i];
             }
         }
-        if (inext < 0)          /* node i has no unvisited neighbours */
+        else                    /* node i finished, go back */
         {
-            head--;
             xi[--top] = i;
+            if (depth == 0)
+                break;
+            depth--;
+            i = xi[depth];
+            p = pstack[depth];
         }
     }
 
