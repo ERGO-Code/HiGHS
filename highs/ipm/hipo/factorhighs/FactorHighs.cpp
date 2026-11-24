@@ -10,10 +10,7 @@
 
 namespace hipo {
 
-FHsolver::~FHsolver() {
-  if (logger_) data_.printTimes(*logger_);
-  if (local_logger_ && logger_) delete logger_;
-}
+FHsolver::~FHsolver() { data_.printTimes(*logger_); }
 
 void FHsolver::setRegularisation(double reg_p, double reg_d) {
   options_.reg_p = reg_p;
@@ -30,7 +27,7 @@ void FHsolver::setRegularisationEntries(const double* reg, Int n) {
 
 Int FHsolver::analyse(Symbolic& S, Int n, Int nz, const Int* rows,
                       const Int* ptr, const Int* signs, const Int* perm) {
-  Analyse an_obj(n, nz, rows, ptr, signs, options_, logger_, data_, perm);
+  Analyse an_obj(n, nz, rows, ptr, signs, options_, *logger_, data_, perm);
   return an_obj.run(S);
 }
 
@@ -38,7 +35,7 @@ Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
                         const Int* ptr, const double* vals) {
   if (!static_reg_.empty() && static_cast<Int>(static_reg_.size()) != n)
     return kRetInvalidInput;
-  Factorise fact_obj(S, n, nz, rows, ptr, vals, static_reg_, options_, logger_,
+  Factorise fact_obj(S, n, nz, rows, ptr, vals, static_reg_, options_, *logger_,
                      data_, sn_columns_, &serial_stack_);
   return fact_obj.run(N_);
 }
@@ -81,20 +78,14 @@ void FHsolver::setParallelSolve(bool forward, bool backward, bool diag) {
   options_.parallel_diag = diag;
 }
 
-void FHsolver::setLogger(const Logger* logger, bool use_printf) {
-  if (local_logger_ && logger_) delete logger_;
-  local_logger_ = false;
-
-  logger_ = logger;
-  if (!logger_) {
-    logger_ = new Logger(use_printf);
-    if (logger_) local_logger_ = true;
-  }
+void FHsolver::setLogger(const Logger* logger, bool to_console) {
+  if (logger)
+    logger_ = logger;
+  else
+    logger_ = to_console ? &Logger::console() : &Logger::silent();
 
 #if HIPO_TIMING_LEVEL > 0
-  if (logger_)
-    logger_->printw(
-        "Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
+  logger_->printw("Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
 #endif
 }
 

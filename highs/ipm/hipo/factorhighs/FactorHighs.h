@@ -52,11 +52,13 @@ Then, the factorization is performed as follows.
     FH.factorise(S, n, nz rows, ptr, val);
     FH.solve(x);
 
-Printing to screen is achieved using the interface in auxiliary/Logger.h.
-Use setLogger to pass the Logger object to use: FH.setLogger(&logger).
-To use printf instead, use FH.setLogger(nullptr,true).
-Logging is off by default. Use FH.setLogger(nullptr, false) to switch logging
-off.
+Logging is achieved using the interface in auxiliary/Logger.h, which prints
+through the HiGHS logging functions. Logging is off by default.
+- To use a given Logger object, call FH.setLogger(&logger). The object is not
+  owned by FHsolver and must outlive it.
+- To print to console without a Logger object, call FH.setLogger(nullptr, true).
+  Only user-level messages are printed; warnings and errors are prefixed.
+- To switch logging off, call FH.setLogger(nullptr, false).
 
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
@@ -84,11 +86,11 @@ via the Symbolic object, S.iperm().
 namespace hipo {
 
 class FHsolver {
-  const Logger* logger_ = nullptr;
+  // Never nullptr. Not owned by FHsolver.
+  const Logger* logger_ = &Logger::silent();
   DataCollector data_;
   Numeric N_;
   CliqueStack serial_stack_;
-  bool local_logger_ = false;
 
  public:
   using StopCallback = FHoptions::StopCallback;
@@ -163,10 +165,11 @@ class FHsolver {
   void setParallel(bool tree, bool node);
   void setParallelSolve(bool forward, bool backward, bool diag);
 
-  // Pass the Logger object to be used for logging. Alternatively, printf can be
-  // used for logging, by passing a nullptr and setting use_printf to true.
+  // Pass the Logger object to be used for logging; it is not owned by FHsolver
+  // and must outlive it. If logger is nullptr, print user-level messages to
+  // console if to_console is true, or switch logging off otherwise.
   // By default, logging is off.
-  void setLogger(const Logger* logger = nullptr, bool use_printf = false);
+  void setLogger(const Logger* logger = nullptr, bool to_console = false);
   const Logger* getLogger() const { return logger_; }
 
   // Pass a callback that is checked periodically during reorderMetis,

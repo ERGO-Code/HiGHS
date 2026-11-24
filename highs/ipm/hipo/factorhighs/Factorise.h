@@ -65,7 +65,7 @@ class Factorise {
   // flag to stop computation
   std::atomic<bool> flag_stop_{false};
 
-  const Logger* logger_;
+  const Logger& logger_;
   DataCollector& data_;
   const FHoptions& FH_opt_;
 
@@ -79,9 +79,8 @@ class Factorise {
  public:
   Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM, const Int* ptrM,
             const double* valM, const std::vector<double>& static_reg,
-            const FHoptions& FH_opt, const Logger* logger,
-            DataCollector& data, std::vector<std::vector<double>>& sn_columns,
-            CliqueStack* stack);
+            const FHoptions& FH_opt, const Logger& logger, DataCollector& data,
+            std::vector<std::vector<double>>& sn_columns, CliqueStack* stack);
 
   bool run(Numeric& num);
 };

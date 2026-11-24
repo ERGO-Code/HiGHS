@@ -17,7 +17,7 @@ namespace hipo {
 Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
                      const Int* ptrM, const double* valM,
                      const std::vector<double>& static_reg,
-                     const FHoptions& FH_opt, const Logger* logger,
+                     const FHoptions& FH_opt, const Logger& logger,
                      DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
                      CliqueStack* stack)
@@ -35,10 +35,9 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   n_ = n;
 
   if (n_ != S_.size()) {
-    if (logger_)
-      logger_->printInfo(
-          "Matrix provided to Factorise has size incompatible with symbolic "
-          "object.\n");
+    logger_.printInfo(
+        "Matrix provided to Factorise has size incompatible with symbolic "
+        "object.\n");
     return;
   }
 
@@ -150,8 +149,7 @@ void Factorise::processSupernode(Int sn) {
   if (serial) {
     bool reallocation = false;
     clique_ptr = stack_->setup(S_.cliqueSize(sn), reallocation);
-    if (reallocation && logger_)
-      logger_->printInfo("Reallocation of CliqueStack\n");
+    if (reallocation) logger_.printInfo("Reallocation of CliqueStack\n");
   }
 
   // initialise the format handler
@@ -203,8 +201,7 @@ void Factorise::processSupernode(Int sn) {
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
-        if (logger_)
-          logger_->printInfo("Missing child supernode contribution\n");
+        logger_.printInfo("Missing child supernode contribution\n");
         flag_stop_.store(true, std::memory_order_relaxed);
         return;
       }
@@ -239,10 +236,10 @@ void Factorise::processSupernode(Int sn) {
   if (Int flag = FH->denseFactorise(reg_thresh, &static_reg_[S_.snStart(sn)])) {
     flag_stop_.store(true, std::memory_order_relaxed);
 
-    if (logger_ && flag == kRetInvalidInput)
-      logger_->printInfo("DenseFact: invalid input\n");
-    else if (logger_ && flag == kRetInvalidPivot)
-      logger_->printInfo("DenseFact: invalid pivot\n");
+    if (flag == kRetInvalidInput)
+      logger_.printInfo("DenseFact: invalid input\n");
+    else if (flag == kRetInvalidPivot)
+      logger_.printInfo("DenseFact: invalid pivot\n");
 
     return;
   }

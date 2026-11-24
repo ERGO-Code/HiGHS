@@ -1,29 +1,33 @@
 #include "Logger.h"
 
-#include <stdarg.h>
-
 namespace hipo {
 
-Logger::Logger(bool use_printf) : use_printf_{use_printf} {}
+Logger::Logger(bool to_console) {
+  own_log_options_.log_stream = nullptr;
+  own_log_options_.output_flag = &own_output_flag_;
+  own_log_options_.log_to_console = &own_log_to_console_;
+  own_log_options_.log_dev_level = &own_log_dev_level_;
+  if (to_console) log_options_ = &own_log_options_;
+}
 
 void Logger::setOptions(const HighsLogOptions* log_options) {
   log_options_ = log_options;
 }
 
 bool Logger::debug(Int level) const {
-  // Return true if level agrees with log_dev_level
+  // Return true if level is between 1 and log_dev_level
+  if (!log_options_ || !log_options_->log_dev_level) return false;
+  return level >= 1 && level <= *log_options_->log_dev_level;
+}
 
-  if (log_options_ && log_options_->log_dev_level) {
-    if (*log_options_->log_dev_level == kHighsLogDevLevelInfo)
-      return level == 1;
+const Logger& Logger::silent() {
+  static const Logger logger(false);
+  return logger;
+}
 
-    if (*log_options_->log_dev_level == kHighsLogDevLevelDetailed)
-      return level == 1 || level == 2;
-
-    if (*log_options_->log_dev_level == kHighsLogDevLevelVerbose)
-      return level == 1 || level == 2 || level == 3;
-  }
-  return false;
+const Logger& Logger::console() {
+  static const Logger logger(true);
+  return logger;
 }
 
 std::string format(double d, Int width, Int prec,
@@ -41,13 +45,6 @@ std::string integer(Int i, Int width) {
   s.width(width);
   s << i;
   return s.str();
-}
-
-void logger_printf(const char* format, ...) {
-  va_list argptr;
-  va_start(argptr, format);
-  vprintf(format, argptr);
-  va_end(argptr);
 }
 
 }  // namespace hipo
