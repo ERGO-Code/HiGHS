@@ -835,14 +835,6 @@ HighsStatus writeMps(
   };
 
   for (HighsInt c_n = 0; c_n < num_col; c_n++) {
-    if (noCostZeroColumn(c_n)) {
-      // Possibly skip this column as it's zero and has no cost
-      num_no_cost_zero_columns++;
-      // Give the column a presence by writing out a zero cost
-      fprintf(file, "    %-8s  %-8s  %.17g\n", col_names[c_n].c_str(),
-              objective_name.c_str(), 0.0);
-      continue;
-    }
     if (have_int) {
       if (integrality[c_n] == HighsVarType::kInteger && !integerFg) {
         // Start an integer section
@@ -859,6 +851,14 @@ HighsStatus writeMps(
                 nIntegerMk++);
         integerFg = false;
       }
+    }
+    if (noCostZeroColumn(c_n)) {
+      // Empty zero-cost column: give it a presence by writing out a
+      // zero cost, after the integer markers so its type is kept (#3627)
+      num_no_cost_zero_columns++;
+      fprintf(file, "    %-8s  %-8s  %.17g\n", col_names[c_n].c_str(),
+              objective_name.c_str(), 0.0);
+      continue;
     }
     if (col_cost[c_n] != 0) {
       double v = use_sense * col_cost[c_n];
