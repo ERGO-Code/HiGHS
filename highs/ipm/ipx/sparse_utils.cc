@@ -17,19 +17,19 @@ Int DepthFirstSearch(Int istart, const Int* Ap, const Int* Ai,
             marked[i] = marker;
             pstack[head] = j >= 0 ? Ap[j] : 0;
         }
-        bool done = true;
         const Int pbeg = pstack[head];
         const Int pend = j >= 0 ? Ap[j+1] : 0;
-        for (Int p = pbeg; p < pend; p++) {
+        Int p;
+        for (p = pbeg; p < pend; p++) {
             Int inext = Ai[p];
-            if (marked[inext] == marker)
-                continue;
-            pstack[head] = p+1;
-            istack[++head] = inext;
-            done = false;
-            break;
+            if (marked[inext] != marker) {
+                pstack[head] = p+1;
+                istack[++head] = inext;
+                break;
+            }
         }
-        if (done) {
+        if (p >= pend) {
+            // no unmarked neighbours left, move i to the output
             head--;
             istack[--top] = i;
         }
@@ -52,14 +52,13 @@ bool AugmentingPath(Int jstart, const Int* Ap, const Int* Ai, Int* jmatch,
         const Int j = jstack[head];
         if (marked[j] != jstart) { // first time j visited in this path
             marked[j] = jstart;
-            Int i, p;
-            for (p = cheap[j]; p < Ap[j+1] && !found; p++) {
-                i = Ai[p];
-                found = jmatch[i] == -1;
-            }
-            cheap[j] = p;
+            Int p = cheap[j];
+            while (p < Ap[j+1] && jmatch[Ai[p]] != -1)
+                p++;
+            found = p < Ap[j+1];
+            cheap[j] = found ? p+1 : p;
             if (found) {
-                istack[head] = i;
+                istack[head] = Ai[p];
                 break;
             }
             pstack[head] = Ap[j]; // start depth-first search from j
@@ -69,10 +68,9 @@ bool AugmentingPath(Int jstart, const Int* Ap, const Int* Ai, Int* jmatch,
         Int p;
         for (p = pbeg; p < pend; p++) {
             Int i = Ai[p];
-            if (jmatch[i] < -1) // row to be ignored
-                continue;
-            assert(jmatch[i] >= 0);
-            if (marked[jmatch[i]] == jstart)
+            assert(jmatch[i] != -1);
+            // skip rows to be ignored and rows matched to a column in the path
+            if (jmatch[i] < -1 || marked[jmatch[i]] == jstart)
                 continue;
             pstack[head] = p+1;
             istack[head] = i;

@@ -18,7 +18,7 @@ namespace ipx {
 // @marked, @marker Node i is "marked" iff @marked[i] == @marker.
 // @work workspace of size # rows of A.
 //
-// The code has been copied and adapted from cs_dfs.c, included in the CSPARSE
+// The code follows the algorithm of cs_dfs.c, included in the CSPARSE
 // package [1].
 //
 // [1] T. Davis, "Direct methods for sparse linear systems" (2006)
@@ -45,8 +45,8 @@ Int DepthFirstSearch(Int istart, const Int* Ap, const Int* Ai,
 //
 // Returns true if the matching was extended.
 //
-// The code has been copied and adapted from cs_augment.c, included in the
-// CSPARSE package [1].
+// The code follows the algorithm of cs_augment.c, included in the CSPARSE
+// package [1].
 //
 // [1] T. Davis, "Direct methods for sparse linear systems" (2006)
 //
