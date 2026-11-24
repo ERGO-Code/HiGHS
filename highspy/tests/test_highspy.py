@@ -1029,6 +1029,39 @@ class TestHighsPy(unittest.TestCase):
                 contents = f.read()
                 self.assertEqual(contents, b"HiGHS_basis_file v2\nValid\n# Columns 2\nc0 1\nc1 1\n# Rows 2\nr0 0\nr1 0\n")
 
+    def test_basis_status_array(self):
+        h1 = self.get_basic_model()
+        h1.run()
+        b1 = h1.getBasis()
+        np.testing.assert_array_equal(b1.col_status_array, [int(s) for s in b1.col_status])
+        np.testing.assert_array_equal(b1.row_status_array, [int(s) for s in b1.row_status])
+        self.assertEqual(b1.col_status_array.dtype, np.uint8)
+
+        # Pass a basis built from arrays into an unrun model
+        h2 = self.get_basic_model()
+        b2 = highspy.HighsBasis()
+        b2.col_status_array = np.array([1, 1], dtype=np.int64)
+        b2.row_status_array = b1.row_status_array
+        self.assertEqual(b2.col_status, [highspy.HighsBasisStatus.kBasic] * 2)
+        self.assertEqual(h2.setBasis(b2), highspy.HighsStatus.kOk)
+        self.assertEqual(h2.getBasis().col_status, b1.col_status)
+        self.assertEqual(h2.getBasis().row_status, b1.row_status)
+
+        with self.assertRaises(ValueError):
+            b2.col_status_array = np.array([0, 5])
+        with self.assertRaises(ValueError):
+            b2.col_status_array = np.array([0, -1])
+        with self.assertRaises(TypeError):
+            b2.col_status_array = np.array([1.0, 1.0])
+        np.testing.assert_array_equal(b2.col_status_array, [1, 1])
+
+        # The array is a copy: it survives reassignment and cannot alter the basis
+        old = b2.col_status_array
+        b2.col_status_array = np.full(100_000, 4)
+        old[0] = 0
+        np.testing.assert_array_equal(old, [0, 1])
+        self.assertEqual(b2.col_status[0], highspy.HighsBasisStatus.kNonbasic)
+
     def test_read_basis(self):
         if platform == "linux" or platform == "darwin":
             # Read basis from one run model into an unrun model
