@@ -33,6 +33,10 @@ struct Diagnostics {
                                               kHighsInf};
   Int progress_iter[kNumProgressQuantities]{};
 
+  // data for gap test: best pdgap at a feasible point and its iteration
+  double gap_ref = kHighsInf;
+  Int gap_iter = 0;
+
   explicit Diagnostics(const Model& model_input);
 
   // ===================================================================================
@@ -42,7 +46,8 @@ struct Diagnostics {
   // - kLargeResIncrease, if residualReductionTest found a residual increased
   //   by more than a factor kResReductionLargeIncrease;
   // - kNoProgress and kOscillation, if the window and best-value parts of
-  //   progressTest failed.
+  //   progressTest failed;
+  // - kNoProgress, if gapTest failed.
   // Must be called after the step, while it.delta still holds the direction.
   // ===================================================================================
   void stagnation(const Iterate& it, Int iter, double feas_tol, double opt_tol,
@@ -74,7 +79,8 @@ struct Diagnostics {
   // ===================================================================================
   // Add kPoorCentrality to report if more than a fraction
   // kPoorCentralityFraction of the products xj * zj / mu are outside
-  // [kSmallProduct, kLargeProduct] and a stepsize is below kPoorCentralityAlpha.
+  // [kSmallProduct, kLargeProduct] and a stepsize is below
+  // kPoorCentralityAlpha.
   // ===================================================================================
   void centrality(const Iterate& it, IterationReport& report,
                   std::stringstream& log_stream) const;
@@ -117,6 +123,16 @@ struct Diagnostics {
                     double opt_tol, double crossover_tol,
                     bool& no_window_progress, bool& no_best_progress,
                     std::stringstream& log_stream);
+
+  // ===================================================================================
+  // At feasible points the objectives cannot cross, so pdgap must keep
+  // falling, even if mu does not show it. The test fails if pinf and dinf are
+  // below their tolerance, pdgap is above its tolerance, and pdgap did not
+  // improve its best value by a factor kProgressFactor in the last
+  // kGapProgressMaxIter iterations. The test restarts at each infeasible point.
+  // ===================================================================================
+  bool gapTest(const Iterate& it, Int iter, double feas_tol, double opt_tol,
+               std::stringstream& log_stream);
 
   // ===================================================================================
   // Clear the data used by the tests. The windows of the progress test restart
