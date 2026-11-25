@@ -18,11 +18,11 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
                      const Int* rowsM, const Int* ptrM, const double* valM,
                      const std::vector<double>& static_reg,
                      const FHoptions& FH_opt, const Logger& logger,
-                     DataCollector& data, SnColumns& sn_columns,
+                     DataCollector& data, FactorStorage& factor,
                      CliqueStack* stack, ScratchArena& scratch)
     : S_{S},
       num_{num},
-      sn_columns_{sn_columns},
+      factor_{factor},
       swaps_{num.swaps_},
       pivot_2x2_{num.pivot_2x2_},
       total_reg_{num.total_reg_},
@@ -158,9 +158,10 @@ void Factorise::processSupernode(Int sn) {
   }
 
   // initialise the format handler
-  // this also allocates space for the frontal matrix and schur complement
+  // this also initialises the frontal matrix, and allocates space for the schur
+  // complement if CliqueStack is not used
   HybridHybridFormatHandler FH_obj(
-      S_, sn, data_, sn_columns_[sn], clique_ptr, FH_opt_, total_reg_.data(),
+      S_, sn, data_, factor_[sn], clique_ptr, FH_opt_, total_reg_.data(),
       unreg_pivots_.data(), swaps_.data(), pivot_2x2_.data());
   FormatHandler* FH = &FH_obj;
 
@@ -302,9 +303,9 @@ bool Factorise::run() {
 
   // Layout of the factor: the frontal matrix of each supernode, followed by
   // extra_space_frontal entries, one after the other. The memory is allocated
-  // only the first time, then sn_columns_ reuses the memory of previous
+  // only the first time, then factor_ reuses the memory of previous
   // factorisations.
-  sn_columns_.setLayout(S_.sn(), [&](Int sn) {
+  factor_.setLayout(S_.sn(), [&](Int sn) {
     const Int sn_size = S_.snStart(sn + 1) - S_.snStart(sn);
     const Int ldf = (Int)(S_.ptr(sn + 1) - S_.ptr(sn));
     return HybridHybridFormatHandler::frontalSize(ldf, sn_size, FH_opt_.nb) +
@@ -324,7 +325,7 @@ bool Factorise::run() {
 
   // complete the numerical object; the outputs are already in it
   num_.S_ = &S_;
-  num_.sn_columns_ = &sn_columns_;
+  num_.factor_ = &factor_;
   num_.data_ = &data_;
   num_.options_ = &FH_opt_;
   num_.scratch_ = &scratch_;

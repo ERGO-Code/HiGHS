@@ -328,6 +328,7 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/FactorHighsInfo.h
     ipm/hipo/factorhighs/FactorHighsOptions.h
     ipm/hipo/factorhighs/FactorHighsSettings.h
+    ipm/hipo/factorhighs/FactorStorage.h
     ipm/hipo/factorhighs/Factorise.h
     ipm/hipo/factorhighs/FormatHandler.h
     ipm/hipo/factorhighs/HybridHybridFormatHandler.h
@@ -336,7 +337,6 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/Numeric.h
     ipm/hipo/factorhighs/ReturnValues.h
     ipm/hipo/factorhighs/ScratchArena.h
-    ipm/hipo/factorhighs/SnColumns.h
     ipm/hipo/factorhighs/SolveHandler.h
     ipm/hipo/factorhighs/Swaps.h
     ipm/hipo/factorhighs/Symbolic.h

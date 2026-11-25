@@ -6,8 +6,8 @@
 
 #include "CliqueStack.h"
 #include "FactorHighsOptions.h"
+#include "FactorStorage.h"
 #include "Numeric.h"
-#include "SnColumns.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -45,7 +45,7 @@ class Factorise {
   // columns of L, stored as dense supernodes
   // This memory is managed outside of Factorise, so that it can be reused for
   // all ipm iterations.
-  SnColumns& sn_columns_;
+  FactorStorage& factor_;
 
   // one norm of the original matrix, sets the dynamic regularisation threshold
   double M_norm1_{};
@@ -93,9 +93,8 @@ class Factorise {
   Factorise(const Symbolic& S, Numeric& num, Int n, Int nz, const Int* rowsM,
             const Int* ptrM, const double* valM,
             const std::vector<double>& static_reg, const FHoptions& FH_opt,
-            const Logger& logger, DataCollector& data,
-            SnColumns& sn_columns, CliqueStack* stack,
-            ScratchArena& scratch);
+            const Logger& logger, DataCollector& data, FactorStorage& factor,
+            CliqueStack* stack, ScratchArena& scratch);
 
   bool run();
 };

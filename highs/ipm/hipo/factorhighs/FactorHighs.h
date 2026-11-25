@@ -8,9 +8,9 @@
 #include "DataCollector.h"
 #include "FactorHighsInfo.h"
 #include "FactorHighsOptions.h"
+#include "FactorStorage.h"
 #include "Numeric.h"
 #include "ScratchArena.h"
-#include "SnColumns.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 
@@ -111,7 +111,7 @@ class FHsolver {
   // Columns of factorisation, stored by supernode.
   // This memory is allocated the first time that it is used. Subsequent
   // factorisations reuse the same memory.
-  SnColumns sn_columns_;
+  FactorStorage factor_;
 
   // Scratch memory of the dense kernels and solves, kept between calls.
   ScratchArena scratch_;

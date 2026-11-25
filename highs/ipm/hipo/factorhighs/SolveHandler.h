@@ -4,10 +4,10 @@
 #include <vector>
 
 #include "DataCollector.h"
-#include "SnColumns.h"
+#include "FactorHighsOptions.h"
+#include "FactorStorage.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
-#include "FactorHighsOptions.h"
 
 namespace hipo {
 
@@ -21,13 +21,13 @@ namespace hipo {
 class SolveHandler {
  protected:
   const Symbolic& S_;
-  const SnColumns& sn_columns_;
+  const FactorStorage& factor_;
   DataCollector& data_;
 
   const FHoptions& options_;
 
  public:
-  SolveHandler(const Symbolic& S, const SnColumns& sn_columns,
+  SolveHandler(const Symbolic& S, const FactorStorage& factor,
                DataCollector& data, const FHoptions& options);
 
   // avoid copies

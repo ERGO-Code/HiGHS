@@ -9,13 +9,14 @@
 
 namespace hipo {
 
-HybridSolveHandler::HybridSolveHandler(
-    const Symbolic& S, const SnColumns& sn_columns,
-    const std::vector<Int>& swaps,
-    const std::vector<char>& any_swap,
-    const std::vector<double>& pivot_2x2, DataCollector& data,
-    const FHoptions& options)
-    : SolveHandler(S, sn_columns, data, options),
+HybridSolveHandler::HybridSolveHandler(const Symbolic& S,
+                                       const FactorStorage& factor,
+                                       const std::vector<Int>& swaps,
+                                       const std::vector<char>& any_swap,
+                                       const std::vector<double>& pivot_2x2,
+                                       DataCollector& data,
+                                       const FHoptions& options)
+    : SolveHandler(S, factor, data, options),
       swaps_{swaps},
       any_swaps_{any_swap},
       pivot_2x2_{pivot_2x2} {
@@ -71,8 +72,8 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
   // number of blocks of columns
   const Int n_blocks = (sn_size - 1) / nb + 1;
 
-  // index to access snColumns[sn]
-  Int64 SnCol_ind{};
+  // index to access factor_[sn]
+  Int64 factor_ind{};
 
   if (sn_size < nb) {
     // Fast solve
@@ -97,7 +98,7 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
     HIPO_CLOCK_START(2);
     for (Int row = 0; row < jb; ++row) {
       for (Int col = 0; col < row; ++col) {
-        x[x_start + row] -= sn_columns_[sn][col + jb * row] * x[x_start + col];
+        x[x_start + row] -= factor_[sn][col + jb * row] * x[x_start + col];
       }
     }
 
@@ -108,19 +109,19 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
         if (row_to_write < end_col_in_task) {
           for (Int col = 0; col < jb; ++col) {
             x[S_.rows(start_row + row)] -=
-                sn_columns_[sn][col + jb * row] * x[x_start + col];
+                factor_[sn][col + jb * row] * x[x_start + col];
           }
         } else {
           task_rows_[task].push_back(S_.rows(start_row + row));
           task_vals_[task].push_back(0.0);
           for (Int col = 0; col < jb; ++col)
             task_vals_[task].back() +=
-                sn_columns_[sn][col + jb * row] * x[x_start + col];
+                factor_[sn][col + jb * row] * x[x_start + col];
         }
       } else {
         for (Int col = 0; col < jb; ++col) {
           x[S_.rows(start_row + row)] -=
-              sn_columns_[sn][col + jb * row] * x[x_start + col];
+              factor_[sn][col + jb * row] * x[x_start + col];
         }
       }
     }
@@ -160,18 +161,18 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
       }
 
       HIPO_CLOCK_START(2);
-      callAndTime_dtrsv('U', 'T', 'U', jb, &sn_columns_[sn][SnCol_ind], jb,
+      callAndTime_dtrsv('U', 'T', 'U', jb, &factor_[sn][factor_ind], jb,
                         &x[x_start], 1, data_);
 
-      SnCol_ind += diag_entries;
+      factor_ind += diag_entries;
 
       // temporary space for gemv
       const Int gemv_size = ldSn - nb * j - jb;
       if (gemv_size > 0) {
-        callAndTime_dgemv('T', jb, gemv_size, 1.0, &sn_columns_[sn][SnCol_ind],
-                          jb, &x[x_start], 1, 0.0, work.data(), 1, data_);
+        callAndTime_dgemv('T', jb, gemv_size, 1.0, &factor_[sn][factor_ind], jb,
+                          &x[x_start], 1, 0.0, work.data(), 1, data_);
 
-        SnCol_ind += jb * gemv_size;
+        factor_ind += jb * gemv_size;
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
         HIPO_CLOCK_START(2);
@@ -286,9 +287,9 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
   // number of blocks of columns
   const Int n_blocks = (sn_size - 1) / nb + 1;
 
-  // index to access snColumns[sn]
-  // initialised with the total number of entries of snColumns[sn]
-  Int64 SnCol_ind = sn_columns_.size(sn) - extra_space_frontal;
+  // index to access factor_[sn], initialised with the end of its frontal matrix
+  // (the entries of factor_[sn], without the extra space)
+  Int64 factor_ind = factor_.size(sn) - extra_space_frontal;
 
   if (sn_size < nb) {
     // Fast solve
@@ -314,13 +315,13 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
     for (Int row = ldSn - 1; row >= jb; --row) {
       for (Int col = jb - 1; col >= 0; --col) {
         x[x_start + col] -=
-            sn_columns_[sn][col + row * jb] * x[S_.rows(start_row + row)];
+            factor_[sn][col + row * jb] * x[S_.rows(start_row + row)];
       }
     }
 
     for (Int row = jb - 1; row >= 0; --row) {
       for (Int col = row - 1; col >= 0; --col) {
-        x[x_start + col] -= sn_columns_[sn][col + row * jb] * x[x_start + row];
+        x[x_start + col] -= factor_[sn][col + row * jb] * x[x_start + row];
       }
     }
     HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
@@ -370,15 +371,15 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_sparse);
 
         HIPO_CLOCK_START(2);
-        SnCol_ind -= jb * gemv_size;
-        callAndTime_dgemv('N', jb, gemv_size, -1.0, &sn_columns_[sn][SnCol_ind],
+        factor_ind -= jb * gemv_size;
+        callAndTime_dgemv('N', jb, gemv_size, -1.0, &factor_[sn][factor_ind],
                           jb, work.data(), 1, 1.0, &x[x_start], 1, data_);
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
       }
 
       HIPO_CLOCK_START(2);
-      SnCol_ind -= diag_entries;
-      callAndTime_dtrsv('U', 'N', 'U', jb, &sn_columns_[sn][SnCol_ind], jb,
+      factor_ind -= diag_entries;
+      callAndTime_dtrsv('U', 'N', 'U', jb, &factor_[sn][factor_ind], jb,
                         &x[x_start], 1, data_);
       HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
 
@@ -480,16 +481,15 @@ void HybridSolveHandler::processDiagSn(Int sn, double* x) const {
       if (current_2x2[col] == 0.0) {
         // 1x1 pivots
         step = 1;
-        const double inv_d = sn_columns_[sn][diag_start + col + jb * col];
+        const double inv_d = factor_[sn][diag_start + col + jb * col];
         x[sn_start + nb * j + col] *= inv_d;
       } else {
         // 2x2 pivots
         step = 2;
 
         // inverse of 2x2 pivot
-        const double i_d1 = sn_columns_[sn][diag_start + col + jb * col];
-        const double i_d2 =
-            sn_columns_[sn][diag_start + col + 1 + jb * (col + 1)];
+        const double i_d1 = factor_[sn][diag_start + col + jb * col];
+        const double i_d2 = factor_[sn][diag_start + col + 1 + jb * (col + 1)];
         const double i_off = current_2x2[col];
 
         double x1 = x[sn_start + nb * j + col];
@@ -571,7 +571,7 @@ void HybridSolveHandler::inertia(Int& pos, Int& neg, Int& zero,
         if (current_2x2[col] == 0.0) {
           // 1x1 pivots
           step = 1;
-          const double inv_d = sn_columns_[sn][diag_start + col + jb * col];
+          const double inv_d = factor_[sn][diag_start + col + jb * col];
           const double pivot = 1.0 / inv_d;
 
           if (pivot > tol)
@@ -586,9 +586,9 @@ void HybridSolveHandler::inertia(Int& pos, Int& neg, Int& zero,
           step = 2;
 
           // inverse of 2x2 pivot
-          const double i_d1 = sn_columns_[sn][diag_start + col + jb * col];
+          const double i_d1 = factor_[sn][diag_start + col + jb * col];
           const double i_d2 =
-              sn_columns_[sn][diag_start + col + 1 + jb * (col + 1)];
+              factor_[sn][diag_start + col + 1 + jb * (col + 1)];
           const double i_off = current_2x2[col];
 
           // determinant and trace of inverse

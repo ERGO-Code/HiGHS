@@ -2,8 +2,8 @@
 
 namespace hipo {
 
-SolveHandler::SolveHandler(const Symbolic& S, const SnColumns& sn_columns,
+SolveHandler::SolveHandler(const Symbolic& S, const FactorStorage& factor,
                            DataCollector& data, const FHoptions& options)
-    : S_{S}, sn_columns_{sn_columns}, data_{data}, options_{options} {}
+    : S_{S}, factor_{factor}, data_{data}, options_{options} {}
 
 }  // namespace hipo

@@ -20,7 +20,7 @@ class ScratchArena;
 
 class Numeric {
   // columns of factorisation, stored by supernode
-  const SnColumns* sn_columns_ = nullptr;
+  const FactorStorage* factor_ = nullptr;
 
   // Swaps and 2x2 pivots have one entry per column: supernode sn owns the
   // entries from S_->snStart(sn).

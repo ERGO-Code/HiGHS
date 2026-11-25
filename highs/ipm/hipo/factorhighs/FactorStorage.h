@@ -1,5 +1,5 @@
-#ifndef FACTORHIGHS_SN_COLUMNS_H
-#define FACTORHIGHS_SN_COLUMNS_H
+#ifndef FACTORHIGHS_FACTOR_STORAGE_H
+#define FACTORHIGHS_FACTOR_STORAGE_H
 
 #include <cstddef>
 #include <memory>
@@ -16,7 +16,7 @@ namespace hipo {
 // Every supernode starts on a 64-byte boundary: BLAS kernels may round
 // differently depending on the alignment of their operands, so this keeps the
 // results independent of where a supernode lies in the buffer.
-class SnColumns {
+class FactorStorage {
   // alignment of each supernode, in bytes and in entries
   static constexpr std::size_t kAlignBytes = 64;
   static constexpr Int64 kAlignEntries = kAlignBytes / sizeof(double);

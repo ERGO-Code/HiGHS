@@ -15,8 +15,8 @@ class ScratchArena;
 // Interface class to handle different formats of dense matrices during the
 // factorise phase.
 // Any implementation of a specific format needs to define:
-// - initFrontal: to initialise the frontal matrix with the correct number of
-//                elements; the entries should be set to zero.
+// - initFrontal: to set to zero the entries of the frontal matrix, whose
+//                storage within the factor is given.
 // - initClique: to initialise the clique matrix with the correct number of
 //                elements; the entries should be left uninitialised.
 // - assembleFrontal: to set a specific entry of frontal (used to assemble the
@@ -62,8 +62,8 @@ class FormatHandler {
   double* pivot_2x2_ = nullptr;
 
  public:
-  FormatHandler(const Symbolic& S, Int sn, double* frontal,
-                double* clique_ptr, const FHoptions& FH_opt, double* total_reg,
+  FormatHandler(const Symbolic& S, Int sn, double* frontal, double* clique_ptr,
+                const FHoptions& FH_opt, double* total_reg,
                 double* total_unreg_pivots, Int* total_swaps,
                 double* total_pivot_2x2);
   void terminate(std::vector<double>& clique);
