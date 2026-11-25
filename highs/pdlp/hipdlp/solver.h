@@ -178,8 +178,8 @@ struct SolveResult {
   int reduced_rows = 0, reduced_columns = 0, reduced_nonzeros = 0;
   int64_t iterations = 0, restarts = 0, kkt_checks = 0, certificate_checks = 0,
           spmv_count = 0;
-  double omega = 0;  // primal weight at the end (GPU only): a StartPoint's
-                     // omega to continue
+  double omega =
+      0;  // primal weight at the end: a StartPoint's omega to continue
   bool primal_valid = false, dual_valid = false, certificate_valid = false,
        ray_valid = false;
   std::vector<double> primal, dual, reduced_cost, row_activity;
@@ -201,10 +201,13 @@ struct SolveResult {
       0;  // Bytes allocated by the largest single solve/validation
 };
 SolveResult Solve(const HostLp& lp, const SolveOptions& options = {});
-// The same from `start` (a warm start). SolveCpu has no warm start.
+// The same from start (a warm start)
 SolveResult Solve(const HostLp& lp, const SolveOptions& options,
                   const StartPoint& start);
 
 SolveResult SolveCpu(const HostLp& lp, const SolveOptions& options = {});
+// The same from start (a warm start)
+SolveResult SolveCpu(const HostLp& lp, const SolveOptions& options,
+                     const StartPoint& start);
 double InitialPrimalWeight(const HostLp& lp);
 }  // namespace hipdlp

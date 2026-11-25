@@ -131,8 +131,9 @@ hipdlp::SolveResult solveHost(const HighsOptions& options,
                  "solver\n",
                  options.hipdlp_backend.c_str());
 #endif
-  // The CPU solver has no warm start: a restart starts from zero
-  return hipdlp::SolveCpu(host, solve_options);
+
+  return start ? hipdlp::SolveCpu(host, solve_options, *start)
+               : hipdlp::SolveCpu(host, solve_options);
 }
 
 }  // namespace

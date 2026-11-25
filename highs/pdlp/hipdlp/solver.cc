@@ -160,21 +160,24 @@ void MultiplyTranspose(const Csr& a, const std::vector<double>& y,
   }
 }
 
-Iterate Initialize(const Model& m) {
+// start (not null): an unscaled start point, scaled as the GPU's Initialize
+// does: x_s = D_c^{-1} x (projected on the bounds), y_s = D_r^{-1} y
+Iterate Initialize(const Model& m, const StartPoint* start) {
   Iterate it;
   it.x.resize(m.a.cols);
-  for (int j = 0; j < m.a.cols; ++j)
-    it.x[j] = Project(0.0, m.column_lower[j], m.column_upper[j]);
-  it.y.assign(m.a.rows, 0.0);
+  for (int j = 0; j < m.a.cols; ++j) {
+    const double x = start ? (*start->primal)[j] / m.column_scale[j] : 0.0;
+    it.x[j] = Project(x, m.column_lower[j], m.column_upper[j]);
+  }
+  it.y.resize(m.a.rows);
+  for (int i = 0; i < m.a.rows; ++i)
+    it.y[i] = start ? (*start->dual)[i] / m.row_scale[i] : 0.0;
   it.xp = it.xr = it.xa = it.x;
-  it.yp.assign(m.a.rows, 0.0);
-  it.yr.assign(m.a.rows, 0.0);
+  it.yp = it.yr = it.ya = it.y;
   it.dx.assign(m.a.cols, 0.0);
   it.dy.assign(m.a.rows, 0.0);
-  it.ya.assign(m.a.rows, 0.0);
   it.epoch_dx.assign(m.a.cols, 0.0);
   it.epoch_dy.assign(m.a.rows, 0.0);
-
   return it;
 }
 
@@ -524,8 +527,9 @@ Status NextStatus(const Report& report, const Verdict& seen, bool feasible,
 }
 
 SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
-                   Snapshot* snapshot, bool fixed_weight) {
-  const std::chrono::steady_clock::time_point start =
+                   Snapshot* snapshot, bool fixed_weight,
+                   const StartPoint* start) {
+  const std::chrono::steady_clock::time_point start_time =
       std::chrono::steady_clock::now();
   SolveResult result;
   result.backend = "CPU";
@@ -533,10 +537,21 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
   result.rows = lp.rows;
   result.columns = lp.columns;
   result.nonzeros = lp.value.size();
+  if (start && !start->primal && !start->dual) start = nullptr;
+  if (start && !(start->primal && start->dual &&
+                 start->primal->size() == size_t(lp.columns) &&
+                 start->dual->size() == size_t(lp.rows))) {
+    result.message =
+        "The start point must give a primal and a dual vector of the model "
+        "size";
+    result.termination_source = "INPUT_VALIDATION";
+    return result;  // status: kInvalidModel (the default)
+  }
   const Model m = Prepare(lp);
-  Iterate it = Initialize(m);
+  Iterate it = Initialize(m, start);
   Weight w;
-  w.omega = w.best = InitialPrimalWeight(lp);
+  w.omega = w.best =
+      start && start->omega > 0 ? start->omega : InitialPrimalWeight(lp);
   w.integral = 0;
   w.direction = 0;
   w.epoch_limit = 0;
@@ -564,8 +579,8 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
   int64_t kkt_checks = 1, certificate_rounds = 1;
   bool feasible = !report.bad && report.primal <= options.tolerance;
   Verdict seen = Certificates(lp, m, it, report, iterations);
-  status =
-      NextStatus(report, seen, feasible, options, iterations, Seconds(start));
+  status = NextStatus(report, seen, feasible, options, iterations,
+                      Seconds(start_time));
   log_decision(false);
   if (status == Status::kRunning) {
     Evaluate(m, it, w.omega);
@@ -579,7 +594,7 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
     ++epoch;
     const bool check = iterations % kCheckInterval == 0 ||
                        iterations >= options.iteration_limit ||
-                       Seconds(start) >= options.time_limit_seconds;
+                       Seconds(start_time) >= options.time_limit_seconds;
     if (!check) continue;
 
     fpe = FixedPointError(m, it, w.omega);
@@ -588,15 +603,15 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
     if (!report.bad && report.primal <= options.tolerance) feasible = true;
     if (iterations % kCertificateInterval == 0 ||
         iterations >= options.iteration_limit ||
-        Seconds(start) >= options.time_limit_seconds) {
+        Seconds(start_time) >= options.time_limit_seconds) {
       const Verdict now = Certificates(lp, m, it, report, iterations);
       ++certificate_rounds;
       seen.farkas = seen.farkas || now.farkas;
       seen.ray = seen.ray || now.ray;
       seen.bad = seen.bad || now.bad;
     }
-    status =
-        NextStatus(report, seen, feasible, options, iterations, Seconds(start));
+    status = NextStatus(report, seen, feasible, options, iterations,
+                        Seconds(start_time));
     // A balance deadline only interrupts an epoch whose FPE has not fallen by
     // half.
     const bool restart =
@@ -639,6 +654,7 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
   result.metrics_valid = !report.bad;
   result.primal_valid = !report.bad && report.l2_primal <= options.tolerance;
   result.dual_valid = status == Status::kOptimal;
+  result.omega = w.omega;
   result.primal = report.x;
   result.dual = report.y;
   result.reduced_cost = report.z;
@@ -651,7 +667,7 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
   result.metrics.primal_objective =
       report.primal_objective * lp.sense + lp.offset;
   result.metrics.dual_objective = report.dual_objective * lp.sense + lp.offset;
-  result.times.total = Seconds(start);
+  result.times.total = Seconds(start_time);
   if (snapshot) {
     snapshot->row_multiplier = m.row_scale;
     snapshot->column_multiplier = m.column_scale;
@@ -674,12 +690,17 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
 }  // unnamed namespace
 
 SolveResult SolveCpu(const HostLp& lp, const SolveOptions& options) {
-  return RunCpu(lp, options, nullptr, false);
+  return RunCpu(lp, options, nullptr, false, nullptr);
+}
+
+SolveResult SolveCpu(const HostLp& lp, const SolveOptions& options,
+                     const StartPoint& start) {
+  return RunCpu(lp, options, nullptr, false, &start);
 }
 
 SolveResult SolveCpuForTesting(const HostLp& lp, const SolveOptions& options,
                                Snapshot* snapshot, bool fixed_weight) {
-  return RunCpu(lp, options, snapshot, fixed_weight);
+  return RunCpu(lp, options, snapshot, fixed_weight, nullptr);
 }
 
 const char* StatusName(Status status) {

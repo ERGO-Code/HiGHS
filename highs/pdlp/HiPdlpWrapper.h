@@ -55,7 +55,7 @@ struct HiPdlpWarmStart {
 };
 
 // restart: null for an ordinary solve. final_omega (when not null) receives the
-// primal weight PDLP ended with (0 for the CPU solver).
+// primal weight PDLP ended with.
 HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
                           const HighsLp& lp, HighsBasis& highs_basis,
                           HighsSolution& highs_solution,

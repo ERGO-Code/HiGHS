@@ -640,6 +640,14 @@ TEST_CASE("hipdlp-warm-start", "[hipdlp][hipdlp-reference]") {
   const hipdlp::SolveResult warm = hipdlp::Solve(lp, options, start);
   CHECK(warm.status == hipdlp::Status::kOptimal);
   CHECK(warm.iterations < cold.iterations / 10);
+
+  const hipdlp::SolveResult cpu_warm = hipdlp::SolveCpu(lp, options, start);
+  CHECK(cpu_warm.status == warm.status);
+  CHECK(cpu_warm.iterations == warm.iterations);
+  CHECK(cpu_warm.restarts == warm.restarts);
+  CHECK(diff(cpu_warm.primal, warm.primal) <= 1e-6);
+  CHECK(diff(cpu_warm.dual, warm.dual) <= 1e-6);
+  CHECK(cpu_warm.omega > 0);
 }
 
 #endif  // HIGHS_HIPDLP_CUDA_DETECTED
