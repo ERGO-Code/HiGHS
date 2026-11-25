@@ -288,8 +288,7 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
   const Int n_blocks = (sn_size - 1) / nb + 1;
 
   // index to access factor_[sn], initialised with the end of its frontal matrix
-  // (the entries of factor_[sn], without the extra space)
-  Int64 factor_ind = factor_.size(sn) - extra_space_frontal;
+  Int64 factor_ind = factor_.size(sn);
 
   if (sn_size < nb) {
     // Fast solve

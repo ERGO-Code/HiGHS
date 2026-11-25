@@ -36,14 +36,9 @@ Int64 HybridHybridFormatHandler::frontalSize(Int ldf, Int sn_size, Int nb) {
 
 void HybridHybridFormatHandler::initFrontal() {
   // frontal_ points to the storage of the supernode within the factor, which
-  // Factorise allocates with extra_space_frontal entries after the frontal
-  // matrix; here it is only initialised.
-  const Int64 frontal_size =
-      frontalSize(ldf_, sn_size_, nb_) + extra_space_frontal;
+  // Factorise allocates; here it is only initialised.
+  const Int64 frontal_size = frontalSize(ldf_, sn_size_, nb_);
   std::memset(frontal_, 0, frontal_size * sizeof(double));
-
-  // NB: extra_space_frontal is not strictly needed. However, it removes some
-  // weird problem on windows in debug. Who knows what's happening...
 }
 
 void HybridHybridFormatHandler::initClique() {

@@ -1,10 +1,10 @@
 #ifndef FACTORHIGHS_FACTOR_STORAGE_H
 #define FACTORHIGHS_FACTOR_STORAGE_H
 
-#include <cstddef>
 #include <memory>
 #include <vector>
 
+#include "ipm/hipo/auxiliary/AlignedMemory.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
@@ -13,20 +13,18 @@ namespace hipo {
 // supernode sn occupies size(sn) entries from start_[sn]. The buffer is reused
 // by later factorisations and grows only when a layout needs more space.
 //
-// Every supernode starts on a 64-byte boundary: BLAS kernels may round
-// differently depending on the alignment of their operands, so this keeps the
-// results independent of where a supernode lies in the buffer.
+// Every supernode starts on a kCacheAlignBytes boundary (see AlignedMemory.h),
+// so that the results do not depend on where a supernode lies in the buffer.
 class FactorStorage {
-  // alignment of each supernode, in bytes and in entries
-  static constexpr std::size_t kAlignBytes = 64;
-  static constexpr Int64 kAlignEntries = kAlignBytes / sizeof(double);
+  // alignment of each supernode, in entries
+  static constexpr Int64 kAlignEntries = kCacheAlignBytes / sizeof(double);
 
   // smallest multiple of kAlignEntries that is at least n
   static Int64 roundUpToAlignment(Int64 n) {
     return (n + kAlignEntries - 1) / kAlignEntries * kAlignEntries;
   }
 
-  // memory as allocated, and data_, its first 64-byte boundary
+  // memory as allocated, and data_, its first kCacheAlignBytes boundary
   std::unique_ptr<double[]> alloc_{};
   double* data_ = nullptr;
   Int64 capacity_ = 0;
@@ -39,7 +37,7 @@ class FactorStorage {
   template <typename F>
   void setLayout(Int n_sn, F size) {
     // each supernode starts where the previous one ends, rounded up to the
-    // next 64-byte boundary
+    // next kCacheAlignBytes boundary
     start_.resize(n_sn + 1);
     size_.resize(n_sn);
     start_[0] = 0;
@@ -50,22 +48,13 @@ class FactorStorage {
 
     const Int64 total = start_[n_sn];
     if (total > capacity_) {
-      // capacity is reset first, so that it is correct if new throws
+      // the old buffer is freed first, and capacity is reset so that it is
+      // correct if new throws
       alloc_.reset();
       data_ = nullptr;
       capacity_ = 0;
 
-      // new double[] is aligned at least to a double, so the first 64-byte
-      // boundary is at most kAlignEntries - 1 entries after its start
-      const Int64 alloc_entries = total + kAlignEntries - 1;
-      alloc_.reset(new double[alloc_entries]);
-
-      // std::align moves ptr to the first 64-byte boundary with room for total
-      // entries after it
-      void* ptr = alloc_.get();
-      std::size_t space = alloc_entries * sizeof(double);
-      std::align(kAlignBytes, total * sizeof(double), ptr, space);
-      data_ = static_cast<double*>(ptr);
+      data_ = allocateAligned(alloc_, total, kCacheAlignBytes);
       capacity_ = total;
     }
   }

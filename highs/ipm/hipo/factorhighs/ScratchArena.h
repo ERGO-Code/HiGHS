@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "ipm/hipo/auxiliary/AlignedMemory.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 // Scratch memory kept between factorisations and solves, with one stack per
@@ -34,9 +35,8 @@ class ScratchArena {
   std::vector<Stack> stacks_{};
 
  public:
-  // Every buffer starts on a kAlignment boundary: BLAS kernels may round
-  // differently depending on the alignment of their operands.
-  static constexpr Int64 kAlignment = 64;
+  // Every buffer starts on a kAlignment boundary (see AlignedMemory.h).
+  static constexpr Int64 kAlignment = kCacheAlignBytes;
 
   // Make room for one stack per thread of the task executor. Call it from the
   // main thread, before any task that uses the arena is spawned.

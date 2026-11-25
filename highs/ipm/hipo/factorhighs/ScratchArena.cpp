@@ -1,8 +1,6 @@
 #include "ScratchArena.h"
 
 #include <cassert>
-#include <cstddef>
-#include <memory>
 
 #include "parallel/HighsParallel.h"
 
@@ -46,23 +44,15 @@ void* ScratchArena::push(Int thread, Int64 bytes) {
       chunk = &stack.chunks[stack.top];
     }
     if (chunk->capacity < bytes) {
-      // capacity is reset first, so that it is correct if new throws
+      // the old chunk is freed first, and capacity is reset so that it is
+      // correct if new throws
       chunk->data.reset();
       chunk->base = nullptr;
       chunk->capacity = 0;
 
-      // new is aligned at least to a byte, so the first kAlignment boundary is
-      // at most kAlignment - 1 bytes after its start
-      const Int64 alloc_bytes = bytes + kAlignment - 1;
-      chunk->data.reset(new unsigned char[alloc_bytes]);
-
-      // std::align moves base to the first kAlignment boundary with room for
-      // bytes after it. Offsets from base are multiples of kAlignment, so every
-      // buffer is aligned.
-      void* base = chunk->data.get();
-      std::size_t space = alloc_bytes;
-      std::align(kAlignment, bytes, base, space);
-      chunk->base = static_cast<unsigned char*>(base);
+      // Offsets from base are multiples of kAlignment, so every buffer is
+      // aligned.
+      chunk->base = allocateAligned(chunk->data, bytes, kAlignment);
       chunk->capacity = bytes;
     }
   }

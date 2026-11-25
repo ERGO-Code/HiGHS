@@ -58,23 +58,9 @@ Int Numeric::prepare() {
   return kRetOk;
 }
 
-// As permuteVectorInverse and permuteVector, with the copy of x in scratch
-// memory instead of a new vector.
-static void permuteInverseScratch(double* x, const std::vector<Int>& iperm,
-                                  ScratchArena& scratch) {
-  const Int n = iperm.size();
-  ScratchBuffer<double> temp(scratch, n);
-  std::copy_n(x, n, temp.data());
-  for (Int i = 0; i < n; ++i) x[iperm[i]] = temp[i];
-}
-
-static void permuteScratch(double* x, const std::vector<Int>& perm,
-                           ScratchArena& scratch) {
-  const Int n = perm.size();
-  ScratchBuffer<double> temp(scratch, n);
-  std::copy_n(x, n, temp.data());
-  for (Int i = 0; i < n; ++i) x[i] = temp[perm[i]];
-}
+// The solves work on a copy of the rhs in scratch memory, permuted, instead of
+// on x: BLAS kernels may round differently depending on the alignment of their
+// operands, and the scratch memory is aligned, while x may not be.
 
 Int Numeric::solve(double* x) const {
   // Return the number of solves performed
@@ -84,21 +70,25 @@ Int Numeric::solve(double* x) const {
 
   HIPO_CLOCK_CREATE;
 
+  const std::vector<Int>& iperm = S_->iperm();
+  const Int n = iperm.size();
+  ScratchBuffer<double> y(*scratch_, n);
+
   // permute rhs
   HIPO_CLOCK_START(2);
-  permuteInverseScratch(x, S_->iperm(), *scratch_);
+  for (Int i = 0; i < n; ++i) y[iperm[i]] = x[i];
   HIPO_CLOCK_STOP(2, *data_, kTimeSolvePrepare);
 
   // solve
   HIPO_CLOCK_START(2);
-  SH_->forwardSolve(x);
-  SH_->diagSolve(x);
-  SH_->backwardSolve(x);
+  SH_->forwardSolve(y.data());
+  SH_->diagSolve(y.data());
+  SH_->backwardSolve(y.data());
   HIPO_CLOCK_STOP(2, *data_, kTimeSolveSolve);
 
   // unpermute solution
   HIPO_CLOCK_START(2);
-  permuteScratch(x, S_->iperm(), *scratch_);
+  for (Int i = 0; i < n; ++i) x[i] = y[iperm[i]];
   HIPO_CLOCK_STOP(2, *data_, kTimeSolvePrepare);
 
   HIPO_CLOCK_STOP(1, *data_, kTimeSolve);
@@ -107,8 +97,12 @@ Int Numeric::solve(double* x) const {
 
 Int Numeric::forwardSolve(double* x) const {
   if (!SH_ || !scratch_->matchesThreads()) return kRetGeneric;
-  permuteInverseScratch(x, S_->iperm(), *scratch_);
-  SH_->forwardSolve(x);
+  const std::vector<Int>& iperm = S_->iperm();
+  const Int n = iperm.size();
+  ScratchBuffer<double> y(*scratch_, n);
+  for (Int i = 0; i < n; ++i) y[iperm[i]] = x[i];
+  SH_->forwardSolve(y.data());
+  std::copy_n(y.data(), n, x);
   return kRetOk;
 }
 Int Numeric::diagSolve(double* x) const {
@@ -118,8 +112,12 @@ Int Numeric::diagSolve(double* x) const {
 }
 Int Numeric::backwardSolve(double* x) const {
   if (!SH_ || !scratch_->matchesThreads()) return kRetGeneric;
-  SH_->backwardSolve(x);
-  permuteScratch(x, S_->iperm(), *scratch_);
+  const std::vector<Int>& iperm = S_->iperm();
+  const Int n = iperm.size();
+  ScratchBuffer<double> y(*scratch_, n);
+  std::copy_n(x, n, y.data());
+  SH_->backwardSolve(y.data());
+  for (Int i = 0; i < n; ++i) x[i] = y[iperm[i]];
   return kRetOk;
 }
 

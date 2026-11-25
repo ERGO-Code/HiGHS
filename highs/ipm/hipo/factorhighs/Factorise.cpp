@@ -296,15 +296,13 @@ bool Factorise::run() {
   // one (empty) contribution per supernode; allocated only the first time
   schur_contribution_.resize(S_.sn());
 
-  // Layout of the factor: the frontal matrix of each supernode, followed by
-  // extra_space_frontal entries, one after the other. The memory is allocated
-  // only the first time, then factor_ reuses the memory of previous
-  // factorisations.
+  // Layout of the factor: the frontal matrix of each supernode, one after the
+  // other. The memory is allocated only the first time, then factor_ reuses the
+  // memory of previous factorisations.
   factor_.setLayout(S_.sn(), [&](Int sn) {
     const Int sn_size = S_.snStart(sn + 1) - S_.snStart(sn);
     const Int ldf = (Int)(S_.ptr(sn + 1) - S_.ptr(sn));
-    return HybridHybridFormatHandler::frontalSize(ldf, sn_size, FH_opt_.nb) +
-           extra_space_frontal;
+    return HybridHybridFormatHandler::frontalSize(ldf, sn_size, FH_opt_.nb);
   });
 
   if (FH_opt_.parallel_tree) {

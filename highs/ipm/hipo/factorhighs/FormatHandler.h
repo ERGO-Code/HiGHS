@@ -88,8 +88,6 @@ class FormatHandler {
                              ScratchArena& scratch) = 0;
 };
 
-const Int extra_space_frontal = 10;
-
 }  // namespace hipo
 
 #endif

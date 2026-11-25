@@ -1,9 +1,10 @@
 #ifndef FACTORHIGHS_CLIQUE_STACK_H
 #define FACTORHIGHS_CLIQUE_STACK_H
 
+#include <memory>
 #include <stack>
-#include <vector>
 
+#include "ipm/hipo/auxiliary/AlignedMemory.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 // Class to manage the stack of cliques when processing the elimination tree in
@@ -30,7 +31,12 @@
 namespace hipo {
 
 class CliqueStack {
-  std::vector<double> stack_;
+  // memory as allocated, and stack_, its first kCacheAlignBytes boundary (see
+  // AlignedMemory.h), with room for capacity_ entries
+  std::unique_ptr<double[]> alloc_{};
+  double* stack_ = nullptr;
+  Int64 capacity_ = 0;
+
   double* workspace_;
   Int64 worksize_;
   bool empty_ = true;
@@ -39,6 +45,9 @@ class CliqueStack {
   std::stack<std::pair<Int, Int64>> sn_pushed_{};
 
   Int64 top_{};
+
+  // allocate room for size entries, keeping the first top_ entries
+  void reserve(Int64 size);
 
  public:
   void init(Int64 size);

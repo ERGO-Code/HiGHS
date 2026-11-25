@@ -5,13 +5,24 @@
 
 namespace hipo {
 
+void CliqueStack::reserve(Int64 size) {
+  // the old stack is kept until its content is copied
+  std::unique_ptr<double[]> alloc;
+  double* stack = allocateAligned(alloc, size, kCacheAlignBytes);
+
+  if (top_ > 0) std::memcpy(stack, stack_, top_ * sizeof(double));
+  alloc_ = std::move(alloc);
+  stack_ = stack;
+  capacity_ = size;
+}
+
 void CliqueStack::init(Int64 stack_size) {
   top_ = 0;
   workspace_ = nullptr;
   worksize_ = 0;
   empty_ = false;
 
-  stack_.resize(stack_size, 0.0);
+  reserve(stack_size);
 }
 
 double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
@@ -21,16 +32,14 @@ double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
   reallocation = false;
 
   if (clique_size > 0) {
-    // This should not trigger reallocation, because the resize in init is done
-    // with the maximum possible size of the stack.
-    if (top_ + clique_size > static_cast<Int64>(stack_.size())) {
+    // This should not trigger reallocation, because init reserves the maximum
+    // possible size of the stack.
+    if (top_ + clique_size > capacity_) {
       reallocation = true;
-      stack_.resize(top_ + clique_size, 0.0);
+      reserve(top_ + clique_size);
     }
 
-    // accessing stack[top] is valid only if the clique is not empty,
-    // otherwise it may be out of bounds.
-    workspace_ = &stack_[top_];
+    workspace_ = stack_ + top_;
     worksize_ = clique_size;
 
     // initialize workspace to zero
@@ -48,7 +57,7 @@ const double* CliqueStack::getChild(Int& child_sn) const {
 
   child_sn = sn_pushed_.top().first;
   Int64 child_size = sn_pushed_.top().second;
-  const double* child = &stack_[top_ - child_size];
+  const double* child = stack_ + top_ - child_size;
 
   return child;
 }
@@ -66,8 +75,8 @@ void CliqueStack::pushWork(Int sn) {
   // Put the content of the workspace at the top of the stack
 
   if (worksize_ > 0) {
-    // stack_[top_] has lower address than workspace, so no need to resize.
-    std::memmove(&stack_[top_], workspace_, worksize_ * sizeof(double));
+    // the top of the stack has lower address than workspace
+    std::memmove(stack_ + top_, workspace_, worksize_ * sizeof(double));
 
     top_ += worksize_;
 

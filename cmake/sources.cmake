@@ -349,6 +349,7 @@ set(hipo_util_sources
     ipm/hipo/auxiliary/VectorOperations.cpp)
 
 set(hipo_util_headers
+    ipm/hipo/auxiliary/AlignedMemory.h
     ipm/hipo/auxiliary/Auxiliary.h
     ipm/hipo/auxiliary/IntConfig.h
     ipm/hipo/auxiliary/KrylovMethods.h
