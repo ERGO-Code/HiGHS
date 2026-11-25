@@ -2417,8 +2417,8 @@ TEST_CASE("issue-3545", "[highs_test_presolve]") {
 
 TEST_CASE("issue-3565", "[highs_test_presolve]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
-  std::string lp_file = test_name + ".lp";
-  FILE* file = fopen(lp_file.c_str(), "w");
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
   fprintf(file, "%s",
           "min\n obj: -28 x - y - 2.8 z \nst\n r0: x + y + 0.1 z = "
           "1\nbounds\n -inf <= x <= 1\n -1 <= y\n 1 <= z\nend\n");
@@ -2457,11 +2457,67 @@ TEST_CASE("issue-3565", "[highs_test_presolve]") {
   // 0. Restore z = 10 @BS => x = 1 @ZE with dual 0
   Highs h;
   h.setOptionValue("output_flag", dev_run);
-  REQUIRE(h.readModel(lp_file) == HighsStatus::kOk);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
 
-  std::remove(lp_file.c_str());
+  std::remove(model_file.c_str());
 
   h.resetThreadScheduler(true);
+}
+
+TEST_CASE("stale-implied-col-bounds-after-relaxation",
+          "[highs_test_presolve]") {
+  // model from the discussion of #3618 in #3772, together with its variants
+  // with the column s, the column x and the row r negated in all
+  // combinations. presolve relaxes the bound of the column singleton s (lower
+  // or upper bound, positive or negative coefficient), which makes the
+  // implied lower or upper bound of x derived from r invalid
+  //
+  // min 2 s - x + 0.5 y + 0.1 w
+  // r: 5 <= s + x + w <= 5 + 5e-8
+  // q: x - y <= 1
+  // 1 <= s <= 10, x <= 3, y >= 0, 1 <= w <= 1 + 5e-8
+  const double range = 5e-8;
+  for (HighsInt signS : {1, -1}) {
+    for (HighsInt signX : {1, -1}) {
+      for (HighsInt signR : {1, -1}) {
+        HighsLp lp;
+        lp.num_col_ = 4;
+        lp.num_row_ = 2;
+        lp.col_cost_ = {2.0 * signS, -1.0 * signX, 0.5, 0.1};
+        lp.col_lower_ = {signS == 1 ? 1.0 : -10.0,
+                         signX == 1 ? -kHighsInf : -3.0, 0.0, 1.0};
+        lp.col_upper_ = {signS == 1 ? 10.0 : -1.0, signX == 1 ? 3.0 : kHighsInf,
+                         kHighsInf, 1 + range};
+        lp.row_lower_ = {signR == 1 ? 5.0 : -5.0 - range, -kHighsInf};
+        lp.row_upper_ = {signR == 1 ? 5.0 + range : -5.0, 1.0};
+        lp.a_matrix_.format_ = MatrixFormat::kColwise;
+        lp.a_matrix_.start_ = {0, 1, 3, 4, 5};
+        lp.a_matrix_.index_ = {0, 0, 1, 1, 0};
+        lp.a_matrix_.value_ = {static_cast<double>(signS * signR),
+                               static_cast<double>(signX * signR),
+                               static_cast<double>(signX), -1.0,
+                               static_cast<double>(signR)};
+
+        // reference objective without presolve
+        Highs h;
+        h.setOptionValue("output_flag", dev_run);
+        REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+        h.setOptionValue("presolve", kHighsOffString);
+        REQUIRE(h.run() == HighsStatus::kOk);
+        REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+        const double objective = h.getInfo().objective_function_value;
+
+        h.clearSolver();
+        h.setOptionValue("presolve", kHighsOnString);
+        REQUIRE(h.run() == HighsStatus::kOk);
+        REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+        REQUIRE(std::abs(h.getInfo().objective_function_value - objective) <=
+                1e-6);
+
+        h.resetThreadScheduler(true);
+      }
+    }
+  }
 }
