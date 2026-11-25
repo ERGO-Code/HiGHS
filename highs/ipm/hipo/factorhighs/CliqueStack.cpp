@@ -25,6 +25,13 @@ void CliqueStack::init(Int64 stack_size) {
   reserve(stack_size);
 }
 
+void CliqueStack::clear() {
+  top_ = 0;
+  workspace_ = nullptr;
+  worksize_ = 0;
+  sn_pushed_ = std::stack<std::pair<Int, Int64>>();
+}
+
 double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
   // Clear workspace
 

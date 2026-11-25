@@ -51,6 +51,7 @@ class CliqueStack {
 
  public:
   void init(Int64 size);
+  void clear();
   double* setup(Int64 clique_size, bool& reallocation);
   const double* getChild(Int& child_sn) const;
   void popChild();

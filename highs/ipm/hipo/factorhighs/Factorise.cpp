@@ -269,6 +269,7 @@ void Factorise::processTreeSerial() {
     return;
   }
   if (stack_->empty()) stack_->init(S_.maxStackSize());
+  stack_->clear();
   for (Int sn = 0; sn < S_.sn(); ++sn) {
     processSupernode(sn);
   }
