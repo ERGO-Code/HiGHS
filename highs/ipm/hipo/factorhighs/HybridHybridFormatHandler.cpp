@@ -11,10 +11,9 @@
 namespace hipo {
 
 HybridHybridFormatHandler::HybridHybridFormatHandler(
-    const Symbolic& S, Int sn, DataCollector& data,
-    std::vector<double>& frontal, double* clique_ptr, const FHoptions& FH_opt,
-    double* total_reg, double* total_unreg_pivots, Int* total_swaps,
-    double* total_pivot_2x2)
+    const Symbolic& S, Int sn, DataCollector& data, double* frontal,
+    double* clique_ptr, const FHoptions& FH_opt, double* total_reg,
+    double* total_unreg_pivots, Int* total_swaps, double* total_pivot_2x2)
     : FormatHandler(S, sn, frontal, clique_ptr, FH_opt, total_reg,
                     total_unreg_pivots, total_swaps, total_pivot_2x2),
       data_{data},
@@ -27,21 +26,24 @@ HybridHybridFormatHandler::HybridHybridFormatHandler(
   if (!clique_ptr_) initClique();
 }
 
-void HybridHybridFormatHandler::initFrontal() {
+Int64 HybridHybridFormatHandler::frontalSize(Int ldf, Int sn_size, Int nb) {
   // the last block of columns has last_jb columns
-  const Int n_blocks = (sn_size_ - 1) / nb_ + 1;
-  const Int last_jb = sn_size_ - (n_blocks - 1) * nb_;
-  const Int64 frontal_size = diagStart(ldf_, nb_, n_blocks - 1) +
-                             (Int64)(ldf_ - (n_blocks - 1) * nb_) * last_jb +
-                             extra_space_frontal;
-  frontal_.resize(frontal_size);
-  std::memset(frontal_.data(), 0, frontal_size * sizeof(double));
+  const Int n_blocks = (sn_size - 1) / nb + 1;
+  const Int last_jb = sn_size - (n_blocks - 1) * nb;
+  return diagStart(ldf, nb, n_blocks - 1) +
+         (Int64)(ldf - (n_blocks - 1) * nb) * last_jb;
+}
+
+void HybridHybridFormatHandler::initFrontal() {
+  // frontal_ points to the storage of the supernode within the factor, which
+  // Factorise allocates with extra_space_frontal entries after the frontal
+  // matrix; here it is only initialised.
+  const Int64 frontal_size =
+      frontalSize(ldf_, sn_size_, nb_) + extra_space_frontal;
+  std::memset(frontal_, 0, frontal_size * sizeof(double));
 
   // NB: extra_space_frontal is not strictly needed. However, it removes some
   // weird problem on windows in debug. Who knows what's happening...
-
-  // frontal_ is actually allocated just the first time, then the memory is
-  // reused from the previous factorisations and just initialised.
 }
 
 void HybridHybridFormatHandler::initClique() {
@@ -99,16 +101,16 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh,
   // either clique is valid, or clique is not needed
   assert(clique_ptr_ || ldf_ == sn_size_);
 
-  status = denseFactFP2FH(frontal_.data(), ldf_, sn_size_, nb_, scratch, data_);
+  status = denseFactFP2FH(frontal_, ldf_, sn_size_, nb_, scratch, data_);
   if (status) return status;
 
   // find the position within pivot_sign corresponding to this supernode
   Int sn_start = S_->snStart(sn_);
   const Int* pivot_sign = &S_->pivotSign().data()[sn_start];
 
-  status = denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_,
-                       pivot_sign, static_reg, reg_thresh, reg_, unreg_pivots_,
-                       swaps_, pivot_2x2_, scratch, data_, FH_opt_);
+  status = denseFactFH('H', ldf_, sn_size_, frontal_, clique_ptr_, pivot_sign,
+                       static_reg, reg_thresh, reg_, unreg_pivots_, swaps_,
+                       pivot_2x2_, scratch, data_, FH_opt_);
 
   return status;
 }

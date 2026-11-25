@@ -47,7 +47,8 @@ class FormatHandler {
 
   const FHoptions& FH_opt_;
 
-  std::vector<double>& frontal_;
+  // storage of the supernode within the factor
+  double* frontal_ = nullptr;
 
   // local copy of the clique, to be moved at the end
   std::vector<double> clique_{};
@@ -61,7 +62,7 @@ class FormatHandler {
   double* pivot_2x2_ = nullptr;
 
  public:
-  FormatHandler(const Symbolic& S, Int sn, std::vector<double>& frontal,
+  FormatHandler(const Symbolic& S, Int sn, double* frontal,
                 double* clique_ptr, const FHoptions& FH_opt, double* total_reg,
                 double* total_unreg_pivots, Int* total_swaps,
                 double* total_pivot_2x2);

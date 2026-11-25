@@ -10,7 +10,7 @@
 namespace hipo {
 
 HybridSolveHandler::HybridSolveHandler(
-    const Symbolic& S, const std::vector<std::vector<double>>& sn_columns,
+    const Symbolic& S, const SnColumns& sn_columns,
     const std::vector<Int>& swaps,
     const std::vector<char>& any_swap,
     const std::vector<double>& pivot_2x2, DataCollector& data,
@@ -288,7 +288,7 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
 
   // index to access snColumns[sn]
   // initialised with the total number of entries of snColumns[sn]
-  Int64 SnCol_ind = sn_columns_[sn].size() - extra_space_frontal;
+  Int64 SnCol_ind = sn_columns_.size(sn) - extra_space_frontal;
 
   if (sn_size < nb) {
     // Fast solve

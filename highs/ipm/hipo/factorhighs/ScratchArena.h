@@ -19,9 +19,11 @@
 namespace hipo {
 
 class ScratchArena {
-  // capacity and used are in bytes
+  // Memory as allocated, and base, its first kAlignment boundary; capacity and
+  // used are in bytes from base.
   struct Chunk {
     std::unique_ptr<unsigned char[]> data{};
+    unsigned char* base = nullptr;
     Int64 capacity = 0;
     Int64 used = 0;
   };
@@ -32,8 +34,9 @@ class ScratchArena {
   std::vector<Stack> stacks_{};
 
  public:
-  // Every buffer starts at a multiple of kAlignment bytes.
-  static constexpr Int64 kAlignment = 8;
+  // Every buffer starts on a kAlignment boundary: BLAS kernels may round
+  // differently depending on the alignment of their operands.
+  static constexpr Int64 kAlignment = 64;
 
   // Make room for one stack per thread of the task executor. Call it from the
   // main thread, before any task that uses the arena is spawned.

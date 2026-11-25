@@ -336,6 +336,7 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/Numeric.h
     ipm/hipo/factorhighs/ReturnValues.h
     ipm/hipo/factorhighs/ScratchArena.h
+    ipm/hipo/factorhighs/SnColumns.h
     ipm/hipo/factorhighs/SolveHandler.h
     ipm/hipo/factorhighs/Swaps.h
     ipm/hipo/factorhighs/Symbolic.h

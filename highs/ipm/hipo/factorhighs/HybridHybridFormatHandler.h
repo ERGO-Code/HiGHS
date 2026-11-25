@@ -22,8 +22,12 @@ class HybridHybridFormatHandler : public FormatHandler {
   void assembleClique(const double* child, Int nc, Int child_sn);
 
  public:
+  // number of entries of the frontal matrix of a supernode with sn_size
+  // columns and ldf rows, stored in blocks of nb columns
+  static Int64 frontalSize(Int ldf, Int sn_size, Int nb);
+
   HybridHybridFormatHandler(const Symbolic& S, Int sn, DataCollector& data,
-                            std::vector<double>& frontal, double* clique_ptr,
+                            double* frontal, double* clique_ptr,
                             const FHoptions& FH_opt, double* total_reg,
                             double* total_unreg_pivots, Int* total_swaps,
                             double* total_pivot_2x2);

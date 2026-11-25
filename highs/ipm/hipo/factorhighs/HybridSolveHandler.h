@@ -32,8 +32,7 @@ class HybridSolveHandler : public SolveHandler {
   void diagSolve(double* x) const override;
   void inertia(Int& pos, Int& neg, Int& zero, double tol) const override;
 
-  HybridSolveHandler(const Symbolic& S,
-                     const std::vector<std::vector<double>>& sn_columns,
+  HybridSolveHandler(const Symbolic& S, const SnColumns& sn_columns,
                      const std::vector<Int>& swaps,
                      const std::vector<char>& any_swap,
                      const std::vector<double>& pivot_2x2,

@@ -1,6 +1,8 @@
 #include "ScratchArena.h"
 
 #include <cassert>
+#include <cstddef>
+#include <memory>
 
 #include "parallel/HighsParallel.h"
 
@@ -44,18 +46,28 @@ void* ScratchArena::push(Int thread, Int64 bytes) {
       chunk = &stack.chunks[stack.top];
     }
     if (chunk->capacity < bytes) {
-      // An array of unsigned char from new is aligned for any fundamental type
-      // that fits in it, and offsets are multiples of kAlignment, so every
-      // buffer is aligned.
       // capacity is reset first, so that it is correct if new throws
       chunk->data.reset();
+      chunk->base = nullptr;
       chunk->capacity = 0;
-      chunk->data.reset(new unsigned char[bytes]);
+
+      // new is aligned at least to a byte, so the first kAlignment boundary is
+      // at most kAlignment - 1 bytes after its start
+      const Int64 alloc_bytes = bytes + kAlignment - 1;
+      chunk->data.reset(new unsigned char[alloc_bytes]);
+
+      // std::align moves base to the first kAlignment boundary with room for
+      // bytes after it. Offsets from base are multiples of kAlignment, so every
+      // buffer is aligned.
+      void* base = chunk->data.get();
+      std::size_t space = alloc_bytes;
+      std::align(kAlignment, bytes, base, space);
+      chunk->base = static_cast<unsigned char*>(base);
       chunk->capacity = bytes;
     }
   }
 
-  void* ptr = chunk->data.get() + chunk->used;
+  void* ptr = chunk->base + chunk->used;
   chunk->used += bytes;
   return ptr;
 }
@@ -67,7 +79,7 @@ void ScratchArena::pop(Int thread, const void* ptr, Int64 bytes) {
   Chunk& chunk = stack.chunks[stack.top];
   // ptr must be the last buffer pushed (LIFO order)
   assert(chunk.used >= bytes);
-  assert(ptr == chunk.data.get() + chunk.used - bytes);
+  assert(ptr == chunk.base + chunk.used - bytes);
   (void)ptr;
   chunk.used -= bytes;
   if (chunk.used == 0 && stack.top > 0) --stack.top;

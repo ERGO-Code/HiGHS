@@ -6,11 +6,10 @@
 
 namespace hipo {
 
-FormatHandler::FormatHandler(const Symbolic& S, Int sn,
-                             std::vector<double>& frontal, double* clique_ptr,
-                             const FHoptions& FH_opt, double* total_reg,
-                             double* total_unreg_pivots, Int* total_swaps,
-                             double* total_pivot_2x2)
+FormatHandler::FormatHandler(const Symbolic& S, Int sn, double* frontal,
+                             double* clique_ptr, const FHoptions& FH_opt,
+                             double* total_reg, double* total_unreg_pivots,
+                             Int* total_swaps, double* total_pivot_2x2)
     : S_{&S},
       sn_{sn},
       sn_size_{S_->snStart(sn_ + 1) - S_->snStart(sn_)},
