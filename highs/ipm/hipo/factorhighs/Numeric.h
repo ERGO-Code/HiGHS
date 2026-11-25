@@ -28,9 +28,9 @@ class Numeric {
   // swaps of columns for each supernode, ordered locally within a block
   std::vector<Int> swaps_{};
 
-  // indicates whether a block of columns in a supernode has any non-identical
-  // swap
-  std::vector<std::vector<char>> any_swaps_{};
+  // any_swaps_[S_->snStart(sn) + j] indicates whether block j of columns of
+  // supernode sn has any non-identical swap
+  std::vector<char> any_swaps_{};
 
   std::vector<double> pivot_2x2_{};
   const Symbolic* S_;

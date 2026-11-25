@@ -6,9 +6,9 @@
 namespace hipo {
 
 class HybridSolveHandler : public SolveHandler {
-  // swaps and 2x2 pivots: one entry per column, from snStart(sn)
+  // swaps, 2x2 pivots and any_swaps: one entry per column, from snStart(sn)
   const std::vector<Int>& swaps_;
-  const std::vector<std::vector<char>>& any_swaps_;
+  const std::vector<char>& any_swaps_;
   const std::vector<double>& pivot_2x2_;
 
   mutable std::vector<std::vector<double>> parallel_gemv_workspace_;
@@ -35,7 +35,7 @@ class HybridSolveHandler : public SolveHandler {
   HybridSolveHandler(const Symbolic& S,
                      const std::vector<std::vector<double>>& sn_columns,
                      const std::vector<Int>& swaps,
-                     const std::vector<std::vector<char>>& any_swap,
+                     const std::vector<char>& any_swap,
                      const std::vector<double>& pivot_2x2,
                      DataCollector& data, const FHoptions& options);
 };

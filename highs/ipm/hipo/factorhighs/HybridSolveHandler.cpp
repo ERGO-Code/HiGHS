@@ -12,7 +12,7 @@ namespace hipo {
 HybridSolveHandler::HybridSolveHandler(
     const Symbolic& S, const std::vector<std::vector<double>>& sn_columns,
     const std::vector<Int>& swaps,
-    const std::vector<std::vector<char>>& any_swap,
+    const std::vector<char>& any_swap,
     const std::vector<double>& pivot_2x2, DataCollector& data,
     const FHoptions& options)
     : SolveHandler(S, sn_columns, data, options),
@@ -85,7 +85,7 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
 
     if (options_.pivoting) {
       HIPO_CLOCK_START(2);
-      any_swaps_in_block = any_swaps_[sn][0];
+      any_swaps_in_block = any_swaps_[sn_start];
       if (any_swaps_in_block) {
         current_swaps = &swaps_[sn_start];
         // apply swaps to portion of rhs that is affected
@@ -150,7 +150,7 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
 
       if (options_.pivoting) {
         HIPO_CLOCK_START(2);
-        any_swaps_in_block = any_swaps_[sn][j];
+        any_swaps_in_block = any_swaps_[sn_start + j];
         if (any_swaps_in_block) {
           current_swaps = &swaps_[sn_start + nb * j];
           // apply swaps to portion of rhs that is affected
@@ -301,7 +301,7 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
 
     if (options_.pivoting) {
       HIPO_CLOCK_START(2);
-      any_swaps_in_block = any_swaps_[sn][0];
+      any_swaps_in_block = any_swaps_[sn_start];
       if (any_swaps_in_block) {
         current_swaps = &swaps_[sn_start];
         // apply swaps to portion of rhs that is affected
@@ -349,7 +349,7 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
 
       if (options_.pivoting) {
         HIPO_CLOCK_START(2);
-        any_swaps_in_block = any_swaps_[sn][j];
+        any_swaps_in_block = any_swaps_[sn_start + j];
         if (any_swaps_in_block) {
           current_swaps = &swaps_[sn_start + nb * j];
           // apply swaps to portion of rhs that is affected
@@ -461,7 +461,7 @@ void HybridSolveHandler::processDiagSn(Int sn, double* x) const {
 
     if (options_.pivoting) {
       HIPO_CLOCK_START(2);
-      any_swaps_in_block = any_swaps_[sn][j];
+      any_swaps_in_block = any_swaps_[sn_start + j];
       if (any_swaps_in_block) {
         current_swaps = &swaps_[sn_start + nb * j];
         // apply swaps to portion of rhs that is affected
