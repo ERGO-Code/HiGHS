@@ -38,6 +38,13 @@ class Numeric {
   const FHoptions* options_;
   std::unique_ptr<SolveHandler> SH_;
 
+  // What SH_ was built from; it is reused by later factorisations while none of
+  // these changes.
+  const Symbolic* SH_symbolic_ = nullptr;
+  Int64 SH_symbolic_id_ = 0;
+  bool SH_parallel_forward_ = false;
+  bool SH_parallel_backward_ = false;
+
   ScratchArena* scratch_ = nullptr;
 
   friend class Factorise;

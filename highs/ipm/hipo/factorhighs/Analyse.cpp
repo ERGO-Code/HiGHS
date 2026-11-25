@@ -1484,7 +1484,6 @@ Int Analyse::run(Symbolic& S) {
   reverseLinkedList(S.first_child_reverse_, S.next_child_reverse_);
 
   S.id_ = newSymbolicId();
-  S.empty_ = false;
 
   HIPO_CLOCK_STOP(1, data_, kTimeAnalyse);
 

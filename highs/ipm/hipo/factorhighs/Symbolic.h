@@ -26,8 +26,6 @@ struct TreeSchedule {
 
 // Symbolic factorisation object
 class Symbolic {
-  bool empty_ = true;
-
   // Statistics about symbolic factorisation
   Int n_{};
   Int64 nz_{};
@@ -122,15 +120,15 @@ class Symbolic {
   std::vector<Int> next_child_reverse_{};
 
   // Identifies the analyse that filled this object: distinct for every analyse
-  // in the process, 0 if there was none. Objects built from the symbolic
-  // factorisation can be reused while it does not change.
+  // in the process, 0 if there was none (the object is empty). Objects built
+  // from the symbolic factorisation can be reused while it does not change.
   Int64 id_{};
 
   friend class Analyse;
 
  public:
   // provide const access to symbolic factorisation
-  bool empty() const { return empty_; }
+  bool empty() const { return id_ == 0; }
   Int64 id() const { return id_; }
   Int64 nz() const;
   double flops() const;
