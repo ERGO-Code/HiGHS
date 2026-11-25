@@ -1437,6 +1437,12 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
                  << sci(controls_.reg_p_scale, 0, 1) << "\n";
       break;
 
+    case RecoveryAction::kUndoDecreaseReg:
+      controls_.reg_p_scale *= kRegScaleFactor;
+      log_stream << "Applied " << name << ", primal regularisation scale "
+                 << sci(controls_.reg_p_scale, 0, 1) << "\n";
+      break;
+
     case RecoveryAction::kSwitchFactorisation:
       // proposed only if possible; otherwise give up, as for stop
       if (!switchToMultifrontal()) {

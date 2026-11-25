@@ -72,12 +72,20 @@ Recovery::ProposedAction Recovery::proposeAction(
   // can be chosen is acted upon.
   RecoveryAction action = RecoveryAction::kNone;
 
-  // 1, 2: stagnation. Recentring helps only if the point is poorly centred,
+  // 1: reg- brought the numerical trouble back
+  const bool undo_decrease =
+      hasNumericalTrouble(report) &&
+      timesProposed(RecoveryAction::kDecreaseReg) > 0 &&
+      available(RecoveryAction::kUndoDecreaseReg, capabilities);
+
+  // 2, 3: stagnation. Recentring helps only if the point is poorly centred,
   // and L is too urgent for it. Numerical trouble with a short step counts as
   // stagnation, without waiting for N.
   const bool short_step_trouble =
       recent_numerical_trouble && report.alpha_min < kShortStepAlpha;
-  if (report.stagnation() || short_step_trouble) {
+  if (undo_decrease) {
+    action = RecoveryAction::kUndoDecreaseReg;
+  } else if (report.stagnation() || short_step_trouble) {
     const bool try_recentre = report.has(IssueType::kPoorCentrality) &&
                               !report.has(IssueType::kLargeResIncrease);
     RecoveryAction entry = RecoveryAction::kSwitchFactorisation;
@@ -97,14 +105,14 @@ Recovery::ProposedAction Recovery::proposeAction(
     if (action == RecoveryAction::kTerminate && !report.stagnation())
       action = RecoveryAction::kNone;
   } else if (hasNumericalTrouble(report)) {
-    // 3: numerical trouble without stagnation. The ipm is still progressing,
+    // 4: numerical trouble without stagnation. The ipm is still progressing,
     // and changing the regularisation can stop it, but bad pivots can be
     // dropped.
     if (available(RecoveryAction::kDropBadPivots, capabilities))
       action = RecoveryAction::kDropBadPivots;
   }
 
-  // 4: regularisation was increased and iterations have been clean for some
+  // 5: regularisation was increased and iterations have been clean for some
   // time, so decrease regularisation
   if (action == RecoveryAction::kNone &&
       timesProposed(RecoveryAction::kIncreaseReg) > 0 &&
@@ -113,7 +121,7 @@ Recovery::ProposedAction Recovery::proposeAction(
       action = RecoveryAction::kDecreaseReg;
   }
 
-  // 5: absorbed rows or columns
+  // 6: absorbed rows or columns
   if (action == RecoveryAction::kNone && report.has(IssueType::kAbsorbed))
     action = firstAvailable(RecoveryAction::kDecreaseLocalReg, capabilities);
 

@@ -16,6 +16,7 @@ enum class RecoveryAction {
   kIncreaseReg,
   kDecreaseLocalReg,
   kDecreaseReg,
+  kUndoDecreaseReg,
   kRecentre,
   kSwitchFactorisation,
   kTerminate,
@@ -30,7 +31,8 @@ enum class RecoveryAction {
 // proposeAction chooses reg+ instead of stop while reg+ is not used up, so that
 // reg+ is always tried before stopping.
 // After reg+, reg- lowers the primal regularisation again, once enough "clean"
-// iterations have been observed.
+// iterations have been observed; reg-undo raises it back if I or W appear
+// afterwards.
 struct ActionProperties {
   const char* name;
   bool reset_to_best;
@@ -54,6 +56,8 @@ inline ActionProperties actionProperties(RecoveryAction action) {
       return {"lreg-", false, no_limit, RecoveryAction::kNone};
     case RecoveryAction::kDecreaseReg:
       return {"reg-", false, 1, RecoveryAction::kNone};
+    case RecoveryAction::kUndoDecreaseReg:
+      return {"reg-undo", false, 1, RecoveryAction::kNone};
     case RecoveryAction::kRecentre:
       return {"centre", false, 1, RecoveryAction::kSwitchFactorisation};
     case RecoveryAction::kSwitchFactorisation:
@@ -80,15 +84,16 @@ struct Recovery {
   // and the first action from there that capabilities allow and that is not
   // used up (chosen max_times already) is chosen. Entries, in decreasing order
   // of priority; the first issue with an action available is acted upon:
-  //  1. stagnation, with I or W in the last kActionNumericalWindow iterations:
+  //  1. I or W after reg-: reg-undo;
+  //  2. stagnation, with I or W in the last kActionNumericalWindow iterations:
   //     drop; I or W in that window with a step below kShortStepAlpha counts
   //     as stagnation, but cannot lead to stop;
-  //  2. stagnation: centre with C and without L, otherwise switch; reg+ is
+  //  3. stagnation: centre with C and without L, otherwise switch; reg+ is
   //     tried before stop;
-  //  3. I or W without stagnation: drop only, since changing the regularisation
+  //  4. I or W without stagnation: drop only, since changing the regularisation
   //     can stop an ipm that is still progressing;
-  //  4. Enough clean iterations after reg+: reg-.
-  //  5. A: lreg-.
+  //  5. Enough clean iterations after reg+: reg-.
+  //  6. A: lreg-.
   // F is not acted upon here: Solver::shortStepGuard deals with nearly free
   // columns when they block the step.
   // No action is chosen within kActionPatience iterations of the previous one;
