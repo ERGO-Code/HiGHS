@@ -699,6 +699,7 @@ TEST_CASE("hessian-oracle-scale-shift", "[qp-oracle]") {
     index.push_back(iRow);
     iRow++;
   }
+  HighsInt index_num_entries = index.size();
 
   // Compute multiplier_*Qx + scale_*x
   std::vector<double> result;
@@ -714,24 +715,24 @@ TEST_CASE("hessian-oracle-scale-shift", "[qp-oracle]") {
     REQUIRE(norm_difference < 1e-10);
   };
 
+  if (dev_run) highsPrintStringAsHeading("oracle.product(value, oracle_result);");
   oracle.product(value, oracle_result);
   checkResult();
 
+  if (dev_run) highsPrintStringAsHeading("oracle.product(value.data(), oracle_result.data());");
   oracle_result.assign(dim, 0);
   oracle.product(value.data(), oracle_result.data());
   checkResult();
 
+  if (dev_run) highsPrintStringAsHeading("oracle.product(index_num_entries, index.data(), value.data(), oracle_result.data());");
   oracle_result.assign(dim, 0);
-  oracle.product(dim, index.data(), value.data(), oracle_result.data());
+  oracle.product(index_num_entries, index.data(), value.data(), oracle_result.data());
   checkResult();
 
+  if (dev_run) highsPrintStringAsHeading(" oracle.product(dim, nullptr, value.data(), oracle_result.data());");
   oracle_result.assign(dim, 0);
   oracle.product(dim, nullptr, value.data(), oracle_result.data());
   checkResult();
 
-  
-  
-  
-  
 }
 
