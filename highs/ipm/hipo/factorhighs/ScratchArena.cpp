@@ -13,6 +13,12 @@ void ScratchArena::init() {
   if ((Int)stacks_.size() < threads) stacks_.resize(threads);
 }
 
+bool ScratchArena::matchesThreads() const {
+  HighsSplitDeque* deque = HighsTaskExecutor::getThisWorkerDeque();
+  const Int threads = deque ? deque->getNumWorkers() : 1;
+  return threads <= (Int)stacks_.size();
+}
+
 Int ScratchArena::thread() const {
   HighsSplitDeque* deque = HighsTaskExecutor::getThisWorkerDeque();
   const Int thread = deque ? deque->getOwnerId() : 0;

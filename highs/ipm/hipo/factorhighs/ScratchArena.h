@@ -39,6 +39,10 @@ class ScratchArena {
   // main thread, before any task that uses the arena is spawned.
   void init();
 
+  // True if init made a stack for each thread of the current task executor. It
+  // may not have, if the executor changed since the last call of init.
+  bool matchesThreads() const;
+
   // Index of the stack of the calling thread.
   Int thread() const;
 

@@ -1,9 +1,12 @@
 #include "Numeric.h"
 
+#include <algorithm>
+
 #include "DataCollector.h"
 #include "FactorHighsSettings.h"
 #include "HybridSolveHandler.h"
 #include "ReturnValues.h"
+#include "ScratchArena.h"
 #include "Timing.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/VectorOperations.h"
@@ -41,16 +44,35 @@ Int Numeric::prepare() {
   return kRetOk;
 }
 
+// As permuteVectorInverse and permuteVector, with the copy of x in scratch
+// memory instead of a new vector.
+static void permuteInverseScratch(double* x, const std::vector<Int>& iperm,
+                                  ScratchArena& scratch) {
+  const Int n = iperm.size();
+  ScratchBuffer<double> temp(scratch, n);
+  std::copy_n(x, n, temp.data());
+  for (Int i = 0; i < n; ++i) x[iperm[i]] = temp[i];
+}
+
+static void permuteScratch(double* x, const std::vector<Int>& perm,
+                           ScratchArena& scratch) {
+  const Int n = perm.size();
+  ScratchBuffer<double> temp(scratch, n);
+  std::copy_n(x, n, temp.data());
+  for (Int i = 0; i < n; ++i) x[i] = temp[perm[i]];
+}
+
 Int Numeric::solve(double* x) const {
   // Return the number of solves performed
 
-  if (!SH_) return kRetGeneric;
+  // scratch_ is set whenever SH_ is; it must have a stack for each thread
+  if (!SH_ || !scratch_->matchesThreads()) return kRetGeneric;
 
   HIPO_CLOCK_CREATE;
 
   // permute rhs
   HIPO_CLOCK_START(2);
-  permuteVectorInverse(x, S_->iperm());
+  permuteInverseScratch(x, S_->iperm(), *scratch_);
   HIPO_CLOCK_STOP(2, *data_, kTimeSolvePrepare);
 
   // solve
@@ -62,7 +84,7 @@ Int Numeric::solve(double* x) const {
 
   // unpermute solution
   HIPO_CLOCK_START(2);
-  permuteVector(x, S_->iperm());
+  permuteScratch(x, S_->iperm(), *scratch_);
   HIPO_CLOCK_STOP(2, *data_, kTimeSolvePrepare);
 
   HIPO_CLOCK_STOP(1, *data_, kTimeSolve);
@@ -70,8 +92,8 @@ Int Numeric::solve(double* x) const {
 }
 
 Int Numeric::forwardSolve(double* x) const {
-  if (!SH_) return kRetGeneric;
-  permuteVectorInverse(x, S_->iperm());
+  if (!SH_ || !scratch_->matchesThreads()) return kRetGeneric;
+  permuteInverseScratch(x, S_->iperm(), *scratch_);
   SH_->forwardSolve(x);
   return kRetOk;
 }
@@ -81,9 +103,9 @@ Int Numeric::diagSolve(double* x) const {
   return kRetOk;
 }
 Int Numeric::backwardSolve(double* x) const {
-  if (!SH_) return kRetGeneric;
+  if (!SH_ || !scratch_->matchesThreads()) return kRetGeneric;
   SH_->backwardSolve(x);
-  permuteVector(x, S_->iperm());
+  permuteScratch(x, S_->iperm(), *scratch_);
   return kRetOk;
 }
 

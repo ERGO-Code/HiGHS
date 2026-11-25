@@ -321,6 +321,7 @@ bool Factorise::run() {
   num_.sn_columns_ = &sn_columns_;
   num_.data_ = &data_;
   num_.options_ = &FH_opt_;
+  num_.scratch_ = &scratch_;
 
   if (num_.prepare()) return true;
 

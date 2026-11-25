@@ -16,6 +16,8 @@
 
 namespace hipo {
 
+class ScratchArena;
+
 class Numeric {
   // columns of factorisation, stored by supernode
   const std::vector<std::vector<double>>* sn_columns_ = nullptr;
@@ -32,6 +34,8 @@ class Numeric {
   DataCollector* data_ = nullptr;
   const FHoptions* options_;
   std::unique_ptr<SolveHandler> SH_;
+
+  ScratchArena* scratch_ = nullptr;
 
   friend class Factorise;
 
