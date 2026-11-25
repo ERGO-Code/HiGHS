@@ -377,13 +377,13 @@ function(highs_configure_blas)
         set(NO_DOUBLE_COMPLEX ON CACHE BOOL "" FORCE)
         set(NO_SINGLE ON CACHE BOOL "" FORCE)
 
-        if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|armv8|arm")
-            if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-                message(FATAL_ERROR "The HiGHS build with OpenBLAS does not yet support 32-bit ARM architectures. \
-                        You could try to compile OpenBLAS separately on your machine, see https://github.com/OpenMathLib/OpenBLAS. \
-                        Then link with HiGHS by passing the path to the OpenBLAS installation via BLAS_ROOT. \
-                        Please don't hesitate to get in touch with us with details about your related issues.")
-            endif()
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|armv8|arm"
+           AND CMAKE_SIZEOF_VOID_P EQUAL 4
+           AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^armv7")
+            message(FATAL_ERROR "The HiGHS build with OpenBLAS supports 32-bit ARM only on ARMv7 (CMAKE_SYSTEM_PROCESSOR armv7*). \
+                    You could try to compile OpenBLAS separately on your machine, see https://github.com/OpenMathLib/OpenBLAS. \
+                    Then link with HiGHS by passing the path to the OpenBLAS installation via BLAS_ROOT. \
+                    Please don't hesitate to get in touch with us with details about your related issues.")
         endif()
 
         if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -401,9 +401,27 @@ function(highs_configure_blas)
             message(STATUS "MSVC detected: building OpenBLAS as a single portable GENERIC target (no DYNAMIC_ARCH) since MSVC cannot compile OpenBLAS's GNU-inline-asm kernel objects.")
             set(DYNAMIC_ARCH OFF CACHE BOOL "" FORCE)
             set(TARGET GENERIC CACHE STRING "" FORCE)
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^armv7" AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+            # DYNAMIC_ARCH has no 32-bit ARM support, so build the ARMv7 (VFPv3 +
+            # NEON) kernels. ARMv6 (e.g. Raspberry Pi Zero/1) is rejected above
+            message(STATUS "32-bit ARM: building OpenBLAS for TARGET=ARMV7 (no DYNAMIC_ARCH).")
+            set(DYNAMIC_ARCH OFF CACHE BOOL "" FORCE)
+            set(TARGET ARMV7 CACHE STRING "" FORCE)
         else()
             message(STATUS "Enabling DYNAMIC_ARCH for runtime CPU detection.")
             set(DYNAMIC_ARCH ON CACHE BOOL "" FORCE)
+            if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$"
+               AND CMAKE_C_COMPILER_ID STREQUAL "GNU"
+               AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 10
+               AND CMAKE_C_COMPILER_VERSION VERSION_LESS 10.4)
+                # OpenBLAS adds the SVE cores (NEOVERSEV1, NEOVERSEN2, ARMV8SVE,
+                # A64FX) to DYNAMIC_ARCH from GCC 10, but its NEOVERSEV1/N2
+                # kernels need GCC 10.4 and fail to configure with e.g. Debian
+                # 11's GCC 10.2. Leave them out: those CPUs then fall back to
+                # generic ARMv8 kernels at run time
+                message(STATUS "GCC ${CMAKE_C_COMPILER_VERSION} < 10.4: building OpenBLAS DYNAMIC_ARCH without the SVE cores.")
+                set(DYNAMIC_LIST "CORTEXA53;CORTEXA57;THUNDERX;THUNDERX2T99;TSV110;EMAG8180;NEOVERSEN1;THUNDERX3T110" CACHE STRING "" FORCE)
+            endif()
         endif()
 
         # CMAKE_SIZEOF_VOID_P is 4 for 32-bit and 8 for 64-bit
@@ -490,6 +508,12 @@ function(highs_configure_blas)
             set(_highs_blas_ipo_backup "${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
         endif()
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
+
+        if(BUILD_DOTNET)
+            # The NuGet package ships only libhighs_extras, so link OpenBLAS
+            # into it (as on Windows). Function-local, so HiGHS stays shared.
+            set(BUILD_SHARED_LIBS OFF)
+        endif()
 
         message(CHECK_START "Fetching OpenBLAS")
         list(APPEND CMAKE_MESSAGE_INDENT "  ")

@@ -96,6 +96,23 @@ endif
 
 cpu_family = host_machine.cpu_family()
 
+# The error terms in HighsCDouble require exact IEEE double arithmetic, as
+# set in CMakeLists.txt: no fused multiply-adds (GCC contracts by default when
+# the target has FMA), no reassociation, and no x87 80-bit intermediates.
+if cppc.get_id() == 'intel-llvm'
+  add_project_arguments('-fp-model=precise', language : ['c', 'cpp'])
+elif cppc.get_id() == 'intel-llvm-cl'
+  add_project_arguments('/fp:precise', language : ['c', 'cpp'])
+elif cppc.get_id() == 'clang-cl'
+  # clang-cl ignores a bare -ffp-contract=off and contracts even under /fp:precise
+  add_project_arguments('/clang:-ffp-contract=off', language : ['c', 'cpp'])
+elif cppc.get_argument_syntax() == 'gcc'
+  add_project_arguments('-ffp-contract=off', language : ['c', 'cpp'])
+  if cpu_family == 'x86'
+    add_project_arguments('-msse2', '-mfpmath=sse', language : ['c', 'cpp'])
+  endif
+endif
+
 if cpu_family in ['x86_64', 'i686'] and not is_windows
     add_project_arguments(cppc.get_supported_arguments('-mpopcnt'), language: 'cpp')
 endif

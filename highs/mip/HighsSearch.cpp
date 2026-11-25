@@ -989,11 +989,6 @@ HighsSearch::NodeResult HighsSearch::evaluateNode() {
                                    : kSolutionSourceEvaluateNode);
           if (getUpperLimit() < cutoffbnd)
             lp->setObjectiveLimit(getUpperLimit());
-
-          if (lp->unscaledDualFeasible(status)) {
-            addBoundExceedingConflict();
-            result = NodeResult::kBoundExceeding;
-          }
         }
       }
 
