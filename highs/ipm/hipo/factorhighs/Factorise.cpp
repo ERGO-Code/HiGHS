@@ -17,6 +17,7 @@ namespace hipo {
 Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
                      const Int* rowsM, const Int* ptrM, const double* valM,
                      const std::vector<double>& static_reg,
+                     std::vector<double>& static_reg_permuted,
                      const FHoptions& FH_opt, const Logger& logger,
                      DataCollector& data, FactorStorage& factor,
                      CliqueStack* stack,
@@ -30,6 +31,7 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
       pivot_2x2_{num.pivot_2x2_},
       total_reg_{num.total_reg_},
       unreg_pivots_{num.unreg_pivots_},
+      static_reg_{static_reg_permuted},
       logger_{logger},
       data_{data},
       FH_opt_{FH_opt},
@@ -66,12 +68,12 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
 
   // static regularisation in the same order as the permuted matrix: the given
   // values, or reg_p for negative pivots and reg_d for the others
+  static_reg_.resize(n_);
   if (!static_reg.empty()) {
-    static_reg_ = static_reg;
-    permuteVectorInverse(static_reg_, S_.iperm());
+    const std::vector<Int>& iperm = S_.iperm();
+    for (Int i = 0; i < n_; ++i) static_reg_[iperm[i]] = static_reg[i];
   } else {
     const std::vector<Int>& sign = S_.pivotSign();
-    static_reg_.resize(n_);
     for (Int i = 0; i < n_; ++i)
       static_reg_[i] = sign[i] < 0 ? FH_opt_.reg_p : FH_opt_.reg_d;
   }

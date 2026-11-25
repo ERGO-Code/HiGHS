@@ -106,8 +106,12 @@ class FHsolver {
  private:
   FHoptions options_{};
 
-  // static regularisation of each pivot, empty if not used
+  // Static regularisation of each pivot, in two orders: static_reg_ in the
+  // original order, as given by setRegularisationEntries (empty if not used);
+  // static_reg_permuted_ in the order of the factorisation, which depends on
+  // the symbolic factorisation, so each factorisation writes it again.
   std::vector<double> static_reg_;
+  std::vector<double> static_reg_permuted_;
 
   // Columns of factorisation, stored by supernode.
   // This memory is allocated the first time that it is used. Subsequent

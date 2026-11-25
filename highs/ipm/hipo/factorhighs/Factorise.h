@@ -63,8 +63,9 @@ class Factorise {
   // 1x1 pivots before regularisation, infinite for 2x2 pivots
   std::vector<double>& unreg_pivots_;
 
-  // static regularisation of each pivot, permuted
-  std::vector<double> static_reg_{};
+  // static regularisation of each pivot, permuted. Managed outside of
+  // Factorise, so that it can be reused for all ipm iterations.
+  std::vector<double>& static_reg_;
 
   // flag to stop computation
   std::atomic<bool> flag_stop_{false};
@@ -86,7 +87,8 @@ class Factorise {
  public:
   Factorise(const Symbolic& S, Numeric& num, Int n, Int nz, const Int* rowsM,
             const Int* ptrM, const double* valM,
-            const std::vector<double>& static_reg, const FHoptions& FH_opt,
+            const std::vector<double>& static_reg,
+            std::vector<double>& static_reg_permuted, const FHoptions& FH_opt,
             const Logger& logger, DataCollector& data, FactorStorage& factor,
             CliqueStack* stack,
             std::vector<std::vector<double>>& schur_contribution,
