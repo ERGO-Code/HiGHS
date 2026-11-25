@@ -82,6 +82,11 @@ Notice that the fill-reducing ordering can be modified during the call to
 analyse. The inverse permutation used during the factorisation can be accessed
 via the Symbolic object, S.iperm().
 
+FHsolver keeps the memory of the factor and of the scratch space used by the
+factorisation and the solves, and reuses it in later calls. After the first
+factorisation, there are no allocations per supernode, except for the
+contribution blocks when the tree is processed in parallel.
+
 */
 
 namespace hipo {
