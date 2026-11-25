@@ -56,9 +56,7 @@ void Diagnostics::stagnation(const Iterate& it, Int iter, double feas_tol,
 
   if (bad_residuals) report.add(IssueType::kBadResReduction);
   if (large_increase) report.add(IssueType::kLargeResIncrease);
-  const bool gap_ok = gapTest(it, iter, feas_tol, opt_tol, log_stream);
-
-  if (no_window_progress || !gap_ok) report.add(IssueType::kNoProgress);
+  if (no_window_progress) report.add(IssueType::kNoProgress);
   if (no_best_progress) report.add(IssueType::kOscillation);
 }
 
@@ -336,30 +334,8 @@ bool Diagnostics::progressTest(const Iterate& it, Int iter, double feas_tol,
   return window_passed && best_passed;
 }
 
-bool Diagnostics::gapTest(const Iterate& it, Int iter, double feas_tol,
-                          double opt_tol, std::stringstream& log_stream) {
-  if (it.pinf > feas_tol || it.dinf > feas_tol) {
-    gap_ref = kHighsInf;
-    return true;
-  }
-  if (it.pdgap <= opt_tol) return true;
-
-  if (it.pdgap < kProgressFactor * gap_ref) {
-    gap_ref = it.pdgap;
-    gap_iter = iter;
-  }
-  if (iter - gap_iter < kGapProgressMaxIter) return true;
-
-  log_stream << "No progress of pdgap at feasible points in last "
-             << kGapProgressMaxIter << " iterations: pdgap "
-             << sci(it.pdgap, 0, 1) << " (best " << sci(gap_ref, 0, 1) << ")\n";
-  return false;
-}
-
 void Diagnostics::clear(Int iter) {
   bad_res_history = 0;
-  gap_ref = kHighsInf;
-  gap_iter = iter;
 
   for (Int k = 0; k < kNumProgressQuantities; ++k) {
     progress_history[k].clear();
