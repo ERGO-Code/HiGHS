@@ -54,11 +54,19 @@ static std::wstring moduleDirectory() {
   return slash == std::wstring::npos ? L"" : module_path.substr(0, slash + 1);
 }
 
+// Paths are UTF-8, per Highs::initializeExtras. Text that is not valid UTF-8
+// is read as ANSI, as LoadLibraryExA did: non-ASCII ANSI is rarely valid UTF-8
 static std::wstring toWide(const std::string& s) {
-  const int n = MultiByteToWideChar(CP_ACP, 0, s.c_str(), -1, nullptr, 0);
+  UINT code_page = CP_UTF8;
+  int n = MultiByteToWideChar(code_page, MB_ERR_INVALID_CHARS, s.c_str(), -1,
+                              nullptr, 0);
+  if (n <= 0) {
+    code_page = CP_ACP;
+    n = MultiByteToWideChar(code_page, 0, s.c_str(), -1, nullptr, 0);
+  }
   if (n <= 0) return L"";
   std::wstring w(n, L'\0');
-  MultiByteToWideChar(CP_ACP, 0, s.c_str(), -1, &w[0], n);
+  MultiByteToWideChar(code_page, 0, s.c_str(), -1, &w[0], n);
   w.resize(n - 1);  // drop the terminating null
   return w;
 }
@@ -71,14 +79,15 @@ bool HighsDynamicLibrary::load(const std::string& filename,
   unload();
 
 #if defined(_WIN32) || defined(_WIN64)
-  std::string absolute_filename = path + (path.empty() ? "" : "\\") + filename;
+  const std::wstring absolute_filename =
+      toWide(path + (path.empty() ? "" : "\\") + filename);
 
   // allow application directory if no path is specified, otherwise use DLL load
   // directory and absolute path
   DWORD flags = (path.empty() ? LOAD_LIBRARY_SEARCH_APPLICATION_DIR
                               : LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
   handle_ =
-      static_cast<void*>(LoadLibraryExA(absolute_filename.c_str(), nullptr,
+      static_cast<void*>(LoadLibraryExW(absolute_filename.c_str(), nullptr,
                                         LOAD_LIBRARY_SEARCH_SYSTEM32 | flags));
 
   // then the directory of the module holding HiGHS, which the application

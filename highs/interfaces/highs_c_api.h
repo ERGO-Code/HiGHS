@@ -2683,7 +2683,8 @@ HighsInt Highs_repairCallbackSolution(HighsCallbackDataIn* data_in);
 /**
  * @brief Initialize optional extras and cache the result.
  *
- * @param directory Directory containing the extras library. NULL means empty.
+ * @param directory Directory containing the extras library, UTF-8 encoded.
+ *                  NULL means empty.
  * @param search_if_empty If nonzero, search default library directories when
  *                        directory is NULL or empty.
  * @return kHighsStatusOk on success, kHighsStatusError on failure.
