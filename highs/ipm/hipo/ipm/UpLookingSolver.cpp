@@ -1,5 +1,6 @@
 #include "UpLookingSolver.h"
 
+#include "HighsExternalApi.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 
 namespace hipo {
@@ -22,22 +23,11 @@ void UpLookingSolver::etreeAndCounts(const std::vector<Int>& ptr,
                                      const std::vector<Int>& rows,
                                      std::vector<Int64>& colcount) {
   // compute elimination tree and column counts
-  parent_.assign(n_, -1);
-  colcount.assign(n_, 1);
-  std::vector<Int> ancestor(n_, 0);
-
-  for (Int col = 0; col < n_; ++col) {
-    ancestor[col] = col;
-    for (Int el = ptr[col]; el < ptr[col + 1]; ++el) {
-      Int row = rows[el];
-      while (ancestor[row] != col) {
-        if (parent_[row] < 0) parent_[row] = col;
-        ++colcount[row];
-        ancestor[row] = col;
-        row = parent_[row];
-      }
-    }
-  }
+  parent_.resize(n_);
+  colcount.resize(n_);
+  std::vector<Int> work(n_);
+  HighsExtras::qdldl::etree(n_, ptr.data(), rows.data(), parent_.data(),
+                            colcount.data(), work.data());
 }
 
 Int UpLookingSolver::setup() {
@@ -97,7 +87,6 @@ Int UpLookingSolver::factor(const std::vector<Int>& ptr,
 
   std::vector<HighsBool> mark(n_, false);
   std::vector<Int> stack(n_);
-  Int top = 0;
   std::vector<Int> revpattern(n_);
   std::vector<double> x(n_, 0.0);
   std::vector<Int64> next = ptrL_;
@@ -111,63 +100,10 @@ Int UpLookingSolver::factor(const std::vector<Int>& ptr,
       if (control_.timeLimitReached()) return kErrorFactorise;
     }
 
-    // ===================================================================
-    //  Sparsity pattern of row of L
-    // ===================================================================
-    // Compute the sparsity pattern of current row of L by traversing the row
-    // subtree, following the algorithm of ereach in T. Davis, "Direct Methods
-    // for Sparse Linear Systems", SIAM, 2006
-
-    Int rowcount = 0;
-
-    for (Int el = ptr[row]; el < ptr[row + 1]; ++el) {
-      Int i = rows[el];
-      top = 0;
-
-      assert(i <= row);
-
-      while (i >= 0 && i < row && !mark[i]) {
-        mark[i] = true;
-        stack[top++] = i;
-        i = parent_[i];
-      }
-
-      while (top > 0) {
-        --top;
-        revpattern[rowcount] = stack[top];
-        ++rowcount;
-      }
-    }
-
-    // ===================================================================
-    //  Values of row of L
-    // ===================================================================
-    // Compute l, by computing L^-1 * b in x, and then multiplying by Dinv
-
-    x[row] = 0.0;
-    for (Int el = ptr[row]; el < ptr[row + 1]; ++el) x[rows[el]] = val[el];
-    double d = x[row];
-    x[row] = 0.0;
-
-    for (Int i = 0; i < rowcount; ++i) {
-      const Int col = revpattern[rowcount - 1 - i];
-
-      double value = x[col];
-      x[col] = 0.0;
-      assert(rowsL_[ptrL_[col]] == col);
-      for (Int el = ptrL_[col] + 1; el < next[col]; ++el)
-        x[rowsL_[el]] -= valL_[el] * value;
-      work += next[col] - ptrL_[col];
-
-      const double Dinv = valL_[ptrL_[col]];
-      rowsL_[next[col]] = row;
-      valL_[next[col]] = value * Dinv;
-
-      d -= value * valL_[next[col]];
-      next[col]++;
-
-      mark[col] = false;
-    }
+    double d = HighsExtras::qdldl::factorRow(
+        row, ptr.data(), rows.data(), val.data(), parent_.data(),
+        ptrL_.data(), rowsL_.data(), valL_.data(), next.data(), mark.data(),
+        stack.data(), revpattern.data(), x.data(), &work);
 
     // diagonal entry
     double old_pivot = d;

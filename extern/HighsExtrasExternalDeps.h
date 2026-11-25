@@ -17,6 +17,7 @@
 #include "HighsMetis.h"
 #include "amd/amd.h"
 #include "blas/mycblas.h"
+#include "qdldl/qdldl.h"
 #include "rcm/rcm.h"
 
 //
@@ -51,7 +52,7 @@ struct wrapper_storage<extras_family> {
 template <int Index>
 struct extras_feature : feature_base<extras_family, Index> {
   static const char* name() {
-    return std::get<Index>(std::make_tuple("amd", "blas", "metis", "rcm"));
+    return std::get<Index>(std::make_tuple("amd", "blas", "metis", "rcm", "qdldl"));
   }
 };
 
@@ -74,6 +75,9 @@ using metis_methods = std::tuple<decltype(&Highs_METIS_SetDefaultOptions),
 
 using rcm_methods = std::tuple<decltype(&Highs_genrcm)>;
 
+using qdldl_methods = std::tuple<decltype(&Highs_qdldl_etree),
+                                 decltype(&Highs_qdldl_factor_row)>;
+
 //
 // 2. API import/export structure
 //
@@ -82,7 +86,8 @@ using rcm_methods = std::tuple<decltype(&Highs_genrcm)>;
 struct HighsExtrasApi : feature_api<amd_methods>,
                         feature_api<metis_methods>,
                         feature_api<blas_methods>,
-                        feature_api<rcm_methods> {
+                        feature_api<rcm_methods>,
+                        feature_api<qdldl_methods> {
   template <class Methods>
   feature_api<Methods>& as() {
     return static_cast<feature_api<Methods>&>(*this);
@@ -216,11 +221,31 @@ struct rcm : extras_feature<3> {
   }
 };
 
+struct qdldl : extras_feature<4> {
+  using impl = feature_wrapper<extras_family, qdldl_methods>;
+
+  static void etree(HighsInt n, const HighsInt* ptr, const HighsInt* rows,
+                    HighsInt* parent, int64_t* colcount, HighsInt* work) {
+    impl::template fn<0>()(n, ptr, rows, parent, colcount, work);
+  }
+
+  static double factorRow(HighsInt row, const HighsInt* ptr,
+                          const HighsInt* rows, const double* val,
+                          const HighsInt* parent, const int64_t* ptrL,
+                          HighsInt* rowsL, double* valL, int64_t* next,
+                          uint8_t* mark, HighsInt* stack, HighsInt* revpattern,
+                          double* x, int64_t* work) {
+    return impl::template fn<1>()(row, ptr, rows, val, parent, ptrL, rowsL,
+                                  valL, next, mark, stack, revpattern, x,
+                                  work);
+  }
+};
+
 //
 // define feature set
 //
 
-using hipo = require<amd, blas, metis, rcm>;
+using hipo = require<amd, blas, metis, rcm, qdldl>;
 using extrasAll = require<hipo>;
 
 }  // namespace HighsExtras
