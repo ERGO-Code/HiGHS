@@ -22,8 +22,8 @@ namespace hipo {
 const Int64 int32_limit = std::numeric_limits<int32_t>::max();
 const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
-// Distinct id for every symbolic factorisation computed in the process, starting
-// from 1. Analyses may run in parallel, hence the atomic counter.
+// Distinct id for every symbolic factorisation computed in the process,
+// starting from 1. Analyses may run in parallel, hence the atomic counter.
 static Int64 newSymbolicId() {
   static std::atomic<Int64> next_id{0};
   return next_id.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -1476,6 +1476,12 @@ Int Analyse::run(Symbolic& S) {
   S.consecutive_sums_ = std::move(consecutive_sums_);
   S.clique_block_start_ = std::move(clique_block_start_);
   S.schedule_solve_ = std::move(schedule_solve_);
+
+  // linked lists of children in the supernodal elimination tree
+  childrenLinkedList(S.sn_parent_, S.first_child_, S.next_child_);
+  S.first_child_reverse_ = S.first_child_;
+  S.next_child_reverse_ = S.next_child_;
+  reverseLinkedList(S.first_child_reverse_, S.next_child_reverse_);
 
   S.id_ = newSymbolicId();
   S.empty_ = false;

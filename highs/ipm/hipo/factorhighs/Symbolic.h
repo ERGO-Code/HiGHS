@@ -114,6 +114,13 @@ class Symbolic {
 
   TreeSchedule schedule_solve_;
 
+  // Linked lists of children in the supernodal elimination tree, in forward and
+  // reverse order, used by every factorisation.
+  std::vector<Int> first_child_{};
+  std::vector<Int> next_child_{};
+  std::vector<Int> first_child_reverse_{};
+  std::vector<Int> next_child_reverse_{};
+
   // Identifies the analyse that filled this object: distinct for every analyse
   // in the process, 0 if there was none. Objects built from the symbolic
   // factorisation can be reused while it does not change.
@@ -150,6 +157,12 @@ class Symbolic {
   const std::vector<Int>& iperm() const;
   const std::vector<Int>& snParent() const;
   const std::vector<Int>& snStart() const;
+  // first and next child of supernode sn, -1 if none, in forward or reverse
+  // order
+  Int firstChild(Int sn) const { return first_child_[sn]; }
+  Int nextChild(Int sn) const { return next_child_[sn]; }
+  Int firstChildReverse(Int sn) const { return first_child_reverse_[sn]; }
+  Int nextChildReverse(Int sn) const { return next_child_reverse_[sn]; }
   const std::vector<Int>& pivotSign() const;
   const TreeSchedule& schedule() const;
 
