@@ -85,10 +85,10 @@ hipdlp::SolveOptions toSolveOptions(const HighsOptions& options,
       tolerance(options.optimality_tolerance, scales.objective_scale);
   // The single tolerance of the strict criterion, the certificates and the
   // CPU solver, as before (a restart: at the tightest scale)
-  solve_options.tolerance = tolerance(
-      options.pdlp_optimality_tolerance,
-      std::min({scales.primal_scale, scales.dual_scale, scales.residual_scale,
-                scales.objective_scale}));
+  solve_options.tolerance =
+      tolerance(options.pdlp_optimality_tolerance,
+                std::min({scales.primal_scale, scales.dual_scale,
+                          scales.residual_scale, scales.objective_scale}));
   // What decides "optimal" (see hipdlp::StopCriterion in hipdlp/solver.h):
   // kPdlpL2, the PDLP / cuPDLPx relative-L2 measures (the library default);
   // kLpKktCheck, the per-component measures of HiGHS lpKktCheck; kStrict, the
@@ -137,12 +137,36 @@ hipdlp::SolveResult solveHost(const HighsOptions& options,
 
 }  // namespace
 
+HiPdlpKktViolations hiPdlpKktViolations(const HighsOptions& options,
+                                        const HighsInfo& info) {
+  // The largest KKT error relative to its tolerance, from the HighsInfo of
+  // the last lpKktCheck of a solution without a basis: lpKktCheck changes
+  // "Optimal" to "Unknown" when this exceeds 100
+  const bool uniform = options.kkt_tolerance != kDefaultKktTolerance;
+  auto relative = [&](const double error, const double tolerance) {
+    return error / (uniform ? options.kkt_tolerance : tolerance);
+  };
+  HiPdlpKktViolations violations;
+  // HiPDLP has one tolerance for primal infeasibilities and residuals
+  violations.primal = std::max(relative(info.max_relative_primal_infeasibility,
+                                        options.primal_feasibility_tolerance),
+                               relative(info.max_relative_primal_residual_error,
+                                        options.primal_residual_tolerance));
+  violations.dual = relative(info.max_relative_dual_infeasibility,
+                             options.dual_feasibility_tolerance);
+  violations.dual_residual = relative(info.max_relative_dual_residual_error,
+                                      options.dual_residual_tolerance);
+  violations.objective =
+      relative(info.primal_dual_objective_error, options.optimality_tolerance);
+  return violations;
+}
+
 HighsStatus solveLpHiPdlp(const HighsOptions& options, HighsTimer& timer,
                           const HighsLp& lp, HighsBasis& highs_basis,
                           HighsSolution& highs_solution,
                           HighsModelStatus& model_status, HighsInfo& highs_info,
-                          HighsCallback& callback,
-                          const HiPdlpRestart* restart, double* final_omega) {
+                          HighsCallback& callback, const HiPdlpRestart* restart,
+                          double* final_omega) {
   resetModelStatusAndHighsInfo(model_status, highs_info);
   highs_basis.valid = false;
   if (final_omega) *final_omega = 0;

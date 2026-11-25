@@ -29,6 +29,7 @@
 #include "mip/HighsMipSolver.h"
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
+#include "pdlp/HiPdlpWrapper.h"
 #include "presolve/ICrashX.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HSimplexDebug.h"
@@ -1665,7 +1666,7 @@ HighsStatus Highs::calledOptimizeModel() {
 
   // lambda for Lp solving
   auto timedSolveLp = [&](HighsLp& lp, const std::string& lpSolveDescription,
-                          double& time) {
+                          double& time, double* hipdlp_omega = nullptr) {
     time = -timer_.read(timer_.solve_clock);
     if (possibly_use_log_dev_level_2) {
       options_.log_dev_level = use_log_dev_level;
@@ -1673,7 +1674,7 @@ HighsStatus Highs::calledOptimizeModel() {
     }
     timer_.start(timer_.solve_clock);
     const bool as_mip = false;
-    call_status = callSolveLp(lp, lpSolveDescription);
+    call_status = callSolveLp(lp, lpSolveDescription, hipdlp_omega);
     timer_.stop(timer_.solve_clock);
     if (possibly_use_log_dev_level_2) {
       options_.log_dev_level = log_dev_level;
@@ -1681,6 +1682,9 @@ HighsStatus Highs::calledOptimizeModel() {
     }
     time += timer_.read(timer_.solve_clock);
   };
+
+  // What a HiPDLP retry after postsolve starts from; not valid: no retry
+  HiPdlpWarmStart hipdlp_warm_start;
 
   const bool unconstrained_lp = incumbent_lp.numNz() == 0;
   assert(incumbent_lp.num_row_ || unconstrained_lp);
@@ -1829,7 +1833,7 @@ HighsStatus Highs::calledOptimizeModel() {
         const double save_objective_bound = options_.objective_bound;
         options_.objective_bound = kHighsInf;
         timedSolveLp(reduced_lp, "Solving the presolved LP",
-                     this_solve_presolved_lp_time);
+                     this_solve_presolved_lp_time, &hipdlp_warm_start.omega);
         this->run_data_.solve_time = this_solve_presolved_lp_time;
         if (ekk_instance_.status_.initialised_for_solve) {
           // Record the pivot threshold resulting from solving the presolved LP
@@ -2020,6 +2024,12 @@ HighsStatus Highs::calledOptimizeModel() {
 
       if (model_presolve_status_ == HighsPresolveStatus::kReduced)
         this->callLpKktCheck(presolve_.getReducedProblem(), "Before postsolve");
+      if (model_presolve_status_ == HighsPresolveStatus::kReduced &&
+          options_.solver == kHiPdlpString && !basis_.valid) {
+        hipdlp_warm_start.valid = true;
+        hipdlp_warm_start.solution = solution_;
+        hipdlp_warm_start.violations = hiPdlpKktViolations(options_, info_);
+      }
 
       this_postsolve_time = -timer_.read(timer_.postsolve_clock);
       timer_.start(timer_.postsolve_clock);
@@ -2190,6 +2200,11 @@ HighsStatus Highs::calledOptimizeModel() {
   // HiGHS info is valid
   if (!no_incumbent_lp_solution_or_basis) {
     this->callLpKktCheck(this->model_.lp_);
+    // Postsolve can magnify the KKT errors of the PDLP solution of the
+    // presolved LP far beyond what it had there: solve that LP again from
+    // where PDLP stopped with tighter tolerances
+    if (hipdlp_warm_start.valid && model_status_ == HighsModelStatus::kUnknown)
+      retryHiPdlpAfterPostsolve(hipdlp_warm_start);
     info_.valid = true;
   }
 
@@ -4371,7 +4386,8 @@ HighsStatus Highs::completeSolutionFromDiscreteAssignment() {
 }
 
 // The method below runs calls solveLp for the given LP
-HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
+HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message,
+                               double* hipdlp_omega) {
   HighsStatus return_status = HighsStatus::kOk;
 
   // Check that the model is column-wise
@@ -4380,6 +4396,7 @@ HighsStatus Highs::callSolveLp(HighsLp& lp, const std::string& message) {
   HighsLpSolverObject solver_object(lp, basis_, solution_, info_, ekk_instance_,
                                     callback_, options_, timer_);
   solver_object.setProfiling(this->profiling_);
+  solver_object.hipdlp_omega_ = hipdlp_omega;
 
   // Solve the LP
   return_status = solveLp(solver_object, message);

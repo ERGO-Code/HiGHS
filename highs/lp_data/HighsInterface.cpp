@@ -8,6 +8,7 @@
 /**@file lp_data/HighsInterface.cpp
  * @brief
  */
+#include <algorithm>
 #include <sstream>
 #include <unordered_set>
 
@@ -17,6 +18,7 @@
 #include "mip/MipTimer.h"
 #include "model/HighsHessianUtils.h"
 #include "parallel/HighsParallel.h"
+#include "pdlp/HiPdlpWrapper.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
@@ -4286,6 +4288,182 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
     pdlp_cleanup_iteration_limit = 1000;
   }
   return true;
+}
+
+void Highs::retryHiPdlpAfterPostsolve(HiPdlpWarmStart& warm_start) {
+  // HiPDLP stopped on the presolved LP with KKT violations of
+  // warm_start.violations (relative to the tolerances, as lpKktCheck measures
+  // them: see kktRelativeViolations), but postsolve magnified them to more
+  // than the 100 that lpKktCheck accepts, so model_status_ is kUnknown. Solve
+  // the presolved LP again from where PDLP stopped, stopping on the
+  // lpKktCheck measures at tolerances tightened by the observed
+  // magnification, and postsolve again.
+  //
+  // Each measure that postsolve took above kTargetViolation is tightened by
+  // its own magnification, and the others are left as they are, since
+  // postsolve magnifies the measures very differently (e.g. dlr2: the dual
+  // residual 4e4 times, primal infeasibilities 2e-3 times). Tightening every
+  // tolerance by the magnification of the largest violation, to a target of
+  // 10, took 12 times the retry iterations on the five benchmark LPs that
+  // needed a retry.
+  //
+  // After postsolve aim at kTargetViolation, twice inside the 100 that
+  // lpKktCheck accepts: the magnification of a tightened measure repeats to
+  // within a few percent (dlr1, dlr2), and a measure left as it is but taken
+  // above 100 is tightened by the next retry
+  const double kTargetViolation = 50;
+  // The second retry is for a measure that the first left as it is and
+  // postsolve then took above 100
+  const HighsInt kRetryLimit = 2;
+  // Each retry asks the presolved LP for between 1/kMaxTightening and
+  // 1/kMinTightening of the violation it reached
+  const double kMinTightening = 1e1;
+  const double kMaxTightening = 1e3;
+  // A larger magnification is not from PDLP's accuracy but from postsolve
+  // itself (e.g. irish-e: 1e25 whatever PDLP's point), so do not retry
+  const double kMaxMagnification = 1e6;
+  // PDLP does not reliably get below this, whatever the tolerance
+  const double kMinTolerance = 1e-10;
+  // Give up unless each retry at least halves the violation after postsolve
+  const double kRequiredProgress = 0.5;
+
+  assert(model_status_ == HighsModelStatus::kUnknown);
+  assert(warm_start.valid);
+  const HighsLogOptions& log_options = options_.log_options;
+  HighsLp& reduced_lp = presolve_.getReducedProblem();
+  // The smallest tolerance PDLP stops on (see toSolveOptions)
+  const double base_tolerance =
+      options_.kkt_tolerance != kDefaultKktTolerance
+          ? options_.kkt_tolerance
+          : std::min({options_.primal_feasibility_tolerance,
+                      options_.dual_feasibility_tolerance,
+                      options_.dual_residual_tolerance,
+                      options_.optimality_tolerance});
+  const HighsInt pdlp_iteration_limit = options_.pdlp_iteration_limit;
+  HighsInt pdlp_iteration_count = info_.pdlp_iteration_count;
+  // The violations of the postsolved solution, on the original LP
+  HiPdlpKktViolations violations = hiPdlpKktViolations(options_, info_);
+  // The violation to reach on the presolved LP, relative to the tolerances,
+  // when the violation reached was `reduced` and postsolve magnified it by
+  // `magnification`
+  auto tighten = [&](const double reduced, const double magnification) {
+    const double scale = std::max(
+        reduced / kMaxTightening,
+        std::min(reduced / kMinTightening, kTargetViolation / magnification));
+    return std::max(scale, kMinTolerance / base_tolerance);
+  };
+  for (HighsInt retry = 1; retry <= kRetryLimit; retry++) {
+    const HiPdlpKktViolations& reduced = warm_start.violations;
+    const double violation = violations.max();
+    const double reduced_violation = reduced.max();
+    const double magnification = violation / std::max(reduced_violation, 1e-3);
+    if (!(magnification <= kMaxMagnification)) {
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "HiPDLP: no retry, since postsolve magnifies the KKT "
+                   "violation by %g\n",
+                   magnification);
+      break;
+    }
+    HiPdlpRestart restart;
+    restart.start = &warm_start.solution;
+    restart.omega = warm_start.omega;
+    bool tightened = false;
+    // Tighten the tolerance of a measure that postsolve took above
+    // kTargetViolation by its own magnification
+    auto tightenMeasure = [&](const double after, const double before,
+                              double& scale) {
+      if (after <= kTargetViolation) return;
+      const double target = tighten(before, after / std::max(before, 1e-6));
+      if (target < before) {
+        scale = std::min(1.0, target);
+        tightened = true;
+      }
+    };
+    // The objective error of the original LP comes from the postsolved
+    // duals: when the dual errors are too large, it falls with them
+    const bool dual_too_large = violations.dual > kTargetViolation ||
+                                violations.dual_residual > kTargetViolation;
+    tightenMeasure(violations.primal, reduced.primal, restart.primal_scale);
+    tightenMeasure(violations.dual, reduced.dual, restart.dual_scale);
+    tightenMeasure(violations.dual_residual, reduced.dual_residual,
+                   restart.residual_scale);
+    if (!dual_too_large)
+      tightenMeasure(violations.objective, reduced.objective,
+                     restart.objective_scale);
+    const HighsInt remaining_iterations =
+        pdlp_iteration_limit >= kHighsIInf
+            ? kHighsIInf
+            : pdlp_iteration_limit - pdlp_iteration_count;
+    if (!tightened || remaining_iterations <= 0) break;
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "HiPDLP retry %d of %d: KKT violation %g before postsolve "
+                 "and %g after (x %g), so solve the presolved LP again with "
+                 "the tolerances x %g (primal), %g (dual), %g (dual "
+                 "residual), %g (objective)\n",
+                 int(retry), int(kRetryLimit), reduced_violation, violation,
+                 magnification, restart.primal_scale, restart.dual_scale,
+                 restart.residual_scale, restart.objective_scale);
+    // Keep the postsolved solution in case the retry does not finish
+    const HighsSolution previous_solution = solution_;
+    const HighsInfo previous_info = info_;
+    auto keepPrevious = [&](const std::string& reason) {
+      solution_ = previous_solution;
+      info_ = previous_info;
+      model_status_ = HighsModelStatus::kUnknown;
+      highsLogUser(log_options, HighsLogType::kInfo,
+                   "HiPDLP retry %d: %s, so keep the previous solution\n",
+                   int(retry), reason.c_str());
+    };
+    options_.pdlp_iteration_limit = remaining_iterations;
+    timer_.start(timer_.solve_clock);
+    // restart holds a copy of the start omega, so warm_start.omega can
+    // receive the final one
+    const HighsStatus call_status = solveLpHiPdlp(
+        options_, timer_, reduced_lp, basis_, solution_, model_status_, info_,
+        callback_, &restart, &warm_start.omega);
+    timer_.stop(timer_.solve_clock);
+    options_.pdlp_iteration_limit = pdlp_iteration_limit;
+    pdlp_iteration_count += info_.pdlp_iteration_count;
+    if (call_status == HighsStatus::kError ||
+        model_status_ != HighsModelStatus::kOptimal) {
+      keepPrevious("PDLP ended with " + modelStatusToString(model_status_));
+      break;
+    }
+    // The new solution of the presolved LP and its violations there
+    warm_start.solution = solution_;
+    callLpKktCheck(reduced_lp, "Before postsolve");
+    const HiPdlpKktViolations next_reduced =
+        hiPdlpKktViolations(options_, info_);
+    // Postsolve as optimizeModel does for a solution without a basis
+    presolve_.data_.recovered_solution_ = solution_;
+    presolve_.data_.recovered_basis_ = basis_;
+    timer_.start(timer_.postsolve_clock);
+    const HighsPostsolveStatus postsolve_status = runPostsolve();
+    timer_.stop(timer_.postsolve_clock);
+    if (postsolve_status != HighsPostsolveStatus::kSolutionRecovered) {
+      keepPrevious("postsolve failed");
+      break;
+    }
+    solution_.clear();
+    solution_ = presolve_.data_.recovered_solution_;
+    solution_.value_valid = true;
+    solution_.dual_valid = true;
+    this->invalidateBasis();
+    // The check of the original LP decides
+    model_status_ = HighsModelStatus::kOptimal;
+    callLpKktCheck(model_.lp_);
+    const HiPdlpKktViolations next = hiPdlpKktViolations(options_, info_);
+    highsLogUser(log_options, HighsLogType::kInfo,
+                 "HiPDLP retry %d: KKT violation %g before postsolve and %g "
+                 "after: %s\n",
+                 int(retry), next_reduced.max(), next.max(),
+                 modelStatusToString(model_status_).c_str());
+    if (model_status_ == HighsModelStatus::kOptimal) break;
+    if (!(next.max() <= kRequiredProgress * violation)) break;
+    violations = next;
+    warm_start.violations = next_reduced;
+  }
+  info_.pdlp_iteration_count = pdlp_iteration_count;
 }
 
 void HighsLinearObjective::clear() {

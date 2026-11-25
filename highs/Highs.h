@@ -37,6 +37,8 @@ HighsInt highsVersionMinor();
 HighsInt highsVersionPatch();
 const char* highsGithash();
 
+struct HiPdlpWarmStart;
+
 /**
  * @brief Class to set parameters and run HiGHS
  */
@@ -1694,7 +1696,8 @@ class Highs {
 
   HighsStatus completeSolutionFromDiscreteAssignment();
 
-  HighsStatus callSolveLp(HighsLp& lp, const std::string& message);
+  HighsStatus callSolveLp(HighsLp& lp, const std::string& message,
+                          double* hipdlp_omega = nullptr);
   HighsStatus callSolveMip(HighsLp& lp, const std::string& message);
   HighsStatus callSolveQp(HighsModel& model, const std::string& message);
 
@@ -1924,6 +1927,7 @@ class Highs {
 
   bool tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
                       const HighsInfo& presolved_lp_info) const;
+  void retryHiPdlpAfterPostsolve(HiPdlpWarmStart& warm_start);
 };
 
 // Start of deprecated methods not in the Highs class
