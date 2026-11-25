@@ -66,10 +66,8 @@ class FactorHighsSolver : public LinearSolver {
   void getReg(std::vector<double>& Rp, std::vector<double>& Rd) override;
   void getFactorInfo(FactorInfo& info) override;
   LinearSolverType type() const override { return kFactorHighsType; }
-  bool dropBadPivots() override {
-    FH_.setDropBadPivots(true);
-    return true;
-  }
+  bool canDropPivots() const override { return true; }
+  void dropBadPivots() override { FH_.setDropBadPivots(true); }
 };
 
 }  // namespace hipo

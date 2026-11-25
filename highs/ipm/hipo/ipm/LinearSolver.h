@@ -108,9 +108,12 @@ class LinearSolver {
   virtual double spops() const { return 0; }
   virtual double nz() const { return 0; }
 
+  // Whether the factorisation can drop bad pivots, see dropBadPivots.
+  virtual bool canDropPivots() const { return false; }
+
   // Drop bad pivots in the next factorisations, instead of perturbing them.
-  // Return false if the factorisation does not support it.
-  virtual bool dropBadPivots() { return false; }
+  // Does nothing if canDropPivots is false.
+  virtual void dropBadPivots() {}
 };
 
 inline std::string LinearSolverTypeToString(LinearSolverType t) {

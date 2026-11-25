@@ -1360,8 +1360,8 @@ void Solver::runDiagnostics() {
   SolverCapabilities capabilities;
   capabilities.can_switch = LS_ && LS_->type() == kUpLookingType &&
                             options_.factor == kHighsChooseString;
-  capabilities.can_drop_pivots = LS_ && LS_->type() == kFactorHighsType &&
-                                 options_.nla == kHipoNormalEqString;
+  capabilities.can_drop_pivots =
+      LS_ && LS_->canDropPivots() && options_.nla == kHipoNormalEqString;
   const Recovery::ProposedAction proposed =
       recovery_.proposeAction(record.report, capabilities);
   record.action = proposed.action;
@@ -1378,11 +1378,7 @@ shouldTerminate Solver::applyAction(IterationRecord& record) {
   std::stringstream log_stream;
   switch (record.action) {
     case RecoveryAction::kDropBadPivots:
-      // proposed only if the linear solver supports it
-      if (!LS_->dropBadPivots()) {
-        record.messages += "Could not apply drop\n";
-        return false;
-      }
+      LS_->dropBadPivots();
       log_stream << "Applied " << name << " bad pivots\n";
       break;
 
