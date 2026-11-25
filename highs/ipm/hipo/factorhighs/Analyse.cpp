@@ -1,6 +1,7 @@
 #include "Analyse.h"
 
 #include <algorithm>
+#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -20,6 +21,13 @@ namespace hipo {
 
 const Int64 int32_limit = std::numeric_limits<int32_t>::max();
 const Int64 int64_limit = std::numeric_limits<int64_t>::max();
+
+// Distinct id for every symbolic factorisation computed in the process, starting
+// from 1. Analyses may run in parallel, hence the atomic counter.
+static Int64 newSymbolicId() {
+  static std::atomic<Int64> next_id{0};
+  return next_id.fetch_add(1, std::memory_order_relaxed) + 1;
+}
 
 Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
                  const Int* signs, const FHoptions& FH_opt,
@@ -1469,6 +1477,7 @@ Int Analyse::run(Symbolic& S) {
   S.clique_block_start_ = std::move(clique_block_start_);
   S.schedule_solve_ = std::move(schedule_solve_);
 
+  S.id_ = newSymbolicId();
   S.empty_ = false;
 
   HIPO_CLOCK_STOP(1, data_, kTimeAnalyse);

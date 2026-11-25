@@ -114,11 +114,17 @@ class Symbolic {
 
   TreeSchedule schedule_solve_;
 
+  // Identifies the analyse that filled this object: distinct for every analyse
+  // in the process, 0 if there was none. Objects built from the symbolic
+  // factorisation can be reused while it does not change.
+  Int64 id_{};
+
   friend class Analyse;
 
  public:
   // provide const access to symbolic factorisation
   bool empty() const { return empty_; }
+  Int64 id() const { return id_; }
   Int64 nz() const;
   double flops() const;
   double spops() const;
