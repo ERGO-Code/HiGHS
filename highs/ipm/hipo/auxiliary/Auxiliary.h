@@ -32,6 +32,7 @@ void dfsPostorder(Int node, Int& start, std::vector<Int>& head,
                   const std::vector<Int>& next, std::vector<Int>& order);
 Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
                    std::vector<Int64>& start, bool triang = false);
+Int64 diagStart(Int n, Int nb, Int j);
 Int maxDepthTree(const std::vector<Int>& parent);
 Int fullFromLower(Int n, Int nz, const Int* ptrL, const Int* rowsL,
                   std::vector<Int>& ptrF, std::vector<Int>& rowsF);

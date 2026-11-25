@@ -20,13 +20,14 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
                      const FHoptions& FH_opt, const Logger& logger,
                      DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
-                     CliqueStack* stack)
+                     CliqueStack* stack, ScratchArena& scratch)
     : S_{S},
       sn_columns_{sn_columns},
       logger_{logger},
       data_{data},
       FH_opt_{FH_opt},
-      stack_{stack} {
+      stack_{stack},
+      scratch_{scratch} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -233,7 +234,8 @@ void Factorise::processSupernode(Int sn) {
   // threshold for regularisation
   const double reg_thresh = M_norm1_ * kDynamicDiagCoeff;
 
-  if (Int flag = FH->denseFactorise(reg_thresh, &static_reg_[S_.snStart(sn)])) {
+  if (Int flag = FH->denseFactorise(reg_thresh, &static_reg_[S_.snStart(sn)],
+                                    scratch_)) {
     flag_stop_.store(true, std::memory_order_relaxed);
 
     if (flag == kRetInvalidInput)

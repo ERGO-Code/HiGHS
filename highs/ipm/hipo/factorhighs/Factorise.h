@@ -13,6 +13,8 @@
 
 namespace hipo {
 
+class ScratchArena;
+
 class Factorise {
  public:
   // matrix to factorise
@@ -71,6 +73,9 @@ class Factorise {
 
   CliqueStack* stack_;
 
+  // scratch memory of the dense kernels, managed outside of Factorise
+  ScratchArena& scratch_;
+
   void permute(const std::vector<Int>& iperm);
   void processTreeSerial();
   void processTreeParallel();
@@ -80,7 +85,8 @@ class Factorise {
   Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM, const Int* ptrM,
             const double* valM, const std::vector<double>& static_reg,
             const FHoptions& FH_opt, const Logger& logger, DataCollector& data,
-            std::vector<std::vector<double>>& sn_columns, CliqueStack* stack);
+            std::vector<std::vector<double>>& sn_columns, CliqueStack* stack,
+            ScratchArena& scratch);
 
   bool run(Numeric& num);
 };

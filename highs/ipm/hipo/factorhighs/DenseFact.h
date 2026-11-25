@@ -8,6 +8,8 @@
 
 namespace hipo {
 
+class ScratchArena;
+
 /*
   Names:
   denseFact:
@@ -40,11 +42,12 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
 Int denseFactFH(char format, Int n, Int k, double* A, double* B,
                 const Int* pivot_sign, const double* static_reg, double thresh,
                 double* totalreg, double* unreg_pivots, Int* swaps,
-                double* pivot_2x2, DataCollector& data,
+                double* pivot_2x2, ScratchArena& scratch, DataCollector& data,
                 const FHoptions& options);
 
 // function to convert A from lower packed, to lower-blocked-hybrid format
-Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb, DataCollector& data);
+Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb, ScratchArena& scratch,
+                   DataCollector& data);
 
 }  // namespace hipo
 

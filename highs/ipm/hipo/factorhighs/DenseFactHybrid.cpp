@@ -1,8 +1,11 @@
+#include <algorithm>
+
 #include "CallAndTimeBlas.h"
 #include "DataCollector.h"
 #include "DenseFact.h"
 #include "DgemmParallel.h"
 #include "ReturnValues.h"
+#include "ScratchArena.h"
 #include "Swaps.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 
@@ -13,7 +16,7 @@ namespace hipo {
 Int denseFactFH(char format, Int n, Int k, double* A, double* B,
                 const Int* pivot_sign, const double* static_reg, double thresh,
                 double* totalreg, double* unreg_pivots, Int* swaps,
-                double* pivot_2x2, DataCollector& data,
+                double* pivot_2x2, ScratchArena& scratch, DataCollector& data,
                 const FHoptions& options) {
   // ===========================================================================
   // Partial blocked factorisation
@@ -36,16 +39,18 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
   // number of blocks of columns
   const Int n_blocks = (k - 1) / nb + 1;
 
-  // start of diagonal blocks
-  std::vector<Int64> diag_start(n_blocks);
-  getDiagStart(n, k, nb, n_blocks, diag_start);
-
   // size of blocks
   const Int diag_size = nb * nb;
   const Int full_size = nb * nb;
 
-  // buffer for copy of block column
-  std::vector<double> T(n * nb);
+  // Scratch buffers, uninitialised. The buffers are declared before any
+  // parallel gemm, so they outlive its tasks.
+  // copy of block column, fully written by dcopy before being read
+  ScratchBuffer<double> T(scratch, (Int64)n * std::min(nb, k));
+  // copies of pivot signs and static regularisation of a block, which the
+  // kernel swaps together with the pivots
+  ScratchBuffer<Int> pivot_sign_current(scratch, std::min(nb, k));
+  ScratchBuffer<double> static_reg_current(scratch, std::min(nb, k));
 
   // number of rows/columns in the Schur complement
   const Int ns = n - k;
@@ -76,13 +81,14 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
     const Int this_full_size = nb * jb;
 
     // diagonal block j
-    double* D = &A[diag_start[j]];
+    const Int64 D_pos = diagStart(n, nb, j);
+    double* D = &A[D_pos];
 
     // number of rows left below block j
     const Int M = n - nb * j - jb;
 
     // block of columns below diagonal block j
-    const Int64 R_pos = diag_start[j] + this_diag_size;
+    const Int64 R_pos = D_pos + this_diag_size;
     double* R = &A[R_pos];
 
     // ===========================================================================
@@ -96,11 +102,8 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
 
     double* regul_current = &totalreg[j * nb];
     double* unreg_pivots_current = &unreg_pivots[j * nb];
-    std::vector<Int> pivot_sign_current(&pivot_sign[j * nb],
-                                        &pivot_sign[j * nb] + jb);
-    // local copy, swapped by the kernel together with the pivots
-    std::vector<double> static_reg_current(&static_reg[j * nb],
-                                           &static_reg[j * nb] + jb);
+    std::copy_n(&pivot_sign[j * nb], jb, pivot_sign_current.data());
+    std::copy_n(&static_reg[j * nb], jb, static_reg_current.data());
     Int* swaps_current = &swaps[j * nb];
     double* pivot_2x2_current = &pivot_2x2[j * nb];
     Int info = denseFactK('U', jb, D, jb, pivot_sign_current.data(),
@@ -148,8 +151,8 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
           double i_d2 = D[col + 1 + jb * (col + 1)];
           double i_off = pivot_2x2_current[col];
 
-          // copy of original col1
-          std::vector<double> c1_temp(M);
+          // copy of original col1, fully written by dcopy before being read
+          ScratchBuffer<double> c1_temp(scratch, M);
           callAndTime_dcopy(M, c1, jb, c1_temp.data(), 1, data);
 
           // solve col and col+1
@@ -181,7 +184,7 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
         const Int row_jj = n - nb * jj;
 
         const double* P = &T[offset];
-        double* Q = &A[diag_start[jj]];
+        double* Q = &A[diagStart(n, nb, jj)];
         const double* Rjj = &R[offset];
 
         // perform gemm (potentially) in parallel
@@ -246,7 +249,8 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
   return kRetOk;
 }
 
-Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb, DataCollector& data) {
+Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb, ScratchArena& scratch,
+                   DataCollector& data) {
   // ===========================================================================
   // Packed to Hybrid conversion
   // Matrix A on  input is in format FP
@@ -256,7 +260,8 @@ Int denseFactFP2FH(double* A, Int nrow, Int ncol, Int nb, DataCollector& data) {
 
   HIPO_CLOCK_CREATE;
 
-  std::vector<double> buf(nrow * nb);
+  // copy of a block of columns, fully written by dcopy before being read
+  ScratchBuffer<double> buf(scratch, (Int64)nrow * std::min(nb, ncol));
 
   Int64 startAtoBuf = 0;
   Int64 startBuftoA = 0;

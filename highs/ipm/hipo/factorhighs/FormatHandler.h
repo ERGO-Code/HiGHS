@@ -10,6 +10,8 @@
 
 namespace hipo {
 
+class ScratchArena;
+
 // Interface class to handle different formats of dense matrices during the
 // factorise phase.
 // Any implementation of a specific format needs to define:
@@ -77,7 +79,8 @@ class FormatHandler {
   virtual void assembleFrontal(Int i, Int j, double val) = 0;
   virtual void assembleChild(Int child_sn, const double* child) = 0;
   // static_reg: static regularisation of the pivots of the supernode
-  virtual Int denseFactorise(double reg_thresh, const double* static_reg) = 0;
+  virtual Int denseFactorise(double reg_thresh, const double* static_reg,
+                             ScratchArena& scratch) = 0;
 };
 
 const Int extra_space_frontal = 10;
