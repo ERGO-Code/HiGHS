@@ -12,8 +12,11 @@ namespace hipo {
 
 HybridHybridFormatHandler::HybridHybridFormatHandler(
     const Symbolic& S, Int sn, DataCollector& data,
-    std::vector<double>& frontal, double* clique_ptr, const FHoptions& FH_opt)
-    : FormatHandler(S, sn, frontal, clique_ptr, FH_opt),
+    std::vector<double>& frontal, double* clique_ptr, const FHoptions& FH_opt,
+    double* total_reg, double* total_unreg_pivots, std::vector<Int>& swaps,
+    std::vector<double>& pivot_2x2)
+    : FormatHandler(S, sn, frontal, clique_ptr, FH_opt, total_reg,
+                    total_unreg_pivots, swaps, pivot_2x2),
       data_{data},
       nb_{FH_opt_.nb} {
   // initialise frontal and clique
@@ -25,11 +28,12 @@ HybridHybridFormatHandler::HybridHybridFormatHandler(
 }
 
 void HybridHybridFormatHandler::initFrontal() {
+  // the last block of columns has last_jb columns
   const Int n_blocks = (sn_size_ - 1) / nb_ + 1;
-  diag_start_.resize(n_blocks);
-  Int64 frontal_size =
-      getDiagStart(ldf_, sn_size_, nb_, n_blocks, diag_start_) +
-      extra_space_frontal;
+  const Int last_jb = sn_size_ - (n_blocks - 1) * nb_;
+  const Int64 frontal_size = diagStart(ldf_, nb_, n_blocks - 1) +
+                             (Int64)(ldf_ - (n_blocks - 1) * nb_) * last_jb +
+                             extra_space_frontal;
   frontal_.resize(frontal_size);
   std::memset(frontal_.data(), 0, frontal_size * sizeof(double));
 
@@ -54,7 +58,8 @@ void HybridHybridFormatHandler::assembleFrontal(Int i, Int j, double val) {
   Int ldb = ldf_ - block_id * nb_;
   Int i_in_block = i - block_id * nb_;
   Int j_in_block = j - block_id * nb_;
-  frontal_[diag_start_[block_id] + i_in_block + ldb * j_in_block] = val;
+  frontal_[diagStart(ldf_, nb_, block_id) + i_in_block + ldb * j_in_block] =
+      val;
 }
 
 void HybridHybridFormatHandler::assembleFrontalMultiple(
@@ -71,17 +76,16 @@ void HybridHybridFormatHandler::assembleFrontalMultiple(
   Int ldb = ldf_ - block_frontal_id * nb_;
   Int row_f_local = row_f - block_frontal_id * nb_;
   Int col_f_local = col_f - block_frontal_id * nb_;
+  const Int64 diag_start = diagStart(ldf_, nb_, block_frontal_id);
 
   if (num > kMinConsecutiveSums)
     callAndTime_daxpy(
         num, 1.0,
         &child_data[start_block_child + col_c_local + jb_child * row_c_local],
-        jb_child,
-        &frontal_[diag_start_[block_frontal_id] + row_f_local +
-                  ldb * col_f_local],
-        1, data_);
+        jb_child, &frontal_[diag_start + row_f_local + ldb * col_f_local], 1,
+        data_);
   else {
-    frontal_[diag_start_[block_frontal_id] + row_f_local + ldb * col_f_local] +=
+    frontal_[diag_start + row_f_local + ldb * col_f_local] +=
         child_data[start_block_child + col_c_local + jb_child * row_c_local];
     num = 1;
   }
@@ -102,10 +106,10 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh,
   Int sn_start = S_->snStart(sn_);
   const Int* pivot_sign = &S_->pivotSign().data()[sn_start];
 
-  status = denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_,
-                       pivot_sign, static_reg, reg_thresh, local_reg_.data(),
-                       local_unreg_pivots_.data(), swaps_.data(),
-                       pivot_2x2_.data(), scratch, data_, FH_opt_);
+  status =
+      denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_, pivot_sign,
+                  static_reg, reg_thresh, reg_, unreg_pivots_, swaps_.data(),
+                  pivot_2x2_.data(), scratch, data_, FH_opt_);
 
   return status;
 }

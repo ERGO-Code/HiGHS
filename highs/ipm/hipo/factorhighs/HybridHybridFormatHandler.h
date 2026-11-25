@@ -7,7 +7,6 @@
 namespace hipo {
 
 class HybridHybridFormatHandler : public FormatHandler {
-  std::vector<Int64> diag_start_;
   DataCollector& data_;
   const Int nb_;
 
@@ -25,7 +24,9 @@ class HybridHybridFormatHandler : public FormatHandler {
  public:
   HybridHybridFormatHandler(const Symbolic& S, Int sn, DataCollector& data,
                             std::vector<double>& frontal, double* clique_ptr,
-                            const FHoptions& FH_opt);
+                            const FHoptions& FH_opt, double* total_reg,
+                            double* total_unreg_pivots, std::vector<Int>& swaps,
+                            std::vector<double>& pivot_2x2);
 };
 
 }  // namespace hipo

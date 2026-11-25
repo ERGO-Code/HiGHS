@@ -251,11 +251,6 @@ Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
   return result;
 }
 
-Int64 diagStart(Int n, Int nb, Int j) {
-  // block i < j stores nb columns of n - i * nb rows
-  return (Int64)nb * ((Int64)j * n - (Int64)nb * j * (j - 1) / 2);
-}
-
 Int maxDepthTree(const std::vector<Int>& parent) {
   Int max_depth = 0;
   Int n = parent.size();

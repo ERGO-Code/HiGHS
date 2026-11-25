@@ -47,21 +47,26 @@ class FormatHandler {
 
   const FHoptions& FH_opt_;
 
-  // local copies to be moved at the end
   std::vector<double>& frontal_;
+
+  // local copy of the clique, to be moved at the end
   std::vector<double> clique_{};
   double* clique_ptr_ = nullptr;
-  std::vector<double> local_reg_{};
-  std::vector<double> local_unreg_pivots_{};
-  std::vector<Int> swaps_{};
-  std::vector<double> pivot_2x2_{};
+
+  // Outputs of the supernode, written in place: regularisation and pivots in
+  // the range of the supernode within the whole vectors, swaps and 2x2 pivots
+  // in the vectors of the supernode.
+  double* reg_ = nullptr;
+  double* unreg_pivots_ = nullptr;
+  std::vector<Int>& swaps_;
+  std::vector<double>& pivot_2x2_;
 
  public:
   FormatHandler(const Symbolic& S, Int sn, std::vector<double>& frontal,
-                double* clique_ptr, const FHoptions& FH_opt);
-  void terminate(std::vector<double>& clique, std::vector<double>& total_reg,
-                 std::vector<double>& total_unreg_pivots,
-                 std::vector<Int>& swaps, std::vector<double>& pivot_2x2);
+                double* clique_ptr, const FHoptions& FH_opt, double* total_reg,
+                double* total_unreg_pivots, std::vector<Int>& swaps,
+                std::vector<double>& pivot_2x2);
+  void terminate(std::vector<double>& clique);
 
   // avoid copies
   FormatHandler(const FormatHandler&) = delete;

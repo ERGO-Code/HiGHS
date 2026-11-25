@@ -8,7 +8,10 @@ namespace hipo {
 
 FormatHandler::FormatHandler(const Symbolic& S, Int sn,
                              std::vector<double>& frontal, double* clique_ptr,
-                             const FHoptions& FH_opt)
+                             const FHoptions& FH_opt, double* total_reg,
+                             double* total_unreg_pivots,
+                             std::vector<Int>& swaps,
+                             std::vector<double>& pivot_2x2)
     : S_{&S},
       sn_{sn},
       sn_size_{S_->snStart(sn_ + 1) - S_->snStart(sn_)},
@@ -16,36 +19,26 @@ FormatHandler::FormatHandler(const Symbolic& S, Int sn,
       ldc_{ldf_ - sn_size_},
       FH_opt_{FH_opt},
       frontal_{frontal},
-      clique_ptr_{clique_ptr} {
-  local_reg_.resize(sn_size_);
-  local_unreg_pivots_.resize(sn_size_);
-  swaps_.resize(sn_size_);
-  pivot_2x2_.resize(sn_size_);
+      clique_ptr_{clique_ptr},
+      reg_{total_reg + S_->snStart(sn_)},
+      unreg_pivots_{total_unreg_pivots + S_->snStart(sn_)},
+      swaps_{swaps},
+      pivot_2x2_{pivot_2x2} {
+  // reg_ and unreg_pivots_ are zero on entry; swaps and 2x2 pivots are zeroed,
+  // as freshly allocated vectors would be.
+  swaps_.assign(sn_size_, 0);
+  pivot_2x2_.assign(sn_size_, 0.0);
 }
 
-void FormatHandler::terminate(std::vector<double>& clique,
-                              std::vector<double>& total_reg,
-                              std::vector<double>& total_unreg_pivots,
-                              std::vector<Int>& swaps,
-                              std::vector<double>& pivot_2x2) {
-  // Move local copies of data into their final position.
-  // In this way, the shared objects sn_columns_ and schur_contribution_ are
-  // accessed only here, while a local copy is used for the assembly and dense
-  // factorisation. This should avoid the problem of false sharing.
+void FormatHandler::terminate(std::vector<double>& clique) {
+  // Move the local clique into its final position.
+  // In this way, the shared object schur_contribution_ is accessed only here,
+  // while a local copy is used for the assembly and dense factorisation. This
+  // should avoid the problem of false sharing.
+  // This function should not require a lock, since all threads access different
+  // locations within schur_contribution.
 
   clique = std::move(clique_);
-  swaps = std::move(swaps_);
-  pivot_2x2 = std::move(pivot_2x2_);
-
-  // Move local regularisation and pivots into the total ones.
-  for (Int i = 0; i < sn_size_; ++i) {
-    total_reg[S_->snStart(sn_) + i] = local_reg_[i];
-    total_unreg_pivots[S_->snStart(sn_) + i] = local_unreg_pivots_[i];
-  }
-
-  // This function should not require a lock, since all threads access different
-  // locations within total_reg, total_unreg_pivots, sn_columns and
-  // schur_contribution.
 }
 
 }  // namespace hipo

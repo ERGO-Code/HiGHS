@@ -155,8 +155,10 @@ void Factorise::processSupernode(Int sn) {
 
   // initialise the format handler
   // this also allocates space for the frontal matrix and schur complement
-  std::unique_ptr<FormatHandler> FH(new HybridHybridFormatHandler(
-      S_, sn, data_, sn_columns_[sn], clique_ptr, FH_opt_));
+  HybridHybridFormatHandler FH_obj(
+      S_, sn, data_, sn_columns_[sn], clique_ptr, FH_opt_, total_reg_.data(),
+      unreg_pivots_.data(), swaps_[sn], pivot_2x2_[sn]);
+  FormatHandler* FH = &FH_obj;
 
   HIPO_CLOCK_STOP(2, data_, kTimeFactorisePrepare);
 
@@ -249,8 +251,7 @@ void Factorise::processSupernode(Int sn) {
 
   HIPO_CLOCK_START(2);
   // terminate the format handler
-  FH->terminate(schur_contribution_[sn], total_reg_, unreg_pivots_, swaps_[sn],
-                pivot_2x2_[sn]);
+  FH->terminate(schur_contribution_[sn]);
 
   if (serial) stack_->pushWork(sn);
 
