@@ -16,7 +16,16 @@ Note that, under the terms of the MIT license, by contributing to HiGHS you assi
 
 ## AI generated contributions
 
-Whilst AI may be valuable for generating and communicating suggestions for code and build system developments, AI-generated pull requests (other than the most trivial) require review resources that we don't have and therefore will not be accepted. If the suggestions are good, they will be implemented by HiGHS developers without the use of AI.
+The number of AI generated issues has increased dramatically since the summer of 2026. Relatively few will lead to practical contributions to the codebase, and a high volume of them obstructs the handling of those that do. If you want to submit AI generated issues, please:
+
+- **Limit the number of issues.** Open no more than a few at a time. Large batches of issues, for example from an automated scan of the codebase, will not be accepted.
+- **Prioritise.** Submit those that matter most to your use of HiGHS, and combine closely related points into a single issue.
+- **Email us if you have more than a few issues.** Send a short list, in order of priority, to hello@highs.dev, and include your GitHub username so that we can recognise the source of the issues and invite their submission.
+- **Check before submitting.** Search the open and closed issues for duplicates, confirm that the problem occurs with the latest version of HiGHS, and state in the issue that AI was used.
+
+AI generated issues that do not follow this process may be closed or deleted without discussion.
+
+Whilst AI may be valuable for generating and communicating suggestions for code and build system developments, AI-generated pull requests (other than the most trivial) will not be accepted. Reviewing such a pull request in detail takes longer than making the change directly, so if the suggestions are good, they will be implemented by HiGHS developers.
 
 ## Contact the HiGHS team
 
@@ -28,4 +37,4 @@ The top level [documentation](https://ergo-code.github.io/HiGHS/) is created usi
 
 ## Raise an issue
 
-You can raise an [issue](https://github.com/ERGO-Code/HiGHS/issues) with HiGHS in the normal way via [GitHub](https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue).
+You can raise an [issue](https://github.com/ERGO-Code/HiGHS/issues) with HiGHS in the normal way via [GitHub](https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue). If AI was used to find or write up the issue, first read [AI generated contributions](#ai-generated-contributions).
