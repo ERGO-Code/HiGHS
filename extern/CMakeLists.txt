@@ -48,10 +48,12 @@ if (HIPO)
   highs_configure_blas()
 
   set(highs_extras_sources ${highs_extras_sources} 
-    ${amd_sources} ${blas_sources} ${metis_sources} ${rcm_sources})
+    ${amd_sources} ${blas_sources} ${metis_sources} ${rcm_sources}
+    ${qdldl_sources})
 
   set(highs_extras_headers ${highs_extras_headers} 
-    ${amd_headers} ${blas_headers} ${metis_headers} ${rcm_headers})
+    ${amd_headers} ${blas_headers} ${metis_headers} ${rcm_headers}
+    ${qdldl_headers})
 endif()
 # end optional dependencies (source code)
 

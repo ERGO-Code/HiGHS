@@ -126,14 +126,13 @@ The upstream source code is available at:
 
 ## QDLDL
 
-The up-looking factorisation in `/highs/ipm/hipo/ipm/UpLookingSolver.cpp` was
-adapted from QDLDL, which is distributed under the
-[Apache 2.0 license](https://opensource.org/license/apache-2-0), whose full text
-is reproduced at the end of this file. The code has been modified for use in
-HiPO.
+The source code in `/extern/qdldl` was adapted from QDLDL, which is distributed
+under the [Apache 2.0 license](https://opensource.org/license/apache-2-0), whose
+full text is reproduced at the end of this file. The code has been modified for
+use in HiPO; the changes are listed in `/extern/qdldl/qdldl.h`.
 
-It was originally developed by Paul Goulart, Bartolomeo Stellato and Goran
-Banjac.
+Copyright 2018, Paul Goulart, Bartolomeo Stellato, Goran Banjac, The OSQP
+developers.
 
 The upstream source code is available at:
 

@@ -103,6 +103,12 @@ set(rcm_headers
   rcm/rcm.h
 )
 
+set(qdldl_sources
+  qdldl/qdldl.cpp)
+
+set(qdldl_headers
+  qdldl/qdldl.h)
+
 set(cupdlp_sources
   pdlp/cupdlp/cupdlp_linalg.c
   pdlp/cupdlp/cupdlp_proj.c
