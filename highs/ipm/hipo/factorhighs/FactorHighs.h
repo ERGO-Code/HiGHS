@@ -9,6 +9,7 @@
 #include "FactorHighsInfo.h"
 #include "FactorHighsOptions.h"
 #include "Numeric.h"
+#include "ScratchArena.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 
@@ -105,6 +106,9 @@ class FHsolver {
   // This memory is allocated the first time that it is used. Subsequent
   // factorisations reuse the same memory.
   std::vector<std::vector<double>> sn_columns_;
+
+  // Scratch memory of the dense kernels and solves, kept between calls.
+  ScratchArena scratch_;
 
  public:
   // Print collected data (if any) and terminate DataCollector
