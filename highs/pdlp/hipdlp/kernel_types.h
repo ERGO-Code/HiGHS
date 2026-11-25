@@ -6,25 +6,30 @@
 
 namespace hipdlp {
 
-// What a solve or check reads as ITS problem: the vectors and sense/offset of `lp`, and the
-// unscaled constraint matrix either borrowed from the device (`matrix`, which must outlive the
-// call, be complete on the device and match lp.rows/columns) or, when null, uploaded from lp.
-// `matrix` is the full original model for the original-model check and certificates, and the
-// reduced model for a reduced solve: the caller decides which, nothing here can tell.
+// What a solve or check reads as ITS problem: the vectors and sense/offset of
+// `lp`, and the unscaled constraint matrix either borrowed from the device
+// (`matrix`, which must outlive the call, be complete on the device and match
+// lp.rows/columns) or, when null, uploaded from lp. `matrix` is the full
+// original model for the original-model check and certificates, and the reduced
+// model for a reduced solve: the caller decides which, nothing here can tell.
 struct SolveSource {
   const HostLp* lp = nullptr;
   const DeviceCsr* matrix = nullptr;
-  // Optional A^T of `matrix` (same lifetime and contract); built on the device when null.
+  // Optional A^T of `matrix` (same lifetime and contract); built on the device
+  // when null.
   const DeviceTranspose* transposed = nullptr;
-  // A presolved model. Its INFEASIBLE never reaches a caller, it only sends the hybrid to the
-  // original model, so its sessions stop on a Farkas candidate without the exposure condition
-  // that an original-model certificate must also pass (see ReduceStats).
+  // A presolved model. Its INFEASIBLE never reaches a caller, it only sends the
+  // hybrid to the original model, so its sessions stop on a Farkas candidate
+  // without the exposure condition that an original-model certificate must also
+  // pass (see ReduceStats).
   bool reduced = false;
-  // Cost norm of the dual residual (see CostScale); negative: CostScale(*lp). A presolved model
-  // passes the original model's value, so both sessions use the same dual tolerance.
+  // Cost norm of the dual residual (see CostScale); negative: CostScale(*lp). A
+  // presolved model passes the original model's value, so both sessions use the
+  // same dual tolerance.
   double cost_scale = -1;
-  // Optional start point of the session's model: its unscaled primal x and minimized-form dual
-  // y, e.g. what an earlier session of the same model returned. Both or neither; null: zero.
+  // Optional start point of the session's model: its unscaled primal x and
+  // minimized-form dual y, e.g. what an earlier session of the same model
+  // returned. Both or neither; null: zero.
   const std::vector<double>* start_primal = nullptr;
   const std::vector<double>* start_dual = nullptr;
   double start_omega = 0;  // > 0: the initial primal weight instead of omega0
@@ -36,16 +41,19 @@ struct DeviceLp {
   double *a, *at, *original_a, *original_at;
   double *c, *lr, *ur, *lx, *ux, *cs, *lrs, *urs, *lxs, *uxs;
   double *dr, *dc, *fr, *fc;
-  // 1-norms of the rows / columns of the unscaled matrix: the scale of each certificate residual.
+  // 1-norms of the rows / columns of the unscaled matrix: the scale of each
+  // certificate residual.
   double *row_norm, *column_norm;
 };
 
-// Below kDeviationLevel the iterate is kept as the anchor (xa, ya) plus a deviation: x, y, xp, yp,
-// xr, yr are then deviations from it (DeviceState::deviation). Near a solution the steps are far
-// below the precision of the anchor's entries; formed from absolute values they lose those digits
-// to cancellation at every step, and under the reflection that error accumulates over an epoch
-// (2026-10-14 tail experiments). In the deviation form a step only involves small numbers and the
-// anchor terms ga = c - A'ya and the row bound residuals lower = A xa - l, upper = A xa - u, which
+// Below kDeviationLevel the iterate is kept as the anchor (xa, ya) plus a
+// deviation: x, y, xp, yp, xr, yr are then deviations from it
+// (DeviceState::deviation). Near a solution the steps are far below the
+// precision of the anchor's entries; formed from absolute values they lose
+// those digits to cancellation at every step, and under the reflection that
+// error accumulates over an epoch (2026-10-14 tail experiments). In the
+// deviation form a step only involves small numbers and the anchor terms ga = c
+// - A'ya and the row bound residuals lower = A xa - l, upper = A xa - u, which
 // are rounded once per epoch.
 struct Vectors {
   double *x, *y, *xp, *yp, *xr, *yr, *xa, *ya, *dx, *dy;
@@ -61,19 +69,28 @@ struct DeviceState {
   Status status;
   int bad, feasible_valid, optimal, farkas_valid, ray_valid, restart;
   int fixed_weight, cert_source, exposure_check;
-  int deviation, deviation_next;  // deviation form active / requested from the next restart
-  int hold;  // HIPDLP_HOST_LOOP: a check is due, the iterate waits for the end of the chunk
-  int64_t iterations, epoch, restarts, kkt_checks, certificate_checks, spmv_count, iteration_limit;
+  int deviation, deviation_next;  // deviation form active / requested from the
+                                  // next restart
+  int hold;  // HIPDLP_HOST_LOOP: a check is due, the iterate waits for the end
+             // of the chunk
+  int64_t iterations, epoch, restarts, kkt_checks, certificate_checks,
+      spmv_count, iteration_limit;
   double tolerance, remaining_seconds, omega, best_omega, integral;
   double omega0 = 1;     // the initial primal weight
-  double kkt_guard = 0;  // > 0: L2 stop also needs the kkt measures <= kkt_guard * their tolerances
-  // Per-measure tolerances of the L2 and kkt criteria (SolveOptions; `tolerance` where it gives 0)
-  double primal_tolerance, dual_tolerance, residual_tolerance, l2_gap_tolerance, kkt_gap_tolerance;
+  double kkt_guard = 0;  // > 0: L2 stop also needs the kkt measures <=
+                         // kkt_guard * their tolerances
+  // Per-measure tolerances of the L2 and kkt criteria (SolveOptions;
+  // `tolerance` where it gives 0)
+  double primal_tolerance, dual_tolerance, residual_tolerance, l2_gap_tolerance,
+      kkt_gap_tolerance;
   double cost_scale;  // dual residual denominator 1 + cost_scale (CostScale)
-  int warm_start;  // Initialize starts from out_x / out_y (scaled by 1/dc, 1/dr), not from zero
-  int stop_l2;     // OPTIMAL is decided by the L2 measures (StopCriterion::kPdlpL2)
-  int stop_strict; // ... by the strict four measures (StopCriterion::kStrict)
-  double active_bound_norm, active_cost_norm;  // of the last check (lpKktCheck definitions)
+  int warm_start;     // Initialize starts from out_x / out_y (scaled by 1/dc,
+                      // 1/dr), not from zero
+  int stop_l2;        // OPTIMAL is decided by the L2 measures
+                      // (StopCriterion::kPdlpL2)
+  int stop_strict;  // ... by the strict four measures (StopCriterion::kStrict)
+  double active_bound_norm,
+      active_cost_norm;  // of the last check (lpKktCheck definitions)
   double fpe, reference_fpe, previous_fpe, normalization;
   double margin, stationarity, cert_scale;
   double ray_margin, ray_row_violation, ray_column_violation;
@@ -83,15 +100,16 @@ struct DeviceState {
   int decision_count;
   int direction_source, direction_sign;
   int64_t direction_iteration, epoch_iteration;
-  int64_t balance_epoch_limit;  // 0: no extra deadline; otherwise local to the next epoch.
+  int64_t balance_epoch_limit;  // 0: no extra deadline; otherwise local to the
+                                // next epoch.
   int balance_direction;
   CertificateInfo farkas_info, ray_info;
   int64_t feasible_iteration;
 };
 
-// lpKktCheck pass 1 and the PDLP / cuPDLPx L2 measures (Metrics::l2_*): squared violation and
-// residual sums and the squared norms of b and c they are divided by. `cross` carries cuPDLPx's
-// dual objective z'x + b-part (l2_gap).
+// lpKktCheck pass 1 and the PDLP / cuPDLPx L2 measures (Metrics::l2_*): squared
+// violation and residual sums and the squared norms of b and c they are divided
+// by. `cross` carries cuPDLPx's dual objective z'x + b-part (l2_gap).
 struct KktSums {
   double p = 0, d = 0, dual_pos = 0, cross = 0;
   double l2_primal_sq = 0, l2_dual_sq = 0, b_sq = 0, c_sq = 0;
@@ -176,7 +194,8 @@ struct NormMax {
 
 struct FarkasSums {
   double d = 0, absolute = 0, dual = 0;
-  double exposure = 0;  // sum |A'f+g|_j * max(1, |x_j|) over the current iterate x
+  double exposure =
+      0;  // sum |A'f+g|_j * max(1, |x_j|) over the current iterate x
   int bad = 0;
   __device__ void Merge(const FarkasSums& b) {
     d += b.d;
@@ -207,10 +226,11 @@ struct Combine {
   }
 };
 
-// The partial results of one block-per-slot reduction share one buffer; it is sized for the widest reduction (the KKT sums)
-constexpr size_t kPartialBytes =
-    std::max({sizeof(KktSums), sizeof(KktRelSums), sizeof(FpeSums), sizeof(WeightSums),
-              sizeof(NormMax), sizeof(FarkasSums), sizeof(RaySums)});
+// The partial results of one block-per-slot reduction share one buffer; it is
+// sized for the widest reduction (the KKT sums)
+constexpr size_t kPartialBytes = std::max(
+    {sizeof(KktSums), sizeof(KktRelSums), sizeof(FpeSums), sizeof(WeightSums),
+     sizeof(NormMax), sizeof(FarkasSums), sizeof(RaySums)});
 
 struct Resources {
  public:
@@ -250,8 +270,8 @@ struct Resources {
     for (void* p : allocations) cudaFree(p);
     if (stream) cudaStreamDestroy(stream);
   }
-  // Uninitialized: only for arrays that a copy or kernel overwrites completely before anything
-  // reads them. Everything else uses AllocateZero.
+  // Uninitialized: only for arrays that a copy or kernel overwrites completely
+  // before anything reads them. Everything else uses AllocateZero.
   template <typename T>
   T* Allocate(size_t count) {
     T* p;
@@ -276,8 +296,8 @@ struct Resources {
   T* Upload(const std::vector<T>& values) {
     T* p = Allocate<T>(values.size());
     if (!values.empty()) {
-      Cuda(cudaMemcpyAsync(p, values.data(), values.size() * sizeof(T), cudaMemcpyHostToDevice,
-                           stream));
+      Cuda(cudaMemcpyAsync(p, values.data(), values.size() * sizeof(T),
+                           cudaMemcpyHostToDevice, stream));
       h2d_bytes += values.size() * sizeof(T);
     }
     return p;

@@ -1,23 +1,26 @@
 #pragma once
 
-// The solver is written against CUDA. With USE_HIP the CUDA names below are mapped to their
-// HIP / ROCm equivalents (same arguments, same order), so the sources keep the CUDA spelling.
-// The conditional graph API (cudaGraphConditionalHandle, ...) has no HIP equivalent and is only
-// used without HIPDLP_HOST_LOOP, which USE_HIP defines (solver.cu).
+// The solver is written against CUDA. With USE_HIP the CUDA names below are
+// mapped to their HIP / ROCm equivalents (same arguments, same order), so the
+// sources keep the CUDA spelling. The conditional graph API
+// (cudaGraphConditionalHandle, ...) has no HIP equivalent and is only used
+// without HIPDLP_HOST_LOOP, which USE_HIP defines (solver.cu).
 
 #ifndef USE_HIP
 
-#include <cub/block/block_reduce.cuh>
 #include <cuda_runtime.h>
 #include <cusparse.h>
 #include <nvtx3/nvToolsExt.h>
 
+#include <cub/block/block_reduce.cuh>
+
 #else
 
 #include <hip/hip_runtime.h>
-#include <hipcub/block/block_reduce.hpp>
 #include <hipsparse/hipsparse.h>
 #include <rocprofiler-sdk-roctx/roctx.h>
+
+#include <hipcub/block/block_reduce.hpp>
 
 // Runtime: types and constants
 #define cudaDeviceProp hipDeviceProp_t
@@ -44,7 +47,8 @@
 #define cudaErrorNoDevice hipErrorNoDevice
 #define cudaErrorNoKernelImageForDevice hipErrorNoBinaryForGpu
 #define cudaErrorNotSupported hipErrorNotSupported
-// No HIP counterpart. The closest "this device cannot run it" code, distinct from the above.
+// No HIP counterpart. The closest "this device cannot run it" code, distinct
+// from the above.
 #define cudaErrorCompatNotSupportedOnDevice hipErrorInvalidDevice
 
 // Runtime: functions
@@ -59,7 +63,8 @@
 #define cudaGetLastError hipGetLastError
 #define cudaGraphDestroy hipGraphDestroy
 #define cudaGraphExecDestroy hipGraphExecDestroy
-// hipGraphInstantiate takes an error node and a log buffer, the CUDA 12 form takes flags.
+// hipGraphInstantiate takes an error node and a log buffer, the CUDA 12 form
+// takes flags.
 #define cudaGraphInstantiate hipGraphInstantiateWithFlags
 #define cudaGraphLaunch hipGraphLaunch
 #define cudaMalloc hipMalloc
@@ -73,10 +78,13 @@
 #define cudaStreamEndCapture hipStreamEndCapture
 #define cudaStreamIsCapturing hipStreamIsCapturing
 #define cudaStreamSynchronize hipStreamSynchronize
-// hipFuncGetAttributes takes the kernel as const void*, cudaFuncGetAttributes as a function.
+// hipFuncGetAttributes takes the kernel as const void*, cudaFuncGetAttributes
+// as a function.
 template <typename Kernel>
-inline hipError_t HipFuncGetAttributes(hipFuncAttributes* attributes, Kernel kernel) {
-  return hipFuncGetAttributes(attributes, reinterpret_cast<const void*>(kernel));
+inline hipError_t HipFuncGetAttributes(hipFuncAttributes* attributes,
+                                       Kernel kernel) {
+  return hipFuncGetAttributes(attributes,
+                              reinterpret_cast<const void*>(kernel));
 }
 #define cudaFuncGetAttributes HipFuncGetAttributes
 

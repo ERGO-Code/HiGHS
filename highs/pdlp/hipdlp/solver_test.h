@@ -16,9 +16,10 @@ struct Decision {
   double primal = 0, dual = 0, gap = 0;
 };
 
-// Test-only observation: every buffer is read after the entire graph completes. Record all
-// checks through iteration 20,000, then restarts, every 100,000 steps and the terminal check,
-// up to kDecisionCapacity entries. Each decision precedes its restart/weight update.
+// Test-only observation: every buffer is read after the entire graph completes.
+// Record all checks through iteration 20,000, then restarts, every 100,000
+// steps and the terminal check, up to kDecisionCapacity entries. Each decision
+// precedes its restart/weight update.
 struct Snapshot {
   std::vector<double> row_multiplier, column_multiplier, scaled_value;
   std::vector<double> x, y, xp, yp, xa, ya;
@@ -28,8 +29,10 @@ struct Snapshot {
   std::vector<Decision> decisions;
 };
 
-SolveResult SolveForTesting(const HostLp& lp, const SolveOptions& options, Snapshot* snapshot, bool fixed_weight = true);
+SolveResult SolveForTesting(const HostLp& lp, const SolveOptions& options,
+                            Snapshot* snapshot, bool fixed_weight = true);
 
-SolveResult SolveCpuForTesting(const HostLp& lp, const SolveOptions& options, Snapshot* snapshot, bool fixed_weight = true);
+SolveResult SolveCpuForTesting(const HostLp& lp, const SolveOptions& options,
+                               Snapshot* snapshot, bool fixed_weight = true);
 
 }  // namespace hipdlp
