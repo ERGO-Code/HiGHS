@@ -4326,19 +4326,21 @@ void Highs::retryHiPdlpAfterPostsolve(HiPdlpWarmStart& warm_start) {
   const double kMinTolerance = 1e-10;
   // Give up unless each retry at least halves the violation after postsolve
   const double kRequiredProgress = 0.5;
+  // A measure below this fraction of its tolerance before postsolve counts
+  // as this much in a magnification: smaller is noise, and would make the
+  // magnification of a measure exceed kMaxMagnification unchecked
+  const double kMinReducedViolation = 1e-3;
 
   assert(model_status_ == HighsModelStatus::kUnknown);
   assert(warm_start.valid);
   const HighsLogOptions& log_options = options_.log_options;
   HighsLp& reduced_lp = presolve_.getReducedProblem();
-  // The smallest tolerance PDLP stops on (see toSolveOptions)
-  const double base_tolerance =
-      options_.kkt_tolerance != kDefaultKktTolerance
-          ? options_.kkt_tolerance
-          : std::min({options_.primal_feasibility_tolerance,
-                      options_.dual_feasibility_tolerance,
-                      options_.dual_residual_tolerance,
-                      options_.optimality_tolerance});
+  // The tolerance PDLP stops on for a measure (see toSolveOptions): a
+  // user-set kkt_tolerance replaces each of them
+  const bool uniform_tolerance = options_.kkt_tolerance != kDefaultKktTolerance;
+  auto option = [&](const double tolerance) {
+    return uniform_tolerance ? options_.kkt_tolerance : tolerance;
+  };
   const HighsInt pdlp_iteration_limit = options_.pdlp_iteration_limit;
   HighsInt pdlp_iteration_count = info_.pdlp_iteration_count;
   // The violations of the postsolved solution, on the original LP
@@ -4346,17 +4348,19 @@ void Highs::retryHiPdlpAfterPostsolve(HiPdlpWarmStart& warm_start) {
   // The violation to reach on the presolved LP, relative to the tolerances,
   // when the violation reached was `reduced` and postsolve magnified it by
   // `magnification`
-  auto tighten = [&](const double reduced, const double magnification) {
+  auto tighten = [&](const double reduced, const double magnification,
+                     const double tolerance) {
     const double scale = std::max(
         reduced / kMaxTightening,
         std::min(reduced / kMinTightening, kTargetViolation / magnification));
-    return std::max(scale, kMinTolerance / base_tolerance);
+    return std::max(scale, kMinTolerance / tolerance);
   };
   for (HighsInt retry = 1; retry <= kRetryLimit; retry++) {
     const HiPdlpKktViolations& reduced = warm_start.violations;
     const double violation = violations.max();
     const double reduced_violation = reduced.max();
-    const double magnification = violation / std::max(reduced_violation, 1e-3);
+    const double magnification =
+        violation / std::max(reduced_violation, kMinReducedViolation);
     if (!(magnification <= kMaxMagnification)) {
       highsLogUser(log_options, HighsLogType::kInfo,
                    "HiPDLP: no retry, since postsolve magnifies the KKT "
@@ -4371,9 +4375,10 @@ void Highs::retryHiPdlpAfterPostsolve(HiPdlpWarmStart& warm_start) {
     // Tighten the tolerance of a measure that postsolve took above
     // kTargetViolation by its own magnification
     auto tightenMeasure = [&](const double after, const double before,
-                              double& scale) {
+                              const double tolerance, double& scale) {
       if (after <= kTargetViolation) return;
-      const double target = tighten(before, after / std::max(before, 1e-6));
+      const double target = tighten(
+          before, after / std::max(before, kMinReducedViolation), tolerance);
       if (target < before) {
         scale = std::min(1.0, target);
         tightened = true;
@@ -4383,12 +4388,19 @@ void Highs::retryHiPdlpAfterPostsolve(HiPdlpWarmStart& warm_start) {
     // duals: when the dual errors are too large, it falls with them
     const bool dual_too_large = violations.dual > kTargetViolation ||
                                 violations.dual_residual > kTargetViolation;
-    tightenMeasure(violations.primal, reduced.primal, restart.primal_scale);
-    tightenMeasure(violations.dual, reduced.dual, restart.dual_scale);
+    tightenMeasure(violations.primal, reduced.primal,
+                   option(options_.primal_feasibility_tolerance),
+                   restart.primal_scale);
+    tightenMeasure(violations.dual, reduced.dual,
+                   option(options_.dual_feasibility_tolerance),
+                   restart.dual_scale);
     tightenMeasure(violations.dual_residual, reduced.dual_residual,
+                   option(options_.dual_residual_tolerance),
                    restart.residual_scale);
     if (!dual_too_large)
       tightenMeasure(violations.objective, reduced.objective,
+                     option(std::min(options_.optimality_tolerance,
+                                     options_.pdlp_optimality_tolerance)),
                      restart.objective_scale);
     const HighsInt remaining_iterations =
         pdlp_iteration_limit >= kHighsIInf

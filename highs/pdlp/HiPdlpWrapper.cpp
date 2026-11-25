@@ -27,6 +27,9 @@ HighsStatus solveLpHiPdlp(HighsLpSolverObject& solver_object) {
 }
 
 namespace {
+// The L2 stop also needs the lpKktCheck measures within this many times their
+// tolerances, so that it cannot end far outside what lpKktCheck accepts
+const double kHiPdlpKktGuard = 10;
 
 // HighsLp (column-wise) -> hipdlp::HostLp (CSR, sorted unique columns)
 hipdlp::HostLp toHostLp(const HighsLp& lp) {
@@ -94,9 +97,7 @@ hipdlp::SolveOptions toSolveOptions(const HighsOptions& options,
   // kLpKktCheck, the per-component measures of HiGHS lpKktCheck; kStrict, the
   // strict element-wise measures. Change this line to use another one.
   solve_options.stop = hipdlp::StopCriterion::kPdlpL2;
-  // The L2 stop also needs the lpKktCheck measures within 10 times their
-  // tolerances, so that it cannot end far outside what lpKktCheck accepts
-  solve_options.kkt_guard = 10;
+  solve_options.kkt_guard = kHiPdlpKktGuard;
   // A restart aims at what lpKktCheck measures
   if (restart) solve_options.stop = hipdlp::StopCriterion::kLpKktCheck;
   // Remaining share of the global time limit
