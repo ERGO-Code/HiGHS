@@ -18,6 +18,19 @@ set(HIGHS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 configure_file(${CMAKE_CURRENT_LIST_DIR}/../highs/HConfig.h.in ${PROJECT_BINARY_DIR}/HConfig.h)
 message(STATUS "Configuring highs_extras version ${VERSION}")
 
+# HiGHS sets floating-point options for HighsCDouble (see the top-level
+# CMakeLists.txt). The third-party code built here does not use HighsCDouble and
+# may rely on the default behaviour for performance (e.g. contraction in
+# OpenBLAS), so the options are removed again for this directory and its
+# subdirectories.
+if (HIGHS_FLOATING_POINT_OPTIONS)
+  get_directory_property(_highs_extras_compile_options COMPILE_OPTIONS)
+  list(REMOVE_ITEM _highs_extras_compile_options
+       ${HIGHS_FLOATING_POINT_OPTIONS})
+  set_directory_properties(
+    PROPERTIES COMPILE_OPTIONS "${_highs_extras_compile_options}")
+endif()
+
 set(highs_extras_sources
     HighsExtrasApi.cpp
     HighsExtrasExternalDeps.cpp)
@@ -105,6 +118,14 @@ if(BUILD_SHARED_EXTRAS_LIB)
       PREFIX ""
       WINDOWS_EXPORT_ALL_SYMBOLS OFF)
   endif()
+endif()
+
+# Highs.Native.Extras NuGet package: HiGHS loads the library by this file name
+# from the directory of the highs library in Highs.Native
+if(DEFINED DOTNET_EXTRAS_PROJECT_DIR)
+  add_custom_command(TARGET highs_extras POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy "$<TARGET_FILE:highs_extras>"
+      "${DOTNET_EXTRAS_PROJECT_DIR}/runtimes/${DOTNET_RID}/native/$<TARGET_FILE_NAME:highs_extras>")
 endif()
 
 # This CMake file is only inlcluded if not (HIPO_PYTHON)

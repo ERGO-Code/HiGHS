@@ -20,6 +20,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The HiPO builds use --parallel 2 to keep the OpenBLAS build within the memory
+# of the hosted runners
 jobs:
   # Build macos intel
   build_macos_intel:
@@ -33,18 +35,20 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON \
+          cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON \
             -DCMAKE_C_COMPILER=/usr/bin/clang \
             -DCMAKE_CXX_COMPILER=/usr/bin/clang++
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config Release --parallel --verbose
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
-          name: macos-x64
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
+          name: runtimes-macos-x64
+          path: |
+            ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
+            ${{github.workspace}}/build/dotnet/Highs.Native.Extras/runtimes
 
   # Build macos arm64
   build_macos_arm:
@@ -58,19 +62,21 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         run: |
-          cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON \
+          cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON \
             -DCMAKE_C_COMPILER=/usr/bin/clang \
             -DCMAKE_CXX_COMPILER=/usr/bin/clang++
 
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
-          name: macos-arm64
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
+          name: runtimes-macos-arm64
+          path: |
+            ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
+            ${{github.workspace}}/build/dotnet/Highs.Native.Extras/runtimes
 
   # Build windows 32 and linux
   build_windows_32:
@@ -84,17 +90,22 @@ jobs:
       - name: Configure CMake win32
         shell: bash
         working-directory: ${{github.workspace}}/build32
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A Win32 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+        # no -DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON as on x64 and ARM64: the
+        # optimized (clang-cl) OpenBLAS build covers only those, so win-x86
+        # always gets the generic kernels
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON -A Win32 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
       - name: Build win32
         shell: bash
         working-directory: ${{github.workspace}}/build32
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
-          name: win-x86
-          path: ${{github.workspace}}/build32/dotnet/Highs.Native/runtimes/win-x86/
+          name: runtimes-win-x86
+          path: |
+            ${{github.workspace}}/build32/dotnet/Highs.Native/runtimes
+            ${{github.workspace}}/build32/dotnet/Highs.Native.Extras/runtimes
 
   build_windows_arm64:
     runs-on: windows-11-arm
@@ -107,17 +118,19 @@ jobs:
       - name: Configure CMake win-arm64
         shell: bash
         working-directory: ${{github.workspace}}/build_arm64
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -A ARM64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON -A ARM64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON
 
       - name: Build win-arm64
         shell: bash
         working-directory: ${{github.workspace}}/build_arm64
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
-          name: win-arm64
-          path: ${{github.workspace}}/build_arm64/dotnet/Highs.Native/runtimes/win-arm64/
+          name: runtimes-win-arm64
+          path: |
+            ${{github.workspace}}/build_arm64/dotnet/Highs.Native/runtimes
+            ${{github.workspace}}/build_arm64/dotnet/Highs.Native.Extras/runtimes
 
   build_linux:
     runs-on: ubuntu-latest
@@ -130,16 +143,18 @@ jobs:
 
       - name: Configure CMake
         working-directory: /__w/HiGHS/HiGHS/build
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON
 
       - name: Build
         working-directory: /__w/HiGHS/HiGHS/build
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - uses: actions/upload-artifact@v7
         with:
-          name: linux-x64
-          path: /__w/HiGHS/HiGHS/build/dotnet/Highs.Native/runtimes
+          name: runtimes-linux-x64
+          path: |
+            /__w/HiGHS/HiGHS/build/dotnet/Highs.Native/runtimes
+            /__w/HiGHS/HiGHS/build/dotnet/Highs.Native.Extras/runtimes
 
   build_linux_arm64:
     runs-on: ubuntu-24.04-arm
@@ -153,21 +168,52 @@ jobs:
       - name: Configure CMake linux-arm-64
         working-directory: /__w/HiGHS/HiGHS/build_linux_arm64
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/nuget/arm-toolchain.cmake
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/nuget/arm-toolchain.cmake
 
       - name: Build linux-arm-64
         working-directory: /__w/HiGHS/HiGHS/build_linux_arm64
+        shell: bash
+        run: cmake --build . --config Release --parallel 2
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: runtimes-linux-arm64
+          path: |
+            /__w/HiGHS/HiGHS/build_linux_arm64/dotnet/Highs.Native/runtimes
+            /__w/HiGHS/HiGHS/build_linux_arm64/dotnet/Highs.Native.Extras/runtimes
+
+  build_linux_arm:
+    runs-on: ubuntu-latest
+    container: stabletec/build-core:debian-11
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install ARM 32-bit cross-compiler
+        run: |
+         apt-get update
+         apt-get install -y --no-install-recommends g++-arm-linux-gnueabihf
+
+      - name: Build HiGHS
+        run: |
+         cmake -E make_directory /__w/HiGHS/HiGHS/build_linux_arm
+
+      - name: Configure CMake linux-arm
+        working-directory: /__w/HiGHS/HiGHS/build_linux_arm
+        shell: bash
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DCMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/nuget/armhf-toolchain.cmake
+
+      - name: Build linux-arm
+        working-directory: /__w/HiGHS/HiGHS/build_linux_arm
         shell: bash
         run: cmake --build . --config Release --parallel
 
       - uses: actions/upload-artifact@v7
         with:
-          name: linux-arm64
-          path: /__w/HiGHS/HiGHS/build_linux_arm64/dotnet/Highs.Native/runtimes
+          name: linux-arm
+          path: /__w/HiGHS/HiGHS/build_linux_arm/dotnet/Highs.Native/runtimes
 
   build_windows:
     runs-on: windows-latest
-    needs: [build_macos_intel, build_macos_arm, build_windows_32, build_windows_arm64, build_linux, build_linux_arm64]
+    needs: [build_macos_intel, build_macos_arm, build_windows_32, build_windows_arm64, build_linux, build_linux_arm64, build_linux_arm]
     steps:
       - uses: actions/checkout@v6
       - name: Build HiGHS Windows native
@@ -177,69 +223,65 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+        run: cmake $GITHUB_WORKSPACE -DCSHARP=ON -DBUILD_DOTNET=ON -DHIPO=ON -DBUILD_OPENBLAS=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DHIGHS_OPENBLAS_REQUIRE_OPTIMIZED=ON
 
       - name: Build
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: cmake --build . --config Release --parallel
+        run: cmake --build . --config Release --parallel 2
 
       - name: Display structure of downloaded files
         run: |
           pwd
-          ls -R ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
-
-      - name: Download runtimes macos-x64
-        uses: actions/download-artifact@v8
-        with:
-          name: macos-x64
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
-
-      - name: Download runtimes macos-arm64
-        uses: actions/download-artifact@v8
-        with:
-          name: macos-arm64
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
-
-      - name: Download runtimes win-x86
-        uses: actions/download-artifact@v8
-        with:
-          name: win-x86
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes/win-x86
-
-      - name: Download runtimes win-arm64
-        uses: actions/download-artifact@v8
-        with:
-          name: win-arm64
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes/win-arm64
+          ls -R ${{github.workspace}}/build/dotnet/*/runtimes
 
       - name: Download runtimes
         uses: actions/download-artifact@v8
         with:
-          name: linux-x64
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
+          pattern: runtimes-*
+          merge-multiple: true
+          path: ${{github.workspace}}/build/dotnet
 
-      - name: Download runtimes
+      - name: Download runtimes linux-arm
         uses: actions/download-artifact@v8
         with:
-          name: linux-arm64
+          name: linux-arm
           path: ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
 
       - name: Display structure of downloaded files
-        run: ls -R ${{github.workspace}}/build/dotnet/Highs.Native/runtimes
+        run: ls -R ${{github.workspace}}/build/dotnet/*/runtimes
+
+      # upload-artifact does not fail when one of its two paths is missing, so
+      # check that every runtime is in place before packing
+      - name: Check runtimes
+        shell: bash
+        working-directory: ${{github.workspace}}/build/dotnet
+        run: |
+          missing=0
+          for rid in win-x64 win-x86 win-arm64 linux-x64 linux-arm64 linux-arm osx-x64 osx-arm64; do
+            ls Highs.Native/runtimes/$rid/native/*highs.* || missing=1
+          done
+          for rid in win-x64 win-x86 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64; do
+            ls Highs.Native.Extras/runtimes/$rid/native/*highs_extras.* || missing=1
+          done
+          exit $missing
 
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '6.0.x'
 
-      - name: Dotnet pack
+      - name: Dotnet pack Highs.Native
         working-directory: ${{github.workspace}}/build/dotnet/Highs.Native
-        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.16.0' }}
+        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.16.0' }} -o ${{github.workspace}}/nupkgs
+
+      - name: Dotnet pack Highs.Native.Extras
+        working-directory: ${{github.workspace}}/build/dotnet/Highs.Native.Extras
+        run: dotnet pack -c Release /p:Version=${{ inputs.version || '1.16.0' }} -o ${{github.workspace}}/nupkgs "-p:RestoreSources=${{github.workspace}}/nupkgs"
 
       - uses: actions/upload-artifact@v7
         with:
           name: nuget
-          path: ${{github.workspace}}/build/dotnet/Highs.Native/bin/Release/*.nupkg
+          path: ${{github.workspace}}/nupkgs/*.nupkg
 
   dotnet_push:
     runs-on: windows-latest
@@ -267,4 +309,5 @@ jobs:
           user: ${{ secrets.NUGET_USER }}
 
       - name: Dotnet push
-        run: dotnet nuget push "*.nupkg" --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        # --skip-duplicate: a re-run after one of the two packages failed to push
+        run: dotnet nuget push "*.nupkg" --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

@@ -1,6 +1,6 @@
 name: build-intel
 
-on: [push, pull_request]
+on: [pull_request]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -82,7 +82,7 @@ jobs:
 
       - name: Cache oneAPI install
         id: cache-install
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             C:\Program Files (x86)\Intel\oneAPI\setvars-vcvarsall.bat

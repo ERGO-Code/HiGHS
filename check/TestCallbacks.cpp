@@ -1,4 +1,5 @@
-// #include <algorithm>
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -15,6 +16,7 @@ const double egout_optimal_objective = 568.1007;
 const double egout_objective_target = 610;
 const HighsInt adlittle_ipm_iteration_limit = 5;
 const HighsInt adlittle_simplex_iteration_limit = 30;
+const HighsInt adlittle_pdlp_iteration_limit = 1;
 
 const HighsInt primal1_qp_iteration_limit = 5;
 
@@ -156,6 +158,16 @@ HighsCallbackFunctionType userInterruptCallback =
                 int(data_out->ipm_iteration_count));
           data_in->user_interrupt =
               data_out->ipm_iteration_count > adlittle_ipm_iteration_limit;
+        } else if (callback_type == kCallbackPdlpInterrupt) {
+          if (dev_run)
+            printf(
+                "userInterruptCallback(type %2d; data %2d): %s with iteration "
+                "count = "
+                "%d\n",
+                callback_type, local_callback_data, message.c_str(),
+                int(data_out->pdlp_iteration_count));
+          data_in->user_interrupt =
+              data_out->pdlp_iteration_count > adlittle_pdlp_iteration_limit;
         } else if (callback_type == kCallbackMipInterrupt) {
           if (dev_run)
             printf(
@@ -406,6 +418,65 @@ TEST_CASE("highs-callback-solution-basis-logging", "[highs_callback]") {
   highs.resetThreadScheduler(true);
 }
 
+// An exception that reaches Highs::optimizeModelTryCatch must not stop
+// later solves of the same Highs instance, or leave the options changed.
+// Presolve and the solvers catch their own exceptions, so throw from a log
+// line between them, which solver selection (strategy 5) has passed
+TEST_CASE("highs-exception-then-solve-again", "[highs_callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  HighsCallbackFunctionType throwingLogCallback =
+      [](int callback_type, const std::string& message,
+         const HighsCallbackOutput* data_out, HighsCallbackInput* data_in,
+         void* user_callback_data) {
+        if (*static_cast<bool*>(user_callback_data) &&
+            message.find("Solving the presolved LP") != std::string::npos)
+          throw std::runtime_error("test exception");
+      };
+  for (const HighsInt strategy : {0, 5}) {
+    INFO("solver_select_strategy " << strategy);
+    bool throw_exception = true;
+    Highs highs;
+    // The logging callback is only called when output_flag is true
+    highs.setOptionValue("log_to_console", dev_run);
+    highs.setOptionValue("solver_select_strategy", strategy);
+    highs.setCallback(throwingLogCallback, &throw_exception);
+    highs.startCallback(kCallbackLogging);
+    highs.readModel(filename);
+    // run() fixes a column with infinite cost, and must undo this
+    highs.changeColCost(0, kHighsInf);
+    REQUIRE(highs.run() == HighsStatus::kError);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kSolveError);
+    REQUIRE(highs.getOptions().solver == kHighsChooseString);
+    REQUIRE(highs.getLp().col_cost_[0] == kHighsInf);
+    throw_exception = false;
+    REQUIRE(highs.run() == HighsStatus::kOk);
+    REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+    const bool ipm_ran = highs.getInfo().ipm_iteration_count > 0;
+    REQUIRE(ipm_ran == (strategy == 5));
+
+    highs.resetThreadScheduler(true);
+  }
+  // An LP copied from a model solved by an outer run(), as in the MIP
+  // solver, carries its changes in mods_, which mustn't be undone here
+  bool throw_exception = true;
+  Highs highs;
+  highs.setOptionValue("log_to_console", dev_run);
+  highs.setCallback(throwingLogCallback, &throw_exception);
+  highs.startCallback(kCallbackLogging);
+  highs.readModel(filename);
+  HighsLp lp = highs.getLp();
+  lp.mods_.save_inf_cost_variable_index = {0};
+  lp.mods_.save_inf_cost_variable_cost = {kHighsInf};
+  lp.mods_.save_inf_cost_variable_lower = {-5};
+  lp.mods_.save_inf_cost_variable_upper = {kHighsInf};
+  highs.passModel(lp);
+  REQUIRE(highs.run() == HighsStatus::kError);
+  REQUIRE(highs.getLp().col_cost_[0] == lp.col_cost_[0]);
+  REQUIRE(highs.getLp().col_lower_[0] == lp.col_lower_[0]);
+  highs.resetThreadScheduler(true);
+}
+
 TEST_CASE("highs-callback-simplex-interrupt", "[highs_callback]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
@@ -447,6 +518,38 @@ TEST_CASE("highs-callback-ipm-interrupt", "[highs_callback]") {
     REQUIRE(highs.getInfo().ipm_iteration_count ==
             adlittle_ipm_iteration_limit + 1);
   }
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("highs-callback-pdlp-interrupt", "[highs_callback]") {
+  std::string filename =
+      std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  // Don't presolve, so that PDLP solves the original LP
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("solver", kHiPdlpString);
+  highs.setCallback(userInterruptCallback);
+  highs.startCallback(kCallbackPdlpInterrupt);
+  highs.readModel(filename);
+  REQUIRE(highs.run() == HighsStatus::kWarning);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kInterrupt);
+  REQUIRE(highs.getInfo().pdlp_iteration_count > adlittle_pdlp_iteration_limit);
+  // The solution returned is the latest iterate, rather than the
+  // initial point
+  const HighsSolution& solution = highs.getSolution();
+  REQUIRE(solution.value_valid);
+  double max_abs_value = 0;
+  for (double value : solution.col_value)
+    max_abs_value = std::max(max_abs_value, std::fabs(value));
+  REQUIRE(max_abs_value > 0);
+
+  // No interrupt when the callback is stopped
+  highs.stopCallback(kCallbackPdlpInterrupt);
+  highs.clearSolver();
+  REQUIRE(highs.run() == HighsStatus::kOk);
+  REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
+
   highs.resetThreadScheduler(true);
 }
 

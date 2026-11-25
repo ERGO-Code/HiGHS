@@ -280,20 +280,165 @@ TEST_CASE("filereader-integrality-constraints", "[highs_filereader]") {
   REQUIRE(are_the_same);
 }
 
-/*
 TEST_CASE("filereader-nan", "[highs_filereader]") {
-  // Check that if
-  std::string model_file;
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+
   Highs highs;
   highs.setOptionValue("output_flag", dev_run);
-  model_file = std::string(HIGHS_DIR) + "/check/instances/nan0.mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
-  model_file = std::string(HIGHS_DIR) + "/check/instances/nan1.mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
-  model_file = std::string(HIGHS_DIR) + "/check/instances/nan2.mps";
-  REQUIRE(highs.readModel(model_file) == HighsStatus::kError);
+
+  FILE* file;
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nRHS\n RHS1 "
+          "R1 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  // Testing nan cost
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ nan\n C1 R1 1\nRHS\n "
+          "RHS1 R1 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing nan and inf matrix coeff in first field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 nan\nRHS\n "
+          "RHS1 R1 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 inf\nRHS\n "
+          "RHS1 R1 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing nan and inf matrix coeff in second field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1 R1 nan\nRHS\n RHS1 R1 "
+          "1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1 R1 inf\nRHS\n RHS1 R1 "
+          "1\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf RHS (OK) and nan RHS in first field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\nCOLUMNS\n C1 OBJ 1 R1 1\n C1 R2 "
+          "1\nRHS\n RHS1 R1 -inf R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\nCOLUMNS\n C1 OBJ 1 R1 1\n C1 R2 "
+          "1\nRHS\n RHS1 R1 nan R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf RHS (OK) and nan RHS in second field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\nCOLUMNS\n C1 OBJ 1 R1 1\n C1 R2 "
+          "1\nRHS\n RHS1 R1 1 R2 inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\nCOLUMNS\n C1 OBJ 1 R1 1\n C1 R2 "
+          "1\nRHS\n RHS1 R1 1 R2 nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf bounds (OK) and nan bounds
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nBOUNDS\n "
+          "UP BOUND1 C1 inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nBOUNDS\n "
+          "LO BOUND1 C1 -inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nBOUNDS\n "
+          "UP BOUND1 C1 nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nBOUNDS\n "
+          "LO BOUND1 C1 -nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf RANGE (OK) and nan RANGE in first field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\n\nCOLUMNS\n C1 OBJ 1\n C1 R1 "
+          "1\nRANGES\n RANGE1 R1 inf R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\n\nCOLUMNS\n C1 OBJ 1\n C1 R1 "
+          "1\nRANGES\n RANGE1 R1 nan R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf RANGE (OK) and nan RANGE in second field
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\n\nCOLUMNS\n C1 OBJ 1\n C1 R1 "
+          "1\nRANGES\n RANGE1 R1 1 R2 inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kOk);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n L R2\n\nCOLUMNS\n C1 OBJ 1\n C1 R1 "
+          "1\nRANGES\n RANGE1 R1 1 R2 nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  // Testing inf and nan Hessian value
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nQSECTION "
+          "OBJ\n C1 C1 inf\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 OBJ 1\n C1 R1 1\nQSECTION "
+          "OBJ\n C1 C1 nan\nENDATA\n");
+  fclose(file);
+  REQUIRE(highs.readModel(filename) == HighsStatus::kError);
+
+  std::remove(filename.c_str());
 }
-*/
 
 TEST_CASE("filereader-fixed-integer", "[highs_filereader]") {
   double objective_value;
@@ -765,5 +910,357 @@ TEST_CASE("issue-3457", "[highs_filereader]") {
   // Row names are trivially absent, but not needed, so make sure that
   // an unnecessary warning isn't issued
   REQUIRE(highs.writeModel(filename) == HighsStatus::kOk);
+  std::remove(filename.c_str());
+}
+
+TEST_CASE("issue-3649", "[highs_filereader]") {
+#include "io/Filereader.h"
+  // Ensures that extractModelName doesn't throw an exception (#3649)
+  REQUIRE(extractModelName("gz") == "gz");
+  REQUIRE(extractModelName(".gz") == "");
+  REQUIRE(extractModelName("..gz") == "");
+  REQUIRE(extractModelName("mps.gz") == "mps");
+  REQUIRE(extractModelName("a.mps.gz") == "a");
+  REQUIRE(extractModelName("a.mps") == "a");
+}
+
+TEST_CASE("issue-3650", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("log_dev_level", 1);
+  FILE* file;
+
+  if (dev_run) highsPrintStringAsHeading("Empty file");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after NAME");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run)
+    highsPrintStringAsHeading("No NAME then illegal one-line OBJSENSE");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "OBJSENSE MX\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Illegal one-line OBJSENSE");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nOBJSENSE MX\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Unfinished OBJSENSE");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nOBJSENSE\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after OBJSENSE");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nOBJSENSE\n  MAX\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after ROWS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after COLUMNS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after RHS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nRHS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after BOUNDS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nBOUNDS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after RANGES");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nRANGES\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after QUADOBJ");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nQUADOBJ\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after CSECTION");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N  COST\nCOLUMNS\nCSECTION CONE 1.0 QUAD\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("No keyword after SOS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n N  COST\nCOLUMNS\nSOS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Free format file has no objective");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n G  R1\nCOLUMNS\n C1 R1 -1.0\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  h.setOptionValue("mps_parser_type_free", false);
+
+  if (dev_run)
+    highsPrintStringAsHeading("Fixed format file has no objective or ENDATA");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n G  R1\nCOLUMNS\n    C1        R1           -1.0\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Fixed format file has no objective");
+  file = fopen(filename.c_str(), "w");
+  fprintf(
+      file, "%s",
+      "NAME\nROWS\n G  R1\nCOLUMNS\n    C1        R1           -1.0\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  if (dev_run) highsPrintStringAsHeading("Fixed format file ends in ROWS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Fixed format file ends in COLUMNS");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\nCOLUMNS\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Blank line in fixed format file");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n \n\n G  R1\nCOLUMNS\n\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  std::remove(filename.c_str());
+}
+
+TEST_CASE("word-is-finite-double", "[highs_filereader]") {
+  auto testWord = [&](std::string word, HighsInt require_status) {
+    double value;
+    HighsInt status = wordIsFiniteDouble(word, value);
+    if (dev_run)
+      printf("Word %-12s maps to %11.4g with status %d\n", word.c_str(), value,
+             int(status));
+    REQUIRE(status == require_status);
+  };
+  testWord("3.142", 0);
+  testWord("3.142e2", 0);
+  testWord("3.142E2", 0);
+  testWord(" 3.142E2", 0);
+  testWord("3.142E2 ", 0);
+  testWord("-3.142E-2", 0);
+  testWord("-3.142E-02", 0);
+  testWord("-3.142E+02", 0);
+  testWord("3.142E2_1", kDoubleStatusIllegal);
+  testWord("3.142d2", kDoubleStatusFinite);
+  testWord(" 3.142d2", kDoubleStatusFinite);
+  testWord("3.142d2 ", kDoubleStatusFinite);
+  testWord("3.142d2_1", kDoubleStatusIllegal);
+  testWord("3.142d2_a", kDoubleStatusIllegal);
+  testWord("3.142D2", kDoubleStatusFinite);
+  testWord("Inf", kDoubleStatusInfinite);
+  testWord("Infinity", kDoubleStatusInfinite);
+  testWord("infty", kDoubleStatusIllegal);
+  testWord("nan", kDoubleStatusNan);
+  testWord("NaN", kDoubleStatusNan);
+  testWord("NaNaN", kDoubleStatusIllegal);
+  testWord("abc", kDoubleStatusIllegal);
+}
+
+TEST_CASE("issue-3657", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+
+  FILE* file;
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\nCOLUMNS\n C1 R1 abc\nRHS\nENDATA\n");
+  fclose(file);
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  std::remove(filename.c_str());
+}
+
+TEST_CASE("issue-3658", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+
+  FILE* file;
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+
+  if (dev_run)
+    highsPrintStringAsHeading(
+        "Extra data in ROWS line: interpreted as name with spaces, but file is "
+        "free format so fixed format reader fails: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ L R0\n G R1\n G R2\nCOLUMNS\n C1 R1 1 R2 "
+          "2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run)
+    highsPrintStringAsHeading(
+        "Extra data in ROWS line: interpreted as name \"OBJECTIVE_ROW L R0\" "
+        "with spaces of length greater than 8: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJECTIVE_ROW L R0\n G R1\n G R2\nCOLUMNS\n C1 R1 1 "
+          "R2 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Extra data in COLUMNS line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R1\n G R2\nCOLUMNS\n C1 R1 1 R2 2 R1 "
+          "3\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Short names in COLUMNS line: OK");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  if (dev_run) highsPrintStringAsHeading("No objective name: OK");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s", "NAME\nROWS\n G R\n G S\nCOLUMNS\n C R 1 S 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  if (dev_run) highsPrintStringAsHeading("Extra data in RHS line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nRHS\n RHS1 OBJ 1 R 1 S 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Extra data in RANGES line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nRANGES\n RANGES1 R 1 S 1 R 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Extra data in BOUNDS line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nBOUNDS\n UP C 1 D 1\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Extra data in Hessian line: error");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nQSECTION "
+          "OBJ\n C C 1 D 1 D 2\nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kError);
+
+  if (dev_run) highsPrintStringAsHeading("Extra space in Hessian line: OK");
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n G R\n G S\nCOLUMNS\n C R 1 S 2\n D R 2 S "
+          "1\nQSECTION "
+          "OBJ\n C C 1 D 1 \nENDATA\n");
+  fclose(file);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  std::remove(filename.c_str());
+}
+
+TEST_CASE("issue-3659", "[highs_filereader]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+
+  FILE* file;
+  file = fopen(filename.c_str(), "w");
+  fprintf(file, "%s",
+          "NAME\nROWS\n N OBJ\n N FREE1\n G R1\nCOLUMNS\n C1 R1 1\nRHS\n RHS1 "
+          "FREE1 5\nENDATA\n");
+  fclose(file);
+
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+
+  REQUIRE(h.getLp().offset_ == 0);
+  std::remove(filename.c_str());
+}
+
+TEST_CASE("issue-3627", "[highs_filereader]") {
+  // An empty column with zero cost must be written inside/outside the
+  // MPS integer markers according to its own type
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+  const double inf = kHighsInf;
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 0, 1, 0};
+  lp.col_lower_ = {0, 0.25, 0, -inf};
+  lp.col_upper_ = {10, 0.75, 10, inf};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {inf};
+  lp.a_matrix_.start_ = {0, 1, 1, 2, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.col_names_ = {"x", "y", "w", "z"};
+  lp.row_names_ = {"r0"};
+  // Empty zero-cost columns: y continuous after integer x, and z free
+  // integer after continuous w. The fractional bounds on y make the
+  // model infeasible if y is misread as integer
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous,
+                     HighsVarType::kContinuous, HighsVarType::kInteger};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.getLp().integrality_ == lp.integrality_);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 1);
   std::remove(filename.c_str());
 }

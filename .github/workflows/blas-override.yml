@@ -1,7 +1,6 @@
 name: blas-override
 
 on:
-  push:
   pull_request:
 
 concurrency:
@@ -17,7 +16,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout HiGHS (current branch)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: HiGHS
 

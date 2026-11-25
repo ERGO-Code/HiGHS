@@ -38,10 +38,17 @@
            the original and permuted matrices, then A'[i] = A[perm[i]].
     \param iperm is an array of size nvtxs such that if A and A' are
            the original and permuted matrices, then A[i] = A'[iperm[i]].
+    \param should_stop is a callback, called before each bisection, that
+           returns nonzero to stop the ordering. It may be NULL.
+    \param stop_data is the pointer passed to should_stop.
+
+    \returns METIS_OK on success, METIS_ERROR_INTERRUPTED if should_stop
+           requested termination (perm and iperm are then undefined).
 */
 /*************************************************************************/
 int Highs_METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx_t *vwgt,
-          idx_t *options, idx_t *perm, idx_t *iperm) 
+          idx_t *options, idx_t *perm, idx_t *iperm,
+          Highs_METIS_ShouldStop should_stop, void *stop_data)
 {
   idx_t i, ii, j, l, nnvtxs=0;
   graph_t *graph=NULL;
@@ -53,6 +60,10 @@ int Highs_METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx
   if (!ctrl) {
     return METIS_ERROR_INPUT;
   }
+
+  ctrl->should_stop = should_stop;
+  ctrl->stop_data   = stop_data;
+  ctrl->stopped     = 0;
 
   /* prune the dense columns */
   if (ctrl->pfactor > 0.0) { 
@@ -106,6 +117,17 @@ int Highs_METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx
   else
     MlevelNestedDissection(ctrl, graph, iperm, graph->nvtxs);
 
+  /* the recursion has freed all the graphs; free the remaining arrays */
+  if (ctrl->stopped) {
+    if (ctrl->pfactor > 0.0)
+      gk_free((void **)&piperm);
+    else if (ctrl->compress) {
+      gk_free((void **)&cptr);
+      gk_free((void **)&cind);
+    }
+    FreeCtrl(&ctrl);
+    return METIS_ERROR_INTERRUPTED;
+  }
 
   if (ctrl->pfactor > 0.0) { /* Order any prunned vertices */
     icopy(nnvtxs, iperm, perm);  /* Use perm as an auxiliary array */
@@ -141,11 +163,26 @@ int Highs_METIS_NodeND(idx_t *nvtxs, const idx_t *xadj, const idx_t *adjncy, idx
 
 
 /*************************************************************************/
+/*! Returns nonzero if the ordering should stop. Once the callback has 
+    requested termination, the result is remembered in ctrl->stopped. */
+/*************************************************************************/
+static int CheckStop(ctrl_t *ctrl)
+{
+  if (!ctrl->stopped && ctrl->should_stop && ctrl->should_stop(ctrl->stop_data))
+    ctrl->stopped = 1;
+  return ctrl->stopped;
+}
+
+
+/*************************************************************************/
 /*! This is the driver for the recursive tri-section of a graph into the
     left, separator, and right partitions. The graphs correspond to the 
     left and right parts are further tri-sected in a recursive fashion.
     The nodes in the separator are ordered at the end of the left & right
     nodes.
+
+    The function takes ownership of graph and frees it, also when it 
+    returns early because the ordering has been stopped.
  */
 /*************************************************************************/
 void MlevelNestedDissection(ctrl_t *ctrl, graph_t *graph, idx_t *order, 
@@ -154,6 +191,11 @@ void MlevelNestedDissection(ctrl_t *ctrl, graph_t *graph, idx_t *order,
   idx_t i, j, nvtxs, nbnd;
   idx_t *label, *bndind;
   graph_t *lgraph, *rgraph;
+
+  if (CheckStop(ctrl)) {
+    FreeGraph(&graph);
+    return;
+  }
 
   nvtxs = graph->nvtxs;
 
@@ -184,6 +226,10 @@ void MlevelNestedDissection(ctrl_t *ctrl, graph_t *graph, idx_t *order,
     MMDOrder(ctrl, lgraph, order, lastvtx-rgraph->nvtxs); 
     FreeGraph(&lgraph);
   }
+  if (ctrl->stopped) {
+    FreeGraph(&rgraph);
+    return;
+  }
   if (rgraph->nvtxs > MMDSWITCH && rgraph->nedges > 0) 
     MlevelNestedDissection(ctrl, rgraph, order, lastvtx);
   else {
@@ -199,6 +245,9 @@ void MlevelNestedDissection(ctrl_t *ctrl, graph_t *graph, idx_t *order,
     graph that result after removing the separator vertises are ordered
     independently (i.e., this may lead to more than just the left and 
     the right subgraphs).
+
+    The function takes ownership of graph and frees it, also when it 
+    returns early because the ordering has been stopped.
 */
 /*************************************************************************/
 void MlevelNestedDissectionCC(ctrl_t *ctrl, graph_t *graph, idx_t *order, 
@@ -208,6 +257,11 @@ void MlevelNestedDissectionCC(ctrl_t *ctrl, graph_t *graph, idx_t *order,
   idx_t *label, *bndind;
   idx_t *cptr, *cind;
   graph_t **sgraphs;
+
+  if (CheckStop(ctrl)) {
+    FreeGraph(&graph);
+    return;
+  }
 
   nvtxs = graph->nvtxs;
 
@@ -243,6 +297,12 @@ void MlevelNestedDissectionCC(ctrl_t *ctrl, graph_t *graph, idx_t *order,
 
   /* Go and process the subgraphs */
   for (rnvtxs=i=0; i<ncmps; i++) {
+    /* If stopped, free the subgraphs not yet processed */
+    if (ctrl->stopped) {
+      FreeGraph(&sgraphs[i]);
+      continue;
+    }
+
     /* Save the number of vertices in sgraphs[i] because sgraphs[i] is freed 
        inside MlevelNestedDissectionCC, and as such it will be undefined. */
     snvtxs = sgraphs[i]->nvtxs;

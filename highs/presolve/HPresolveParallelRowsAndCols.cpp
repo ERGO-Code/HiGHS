@@ -409,9 +409,7 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
                          colScale * model->col_lower_[duplicateCol];
           }
 
-          if (mipsolver != nullptr && mipsolver->mipdata_->cliquesExtracted) {
-            presolveCliqueTable.eliminateCol(col);
-          }
+          presolveCliqueTable.eliminateCol(col);
 
           // change bounds
           HPRESOLVE_CHECKED_CALL(changeColBounds(col, mergeLower, mergeUpper));
@@ -566,6 +564,15 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
         assert(numSingleton == 0 && numSingletonCandidate == 0);
 
       if (numSingleton == 0 && numSingletonCandidate == 0) {
+        // remove the implied row dual bounds of both rows, since they might in
+        // general not be valid anymore. this is done before the row dual
+        // bounds are swapped below, while the dual activities are consistent:
+        // the swap only accounts for the explicit row dual bounds, i.e.
+        // unlinking row i must remove the contribution of its swapped explicit
+        // bound, which is not the case if an implied bound of row i is tighter
+        resetRowDualImpliedBounds(i);
+        resetRowDualImpliedBounds(parallelRowCand);
+
         bool rowLowerTightened = false;
         bool rowUpperTightened = false;
         double newUpper;
@@ -634,9 +641,6 @@ HPresolve::Result HPresolve::detectParallelRowsAndCols(
             changeRowLower(parallelRowCand, newLower, true);
           }
         }
-        // remove implied bounds, since they might in general not be valid
-        // anymore
-        resetRowDualImpliedBounds(parallelRowCand);
 
         postsolve_stack.duplicateRow(parallelRowCand, rowUpperTightened,
                                      rowLowerTightened, i, rowScale);

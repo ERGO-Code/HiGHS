@@ -40,6 +40,39 @@ TEST_CASE("hi-pdlp", "[hipdlp]") {
   h.resetThreadScheduler(true);
 }
 
+TEST_CASE("hi-pdlp-feasibility-tolerances", "[hipdlp]") {
+  // With a loose objective gap tolerance, tightening the primal and
+  // dual feasibility tolerances must make PDLP iterate for longer: they
+  // are used in its termination test, as well as in HiGHS's KKT check
+  std::string model = "afiro";
+  std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/" + model + ".mps";
+  const double loose_tolerance = 1e-2;
+  const double tight_tolerance = 1e-6;
+  for (const std::string& solver : {kHiPdlpString, kPdlpString}) {
+    HighsInt iteration_count[2];
+    for (HighsInt k = 0; k < 2; k++) {
+      const double feasibility_tolerance =
+          k == 0 ? loose_tolerance : tight_tolerance;
+      Highs h;
+      h.setOptionValue("output_flag", dev_run);
+      REQUIRE(h.readModel(model_file) != HighsStatus::kError);
+      h.setOptionValue("solver", solver);
+      h.setOptionValue("presolve", kHighsOffString);
+      h.setOptionValue("pdlp_optimality_tolerance", loose_tolerance);
+      h.setOptionValue("primal_feasibility_tolerance", feasibility_tolerance);
+      h.setOptionValue("dual_feasibility_tolerance", feasibility_tolerance);
+      REQUIRE(h.run() != HighsStatus::kError);
+      iteration_count[k] = h.getInfo().pdlp_iteration_count;
+      if (dev_run)
+        printf("%s: feasibility tolerance %g needs %d iterations\n",
+               solver.c_str(), feasibility_tolerance, int(iteration_count[k]));
+      h.resetThreadScheduler(true);
+    }
+    REQUIRE(iteration_count[1] > iteration_count[0]);
+  }
+}
+
 TEST_CASE("hi-pdlp-maximize", "[hipdlp]") {
   const std::string model_file =
       std::string(HIGHS_DIR) + "/check/instances/3459.mps";

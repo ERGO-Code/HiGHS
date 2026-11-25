@@ -90,6 +90,9 @@ cc_library(
             "-fexceptions",
             "-Wno-unused-variable",
             "-Wno-unused-but-set-variable",
+            # HighsCDouble needs exact IEEE double arithmetic, as set in
+            # CMakeLists.txt: GCC/Clang contract into FMA when the target has it.
+            "-ffp-contract=off",
         ],
     }),
     defines = select({
@@ -235,6 +238,7 @@ TEST_NAMES = [
     "TestRays",
     "TestSemiVariables",
     "TestSetup",
+    "TestSolverSelect",
     "TestSort",
     "TestSpecialLps",
     "TestThrow",
@@ -249,6 +253,7 @@ TEST_NAMES = [
             "-fexceptions",
             "-Wno-unused-variable",
             "-Wno-unused-but-set-variable",
+            "-ffp-contract=off",  # tests use inline HighsCDouble
         ],
     }),
     deps = [

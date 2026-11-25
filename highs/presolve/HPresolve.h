@@ -225,6 +225,9 @@ class HPresolve {
 
   void resetColImpliedBoundsDerivedFromRow(HighsInt row);
 
+  void resetColImpliedBoundsDerivedFromRowSide(HighsInt row, bool isLowerSide,
+                                               HighsInt skipCol = -1);
+
   void resetRowDualImpliedBoundsDerivedFromCol(HighsInt col);
 
   void resetRowDualImpliedBoundsIfDualSideLost(HighsInt col, bool isLowerBound);
@@ -277,7 +280,11 @@ class HPresolve {
 
   bool isImpliedEquationAtLower(HighsInt row) const;
 
+  bool isImpliedEquationAtLower(HighsInt row, double implDualLower) const;
+
   bool isImpliedEquationAtUpper(HighsInt row) const;
+
+  bool isImpliedEquationAtUpper(HighsInt row, double implDualUpper) const;
 
   StatusResult isImpliedIntegral(HighsInt col);
 
@@ -603,6 +610,12 @@ class HPresolve {
   Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestAggregator(HighsPostsolveStack& postsolve_stack);
+  Result presolveTestTransformColumn(HighsPostsolveStack& postsolve_stack,
+                                     HighsInt col, double scale,
+                                     double constant);
+  Result presolveTestSubstitute(HighsPostsolveStack& postsolve_stack,
+                                HighsInt substcol, HighsInt staycol,
+                                double offset, double scale);
 
   /*
   // Methods defined and used in HPresolveDebug, and only executed if
