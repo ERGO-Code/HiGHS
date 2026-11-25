@@ -1228,3 +1228,39 @@ TEST_CASE("issue-3659", "[highs_filereader]") {
   REQUIRE(h.getLp().offset_ == 0);
   std::remove(filename.c_str());
 }
+
+TEST_CASE("issue-3627", "[highs_filereader]") {
+  // An empty column with zero cost must be written inside/outside the
+  // MPS integer markers according to its own type
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string filename = test_name + ".mps";
+  const double inf = kHighsInf;
+  HighsLp lp;
+  lp.num_col_ = 4;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1, 0, 1, 0};
+  lp.col_lower_ = {0, 0.25, 0, -inf};
+  lp.col_upper_ = {10, 0.75, 10, inf};
+  lp.row_lower_ = {1};
+  lp.row_upper_ = {inf};
+  lp.a_matrix_.start_ = {0, 1, 1, 2, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  lp.col_names_ = {"x", "y", "w", "z"};
+  lp.row_names_ = {"r0"};
+  // Empty zero-cost columns: y continuous after integer x, and z free
+  // integer after continuous w. The fractional bounds on y make the
+  // model infeasible if y is misread as integer
+  lp.integrality_ = {HighsVarType::kInteger, HighsVarType::kContinuous,
+                     HighsVarType::kContinuous, HighsVarType::kInteger};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.writeModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.readModel(filename) == HighsStatus::kOk);
+  REQUIRE(h.getLp().integrality_ == lp.integrality_);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 1);
+  std::remove(filename.c_str());
+}
