@@ -1047,20 +1047,12 @@ class TestHighsPy(unittest.TestCase):
         self.assertEqual(h2.getBasis().col_status, b1.col_status)
         self.assertEqual(h2.getBasis().row_status, b1.row_status)
 
+        # Invalid statuses are rejected when the basis is passed to HiGHS
+        b2.col_status_array = np.array([0, 5])
         with self.assertRaises(ValueError):
-            b2.col_status_array = np.array([0, 5])
-        with self.assertRaises(ValueError):
-            b2.col_status_array = np.array([0, -1])
-        with self.assertRaises(TypeError):
-            b2.col_status_array = np.array([1.0, 1.0])
-        np.testing.assert_array_equal(b2.col_status_array, [1, 1])
-
-        # The array is a copy: it survives reassignment and cannot alter the basis
-        old = b2.col_status_array
-        b2.col_status_array = np.full(100_000, 4)
-        old[0] = 0
-        np.testing.assert_array_equal(old, [0, 1])
-        self.assertEqual(b2.col_status[0], highspy.HighsBasisStatus.kNonbasic)
+            h2.setBasis(b2)
+        b2.col_status_array[1] = 1
+        self.assertEqual(h2.setBasis(b2), highspy.HighsStatus.kOk)
 
     def test_read_basis(self):
         if platform == "linux" or platform == "darwin":

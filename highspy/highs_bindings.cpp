@@ -56,39 +56,6 @@ std::function<void(Base&, dense_array_t<T>)> make_setter_ptr(
   };
 }
 
-// Basis status vectors as uint8 numpy arrays: much faster than lists of enum
-// objects. The getter copies, since a view would dangle once the vector is
-// reassigned and would let writes bypass the setter's validation
-static_assert(sizeof(HighsBasisStatus) == sizeof(uint8_t),
-              "HighsBasisStatus must be stored as uint8_t");
-
-std::function<dense_array_t<uint8_t>(const HighsBasis&)>
-make_basis_status_getter(std::vector<HighsBasisStatus> HighsBasis::* member) {
-  return [member](const HighsBasis& self) -> dense_array_t<uint8_t> {
-    auto& status = self.*member;
-    return dense_array_t<uint8_t>(
-        status.size(), reinterpret_cast<const uint8_t*>(status.data()));
-  };
-}
-
-std::function<void(HighsBasis&, py::array_t<int64_t, py::array::c_style>)>
-make_basis_status_setter(std::vector<HighsBasisStatus> HighsBasis::* member) {
-  return [member](HighsBasis& self,
-                  py::array_t<int64_t, py::array::c_style> array) -> void {
-    if (array.ndim() != 1) throw py::value_error("Expected a 1D array");
-    auto values = array.unchecked<1>();
-    std::vector<HighsBasisStatus> status(values.shape(0));
-    for (py::ssize_t i = 0; i < values.shape(0); i++) {
-      if (values(i) < static_cast<int64_t>(HighsBasisStatus::kLower) ||
-          values(i) > static_cast<int64_t>(HighsBasisStatus::kNonbasic))
-        throw py::value_error("Invalid basis status value " +
-                              std::to_string(values(i)));
-      status[i] = static_cast<HighsBasisStatus>(values(i));
-    }
-    self.*member = std::move(status);
-  };
-}
-
 HighsStatus highs_passModel(Highs* h, HighsModel& model) {
   return h->passModel(model);
 }
@@ -694,6 +661,12 @@ HighsStatus highs_setSparseSolution(Highs* h, HighsInt num_entries,
 }
 
 HighsStatus highs_setBasis(Highs* h, HighsBasis& basis) {
+  // col_status_array and row_status_array let any uint8 into the basis
+  for (const auto* statuses : {&basis.col_status, &basis.row_status})
+    for (HighsBasisStatus status : *statuses)
+      if (status > HighsBasisStatus::kNonbasic)
+        throw py::value_error("Invalid basis status value " +
+                              std::to_string(static_cast<int>(status)));
   return h->setBasis(basis);
 }
 
@@ -1654,11 +1627,11 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def_readwrite("col_status", &HighsBasis::col_status)
       .def_readwrite("row_status", &HighsBasis::row_status)
       .def_property("col_status_array",
-                    make_basis_status_getter(&HighsBasis::col_status),
-                    make_basis_status_setter(&HighsBasis::col_status))
+                    make_readonly_ptr(&HighsBasis::col_status),
+                    make_setter_ptr(&HighsBasis::col_status))
       .def_property("row_status_array",
-                    make_basis_status_getter(&HighsBasis::row_status),
-                    make_basis_status_setter(&HighsBasis::row_status));
+                    make_readonly_ptr(&HighsBasis::row_status),
+                    make_setter_ptr(&HighsBasis::row_status));
   py::class_<HighsRangingRecord>(m, "HighsRangingRecord", py::module_local())
       .def(py::init<>())
       .def_readwrite("value_", &HighsRangingRecord::value_)
