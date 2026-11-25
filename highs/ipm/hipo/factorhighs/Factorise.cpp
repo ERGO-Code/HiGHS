@@ -14,15 +14,20 @@
 
 namespace hipo {
 
-Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
-                     const Int* ptrM, const double* valM,
+Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
+                     const Int* rowsM, const Int* ptrM, const double* valM,
                      const std::vector<double>& static_reg,
                      const FHoptions& FH_opt, const Logger& logger,
                      DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
                      CliqueStack* stack, ScratchArena& scratch)
     : S_{S},
+      num_{num},
       sn_columns_{sn_columns},
+      swaps_{num.swaps_},
+      pivot_2x2_{num.pivot_2x2_},
+      total_reg_{num.total_reg_},
+      unreg_pivots_{num.unreg_pivots_},
       logger_{logger},
       data_{data},
       FH_opt_{FH_opt},
@@ -283,9 +288,11 @@ void Factorise::processTreeParallel() {
   tg.taskWait();
 }
 
-bool Factorise::run(Numeric& num) {
+bool Factorise::run() {
   HIPO_CLOCK_CREATE;
 
+  // The outputs reuse the memory of the previous factorisation. The values are
+  // reset below and by each supernode, as with fresh vectors.
   total_reg_.assign(n_, 0.0);
   unreg_pivots_.assign(n_, 0.0);
 
@@ -309,17 +316,13 @@ bool Factorise::run(Numeric& num) {
   permuteVector(total_reg_, S_.iperm());
   permuteVector(unreg_pivots_, S_.iperm());
 
-  // move factorisation to numerical object
-  num.S_ = &S_;
-  num.sn_columns_ = &sn_columns_;
-  num.total_reg_ = std::move(total_reg_);
-  num.unreg_pivots_ = std::move(unreg_pivots_);
-  num.swaps_ = std::move(swaps_);
-  num.pivot_2x2_ = std::move(pivot_2x2_);
-  num.data_ = &data_;
-  num.options_ = &FH_opt_;
+  // complete the numerical object; the outputs are already in it
+  num_.S_ = &S_;
+  num_.sn_columns_ = &sn_columns_;
+  num_.data_ = &data_;
+  num_.options_ = &FH_opt_;
 
-  if (num.prepare()) return true;
+  if (num_.prepare()) return true;
 
   HIPO_CLOCK_STOP(1, data_, kTimeFactorise);
 
