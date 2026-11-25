@@ -19,9 +19,12 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
                      const std::vector<double>& static_reg,
                      const FHoptions& FH_opt, const Logger& logger,
                      DataCollector& data, FactorStorage& factor,
-                     CliqueStack* stack, ScratchArena& scratch)
+                     CliqueStack* stack,
+                     std::vector<std::vector<double>>& schur_contribution,
+                     ScratchArena& scratch)
     : S_{S},
       num_{num},
+      schur_contribution_{schur_contribution},
       factor_{factor},
       swaps_{num.swaps_},
       pivot_2x2_{num.pivot_2x2_},
@@ -290,7 +293,7 @@ bool Factorise::run() {
   swaps_.assign(n_, 0);
   pivot_2x2_.assign(n_, 0.0);
 
-  // allocate space
+  // one (empty) contribution per supernode; allocated only the first time
   schur_contribution_.resize(S_.sn());
 
   // Layout of the factor: the frontal matrix of each supernode, followed by
@@ -310,7 +313,12 @@ bool Factorise::run() {
     processTreeSerial();
   }
 
-  if (flag_stop_.load(std::memory_order_relaxed)) return true;
+  if (flag_stop_.load(std::memory_order_relaxed)) {
+    // free the contributions that were not assembled, which are kept between
+    // factorisations otherwise
+    for (std::vector<double>& clique : schur_contribution_) freeVector(clique);
+    return true;
+  }
 
   permuteVector(total_reg_, S_.iperm());
   permuteVector(unreg_pivots_, S_.iperm());

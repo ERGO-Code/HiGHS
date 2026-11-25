@@ -98,6 +98,7 @@ class FHsolver {
   DataCollector data_;
   Numeric N_;
   CliqueStack serial_stack_;
+  std::vector<std::vector<double>> schur_contribution_;
 
  public:
   using StopCallback = FHoptions::StopCallback;

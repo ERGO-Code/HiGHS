@@ -31,8 +31,10 @@ class Factorise {
   // numerical factorisation, which receives the result
   Numeric& num_;
 
-  // generated elements, aka Schur complements.
-  std::vector<std::vector<double>> schur_contribution_{};
+  // generated elements, aka Schur complements, when the tree is processed in
+  // parallel. Managed outside of Factorise, so that it can be reused for all
+  // ipm iterations.
+  std::vector<std::vector<double>>& schur_contribution_;
 
   // columns of L, stored as dense supernodes
   // This memory is managed outside of Factorise, so that it can be reused for
@@ -86,7 +88,9 @@ class Factorise {
             const Int* ptrM, const double* valM,
             const std::vector<double>& static_reg, const FHoptions& FH_opt,
             const Logger& logger, DataCollector& data, FactorStorage& factor,
-            CliqueStack* stack, ScratchArena& scratch);
+            CliqueStack* stack,
+            std::vector<std::vector<double>>& schur_contribution,
+            ScratchArena& scratch);
 
   bool run();
 };
