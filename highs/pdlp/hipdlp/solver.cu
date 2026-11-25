@@ -1381,16 +1381,7 @@ static SolveResult Run(const SolveSource& source, const SolveOptions& options, S
     if (source.start_omega > 0) {
       initial.omega0 = source.start_omega;  // a warm start continues
     } else {
-      // The initial primal weight (|c|_2 + 1) / (|b|_2 + 1) of the input LP, b taking each row's
-      // finite bound (the lower one of a ranged row, 0 for a free row)
-      double c2 = 0, b2 = 0;
-      for (double c : host.cost) c2 += c * c;
-      for (int i = 0; i < host.rows; ++i) {
-        double l = host.row_lower[i], u = host.row_upper[i];
-        double b = std::isfinite(l) && l != u ? l : (std::isfinite(u) ? u : (std::isfinite(l) ? l : 0));
-        b2 += b * b;
-      }
-      initial.omega0 = (std::sqrt(c2) + 1) / (std::sqrt(b2) + 1);
+      initial.omega0 = InitialPrimalWeight(host);
     }
     if (snapshot)
       initial.decisions = r.AllocateZero<Decision>(kDecisionCapacity);  // padding downloaded too

@@ -536,7 +536,7 @@ SolveResult RunCpu(const HostLp& lp, const SolveOptions& options,
   const Model m = Prepare(lp);
   Iterate it = Initialize(m);
   Weight w;
-  w.omega = w.best = 1.0;
+  w.omega = w.best = InitialPrimalWeight(lp);
   w.integral = 0;
   w.direction = 0;
   w.epoch_limit = 0;
@@ -708,6 +708,23 @@ const char* StatusName(Status status) {
       return "DEVICE_ERROR";
   }
   return "DEVICE_ERROR";
+}
+
+// The initial primal weight (|c|_2 + 1) / (|b|_2 + 1) of the input LP, b
+// taking each row's finite bound (the lower one of a ranged row, 0 for a free
+// row)
+double InitialPrimalWeight(const HostLp& lp) {
+  double c2 = 0, b2 = 0;
+  for (double c : lp.cost) c2 += c * c;
+  for (int i = 0; i < lp.rows; ++i) {
+    const double l = lp.row_lower[i], u = lp.row_upper[i];
+    const double b = std::isfinite(l) && l != u ? l
+                     : std::isfinite(u)         ? u
+                     : std::isfinite(l)         ? l
+                                                : 0;
+    b2 += b * b;
+  }
+  return (std::sqrt(c2) + 1) / (std::sqrt(b2) + 1);
 }
 
 }  // namespace hipdlp

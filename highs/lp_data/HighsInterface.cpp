@@ -4293,7 +4293,7 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
 void Highs::retryHiPdlpAfterPostsolve(HiPdlpWarmStart& warm_start) {
   // HiPDLP stopped on the presolved LP with KKT violations of
   // warm_start.violations (relative to the tolerances, as lpKktCheck measures
-  // them: see kktRelativeViolations), but postsolve magnified them to more
+  // them: see hiPdlpKktViolations), but postsolve magnified them to more
   // than the 100 that lpKktCheck accepts, so model_status_ is kUnknown. Solve
   // the presolved LP again from where PDLP stopped, stopping on the
   // lpKktCheck measures at tolerances tightened by the observed

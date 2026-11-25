@@ -175,5 +175,5 @@ SolveResult Solve(const HostLp& lp, const SolveOptions& options = {});
 SolveResult Solve(const HostLp& lp, const SolveOptions& options, const StartPoint& start);
 
 SolveResult SolveCpu(const HostLp& lp, const SolveOptions& options = {});
-
+double InitialPrimalWeight(const HostLp& lp);
 }  // namespace hipdlp

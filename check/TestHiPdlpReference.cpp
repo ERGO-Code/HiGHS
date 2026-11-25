@@ -620,4 +620,26 @@ TEST_CASE("hipdlp-cpu-certificates", "[hipdlp][hipdlp-reference]") {
   REQUIRE(tally.checked == 2 * static_cast<int>(cases.size()));
 }
 
+TEST_CASE("hipdlp-warm-start", "[hipdlp][hipdlp-reference]") {
+  if (!deviceAvailable()) {
+    WARN("No usable CUDA/HIP device: skipping the warm start test");
+    return;
+  }
+  const hipdlp::HostLp lp = readHostLp("afiro");
+  hipdlp::SolveOptions options;
+  options.tolerance = 1e-6;
+  const hipdlp::SolveResult cold = hipdlp::Solve(lp, options);
+  REQUIRE(cold.status == hipdlp::Status::kOptimal);
+  // StartPoint wants the minimized-form y: SolveResult::dual times the sense
+  std::vector<double> dual = cold.dual;
+  for (double& v : dual) v *= lp.sense;
+  hipdlp::StartPoint start;
+  start.primal = &cold.primal;
+  start.dual = &dual;
+  start.omega = cold.omega;
+  const hipdlp::SolveResult warm = hipdlp::Solve(lp, options, start);
+  CHECK(warm.status == hipdlp::Status::kOptimal);
+  CHECK(warm.iterations < cold.iterations / 10);
+}
+
 #endif  // HIGHS_HIPDLP_CUDA_DETECTED
