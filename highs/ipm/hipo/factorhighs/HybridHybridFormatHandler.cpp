@@ -13,10 +13,10 @@ namespace hipo {
 HybridHybridFormatHandler::HybridHybridFormatHandler(
     const Symbolic& S, Int sn, DataCollector& data,
     std::vector<double>& frontal, double* clique_ptr, const FHoptions& FH_opt,
-    double* total_reg, double* total_unreg_pivots, std::vector<Int>& swaps,
-    std::vector<double>& pivot_2x2)
+    double* total_reg, double* total_unreg_pivots, Int* total_swaps,
+    double* total_pivot_2x2)
     : FormatHandler(S, sn, frontal, clique_ptr, FH_opt, total_reg,
-                    total_unreg_pivots, swaps, pivot_2x2),
+                    total_unreg_pivots, total_swaps, total_pivot_2x2),
       data_{data},
       nb_{FH_opt_.nb} {
   // initialise frontal and clique
@@ -106,10 +106,9 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh,
   Int sn_start = S_->snStart(sn_);
   const Int* pivot_sign = &S_->pivotSign().data()[sn_start];
 
-  status =
-      denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_, pivot_sign,
-                  static_reg, reg_thresh, reg_, unreg_pivots_, swaps_.data(),
-                  pivot_2x2_.data(), scratch, data_, FH_opt_);
+  status = denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_,
+                       pivot_sign, static_reg, reg_thresh, reg_, unreg_pivots_,
+                       swaps_, pivot_2x2_, scratch, data_, FH_opt_);
 
   return status;
 }

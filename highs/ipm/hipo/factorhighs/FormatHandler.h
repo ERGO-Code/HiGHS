@@ -53,19 +53,18 @@ class FormatHandler {
   std::vector<double> clique_{};
   double* clique_ptr_ = nullptr;
 
-  // Outputs of the supernode, written in place: regularisation and pivots in
-  // the range of the supernode within the whole vectors, swaps and 2x2 pivots
-  // in the vectors of the supernode.
+  // Outputs of the supernode, written in place in the range of the supernode
+  // within the vectors of the whole matrix.
   double* reg_ = nullptr;
   double* unreg_pivots_ = nullptr;
-  std::vector<Int>& swaps_;
-  std::vector<double>& pivot_2x2_;
+  Int* swaps_ = nullptr;
+  double* pivot_2x2_ = nullptr;
 
  public:
   FormatHandler(const Symbolic& S, Int sn, std::vector<double>& frontal,
                 double* clique_ptr, const FHoptions& FH_opt, double* total_reg,
-                double* total_unreg_pivots, std::vector<Int>& swaps,
-                std::vector<double>& pivot_2x2);
+                double* total_unreg_pivots, Int* total_swaps,
+                double* total_pivot_2x2);
   void terminate(std::vector<double>& clique);
 
   // avoid copies

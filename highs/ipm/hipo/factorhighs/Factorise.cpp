@@ -162,7 +162,7 @@ void Factorise::processSupernode(Int sn) {
   // this also allocates space for the frontal matrix and schur complement
   HybridHybridFormatHandler FH_obj(
       S_, sn, data_, sn_columns_[sn], clique_ptr, FH_opt_, total_reg_.data(),
-      unreg_pivots_.data(), swaps_[sn], pivot_2x2_[sn]);
+      unreg_pivots_.data(), swaps_.data(), pivot_2x2_.data());
   FormatHandler* FH = &FH_obj;
 
   HIPO_CLOCK_STOP(2, data_, kTimeFactorisePrepare);
@@ -292,14 +292,14 @@ bool Factorise::run() {
   HIPO_CLOCK_CREATE;
 
   // The outputs reuse the memory of the previous factorisation. The values are
-  // reset below and by each supernode, as with fresh vectors.
+  // reset here, as with fresh vectors.
   total_reg_.assign(n_, 0.0);
   unreg_pivots_.assign(n_, 0.0);
+  swaps_.assign(n_, 0);
+  pivot_2x2_.assign(n_, 0.0);
 
   // allocate space
   schur_contribution_.resize(S_.sn());
-  swaps_.resize(S_.sn());
-  pivot_2x2_.resize(S_.sn());
 
   // This should actually allocate only the first time, then sn_columns_ reuses
   // the memory of previous factorisations.

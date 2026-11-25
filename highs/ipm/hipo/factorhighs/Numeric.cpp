@@ -20,14 +20,15 @@ void Numeric::computeAnySwaps() {
   any_swaps_.resize(S_->sn());
   const Int nb = options_->nb;
   for (Int sn = 0; sn < S_->sn(); ++sn) {
-    const Int sn_size = S_->snStart(sn + 1) - S_->snStart(sn);
+    const Int sn_start = S_->snStart(sn);
+    const Int sn_size = S_->snStart(sn + 1) - sn_start;
     const Int n_blocks = (sn_size - 1) / nb + 1;
     any_swaps_[sn].assign(n_blocks, 0);
 
     for (Int j = 0; j < n_blocks; ++j) {
       const Int jb = std::min(nb, sn_size - nb * j);
       for (Int i = 0; i < jb; ++i) {
-        if (swaps_[sn][nb * j + i] != i) {
+        if (swaps_[sn_start + nb * j + i] != i) {
           any_swaps_[sn][j] = 1;
           break;
         }
@@ -139,9 +140,8 @@ void Numeric::getUnregPivots(std::vector<double>& unreg_pivots) const {
 Int Numeric::num2x2() const {
   // only the first column of a 2x2 pivot stores a nonzero entry
   Int num = 0;
-  for (const std::vector<double>& sn_2x2 : pivot_2x2_)
-    for (double v : sn_2x2)
-      if (v != 0.0) ++num;
+  for (double v : pivot_2x2_)
+    if (v != 0.0) ++num;
   return num;
 }
 

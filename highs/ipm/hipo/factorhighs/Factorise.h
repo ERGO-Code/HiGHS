@@ -52,14 +52,15 @@ class Factorise {
   // The outputs below are the vectors of the Numeric object, written in place,
   // so that their memory is reused by all factorisations.
 
-  // swaps of columns for each supernode, ordered locally within a block
-  std::vector<std::vector<Int>>& swaps_;
+  // swaps of columns for each supernode, ordered locally within a block, one
+  // entry per column
+  std::vector<Int>& swaps_;
 
-  // Information about 2x2 pivots.
-  // If pivot_2x2[sn][i] == 0, 1x1 pivot was used.
-  // If pivot_2x2[sn][i] != 0, 2x2 pivot was used and pivot_2x2[sn][i] stores
+  // Information about 2x2 pivots, one entry per column.
+  // If pivot_2x2[i] == 0, 1x1 pivot was used.
+  // If pivot_2x2[i] != 0, 2x2 pivot was used and pivot_2x2[i] stores
   //  the off-diagonal pivot entry (of the 2x2 inverse).
-  std::vector<std::vector<double>>& pivot_2x2_;
+  std::vector<double>& pivot_2x2_;
 
   // regularisation
   std::vector<double>& total_reg_;

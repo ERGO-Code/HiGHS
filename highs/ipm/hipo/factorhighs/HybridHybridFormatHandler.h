@@ -25,8 +25,8 @@ class HybridHybridFormatHandler : public FormatHandler {
   HybridHybridFormatHandler(const Symbolic& S, Int sn, DataCollector& data,
                             std::vector<double>& frontal, double* clique_ptr,
                             const FHoptions& FH_opt, double* total_reg,
-                            double* total_unreg_pivots, std::vector<Int>& swaps,
-                            std::vector<double>& pivot_2x2);
+                            double* total_unreg_pivots, Int* total_swaps,
+                            double* total_pivot_2x2);
 };
 
 }  // namespace hipo

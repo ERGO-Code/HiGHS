@@ -11,9 +11,9 @@ namespace hipo {
 
 HybridSolveHandler::HybridSolveHandler(
     const Symbolic& S, const std::vector<std::vector<double>>& sn_columns,
-    const std::vector<std::vector<Int>>& swaps,
+    const std::vector<Int>& swaps,
     const std::vector<std::vector<char>>& any_swap,
-    const std::vector<std::vector<double>>& pivot_2x2, DataCollector& data,
+    const std::vector<double>& pivot_2x2, DataCollector& data,
     const FHoptions& options)
     : SolveHandler(S, sn_columns, data, options),
       swaps_{swaps},
@@ -87,7 +87,7 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
       HIPO_CLOCK_START(2);
       any_swaps_in_block = any_swaps_[sn][0];
       if (any_swaps_in_block) {
-        current_swaps = swaps_[sn].data();
+        current_swaps = &swaps_[sn_start];
         // apply swaps to portion of rhs that is affected
         permuteWithSwaps(&x[x_start], current_swaps, jb);
       }
@@ -152,7 +152,7 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
         HIPO_CLOCK_START(2);
         any_swaps_in_block = any_swaps_[sn][j];
         if (any_swaps_in_block) {
-          current_swaps = &swaps_[sn][nb * j];
+          current_swaps = &swaps_[sn_start + nb * j];
           // apply swaps to portion of rhs that is affected
           permuteWithSwaps(&x[x_start], current_swaps, jb);
         }
@@ -303,7 +303,7 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
       HIPO_CLOCK_START(2);
       any_swaps_in_block = any_swaps_[sn][0];
       if (any_swaps_in_block) {
-        current_swaps = swaps_[sn].data();
+        current_swaps = &swaps_[sn_start];
         // apply swaps to portion of rhs that is affected
         permuteWithSwaps(&x[x_start], current_swaps, jb);
       }
@@ -351,7 +351,7 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
         HIPO_CLOCK_START(2);
         any_swaps_in_block = any_swaps_[sn][j];
         if (any_swaps_in_block) {
-          current_swaps = &swaps_[sn][nb * j];
+          current_swaps = &swaps_[sn_start + nb * j];
           // apply swaps to portion of rhs that is affected
           permuteWithSwaps(&x[x_start], current_swaps, jb);
         }
@@ -463,7 +463,7 @@ void HybridSolveHandler::processDiagSn(Int sn, double* x) const {
       HIPO_CLOCK_START(2);
       any_swaps_in_block = any_swaps_[sn][j];
       if (any_swaps_in_block) {
-        current_swaps = &swaps_[sn][nb * j];
+        current_swaps = &swaps_[sn_start + nb * j];
         // apply swaps to portion of rhs that is affected
         permuteWithSwaps(&x[sn_start + nb * j], current_swaps, jb);
       }
@@ -472,7 +472,7 @@ void HybridSolveHandler::processDiagSn(Int sn, double* x) const {
 
     HIPO_CLOCK_START(2);
 
-    const double* current_2x2 = &pivot_2x2_[sn][nb * j];
+    const double* current_2x2 = &pivot_2x2_[sn_start + nb * j];
     Int step = 1;
 
     // go through columns of block
@@ -563,7 +563,7 @@ void HybridSolveHandler::inertia(Int& pos, Int& neg, Int& zero,
     for (Int j = 0; j < n_blocks; ++j) {
       // number of columns in the block
       const Int jb = std::min(nb, sn_size - nb * j);
-      const double* current_2x2 = &pivot_2x2_[sn][nb * j];
+      const double* current_2x2 = &pivot_2x2_[S_.snStart(sn) + nb * j];
       Int step = 1;
 
       // go through columns of block

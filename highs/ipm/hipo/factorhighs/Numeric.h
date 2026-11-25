@@ -22,14 +22,17 @@ class Numeric {
   // columns of factorisation, stored by supernode
   const std::vector<std::vector<double>>* sn_columns_ = nullptr;
 
+  // Swaps and 2x2 pivots have one entry per column: supernode sn owns the
+  // entries from S_->snStart(sn).
+
   // swaps of columns for each supernode, ordered locally within a block
-  std::vector<std::vector<Int>> swaps_{};
+  std::vector<Int> swaps_{};
 
   // indicates whether a block of columns in a supernode has any non-identical
   // swap
   std::vector<std::vector<char>> any_swaps_{};
 
-  std::vector<std::vector<double>> pivot_2x2_{};
+  std::vector<double> pivot_2x2_{};
   const Symbolic* S_;
   DataCollector* data_ = nullptr;
   const FHoptions* options_;
