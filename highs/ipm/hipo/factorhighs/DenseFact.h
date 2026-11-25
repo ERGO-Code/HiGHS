@@ -36,7 +36,8 @@ class ScratchArena;
 Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
                double* static_reg, double thresh, double* totalreg,
                double* unreg_pivots, Int* swaps, double* pivot_2x2,
-               DataCollector& data, const FHoptions& options);
+               ScratchArena& scratch, DataCollector& data,
+               const FHoptions& options);
 
 // dense partial factorisation, in "hybrid formats"
 Int denseFactFH(char format, Int n, Int k, double* A, double* B,

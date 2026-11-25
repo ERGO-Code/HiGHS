@@ -6,6 +6,7 @@
 #include "FactorHighsOptions.h"
 #include "FactorHighsSettings.h"
 #include "ReturnValues.h"
+#include "ScratchArena.h"
 #include "Swaps.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "util/HighsRandom.h"
@@ -164,7 +165,8 @@ static bool blockBunchKaufman(const Int j, Int n, double* A, Int lda,
 Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
                double* static_reg, double thresh, double* totalreg,
                double* unreg_pivots, Int* swaps, double* pivot_2x2,
-               DataCollector& data, const FHoptions& options) {
+               ScratchArena& scratch, DataCollector& data,
+               const FHoptions& options) {
   // ===========================================================================
   // Factorisation kernel
   // Matrix A is in format F
@@ -187,9 +189,10 @@ Int denseFactK(char uplo, Int n, double* A, Int lda, Int* pivot_sign,
     // initialise order of pivots
     for (Int i = 0; i < n; ++i) swaps[i] = i;
 
-    // allocate space for copy of col(s)
-    std::vector<double> temp(n - 1);
-    std::vector<double> temp2(n - 1);
+    // Copies of row(s), fully written by dcopy before being read. The second
+    // one is used only by 2x2 pivots, which need pivoting.
+    ScratchBuffer<double> temp(scratch, n - 1);
+    ScratchBuffer<double> temp2(scratch, options.pivoting ? n - 1 : 0);
 
     Int step = 1;
 

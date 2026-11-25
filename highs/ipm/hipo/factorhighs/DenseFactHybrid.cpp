@@ -109,7 +109,7 @@ Int denseFactFH(char format, Int n, Int k, double* A, double* B,
     Int info = denseFactK('U', jb, D, jb, pivot_sign_current.data(),
                           static_reg_current.data(), thresh, regul_current,
                           unreg_pivots_current, swaps_current,
-                          pivot_2x2_current, data, options);
+                          pivot_2x2_current, scratch, data, options);
     if (info != 0) return info;
 
     if (options.pivoting) {
