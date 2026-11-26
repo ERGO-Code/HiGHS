@@ -18,10 +18,8 @@ namespace ipx {
 // @marked, @marker Node i is "marked" iff @marked[i] == @marker.
 // @work workspace of size # rows of A.
 //
-// The code follows the algorithm of cs_dfs.c, included in the CSPARSE
-// package [1].
-//
-// [1] T. Davis, "Direct methods for sparse linear systems" (2006)
+// The nodes are returned in reverse postorder, which is a topological order
+// if the graph is acyclic.
 //
 Int DepthFirstSearch(Int istart, const Int* Ap, const Int* Ai,
                      const Int* colmap, Int top, Int* istack, Int* marked,
@@ -39,19 +37,17 @@ Int DepthFirstSearch(Int istart, const Int* Ap, const Int* Ai,
 //        It must be unchanged between subsequent calls.
 // @marked array of size n. On entry @marked[j] != @jstart for all j.
 //         On return some entries were set to @jstart.
-// @work size m workspace.
-// @work2 size m+1 workspace.
-// @work3 size m+1 workspace.
+// @work workspace of size 2*(m+1).
 //
 // Returns true if the matching was extended.
 //
-// The code follows the algorithm of cs_augment.c, included in the CSPARSE
-// package [1].
+// The method is depth-first search with cheap assignment, as in [1].
 //
-// [1] T. Davis, "Direct methods for sparse linear systems" (2006)
+// [1] I. S. Duff, "On algorithms for obtaining a maximum transversal",
+//     ACM Trans. Math. Software 7 (1981), pp. 315-330.
 //
 bool AugmentingPath(Int jstart, const Int* Ap, const Int* Ai, Int* jmatch,
-                    Int* cheap, Int* marked, Int* work, Int* work2, Int* work3);
+                    Int* cheap, Int* marked, Int* work);
 
 }  // namespace ipx
 

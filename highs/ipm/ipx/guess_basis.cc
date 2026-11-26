@@ -171,7 +171,7 @@ static void ProcessRemaining(const Control& control, const Model& model,
     const Int* Ap = AI.colptr();
     const Int* Ai = AI.rowidx();
     std::vector<Int> cheap(Ap, Ap+n+m);
-    std::vector<Int> work(m), work2(m+1), work3(m+1);
+    std::vector<Int> work(2*(m+1));
     Int num_matched = 0;
     Int num_failed = 0;
 
@@ -181,8 +181,7 @@ static void ProcessRemaining(const Control& control, const Model& model,
         if (weights[j] == 0.0)
             break;
         bool matched = AugmentingPath(j, Ap, Ai, jmatch.data(), cheap.data(),
-                                      marked.data(), work.data(), work2.data(),
-                                      work3.data());
+                                      marked.data(), work.data());
         if (matched) {
             basis->push_back(j);
             num_matched++;
