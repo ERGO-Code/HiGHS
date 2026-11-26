@@ -69,6 +69,7 @@ void FactorHighs_getRegularisation(void* FH, double* reg);
 void FactorHighs_iperm(void* FH, void* S, HighsInt* ip);
 void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
                          double tol);
+int64_t FactorHighs_getFactorNz(void* S);
 
 // Other
 void FactorHighs_symbolic_print(void* FH, void* S, HighsInt verbose);

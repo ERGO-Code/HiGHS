@@ -90,6 +90,8 @@ void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
   ((hipo::FHsolver*)FH)->inertia(*pos, *neg, *zero, tol);
 }
 
+int64_t FactorHighs_getFactorNz(void* S) { return ((hipo::Symbolic*)S)->nz(); }
+
 void FactorHighs_symbolic_print(void* FH, void* S, HighsInt verbose) {
   const hipo::Logger* logger = ((hipo::FHsolver*)FH)->getLogger();
   if (logger) ((hipo::Symbolic*)S)->print(*logger, verbose);
