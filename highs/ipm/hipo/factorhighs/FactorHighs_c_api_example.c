@@ -52,6 +52,8 @@ int main() {
                          -0.677966101694915, 0.186440677966102,
                          5.677966101694915};
 
+  printf("HiGHS version %s\n", FactorHighs_version());
+
   // initialise with default number of threads
   const int num_threads = 0;
   int initialise_status = FactorHighs_initialise(num_threads);

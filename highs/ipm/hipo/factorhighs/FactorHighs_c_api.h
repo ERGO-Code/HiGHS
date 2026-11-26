@@ -13,6 +13,9 @@
 extern "C" {
 #endif
 
+// Version of HiGHS, as "major.minor.patch"
+const char* FactorHighs_version(void);
+
 // Initialise and create/destroy objects
 HighsInt FactorHighs_initialise(HighsInt threads);
 void FactorHighs_terminate(void);

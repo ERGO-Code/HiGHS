@@ -4,6 +4,11 @@
 #include "HighsExternalApi.h"
 #include "parallel/HighsParallel.h"
 
+// Defined in lp_data/Highs.cpp
+const char* highsVersion();
+
+const char* FactorHighs_version(void) { return highsVersion(); }
+
 HighsInt FactorHighs_initialise(HighsInt threads) {
   highs::parallel::initialize_scheduler(threads);
   bool hipo_available = HighsExternalApi::isAvailable<HighsExtras::hipo>();
