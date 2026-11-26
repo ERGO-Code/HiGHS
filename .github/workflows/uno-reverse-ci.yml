@@ -152,7 +152,11 @@ jobs:
           cmake --install HiGHS/build
 
       - name: Checkout Uno (main)
+<<<<<<< HEAD
         uses: actions/checkout@v6
+=======
+        uses: actions/checkout@v4
+>>>>>>> master
         with:
           repository: ${{ github.event.inputs.uno_repository || 'cvanaret/Uno' }}
           ref: ${{ github.event.inputs.uno_hipo_ref || 'main' }}

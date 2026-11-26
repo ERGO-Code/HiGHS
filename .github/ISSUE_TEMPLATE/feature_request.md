@@ -3,7 +3,7 @@ name: Feature request
 about: Suggest an idea for this project
 ---
 
-Please provide the following information where possible/relevant.
+Please provide the following information where possible/relevant and check out [CONTRIBUTING.md](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md). If AI was used to find or write up this issue, please read [AI generated contributions](https://github.com/ERGO-Code/HiGHS/blob/master/CONTRIBUTING.md#ai-generated-contributions) before submitting.
 
 **What language and solver does this apply to?**
 All, C++, C, Python, C#, Fortran / LP, MIP, QP
