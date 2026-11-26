@@ -4081,6 +4081,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     bool trySparsify = !may_require_basis_postsolve_;
     bool tryProbing = mipsolver != nullptr;
     bool tryFourierMotzkin = mipsolver != nullptr;
+    bool tryKnapsack = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
@@ -4199,9 +4200,10 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       }
 
       // Knapsack specific techniques
-      if (mipsolver != nullptr && this->allow_rule_[kPresolveRuleKnapsack]) {
+      if (this->allow_rule_[kPresolveRuleKnapsack] && tryKnapsack) {
         HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockKnapsack,
                                      strengthenKnapsacks(postsolve_stack));
+        tryKnapsack = false;
         HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
       }
 
