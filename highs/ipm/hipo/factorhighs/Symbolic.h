@@ -130,38 +130,40 @@ class Symbolic {
   // provide const access to symbolic factorisation
   bool empty() const { return id_ == 0; }
   Int64 id() const { return id_; }
-  Int64 nz() const;
+  Int64 nz() const { return nz_; }
   Int matrixNz() const { return relind_cols_.size(); }
-  double flops() const;
-  double spops() const;
-  double critops() const;
-  Int size() const;
-  Int sn() const;
-  double fillin() const;
-  Int rows(Int64 i) const;
-  Int64 ptr(Int i) const;
-  Int snStart(Int i) const;
-  Int snParent(Int i) const;
-  Int relindCols(Int i) const;
-  Int relindClique(Int i, Int j) const;
-  Int consecutiveSums(Int i, Int j) const;
-  Int64 cliqueBlockStart(Int sn, Int bl) const;
-  Int64 cliqueSize(Int sn) const;
-  Int64 maxStackSize() const;
-  Int largestFront() const;
-  Int depth() const;
-  double solveTreeSpeedup() const;
+  double flops() const { return flops_; }
+  double spops() const { return spops_; }
+  double critops() const { return critops_; }
+  Int size() const { return n_; }
+  Int sn() const { return sn_; }
+  double fillin() const { return fillin_; }
+  Int rows(Int64 i) const { return rows_[i]; }
+  Int64 ptr(Int i) const { return ptr_[i]; }
+  Int snStart(Int i) const { return sn_start_[i]; }
+  Int snParent(Int i) const { return sn_parent_[i]; }
+  Int relindCols(Int i) const { return relind_cols_[i]; }
+  Int relindClique(Int i, Int j) const { return relind_clique_[i][j]; }
+  Int consecutiveSums(Int i, Int j) const { return consecutive_sums_[i][j]; }
+  Int64 cliqueBlockStart(Int sn, Int bl) const {
+    return clique_block_start_[sn][bl];
+  }
+  Int64 cliqueSize(Int sn) const { return clique_block_start_[sn].back(); }
+  Int64 maxStackSize() const { return max_stack_size_; }
+  Int largestFront() const { return largest_front_; }
+  Int depth() const { return tree_depth_; }
+  double solveTreeSpeedup() const { return ops_solve_ / critops_solve_; }
   double memoryEstimate() const { return memory_estimate_; }
-  const std::vector<Int64>& ptr() const;
-  const std::vector<Int>& iperm() const;
-  const std::vector<Int>& snParent() const;
-  const std::vector<Int>& snStart() const;
+  const std::vector<Int64>& ptr() const { return ptr_; }
+  const std::vector<Int>& iperm() const { return iperm_; }
+  const std::vector<Int>& snParent() const { return sn_parent_; }
+  const std::vector<Int>& snStart() const { return sn_start_; }
   Int firstChild(Int sn) const { return first_child_[sn]; }
   Int nextChild(Int sn) const { return next_child_[sn]; }
   Int firstChildReverse(Int sn) const { return first_child_reverse_[sn]; }
   Int nextChildReverse(Int sn) const { return next_child_reverse_[sn]; }
-  const std::vector<Int>& pivotSign() const;
-  const TreeSchedule& schedule() const;
+  const std::vector<Int>& pivotSign() const { return pivot_sign_; }
+  const TreeSchedule& schedule() const { return schedule_solve_; }
 
   void print(const Logger& logger, bool verbose = false) const;
 };

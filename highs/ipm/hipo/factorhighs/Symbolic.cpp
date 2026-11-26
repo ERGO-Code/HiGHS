@@ -12,42 +12,6 @@ void TreeSchedule::clear() {
   valid = false;
 }
 
-Int64 Symbolic::nz() const { return nz_; }
-double Symbolic::flops() const { return flops_; }
-double Symbolic::spops() const { return spops_; }
-double Symbolic::critops() const { return critops_; }
-Int Symbolic::size() const { return n_; }
-Int Symbolic::sn() const { return sn_; }
-double Symbolic::fillin() const { return fillin_; }
-Int Symbolic::rows(Int64 i) const { return rows_[i]; }
-Int64 Symbolic::ptr(Int i) const { return ptr_[i]; }
-Int Symbolic::snStart(Int i) const { return sn_start_[i]; }
-Int Symbolic::snParent(Int i) const { return sn_parent_[i]; }
-Int Symbolic::relindCols(Int i) const { return relind_cols_[i]; }
-Int Symbolic::relindClique(Int i, Int j) const { return relind_clique_[i][j]; }
-Int Symbolic::consecutiveSums(Int i, Int j) const {
-  return consecutive_sums_[i][j];
-}
-Int64 Symbolic::cliqueBlockStart(Int sn, Int bl) const {
-  return clique_block_start_[sn][bl];
-}
-Int64 Symbolic::cliqueSize(Int sn) const {
-  return clique_block_start_[sn].back();
-}
-Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
-Int Symbolic::largestFront() const { return largest_front_; }
-Int Symbolic::depth() const { return tree_depth_; }
-double Symbolic::solveTreeSpeedup() const {
-  return ops_solve_ / critops_solve_;
-}
-
-const std::vector<Int64>& Symbolic::ptr() const { return ptr_; }
-const std::vector<Int>& Symbolic::iperm() const { return iperm_; }
-const std::vector<Int>& Symbolic::snParent() const { return sn_parent_; }
-const std::vector<Int>& Symbolic::snStart() const { return sn_start_; }
-const std::vector<Int>& Symbolic::pivotSign() const { return pivot_sign_; }
-const TreeSchedule& Symbolic::schedule() const { return schedule_solve_; }
-
 static std::string memoryString(double mem) {
   std::stringstream ss;
 
