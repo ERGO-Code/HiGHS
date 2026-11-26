@@ -4,6 +4,11 @@
 #include "HighsExternalApi.h"
 #include "parallel/HighsParallel.h"
 
+// Defined in lp_data/Highs.cpp
+const char* highsVersion();
+
+const char* FactorHighs_version(void) { return highsVersion(); }
+
 HighsInt FactorHighs_initialise(HighsInt threads) {
   highs::parallel::initialize_scheduler(threads);
   bool hipo_available = HighsExternalApi::isAvailable<HighsExtras::hipo>();
@@ -71,10 +76,21 @@ void FactorHighs_setLogging(void* FH, HighsInt display) {
   ((hipo::FHsolver*)FH)->setLogger(nullptr, display);
 }
 
+void FactorHighs_setParallel(void* FH, HighsInt tree, HighsInt node) {
+  ((hipo::FHsolver*)FH)->setParallel(tree, node);
+}
+
+void FactorHighs_setParallelSolve(void* FH, HighsInt forward, HighsInt backward,
+                                  HighsInt diag) {
+  ((hipo::FHsolver*)FH)->setParallelSolve(forward, backward, diag);
+}
+
 void FactorHighs_inertia(void* FH, HighsInt* pos, HighsInt* neg, HighsInt* zero,
                          double tol) {
   ((hipo::FHsolver*)FH)->inertia(*pos, *neg, *zero, tol);
 }
+
+int64_t FactorHighs_getFactorNz(void* S) { return ((hipo::Symbolic*)S)->nz(); }
 
 void FactorHighs_symbolic_print(void* FH, void* S, HighsInt verbose) {
   const hipo::Logger* logger = ((hipo::FHsolver*)FH)->getLogger();

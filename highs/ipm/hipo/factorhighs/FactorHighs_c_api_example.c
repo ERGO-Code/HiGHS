@@ -52,6 +52,8 @@ int main() {
                          -0.677966101694915, 0.186440677966102,
                          5.677966101694915};
 
+  printf("HiGHS version %s\n", FactorHighs_version());
+
   // initialise with default number of threads
   const int num_threads = 0;
   int initialise_status = FactorHighs_initialise(num_threads);
@@ -73,6 +75,15 @@ int main() {
   FactorHighs_setPivoting(FH, pivoting_off);
 
   FactorHighs_setRegularisation(FH, 0.0, 0.0);
+
+  // parallelism is off by default; it must be set before factorise.
+  // Each flag is 1 (on) or 0 (off).
+  const int parallel_tree = 1, parallel_node = 1;
+  FactorHighs_setParallel(FH, parallel_tree, parallel_node);
+
+  const int parallel_forward = 1, parallel_backward = 1, parallel_diag = 1;
+  FactorHighs_setParallelSolve(FH, parallel_forward, parallel_backward,
+                               parallel_diag);
 
   // compute ordering with metis
   int perm[N];
