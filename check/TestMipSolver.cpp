@@ -2881,7 +2881,7 @@ TEST_CASE("issue-3726-mip", "[highs_test_mip_solver]") {
 
   Highs h;
   std::string text;
-  const bool logging = true;  // false;  // dev_run;
+  const bool logging = dev_run;
   auto testObjectiveBound = [&](const double objective_bound,
                                 const HighsModelStatus require_model_status) {
     h.clearSolver();
