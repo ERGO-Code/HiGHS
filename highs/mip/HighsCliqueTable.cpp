@@ -2077,25 +2077,25 @@ void HighsCliqueTable::fixSubstitutedCols(HighsDomain& globaldom) {
   // propagated to the other one by the cliques. hence, fix the other column
   // of each substitution with one fixed column, and repeat for chains of
   // substitutions
-  bool fixedCol = true;
-  while (fixedCol) {
-    fixedCol = false;
+  bool newFixing = true;
+  while (newFixing) {
+    newFixing = false;
     for (const Substitution& subst : substitutions) {
       const bool substFixed = globaldom.isFixed(subst.substcol);
       if (!substFixed && !globaldom.isFixed(subst.replace.col)) continue;
-      const HighsInt fixed = substFixed ? subst.substcol : subst.replace.col;
-      const HighsInt other = substFixed ? subst.replace.col : subst.substcol;
+      const HighsInt fixedCol = substFixed ? subst.substcol : subst.replace.col;
+      const HighsInt otherCol = substFixed ? subst.replace.col : subst.substcol;
       // the columns take the same value if the replacement literal is
       // uncomplemented, and complementary values otherwise
-      const HighsInt fixedVal = globaldom.isFixedToVal(fixed, 1) ? 1 : 0;
+      const HighsInt fixedVal = globaldom.isFixedToVal(fixedCol, 1) ? 1 : 0;
       const HighsInt otherVal =
           subst.replace.val == 1 ? fixedVal : 1 - fixedVal;
-      if (globaldom.isFixedToVal(other, otherVal)) continue;
+      if (globaldom.isFixedToVal(otherCol, otherVal)) continue;
       // fixes the other column, or detects the infeasibility if it is fixed to
       // the other value
-      globaldom.fixCol(other, static_cast<double>(otherVal));
+      globaldom.fixCol(otherCol, static_cast<double>(otherVal));
       if (globaldom.infeasible()) return;
-      fixedCol = true;
+      newFixing = true;
     }
   }
 }
