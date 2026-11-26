@@ -11,9 +11,10 @@
 // serial.
 //
 // The stack is used as follows:
-// - use init to initialize the stack, providing the max stack size. If the
-//   parameter is correct, there will be no reallocation of stack during its
-//   operation.
+// - use init before each factorisation to empty the stack, providing the max
+//   stack size. The memory is kept between factorisations and grows only if
+//   needed. If the parameter is correct, there will be no reallocation of stack
+//   during its operation.
 // - use setup, with the size of the clique that is being computed, to
 //   initialize enough elements in the workspace. This also returns a pointer to
 //   write the new clique. The workspace is simply a chunk of space at the top
@@ -39,7 +40,6 @@ class CliqueStack {
 
   double* workspace_;
   Int64 worksize_;
-  bool empty_ = true;
 
   // pairs (sn, size) of supernodes that got pushed
   std::stack<std::pair<Int, Int64>> sn_pushed_{};
@@ -51,12 +51,10 @@ class CliqueStack {
 
  public:
   void init(Int64 size);
-  void clear();
   double* setup(Int64 clique_size, bool& reallocation);
   const double* getChild(Int& child_sn) const;
   void popChild();
   void pushWork(Int sn);
-  bool empty() const;
 };
 
 }  // namespace hipo

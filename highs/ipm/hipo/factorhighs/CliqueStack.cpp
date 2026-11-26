@@ -20,16 +20,9 @@ void CliqueStack::init(Int64 stack_size) {
   top_ = 0;
   workspace_ = nullptr;
   worksize_ = 0;
-  empty_ = false;
-
-  reserve(stack_size);
-}
-
-void CliqueStack::clear() {
-  top_ = 0;
-  workspace_ = nullptr;
-  worksize_ = 0;
   sn_pushed_ = std::stack<std::pair<Int, Int64>>();
+
+  if (capacity_ < stack_size) reserve(stack_size);
 }
 
 double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
@@ -55,8 +48,6 @@ double* CliqueStack::setup(Int64 clique_size, bool& reallocation) {
 
   return workspace_;
 }
-
-bool CliqueStack::empty() const { return empty_; }
 
 const double* CliqueStack::getChild(Int& child_sn) const {
   // Get the top of the stack, in terms of supernode ID of the child and pointer

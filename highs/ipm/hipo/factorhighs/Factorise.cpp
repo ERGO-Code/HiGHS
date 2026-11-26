@@ -268,8 +268,7 @@ void Factorise::processTreeSerial() {
     flag_stop_.store(true, std::memory_order_relaxed);
     return;
   }
-  if (stack_->empty()) stack_->init(S_.maxStackSize());
-  stack_->clear();
+  stack_->init(S_.maxStackSize());
   for (Int sn = 0; sn < S_.sn(); ++sn) {
     processSupernode(sn);
   }
@@ -296,12 +295,13 @@ bool Factorise::run() {
   swaps_.assign(n_, 0);
   pivot_2x2_.assign(n_, 0.0);
 
-  // one (empty) contribution per supernode; allocated only the first time
+  // one (empty) contribution per supernode; allocated only if there are more
+  // supernodes than before
   schur_contribution_.resize(S_.sn());
 
   // Layout of the factor: the frontal matrix of each supernode, one after the
-  // other. The memory is allocated only the first time, then factor_ reuses the
-  // memory of previous factorisations.
+  // other. factor_ reuses the memory of previous factorisations, and allocates
+  // only if the layout needs more space.
   factor_.setLayout(S_.sn(), [&](Int sn) {
     const Int sn_size = S_.snStart(sn + 1) - S_.snStart(sn);
     const Int ldf = (Int)(S_.ptr(sn + 1) - S_.ptr(sn));

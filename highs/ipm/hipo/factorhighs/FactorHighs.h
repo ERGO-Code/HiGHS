@@ -114,8 +114,7 @@ class FHsolver {
   std::vector<double> static_reg_permuted_;
 
   // Columns of factorisation, stored by supernode.
-  // This memory is allocated the first time that it is used. Subsequent
-  // factorisations reuse the same memory.
+  // The memory is kept between factorisations and grows only when needed.
   FactorStorage factor_;
 
   // Scratch memory of the dense kernels and solves, kept between calls.
