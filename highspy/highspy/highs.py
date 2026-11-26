@@ -2754,7 +2754,15 @@ class highs_linear_expression:
         RHS_vars, RHS_vals = right.reduced_elements()
 
         if not np.array_equal(LHS_vars, RHS_vars) or not np.array_equal(LHS_vals, RHS_vals):
-            raise HighsError("Mismatched variables in chain comparison.")
+            lhs_terms = " + ".join(f"{float(c)!r}*v{int(i)}" for i, c in zip(LHS_vars, LHS_vals)) or "no variables"
+            rhs_terms = " + ".join(f"{float(c)!r}*v{int(i)}" for i, c in zip(RHS_vars, RHS_vals)) or "no variables"
+            raise HighsError(
+                "Mismatched variables in chain comparison: in `lhs <= expr <= rhs`, lhs and rhs must have the same "
+                f"variables with exactly the same coefficients, but lhs has `{lhs_terms}` and rhs has `{rhs_terms}` "
+                "(vN is the variable with index N). Coefficients are compared in floating point, so terms written "
+                "differently (e.g. `x + x` and `2*x`) can differ slightly. Move the variables into the middle term so "
+                "that both bounds are constants, or write two separate constraints."
+            )
 
         if len(LHS_vars) > len(inner.idxs):
             copy = highs_linear_expression()
