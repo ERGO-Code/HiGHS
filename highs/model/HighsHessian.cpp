@@ -423,6 +423,11 @@ HighsStatus HighsHessian::assess(const HighsOptions& options,
   return assessHessian(*this, options, col_names);
 }
 
+void HighsHessian::negate() {
+  if (this->isOracle()) this->oracle_.multiplier_ *= -1;
+  for (HighsInt iEl = 0; iEl < this->numNz(); iEl++) this->value_[iEl] *= -1;
+}
+
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
                                       const bool exit_on_first_error) const {
   if (!this->isOracle()) {

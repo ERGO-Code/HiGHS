@@ -2521,3 +2521,24 @@ TEST_CASE("stale-implied-col-bounds-after-relaxation",
     }
   }
 }
+
+TEST_CASE("fix-presolve-sense", "[highs_test_presolve]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s",
+          "max\n 10 table + 25 chairs\nst\n assembly: table + 2 chairs <= 80\n "
+          "finishing: table + 4 chairs <= 120\nend\n");
+  fclose(file);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+
+  REQUIRE(h.presolve() == HighsStatus::kOk);
+  REQUIRE(h.getModelPresolveStatus() == HighsPresolveStatus::kNotReduced);
+  REQUIRE(h.getPresolvedLp().sense_ == h.getLp().sense_);
+
+  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}

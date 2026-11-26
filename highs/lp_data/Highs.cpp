@@ -1267,6 +1267,10 @@ HighsStatus Highs::presolve() {
   if (using_reduced_lp) {
     presolved_model_.lp_ = presolve_.getReducedProblem();
     presolved_model_.lp_.setMatrixDimensions();
+    // The presolved model is always a minimization, so flip its
+    // objective and sense to be consistent with the incumbent model
+    if (presolved_model_.lp_.sense_ != this->model_.lp_.sense_)
+      presolved_model_.flipObjectiveAndSense();
   }
 
   highsLogUser(log_options, HighsLogType::kInfo, "Presolve status: %s\n",
