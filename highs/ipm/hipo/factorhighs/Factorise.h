@@ -19,6 +19,8 @@ class ScratchArena;
 
 class Factorise {
  public:
+  // matrix to factorise, permuted; managed outside of Factorise, so that it is
+  // built once for each symbolic factorisation
   PermutedMatrix& matrix_;
   Int n_{};
 
@@ -66,6 +68,9 @@ class Factorise {
 
   // flag to stop computation
   std::atomic<bool> flag_stop_{false};
+
+  // the input is not compatible with the symbolic factorisation
+  bool invalid_input_ = false;
 
   const Logger& logger_;
   DataCollector& data_;

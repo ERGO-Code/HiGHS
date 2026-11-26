@@ -131,6 +131,7 @@ class Symbolic {
   bool empty() const { return id_ == 0; }
   Int64 id() const { return id_; }
   Int64 nz() const;
+  Int matrixNz() const { return relind_cols_.size(); }
   double flops() const;
   double spops() const;
   double critops() const;

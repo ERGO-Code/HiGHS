@@ -87,7 +87,9 @@ via the Symbolic object, S.iperm().
 FHsolver keeps the memory of the factor and of the scratch space used by the
 factorisation and the solves, and reuses it in later calls. After the first
 factorisation, there are no allocations per supernode, except for the
-contribution blocks when the tree is processed in parallel.
+contribution blocks when the tree is processed in parallel. The permuted matrix
+is built once for each symbolic factorisation, and later factorisations only
+copy the values.
 
 */
 
@@ -133,7 +135,8 @@ class FHsolver {
               const Int* signs, const Int* perm);
 
   // Perform factorise phase of matrix given by rows, ptr, vals, and store
-  // numerical factorisation in object N. See ReturnValues.h for errors.
+  // numerical factorisation in object N. The pattern must be the one given to
+  // analyse for S. See ReturnValues.h for errors.
   Int factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
                 const Int* ptr, const double* vals);
 

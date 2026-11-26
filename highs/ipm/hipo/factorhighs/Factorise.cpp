@@ -50,11 +50,28 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
     logger_.printInfo(
         "Matrix provided to Factorise has size incompatible with symbolic "
         "object.\n");
+    invalid_input_ = true;
+    return;
+  }
+
+  const Int offset = FH_opt_.one_indexing ? 1 : 0;
+  if (ptr[n_] - offset > nz) {
+    logger_.printInfo("Matrix provided to Factorise has inconsistent nz.\n");
+    invalid_input_ = true;
     return;
   }
 
   if (!matrix_.matches(S_, nz, FH_opt_.one_indexing))
     matrix_.build(S_, nz, rows, ptr, FH_opt_.one_indexing);
+
+  // the pattern must be the one given to analyse for S_
+  if (matrix_.nz() != S_.matrixNz()) {
+    logger_.printInfo(
+        "Matrix provided to Factorise has pattern incompatible with symbolic "
+        "object.\n");
+    invalid_input_ = true;
+    return;
+  }
 
   M_norm1_ = matrix_.fill(rows, ptr, val, scratch_);
 
@@ -251,6 +268,8 @@ void Factorise::processTreeParallel() {
 }
 
 bool Factorise::run() {
+  if (invalid_input_) return true;
+
   HIPO_CLOCK_CREATE;
 
   // The outputs reuse the memory of the previous factorisation. The values are
