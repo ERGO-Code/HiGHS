@@ -81,6 +81,7 @@ if ((NOT FAST_BUILD OR ALL_TESTS) AND NOT (BUILD_EXTRA_UNIT_ONLY))
       TestSetup.cpp
       TestSolverSelect.cpp
       TestSort.cpp
+      TestSparseGraphUtils.cpp
       TestSpecialLps.cpp
       TestSymmetry.cpp
       TestThrow.cpp
