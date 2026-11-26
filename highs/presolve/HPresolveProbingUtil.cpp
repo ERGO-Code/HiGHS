@@ -278,6 +278,9 @@ HPresolve::Result HPresolve::finaliseProbing(
       --liftedNonZeros;
       continue;
     }
+    // a deleted column has no clique entries (see markColDeleted), so it
+    // cannot extend a clique (#3707)
+    assert(!colDeleted[cliqueextension.second.col]);
     double val = 1.0;
     if (cliqueextension.second.val == 0) {
       addToRowLower(cliqueextension.first, HighsCDouble{-1});
@@ -287,6 +290,11 @@ HPresolve::Result HPresolve::finaliseProbing(
     addToMatrix(cliqueextension.first, cliqueextension.second.col, val);
   }
   extensionvars.clear();
+
+  // apply substitutions before removing the fixed columns below, which also
+  // removes the columns of substitutions with a fixed column
+  HPRESOLVE_CHECKED_CALL(
+      applyConflictGraphSubstitutions(postsolve_stack, numVarsSubstituted));
 
   // now remove fixed columns and tighten domains
   for (HighsInt i = 0; i != model->num_col_; ++i) {
@@ -312,10 +320,6 @@ HPresolve::Result HPresolve::finaliseProbing(
     // HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
-  // finally apply substitutions
-  HPRESOLVE_CHECKED_CALL(
-      applyConflictGraphSubstitutions(postsolve_stack, numVarsSubstituted));
-
   // aggregate variable bounds now that the clique table is populated
   aggregateVarBounds();
 
@@ -324,10 +328,24 @@ HPresolve::Result HPresolve::finaliseProbing(
 
 HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
     HighsPostsolveStack& postsolve_stack, HighsInt& numDelCol) {
+  // called by finaliseProbing before the fixed columns are removed. limits
+  // are not checked here, since rows have already been deleted by the clique
+  // table, relying on all substitutions and fixings being applied
+  HighsDomain& domain = mipsolver->mipdata_->getDomain();
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
+
+  // a fixing of one column of a clique-table substitution fixes the other
+  // one, so that it is not lost when the substitution is skipped (#3740)
+  cliquetable.fixSubstitutedCols(domain);
+  if (domain.infeasible()) return Result::kPrimalInfeasible;
+
   for (const auto& substitution : implications.substitutions) {
     if (colDeleted[substitution.substcol] || colDeleted[substitution.staycol])
+      continue;
+    // keep fixed columns, which are removed after the substitutions
+    if (domain.isFixed(substitution.substcol) ||
+        domain.isFixed(substitution.staycol))
       continue;
 
     ++numDelCol;
@@ -341,13 +359,19 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
     HPRESOLVE_CHECKED_CALL(substitute(substitution.substcol,
                                       substitution.staycol, substitution.offset,
                                       substitution.scale));
-    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
   implications.substitutions.clear();
 
   for (HighsCliqueTable::Substitution subst : cliquetable.getSubstitutions()) {
     if (colDeleted[subst.substcol] || colDeleted[subst.replace.col]) continue;
+    if (domain.isFixed(subst.substcol) || domain.isFixed(subst.replace.col)) {
+      // fixSubstitutedCols fixed both columns, which are removed after the
+      // substitutions, so no fixing is lost
+      assert(domain.isFixed(subst.substcol) &&
+             domain.isFixed(subst.replace.col));
+      continue;
+    }
 
     double scale;
     double offset;
@@ -369,7 +393,6 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
         HighsEmptySlice());
     HPRESOLVE_CHECKED_CALL(
         substitute(subst.substcol, subst.replace.col, offset, scale));
-    HPRESOLVE_CHECKED_CALL(checkLimits(postsolve_stack));
   }
 
   cliquetable.clearSubstitutions();

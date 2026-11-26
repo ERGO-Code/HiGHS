@@ -402,6 +402,9 @@ class HighsCliqueTable {
 
   void cleanupFixed(HighsDomain& globaldom);
 
+  // fixes the other column of each substitution with one fixed column
+  void fixSubstitutedCols(HighsDomain& globaldom);
+
   void addImplications(HighsDomain& domain, HighsInt col, HighsInt val);
 
   HighsInt getNumImplications(HighsInt col) const;

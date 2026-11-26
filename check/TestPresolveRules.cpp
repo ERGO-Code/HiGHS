@@ -1948,6 +1948,127 @@ TEST_CASE("test-substitute-zero-scale", "[highs_test_presolve_rules]") {
   HighsTaskExecutor::shutdown(true);
 }
 
+TEST_CASE("test-enumeration-substitution-fixing",
+          "[highs_test_presolve_rules]") {
+  // issue #3740: enumeration presolve stores pairs of binaries that are
+  // identical or complementary in all solutions as clique-table
+  // substitutions, and deletes the rows that become redundant. if the
+  // replacement column was fixed in the same call, the substitution was
+  // skipped, so the substituted column was left free and the presolved model
+  // was a relaxation of the original one. the model (model B of the issue)
+  //   min 0, all rows <=, all columns binary
+  // has the unique feasible point x = (1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1)
+  const HighsInt numCol = 11;
+  const std::vector<std::vector<std::pair<HighsInt, double>>> rows = {
+      {{0, -1},
+       {1, -1},
+       {2, -1},
+       {3, -1},
+       {4, -1},
+       {5, -1},
+       {6, -1},
+       {7, -1},
+       {8, -1}},
+      {{0, 1}, {1, 1}, {2, 1}, {3, 1}},
+      {{0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}},
+      {{1, 1}, {2, 1}, {3, 1}, {4, 1}, {5, 1}},
+      {{2, 1}, {3, 1}, {4, 1}, {5, 1}},
+      {{4, 1}, {5, 1}, {6, 1}, {7, 1}},
+      {{5, 1}, {6, 1}, {7, 1}, {8, 1}},
+      {{0, -1}, {1, 1}, {2, -1}},
+      {{1, -1}, {2, 1}, {3, -1}},
+      {{4, -1}, {5, -1}},
+      {{1, 1}, {2, -1}, {3, 1}},
+      {{2, 1}, {3, -1}, {4, 1}},
+      {{6, 1}, {8, 1}},
+      {{2, 1}, {9, -1}},
+      {{3, 1}, {9, -1}},
+      {{7, 1}, {10, -1}},
+      {{8, 1}, {10, -1}},
+      {{9, 1}, {10, 1}}};
+  const std::vector<double> rhs = {-6, 3, 4, 4, 3, 3, 3, 0, 0,
+                                   -1, 1, 1, 1, 0, 0, 0, 0, 1};
+  const std::vector<double> modelSolution = {1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1};
+
+  HighsLp lp;
+  lp.num_col_ = numCol;
+  lp.num_row_ = static_cast<HighsInt>(rows.size());
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_.assign(numCol, 0.0);
+  lp.col_lower_.assign(numCol, 0.0);
+  lp.col_upper_.assign(numCol, 1.0);
+  lp.integrality_.assign(numCol, HighsVarType::kInteger);
+  lp.row_lower_.assign(lp.num_row_, -kHighsInf);
+  lp.row_upper_ = rhs;
+  lp.a_matrix_.format_ = MatrixFormat::kRowwise;
+  lp.a_matrix_.num_col_ = numCol;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0};
+  for (const auto& row : rows) {
+    for (const auto& entry : row) {
+      lp.a_matrix_.index_.push_back(entry.first);
+      lp.a_matrix_.value_.push_back(entry.second);
+    }
+    lp.a_matrix_.start_.push_back(
+        static_cast<HighsInt>(lp.a_matrix_.index_.size()));
+  }
+  lp.a_matrix_.ensureColwise();
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("presolve_rule_test", kPresolveRuleEnumeration);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsSolution solution;
+  HighsProfiling profiling;
+
+  HighsMipSolver mipsolver(callback, options, lp, solution);
+  mipsolver.timer_.start();
+  profiling.initialize(mipsolver.timer_, true, true);
+  mipsolver.setProfiling(&profiling);
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+  mipsolver.mipdata_->setupDomainPropagation();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status != HighsModelStatus::kInfeasible);
+
+  // enumeration presolve only makes primal reductions, so the presolved model
+  // must have exactly one feasible point as well, and it must agree with the
+  // unique feasible point of the model
+  const HighsLp& presolved = *mipsolver.model_;
+  REQUIRE(presolved.num_col_ <= numCol);
+  HighsInt numFeasible = 0;
+  std::vector<double> x(presolved.num_col_);
+  MipViolation violation;
+  HighsCDouble objective;
+  for (HighsInt point = 0; point < (HighsInt{1} << presolved.num_col_);
+       point++) {
+    for (HighsInt j = 0; j < presolved.num_col_; j++)
+      x[j] = static_cast<double>((point >> j) & 1);
+    if (!mipsolver.solutionFeasible(&presolved, x, nullptr, violation,
+                                    objective))
+      continue;
+    numFeasible++;
+    for (HighsInt j = 0; j < presolved.num_col_; j++)
+      REQUIRE(x[j] == modelSolution[postsolve_stack.getOrigColIndex(j)]);
+  }
+  REQUIRE(numFeasible == 1);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
                    const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,
