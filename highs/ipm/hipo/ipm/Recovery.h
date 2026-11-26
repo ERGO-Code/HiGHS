@@ -32,7 +32,7 @@ enum class RecoveryAction {
 // reg+ is always tried before stopping.
 // After reg+, reg- lowers the primal regularisation again, once enough "clean"
 // iterations have been observed; reg-undo raises it back if I or W appear
-// afterwards.
+// afterwards, before another reg+.
 struct ActionProperties {
   const char* name;
   bool reset_to_best;
@@ -84,7 +84,7 @@ struct Recovery {
   // and the first action from there that capabilities allow and that is not
   // used up (chosen max_times already) is chosen. Entries, in decreasing order
   // of priority; the first issue with an action available is acted upon:
-  //  1. I or W after reg-: reg-undo;
+  //  1. I or W after reg-, with no reg+ since: reg-undo;
   //  2. stagnation, with I or W in the last kActionNumericalWindow iterations:
   //     drop; I or W in that window with a step below kShortStepAlpha counts
   //     as stagnation, but cannot lead to stop;
@@ -130,6 +130,9 @@ struct Recovery {
   bool waitingForPreviousAction(Int iter, RecoveryAction action) const;
 
   Int timesProposed(RecoveryAction action) const;
+
+  // the most recent of reg+ and reg-; kNone if neither was proposed
+  RecoveryAction lastRegChange() const;
 };
 
 }  // namespace hipo

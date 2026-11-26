@@ -18,6 +18,14 @@ Int Recovery::timesProposed(RecoveryAction action) const {
   return count;
 }
 
+RecoveryAction Recovery::lastRegChange() const {
+  for (auto p = proposed_actions.rbegin(); p != proposed_actions.rend(); ++p)
+    if (p->action == RecoveryAction::kIncreaseReg ||
+        p->action == RecoveryAction::kDecreaseReg)
+      return p->action;
+  return RecoveryAction::kNone;
+}
+
 bool Recovery::available(RecoveryAction action,
                          const SolverCapabilities& capabilities) const {
   return allowedBy(action, capabilities) &&
@@ -75,7 +83,7 @@ Recovery::ProposedAction Recovery::proposeAction(
   // 1: reg- brought the numerical trouble back
   const bool undo_decrease =
       hasNumericalTrouble(report) &&
-      timesProposed(RecoveryAction::kDecreaseReg) > 0 &&
+      lastRegChange() == RecoveryAction::kDecreaseReg &&
       available(RecoveryAction::kUndoDecreaseReg, capabilities);
 
   // 2, 3: stagnation. Recentring helps only if the point is poorly centred,
