@@ -45,7 +45,8 @@ struct Diagnostics {
   // ===================================================================================
   // Detect stagnation and add to report:
   // - kBadResReduction, if residualReductionTest failed in at least
-  //   kBadResMaxIter of the last kBadResWindow iterations;
+  //   kBadResMaxIter of the last kBadResWindow iterations, and neither pinf
+  //   nor dinf passed the window part of progressTest;
   // - kLargeResIncrease, if residualReductionTest found a residual increased
   //   by more than a factor kResReductionLargeIncrease;
   // - kNoProgress and kOscillation, if the window and best-value parts of
@@ -121,12 +122,13 @@ struct Diagnostics {
   // History and best values are recorded for all quantities, tracked or not,
   // and are reset only by clear(). infeas_drop is recorded only when it is
   // computed.
-  // Sets no_window_progress and no_best_progress if the two parts failed.
+  // Sets no_window_progress and no_best_progress if the two parts failed, and
+  // feas_progress if pinf or dinf passed the window part.
   // ===================================================================================
   bool progressTest(const Iterate& it, Int iter, double feas_tol,
                     double opt_tol, double crossover_tol,
                     bool& no_window_progress, bool& no_best_progress,
-                    std::stringstream& log_stream);
+                    bool& feas_progress, std::stringstream& log_stream);
 
   // ===================================================================================
   // Check if the iterate is not moving: in the last kProgressMaxIter

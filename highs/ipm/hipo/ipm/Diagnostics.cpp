@@ -38,21 +38,24 @@ void Diagnostics::stagnation(const Iterate& it, Int iter, double feas_tol,
   Int bad_res_count = 0;
   for (Int h = bad_res_history; h != 0; h >>= 1) bad_res_count += h & 1;
 
-  const bool bad_residuals = bad_res_count >= kBadResMaxIter;
-  if (bad_residuals) {
+  bool no_window_progress = false;
+  bool no_best_progress = false;
+  bool feas_progress = false;
+  progressTest(it, iter, feas_tol, opt_tol, crossover_tol, no_window_progress,
+               no_best_progress, feas_progress, log_stream);
+
+  const bool bad_residuals = bad_res_count >= kBadResMaxIter && !feas_progress;
+  if (bad_res_count >= kBadResMaxIter) {
     log_stream << "Bad reduction of residuals in " << bad_res_count
-               << " of the last " << kBadResWindow << " iterations\n";
+               << " of the last " << kBadResWindow << " iterations";
+    if (feas_progress) log_stream << ", but pinf or dinf decreased";
+    log_stream << "\n";
   }
 
   if (large_increase) {
     log_stream << "Residuals increased by more than a factor "
                << sci(kResReductionLargeIncrease, 0, 1) << "\n";
   }
-
-  bool no_window_progress = false;
-  bool no_best_progress = false;
-  progressTest(it, iter, feas_tol, opt_tol, crossover_tol, no_window_progress,
-               no_best_progress, log_stream);
 
   const bool frozen = frozenTest(it, log_stream);
 
@@ -227,6 +230,7 @@ bool Diagnostics::residualReductionTest(const Iterate& it,
 bool Diagnostics::progressTest(const Iterate& it, Int iter, double feas_tol,
                                double opt_tol, double crossover_tol,
                                bool& no_window_progress, bool& no_best_progress,
+                               bool& feas_progress,
                                std::stringstream& log_stream) {
   const Int num = kNumProgressQuantities;
   // The progress of the gap is measured with mu. The relative gap saturates at
@@ -287,6 +291,7 @@ bool Diagnostics::progressTest(const Iterate& it, Int iter, double feas_tol,
   // The tests pass if any tracked quantity passes them.
   bool window_passed = false;
   bool best_passed = false;
+  feas_progress = false;
   for (Int k = 0; k < num; ++k) {
     if (!tracked[k]) continue;
     const std::vector<double>& history = progress_history[k];
@@ -295,12 +300,17 @@ bool Diagnostics::progressTest(const Iterate& it, Int iter, double feas_tol,
     // iterations, the quantity was smaller by a factor kProgressFactor than
     // kProgressMaxIter iterations ago. If there is not enough history yet, the
     // test passes.
-    if (static_cast<Int>(history.size()) <= kProgressMaxIter) {
-      window_passed = true;
-    } else {
+    bool decreased_in_window =
+        static_cast<Int>(history.size()) <= kProgressMaxIter;
+    if (!decreased_in_window) {
       const double window_min =
           *std::min_element(history.begin() + 1, history.end());
-      if (window_min < kProgressFactor * history.front()) window_passed = true;
+      decreased_in_window = window_min < kProgressFactor * history.front();
+    }
+    if (decreased_in_window) {
+      window_passed = true;
+      // k = 0, 1 are pinf and dinf
+      if (k <= 1) feas_progress = true;
     }
 
     // Best test: check if the best value was improved by a factor
