@@ -341,12 +341,15 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
   if (domain.infeasible()) return Result::kPrimalInfeasible;
 
   for (const auto& substitution : implications.substitutions) {
+    // safeguard: currently no column is deleted, since the substitutions are
+    // recorded after the last shrinkProblem (in prepareProbing), and
+    // substitute deletes only substituted columns, which are not binary and
+    // hence occur in no other substitution
     if (colDeleted[substitution.substcol] || colDeleted[substitution.staycol])
       continue;
-    // keep fixed columns, which are removed after the substitutions
-    if (domain.isFixed(substitution.substcol) ||
-        domain.isFixed(substitution.staycol))
-      continue;
+    // keep the fixing of a fixed substituted column, which is removed after
+    // the substitutions
+    if (domain.isFixed(substitution.substcol)) continue;
 
     ++numDelCol;
 
@@ -364,14 +367,14 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
   implications.substitutions.clear();
 
   for (HighsCliqueTable::Substitution subst : cliquetable.getSubstitutions()) {
+    // safeguard: currently no column is deleted, since the substitutions are
+    // recorded after the last shrinkProblem (in prepareProbing), and a later
+    // substitution cannot refer to an earlier substituted column
     if (colDeleted[subst.substcol] || colDeleted[subst.replace.col]) continue;
-    if (domain.isFixed(subst.substcol) || domain.isFixed(subst.replace.col)) {
-      // fixSubstitutedCols fixed both columns, which are removed after the
-      // substitutions, so no fixing is lost
-      assert(domain.isFixed(subst.substcol) &&
-             domain.isFixed(subst.replace.col));
-      continue;
-    }
+    // fixSubstitutedCols fixed both columns or none, so no fixing is lost
+    assert(domain.isFixed(subst.substcol) == domain.isFixed(subst.replace.col));
+    // fixed columns are removed after the substitutions
+    if (domain.isFixed(subst.substcol)) continue;
 
     double scale;
     double offset;
