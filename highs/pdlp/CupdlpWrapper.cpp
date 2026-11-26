@@ -464,8 +464,7 @@ cupdlp_retcode problem_create(CUPDLPproblem** prob) {
 //   return retcode;
 // }
 
-// Transpose with HiGHS code: cuPDLP-C's own CSC-to-CSR transpose was
-// derived from LGPL CSparse (#3712)
+// CSC-to-CSR transpose via HighsSparseMatrix (replaces cuPDLP-C's own, #3712)
 static void csr_alloc_from_csc(CUPDLPcsr** csr, cupdlp_int nRows,
                                cupdlp_int nCols, const CUPDLPcsc* csc) {
   HighsSparseMatrix a_matrix;
