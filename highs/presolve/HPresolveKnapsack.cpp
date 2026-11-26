@@ -761,13 +761,14 @@ void strengthenTwoWeightKnapsack(KnapsackRow& knapsack,
 }  // namespace
 
 HPresolve::Result HPresolve::strengthenKnapsacks(
-    HighsPostsolveStack& postsolve_stack) {
+    HighsPostsolveStack& postsolve_stack, bool& tryKnapsackAgain) {
   const HighsInt maxRowSize =
       std::max(HighsInt{1000}, (model->num_col_ - numDeletedCols) / 20);
   const HighsInt numRows = model->num_row_;
   HighsInt numRedundantRows = 0;
   HighsInt numFixedCols = 0;
   HighsInt numStrengthenedRows = 0;
+  HighsInt numKnapsacksProcessed = 0;
   std::vector<HighsInt> oldRowPositions;
 
   auto checkRedundantKnapsack = [&](const KnapsackRow& knapsack,
@@ -776,6 +777,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
       postsolve_stack.redundantRow(row);
       removeRow(row);
       ++numRedundantRows;
+      ++numKnapsacksProcessed;
       return true;
     }
     return false;
@@ -965,7 +967,7 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
                                     changed);
       }
     }
-
+    ++numKnapsacksProcessed;
     if (changed) {
       changeRow(knapsack);
     }
@@ -978,6 +980,10 @@ HPresolve::Result HPresolve::strengthenKnapsacks(
               " cols, "
               "strengthened %" HIGHSINT_FORMAT " rows\n",
               numRedundantRows, numFixedCols, numStrengthenedRows);
+  if (numRedundantRows + numStrengthenedRows < 50 &&
+      numRedundantRows + numStrengthenedRows <= 0.05 * numKnapsacksProcessed) {
+    tryKnapsackAgain = false;
+  }
 
   return Result::kOk;
 }

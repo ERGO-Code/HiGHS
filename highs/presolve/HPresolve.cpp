@@ -4202,8 +4202,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
       // Knapsack specific techniques
       if (this->allow_rule_[kPresolveRuleKnapsack] && tryKnapsack) {
         HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockKnapsack,
-                                     strengthenKnapsacks(postsolve_stack));
-        tryKnapsack = false;
+                                     strengthenKnapsacks(postsolve_stack, tryKnapsack));
         HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
       }
 
