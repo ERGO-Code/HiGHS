@@ -53,6 +53,14 @@ void FactorHighs_setPivoting(void* FH, HighsInt pivoting);
 void FactorHighs_setLogging(void* FH, HighsInt display);
 void FactorHighs_setOneIndexing(void* FH, HighsInt one_indexing);
 
+// Parallelism, off by default. Set before factorise, also for the solve flags.
+// tree: process independent supernodes in parallel (uses more memory).
+// node: parallel dense factorisation of large frontal matrices.
+void FactorHighs_setParallel(void* FH, HighsInt tree, HighsInt node);
+// Parallel forward, backward and diagonal solves.
+void FactorHighs_setParallelSolve(void* FH, HighsInt forward, HighsInt backward,
+                                  HighsInt diag);
+
 // Extract information
 void FactorHighs_getRegularisation(void* FH, double* reg);
 void FactorHighs_iperm(void* FH, void* S, HighsInt* ip);

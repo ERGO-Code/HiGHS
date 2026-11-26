@@ -74,6 +74,15 @@ int main() {
 
   FactorHighs_setRegularisation(FH, 0.0, 0.0);
 
+  // parallelism is off by default; it must be set before factorise.
+  // Each flag is 1 (on) or 0 (off).
+  const int parallel_tree = 1, parallel_node = 1;
+  FactorHighs_setParallel(FH, parallel_tree, parallel_node);
+
+  const int parallel_forward = 1, parallel_backward = 1, parallel_diag = 1;
+  FactorHighs_setParallelSolve(FH, parallel_forward, parallel_backward,
+                               parallel_diag);
+
   // compute ordering with metis
   int perm[N];
   int metis_status = FactorHighs_reorderMetis(FH, N, NZ, rows, ptr, perm);
