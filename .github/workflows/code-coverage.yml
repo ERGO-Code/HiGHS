@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: install
-        run: sudo apt-get update && sudo apt-get install lcov
+        run: sudo apt-get update && sudo apt-get install lcov libopenblas-dev
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
@@ -24,6 +24,7 @@ jobs:
         run: |
           cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Debug \
                 -DHIGHS_COVERAGE=ON \
+                -DHIPO=ON \
                 -DALL_TESTS=ON \
                 -DBUILD_SHARED_LIBS=OFF \
                 -D CMAKE_C_COMPILER=gcc \
@@ -40,7 +41,6 @@ jobs:
         shell: bash
         run: ctest --parallel --timeout 600 --output-on-failure
 
-        # Coverage with HiPO will be different
       - name: Generate Report
         working-directory: ${{github.workspace}}/build
         shell: bash
@@ -48,6 +48,7 @@ jobs:
           lcov -d . -c -o cov.info --ignore-errors empty,inconsistent
           lcov --remove cov.info "/usr/include/*" "/usr/lib/*" \
             "extern/pdqsort/*" "extern/zstr/*" "extern/catch/*" "extern/cli11/*" \
+            "*/extern/amd/*" "*/extern/metis/*" "*/extern/rcm/*" "*/extern/blas/*" \
             -o cov.info --ignore-errors inconsistent
           lcov --list cov.info --ignore-errors inconsistent
           mv cov.info coverage.info
