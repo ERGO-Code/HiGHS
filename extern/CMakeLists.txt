@@ -40,6 +40,7 @@ set(highs_extras_headers
     HighsExtrasApiBinding.h
     HighsExtrasExternalDeps.h
     HighsMetis.h
+    HighsQdldl.h
     OrderingPrint.h)
 
 # add optional dependencies (source code)

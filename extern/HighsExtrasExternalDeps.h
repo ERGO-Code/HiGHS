@@ -15,9 +15,9 @@
 
 #include "HighsExtrasApiBinding.h"
 #include "HighsMetis.h"
+#include "HighsQdldl.h"
 #include "amd/amd.h"
 #include "blas/mycblas.h"
-#include "qdldl/qdldl.h"
 #include "rcm/rcm.h"
 
 //
