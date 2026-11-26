@@ -1404,6 +1404,8 @@ PYBIND11_MODULE(_core, m, py::mod_gil_not_used()) {
       .def("postsolve", &highs_mipPostsolve)
       .def("run", &Highs::run, py::call_guard<py::gil_scoped_release>())
       .def_static("resetThreadScheduler", &Highs::resetThreadScheduler)
+      .def_static("getThreadSchedulerNumThreads",
+                  &Highs::getThreadSchedulerNumThreads)
       .def_static("resetGlobalScheduler", &Highs::resetGlobalScheduler)
       .def(
           "feasibilityRelaxation",

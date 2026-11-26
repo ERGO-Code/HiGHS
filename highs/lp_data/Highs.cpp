@@ -5446,6 +5446,11 @@ void Highs::resetThreadScheduler(bool blocking) {
   HighsTaskExecutor::shutdown(blocking);
 }
 
+HighsInt Highs::getThreadSchedulerNumThreads() {
+  if (!HighsTaskExecutor::isRunning()) return 0;
+  return HighsTaskExecutor::getNumWorkerThreads();
+}
+
 void Highs::resetGlobalScheduler(bool blocking) {
   // Deprecated in favour of resetThreadScheduler().
   // Cannot call deprecationMessage here.

@@ -2998,3 +2998,25 @@ TEST_CASE("issue-3768", "[highs_test_mip_solver]") {
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   h.resetThreadScheduler(true);
 }
+
+TEST_CASE("issue-3637", "[highs_test_mip_solver]") {
+  // Changing the threads option needs the scheduler to be reset, and
+  // getThreadSchedulerNumThreads() says when that is needed
+  const std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  Highs::resetThreadScheduler(true);
+  REQUIRE(Highs::getThreadSchedulerNumThreads() == 0);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.setOptionValue("threads", 2);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(Highs::getThreadSchedulerNumThreads() == 2);
+  h.setOptionValue("threads", 1);
+  REQUIRE(h.run() == HighsStatus::kError);
+  Highs::resetThreadScheduler(true);
+  REQUIRE(Highs::getThreadSchedulerNumThreads() == 0);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(Highs::getThreadSchedulerNumThreads() == 1);
+  Highs::resetThreadScheduler(true);
+}

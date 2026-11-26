@@ -1365,6 +1365,14 @@ class Highs {
   static void resetThreadScheduler(bool blocking = false);
 
   /**
+   * @brief Returns the number of threads used by the scheduler owned by the
+   * calling thread, or 0 if the calling thread has no scheduler. Compare this
+   * with the threads option to decide whether resetThreadScheduler() must be
+   * called before the next run() or presolve().
+   */
+  static HighsInt getThreadSchedulerNumThreads();
+
+  /**
    * @brief Initialize optional extras and cache the result.
    *
    * The directory is UTF-8 encoded. An empty directory searches default

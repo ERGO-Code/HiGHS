@@ -182,7 +182,7 @@ HiGHS can use several threads to solve a model faster. If you call `run()` on a 
 
 All of this applies to the C API and to other languages as well.
 
-You only need the advanced section below if you run HiGHS from several threads of your own, or if you need to stop HiGHS' threads explicitly, for example before unloading a library.
+You only need the advanced section below if you run HiGHS from several threads of your own, if you want to change the number of threads between solves (see [Changing the number of threads](@ref scheduler-change-threads)), or if you need to stop HiGHS' threads explicitly, for example before unloading a library.
 
 ### Advanced
 
@@ -190,7 +190,7 @@ You only need the advanced section below if you run HiGHS from several threads o
 
 - An **application thread** is any thread not created by HiGHS. A **worker thread** is created by HiGHS as part of a scheduler. The **owning thread** is the application thread that created a scheduler, and it participates in the parallel work.
 - The scheduler is `thread_local`. It is created lazily by the first `run()` or `presolve()` on an application thread, and is shared by all `Highs` instances used on that thread. It is never visible to other application threads.
-- A scheduler of size `N` consists of the owning thread and `N - 1` workers. `N` is fixed at creation: `run()` and `presolve()` return an error if the `threads` option is nonzero and differs from `N`, so all `Highs` instances on a thread must use the same value (or the default). To change `N`, reset the scheduler first. The default is the number of physical cores in the process's CPU affinity mask.
+- A scheduler of size `N` consists of the owning thread and `N - 1` workers. `N` is fixed at creation: `run()` and `presolve()` return an error if the `threads` option is nonzero and differs from `N`, so all `Highs` instances on a thread must use the same value (or the default). To change `N`, reset the scheduler first (see [Changing the number of threads](@ref scheduler-change-threads)). The default is the number of physical cores in the process's CPU affinity mask.
 - Running HiGHS from many application threads with the default thread count can create far more threads than you have cores and oversubscribe the machine. Set `threads` explicitly in that case.
 
 
@@ -202,6 +202,22 @@ A scheduler is destroyed when its owning thread exits, or on `Highs::resetThread
 - `blocking = false` signals the workers to stop and detaches them, so some may still be running on return. Thread exit behaves like `false`.
 
 The call only affects the calling thread's scheduler, and is a no-op if there is none. A later `run()` or `presolve()` on that thread creates a new one.
+
+#### [Changing the number of threads](@id scheduler-change-threads)
+
+`Highs::getThreadSchedulerNumThreads()` returns `N` for the calling thread's scheduler, or 0 if there is none. To solve with a different number of threads on the same thread, compare it with the new value and reset if they differ:
+
+```cpp
+  const HighsInt threads = 2;
+  if (Highs::getThreadSchedulerNumThreads() != threads)
+    Highs::resetThreadScheduler();
+  highs.setOptionValue("threads", threads);
+  highs.run();
+```
+
+The same functions are available as `Highs_getThreadSchedulerNumThreads()` and `Highs_resetThreadScheduler()` in the C API, as `HighsLpSolver.getThreadSchedulerNumThreads()` and `HighsLpSolver.resetThreadScheduler()` in C#, and as `Highs.getThreadSchedulerNumThreads()` and `Highs.resetThreadScheduler()` in `highspy`.
+
+In `highspy`, `solve()` runs each solve on a new thread and resets that thread's scheduler afterwards, so you can change `threads` between calls to `solve()` freely. Only `run()` solves on the calling thread, so `getThreadSchedulerNumThreads()` is useful only with `run()`.
 
 #### Thread safety
 
