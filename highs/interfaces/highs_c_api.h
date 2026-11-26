@@ -2628,9 +2628,9 @@ void Highs_resetThreadScheduler(const HighsInt blocking);
 /**
  * Get the number of threads used by the scheduler owned by the calling thread.
  *
- * Compare this with the `threads` option to decide whether
+ * If the `threads` option is nonzero and differs from this value,
  * `Highs_resetThreadScheduler` must be called before the next `Highs_run` or
- * `Highs_XXXcall`.
+ * `Highs_XXXcall`. A `threads` option of 0 accepts a scheduler of any size.
  *
  * @returns The number of scheduler threads, or 0 if the calling thread has no
  * scheduler.

@@ -217,7 +217,7 @@ The call only affects the calling thread's scheduler, and is a no-op if there is
 
 The same functions are available as `Highs_getThreadSchedulerNumThreads()` and `Highs_resetThreadScheduler()` in the C API, as `HighsLpSolver.getThreadSchedulerNumThreads()` and `HighsLpSolver.resetThreadScheduler()` in C#, and as `Highs.getThreadSchedulerNumThreads()` and `Highs.resetThreadScheduler()` in `highspy`.
 
-In `highspy`, `solve()` runs each solve on a new thread and resets that thread's scheduler afterwards, so you can change `threads` between calls to `solve()` freely. Only `run()` solves on the calling thread, so `getThreadSchedulerNumThreads()` is useful only with `run()`.
+In `highspy`, `solve()` behaves like `run()` unless `HandleKeyboardInterrupt` is `True`. In that case, each solve runs on a new thread whose scheduler is reset afterwards, so `threads` can be changed between calls without a reset.
 
 #### Thread safety
 

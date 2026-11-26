@@ -368,7 +368,6 @@ class TestHighsPy(unittest.TestCase):
         self.assertAlmostEqual(float(value), 2.7)
 
     def test_thread_scheduler_num_threads(self):
-        # run() solves on the calling thread, so its scheduler outlives the solve
         highspy.Highs.resetThreadScheduler(True)
         self.assertEqual(highspy.Highs.getThreadSchedulerNumThreads(), 0)
         h = self.get_basic_model()

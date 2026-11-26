@@ -1366,9 +1366,10 @@ class Highs {
 
   /**
    * @brief Returns the number of threads used by the scheduler owned by the
-   * calling thread, or 0 if the calling thread has no scheduler. Compare this
-   * with the threads option to decide whether resetThreadScheduler() must be
-   * called before the next run() or presolve().
+   * calling thread, or 0 if the calling thread has no scheduler. If the
+   * threads option is nonzero and differs from this value,
+   * resetThreadScheduler() must be called before the next run() or presolve().
+   * A threads option of 0 accepts a scheduler of any size.
    */
   static HighsInt getThreadSchedulerNumThreads();
 
