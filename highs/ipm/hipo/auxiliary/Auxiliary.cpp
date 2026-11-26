@@ -352,9 +352,9 @@ double snSpops(double clique_size) {
 }
 
 Clock::Clock() { start(); }
-void Clock::start() { t0 = std::chrono::high_resolution_clock::now(); }
+void Clock::start() { t0 = std::chrono::steady_clock::now(); }
 double Clock::stop() const {
-  auto t1 = std::chrono::high_resolution_clock::now();
+  auto t1 = std::chrono::steady_clock::now();
   std::chrono::duration<double> d = t1 - t0;
   return d.count();
 }

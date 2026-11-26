@@ -209,3 +209,43 @@ void testRunData(Highs& h, const bool irreducible, const bool reduces_to_empty,
   REQUIRE(run_data.solve_time < kHighsInf);
   h.clearSolver();
 }
+
+TEST_CASE("highs-timer-monotonic", "[highs_run_data]") {
+  // Run times are differences of clock readings, and profiling clocks
+  // are marked as running by negative start times, so a clock that
+  // goes back when the system clock is set back leads to negative run
+  // times and, with log_dev_level > 0, to writes before the profiling
+  // records (#3801)
+  REQUIRE(HighsTimer::wall_clock::is_steady);
+
+  HighsTimer timer;
+  HighsProfiling profiling;
+  profiling.multi_threaded = false;
+  profiling.initialize(timer, true);
+  REQUIRE(!profiling.validClock(-1));
+  REQUIRE(profiling.validClock(kSubSolverDuSimplexBasis));
+  REQUIRE(!profiling.validClock(profiling.num_profiling_clock_));
+
+  // Solve the LP of #3801 with sub-solver profiling (log_dev_level >
+  // 0), so that the simplex clock is started and stopped
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {1.0, 1.0};
+  lp.col_lower_ = {0.0, 0.0};
+  lp.col_upper_ = {kHighsInf, kHighsInf};
+  lp.row_lower_ = {1.0};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1.0, 2.0};
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  h.setOptionValue("presolve", kHighsOffString);
+  h.setOptionValue("log_dev_level", 1);
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  REQUIRE(h.getInfo().objective_function_value == 0.5);
+  REQUIRE(h.getRunTime() >= 0);
+}

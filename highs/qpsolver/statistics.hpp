@@ -14,8 +14,8 @@
 struct Statistics {
   HighsInt phase1_iterations = 0;
   HighsInt num_iterations = 0;
-  std::chrono::high_resolution_clock::time_point time_start;
-  std::chrono::high_resolution_clock::time_point time_end;
+  std::chrono::steady_clock::time_point time_start;
+  std::chrono::steady_clock::time_point time_end;
 
   std::vector<HighsInt> iteration;
   std::vector<HighsInt> nullspacedimension;

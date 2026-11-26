@@ -4365,7 +4365,7 @@ HighsProfilingRecord* HighsProfiling::getHighsProfilingRecord(
 
 void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return;
+  if (!this->validClock(profiling_clock)) return;
   // For a sub-MIP, don't start the clock for anything but a
   // sub-solver
   if (this->isSubMip() && profiling_clock >= kToSubSolver) return;
@@ -4398,7 +4398,7 @@ void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
 
 void HighsProfiling::stop(const HighsInt profiling_clock) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return;
+  if (!this->validClock(profiling_clock)) return;
   // For a sub-MIP, don't start the clock for anything but a
   // sub-solver
   if (this->isSubMip() && profiling_clock >= kToSubSolver) return;
@@ -4424,7 +4424,7 @@ void HighsProfiling::stop(const HighsInt profiling_clock) {
 double HighsProfiling::read(const HighsInt profiling_clock,
                             const HighsInt record_type) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return -kHighsInf;
+  if (!this->validClock(profiling_clock)) return -kHighsInf;
   HighsProfilingRecord* thread_record =
       this->getHighsProfilingRecord(record_type);
   // If the clock is running, work out current running time
@@ -4438,7 +4438,7 @@ double HighsProfiling::read(const HighsInt profiling_clock,
 HighsInt HighsProfiling::numCall(const HighsInt profiling_clock,
                                  const HighsInt record_type) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return -kHighsIInf;
+  if (!this->validClock(profiling_clock)) return -kHighsIInf;
   HighsProfilingRecord* thread_record =
       this->getHighsProfilingRecord(record_type);
   const HighsInt this_call_counts =
@@ -4449,7 +4449,7 @@ HighsInt HighsProfiling::numCall(const HighsInt profiling_clock,
 bool HighsProfiling::running(const HighsInt profiling_clock,
                              const HighsInt record_type) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return false;
+  if (!this->validClock(profiling_clock)) return false;
   HighsProfilingRecord* thread_record =
       this->getHighsProfilingRecord(record_type);
   double time_start = thread_record->start_time[profiling_clock];
