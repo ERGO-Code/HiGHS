@@ -671,6 +671,23 @@ void strengthenTwoWeightKnapsack(KnapsackRow& knapsack,
                                  const std::vector<HighsInt>& order,
                                  const KnapsackStatistics& stats,
                                  const double feastol, bool& changed) {
+  // Consider the knapsack
+  // 12 x_1 + 12 x_2 + 7 x_3 + 7 x_4 + 7 x_5 <= 25
+  // We enumerate the cases where we select n many large items
+  // weight-12 items selected | max num of weight-7 items that fit | activity
+  //      0                   |                3                   |   21
+  //      1                   |                1                   |   19
+  //      2                   |                0                   |   24
+  // We can see that the actual maximum capacity can be tightened to 24,
+  // and that all rows of the table allow us to increase
+  // the weight of the smaller items. To show the latter:
+  // Take the excess capacity and divide by the number of small items selected
+  // First row: (24 - 21) / 3 = 1
+  // Second row: (24 - 19) / 1 = 5
+  // Third row: 0 items selected so can skip it
+  // Each of the 7 weight items can therefore increase to 8 (7 + 1)
+  // The new stronger knapsack:
+  // 12 x_1 + 12 x_2 + 8 x_3 + 8 x_4 + 8 x_5 <= 24
   if (stats.numNonZeros < 2) return;
   const double large = knapsack.terms[order[0]].weight;
   const double small = knapsack.terms[order[stats.numNonZeros - 1]].weight;
