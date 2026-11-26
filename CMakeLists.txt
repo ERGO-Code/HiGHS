@@ -669,6 +669,10 @@ if(MSVC)
   # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820>")
   # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-D_CRT_SECURE_NO_WARNINGS>")
+  # MSVC 17.10+ makes std::mutex constexpr, which crashes with an access
+  # violation if an older msvcp140.dll is loaded in the process, as is common
+  # for Python extensions (#2607).
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR>")
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
 
   # Try to split large pdb files into objects.
