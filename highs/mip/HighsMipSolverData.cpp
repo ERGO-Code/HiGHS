@@ -2199,8 +2199,8 @@ static void clockOff(HighsProfiling* profiling) {
 }
 
 void HighsMipSolverData::evaluateRootNode(HighsMipWorker& worker) {
-  const bool compute_analytic_centre = true;
-  if (!compute_analytic_centre) printf("NOT COMPUTING ANALYTIC CENTRE!\n");
+  const bool compute_analytic_centre =
+      mipsolver.options_mip_->mip_heuristic_run_central_rounding;
   HighsInt maxSepaRounds = mipsolver.submip ? 5 : kHighsIInf;
   if (numRestarts == 0)
     maxSepaRounds =
