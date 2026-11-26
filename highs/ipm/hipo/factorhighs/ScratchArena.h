@@ -12,6 +12,8 @@
 // Scratch memory kept between factorisations and solves, with one stack per
 // thread used in LIFO order. A thread that waits inside a task may run other
 // tasks, which finish first, so LIFO order holds also with nested parallelism.
+// Holding a buffer across a wait should still be avoided: the tasks run during
+// the wait stack their buffers on top, so memory grows with the nesting.
 // Memory in use is never moved, so pointers stay valid until popped.
 //
 // Use ScratchBuffer to get memory from the arena: it is released when the

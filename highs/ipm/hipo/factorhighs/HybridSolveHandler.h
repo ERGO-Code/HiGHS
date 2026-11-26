@@ -1,6 +1,7 @@
 #ifndef FACTORHIGHS_HYBRID_SOLVE_HANDLER_H
 #define FACTORHIGHS_HYBRID_SOLVE_HANDLER_H
 
+#include "ScratchArena.h"
 #include "SolveHandler.h"
 
 namespace hipo {
@@ -11,8 +12,9 @@ class HybridSolveHandler : public SolveHandler {
   const std::vector<char>& any_swaps_;
   const std::vector<double>& pivot_2x2_;
 
-  mutable std::vector<std::vector<double>> parallel_gemv_workspace_;
-  mutable std::vector<double> serial_gemv_workspace_;
+  // gemv workspaces come from the arena; they never live across a taskWait,
+  // so each thread holds at most one at a time
+  ScratchArena& scratch_;
 
   std::vector<Int> first_child_, next_child_;
   mutable std::vector<std::vector<Int>> task_rows_;
@@ -21,9 +23,9 @@ class HybridSolveHandler : public SolveHandler {
   void processForwardTask(Int task, double* x) const;
   void processBackwardTask(Int task, double* x) const;
 
-  void processForwardSn(Int sn, double* x, std::vector<double>& work,
-                        Int task = -1, Int end_col_in_task = -1) const;
-  void processBackwardSn(Int sn, double* x, std::vector<double>& work) const;
+  void processForwardSn(Int sn, double* x, double* work, Int task = -1,
+                        Int end_col_in_task = -1) const;
+  void processBackwardSn(Int sn, double* x, double* work) const;
   void processDiagSn(Int sn, double* x) const;
 
  public:
@@ -36,7 +38,7 @@ class HybridSolveHandler : public SolveHandler {
                      const std::vector<Int>& swaps,
                      const std::vector<char>& any_swap,
                      const std::vector<double>& pivot_2x2, DataCollector& data,
-                     const FHoptions& options);
+                     const FHoptions& options, ScratchArena& scratch);
 };
 
 }  // namespace hipo

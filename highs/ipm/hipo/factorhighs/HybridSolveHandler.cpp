@@ -9,43 +9,21 @@
 
 namespace hipo {
 
-HybridSolveHandler::HybridSolveHandler(const Symbolic& S,
-                                       const FactorStorage& factor,
-                                       const std::vector<Int>& swaps,
-                                       const std::vector<char>& any_swap,
-                                       const std::vector<double>& pivot_2x2,
-                                       DataCollector& data,
-                                       const FHoptions& options)
+HybridSolveHandler::HybridSolveHandler(
+    const Symbolic& S, const FactorStorage& factor,
+    const std::vector<Int>& swaps, const std::vector<char>& any_swap,
+    const std::vector<double>& pivot_2x2, DataCollector& data,
+    const FHoptions& options, ScratchArena& scratch)
     : SolveHandler(S, factor, data, options),
       swaps_{swaps},
       any_swaps_{any_swap},
-      pivot_2x2_{pivot_2x2} {
+      pivot_2x2_{pivot_2x2},
+      scratch_{scratch} {
   childrenLinkedList(S_.schedule().task_parent, first_child_, next_child_);
-
-  bool need_parallel_work =
-      options_.parallel_backward || options_.parallel_forward;
-  bool need_serial_work =
-      !options_.parallel_backward || !options_.parallel_forward;
-
-  // allocate workspace for gemv
-  if (need_parallel_work) {
-    parallel_gemv_workspace_.resize(S_.schedule().count());
-    for (Int task = 0; task < S_.schedule().count(); ++task) {
-      Int64 largest_front = 0;
-      for (Int sn : S_.schedule().sn_per_task[task]) {
-        largest_front = std::max(largest_front, S_.ptr(sn + 1) - S_.ptr(sn));
-      }
-      parallel_gemv_workspace_[task].resize(largest_front);
-    }
-  }
-  if (need_serial_work) {
-    serial_gemv_workspace_.resize(S_.largestFront());
-  }
 }
 
-void HybridSolveHandler::processForwardSn(Int sn, double* x,
-                                          std::vector<double>& work, Int task,
-                                          Int end_col_in_task) const {
+void HybridSolveHandler::processForwardSn(Int sn, double* x, double* work,
+                                          Int task, Int end_col_in_task) const {
   // Blas calls: dtrsv, dgemv
   // supernode columns in format FH
 
@@ -170,7 +148,7 @@ void HybridSolveHandler::processForwardSn(Int sn, double* x,
       const Int gemv_size = ldSn - nb * j - jb;
       if (gemv_size > 0) {
         callAndTime_dgemv('T', jb, gemv_size, 1.0, &factor_[sn][factor_ind], jb,
-                          &x[x_start], 1, 0.0, work.data(), 1, data_);
+                          &x[x_start], 1, 0.0, work, 1, data_);
 
         factor_ind += jb * gemv_size;
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
@@ -235,9 +213,10 @@ void HybridSolveHandler::processForwardTask(Int task, double* x) const {
     child = next_child_[child];
   }
 
+  // taken after waiting for the children
+  ScratchBuffer<double> work(scratch_, S_.largestFront());
   for (Int sn : S_.schedule().sn_per_task[task]) {
-    processForwardSn(sn, x, parallel_gemv_workspace_[task], task,
-                     end_col_in_task);
+    processForwardSn(sn, x, work.data(), task, end_col_in_task);
   }
 }
 
@@ -258,14 +237,15 @@ void HybridSolveHandler::forwardSolve(double* x) const {
     tg.taskWait();
 
   } else {
+    ScratchBuffer<double> work(scratch_, S_.largestFront());
     for (Int sn = 0; sn < S_.sn(); ++sn) {
-      processForwardSn(sn, x, serial_gemv_workspace_);
+      processForwardSn(sn, x, work.data());
     }
   }
 }
 
 void HybridSolveHandler::processBackwardSn(Int sn, double* x,
-                                           std::vector<double>& work) const {
+                                           double* work) const {
   // Blas calls: dtrsv, dgemv
   // supernode columns in format FH
 
@@ -372,7 +352,7 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
         HIPO_CLOCK_START(2);
         factor_ind -= jb * gemv_size;
         callAndTime_dgemv('N', jb, gemv_size, -1.0, &factor_[sn][factor_ind],
-                          jb, work.data(), 1, 1.0, &x[x_start], 1, data_);
+                          jb, work, 1, 1.0, &x[x_start], 1, data_);
         HIPO_CLOCK_STOP(2, data_, kTimeSolveSolve_dense);
       }
 
@@ -393,10 +373,14 @@ void HybridSolveHandler::processBackwardSn(Int sn, double* x,
 }
 
 void HybridSolveHandler::processBackwardTask(Int task, double* x) const {
-  for (auto rit = S_.schedule().sn_per_task[task].rbegin();
-       rit != S_.schedule().sn_per_task[task].rend(); ++rit) {
-    const Int sn = *rit;
-    processBackwardSn(sn, x, parallel_gemv_workspace_[task]);
+  {
+    // released before waiting for the children
+    ScratchBuffer<double> work(scratch_, S_.largestFront());
+    for (auto rit = S_.schedule().sn_per_task[task].rbegin();
+         rit != S_.schedule().sn_per_task[task].rend(); ++rit) {
+      const Int sn = *rit;
+      processBackwardSn(sn, x, work.data());
+    }
   }
 
   // wait for children to complete
@@ -424,8 +408,9 @@ void HybridSolveHandler::backwardSolve(double* x) const {
     tg.taskWait();
 
   } else {
+    ScratchBuffer<double> work(scratch_, S_.largestFront());
     for (Int sn = S_.sn() - 1; sn >= 0; --sn) {
-      processBackwardSn(sn, x, serial_gemv_workspace_);
+      processBackwardSn(sn, x, work.data());
     }
   }
 }

@@ -39,7 +39,8 @@ void Numeric::computeAnySwaps() {
 }
 
 Int Numeric::prepare() {
-  if (!factor_ || !S_ || !data_ || !options_) return kRetInvalidPointer;
+  if (!factor_ || !S_ || !data_ || !options_ || !scratch_)
+    return kRetInvalidPointer;
 
   // Rebuild the solve handler only if needed
   const bool reuse = SH_ && SH_symbolic_ == S_ && SH_symbolic_id_ == S_->id() &&
@@ -47,7 +48,7 @@ Int Numeric::prepare() {
                      SH_parallel_backward_ == options_->parallel_backward;
   if (!reuse) {
     SH_.reset(new HybridSolveHandler(*S_, *factor_, swaps_, any_swaps_,
-                                     pivot_2x2_, *data_, *options_));
+                                     pivot_2x2_, *data_, *options_, *scratch_));
     SH_symbolic_ = S_;
     SH_symbolic_id_ = S_->id();
     SH_parallel_forward_ = options_->parallel_forward;
