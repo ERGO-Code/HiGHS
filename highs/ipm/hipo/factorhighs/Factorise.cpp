@@ -16,29 +16,23 @@ namespace hipo {
 
 Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
                      const Int* rows, const Int* ptr, const double* val,
-                     PermutedMatrix& matrix,
-                     const std::vector<double>& static_reg,
-                     std::vector<double>& static_reg_permuted,
-                     const FHoptions& FH_opt, const Logger& logger,
-                     DataCollector& data, FactorStorage& factor,
-                     CliqueStack* stack,
-                     std::vector<std::vector<double>>& schur_contribution,
-                     ScratchArena& scratch)
-    : matrix_{matrix},
+                     FactoriseMemory& memory, const FHoptions& FH_opt,
+                     const Logger& logger, DataCollector& data)
+    : matrix_{memory.matrix},
       S_{S},
       num_{num},
-      schur_contribution_{schur_contribution},
-      factor_{factor},
+      schur_contribution_{memory.schur_contribution},
+      factor_{memory.factor},
       swaps_{num.swaps_},
       pivot_2x2_{num.pivot_2x2_},
       total_reg_{num.total_reg_},
       unreg_pivots_{num.unreg_pivots_},
-      static_reg_{static_reg_permuted},
+      static_reg_{memory.static_reg_permuted},
       logger_{logger},
       data_{data},
       FH_opt_{FH_opt},
-      stack_{stack},
-      scratch_{scratch} {
+      stack_{memory.serial_stack},
+      scratch_{memory.scratch} {
   // Input the symmetric matrix to be factorised in CSC format and the symbolic
   // factorisation coming from Analyse.
   // Only the lower triangular part of the matrix is used.
@@ -78,6 +72,7 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
   // static regularisation in the same order as the permuted matrix: the given
   // values, or reg_p for negative pivots and reg_d for the others
   static_reg_.resize(n_);
+  const std::vector<double>& static_reg = memory.static_reg;
   if (!static_reg.empty()) {
     const std::vector<Int>& iperm = S_.iperm();
     for (Int i = 0; i < n_; ++i) static_reg_[iperm[i]] = static_reg[i];
@@ -132,7 +127,7 @@ void Factorise::processSupernode(Int sn) {
   double* clique_ptr = nullptr;
   if (serial) {
     bool reallocation = false;
-    clique_ptr = stack_->setup(S_.cliqueSize(sn), reallocation);
+    clique_ptr = stack_.setup(S_.cliqueSize(sn), reallocation);
     if (reallocation) logger_.printInfo("Reallocation of CliqueStack\n");
   }
 
@@ -194,7 +189,7 @@ void Factorise::processSupernode(Int sn) {
       }
     } else {
       Int child;
-      child_clique = stack_->getChild(child);
+      child_clique = stack_.getChild(child);
       assert(child == child_sn);
     }
 
@@ -204,7 +199,7 @@ void Factorise::processSupernode(Int sn) {
     if (parallel) {
       freeVector(schur_contribution_[child_sn]);
     } else {
-      stack_->popChild();
+      stack_.popChild();
     }
 
     // move on to the next child
@@ -237,7 +232,7 @@ void Factorise::processSupernode(Int sn) {
   // terminate the format handler
   FH->terminate(schur_contribution_[sn]);
 
-  if (serial) stack_->pushWork(sn);
+  if (serial) stack_.pushWork(sn);
 
   TSAN_ANNOTATE_HAPPENS_BEFORE(&schur_contribution_[sn]);
 
@@ -245,12 +240,7 @@ void Factorise::processSupernode(Int sn) {
 }
 
 void Factorise::processTreeSerial() {
-  if (!stack_) {
-    // processing the tree in serial requires a CliqueStack
-    flag_stop_.store(true, std::memory_order_relaxed);
-    return;
-  }
-  stack_->init(S_.maxStackSize());
+  stack_.init(S_.maxStackSize());
   for (Int sn = 0; sn < S_.sn(); ++sn) {
     processSupernode(sn);
   }

@@ -331,6 +331,7 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/FactorHighsSettings.h
     ipm/hipo/factorhighs/FactorStorage.h
     ipm/hipo/factorhighs/Factorise.h
+    ipm/hipo/factorhighs/FactoriseMemory.h
     ipm/hipo/factorhighs/FormatHandler.h
     ipm/hipo/factorhighs/HybridHybridFormatHandler.h
     ipm/hipo/factorhighs/HybridSolveHandler.h

@@ -15,14 +15,14 @@ FHsolver::~FHsolver() { data_.printTimes(*logger_); }
 void FHsolver::setRegularisation(double reg_p, double reg_d) {
   options_.reg_p = reg_p;
   options_.reg_d = reg_d;
-  static_reg_.clear();
+  memory_.static_reg.clear();
 }
 
 void FHsolver::setRegularisationEntries(const double* reg, Int n) {
   if (reg)
-    static_reg_.assign(reg, reg + n);
+    memory_.static_reg.assign(reg, reg + n);
   else
-    static_reg_.clear();
+    memory_.static_reg.clear();
 }
 
 Int FHsolver::analyse(Symbolic& S, Int n, Int nz, const Int* rows,
@@ -33,12 +33,12 @@ Int FHsolver::analyse(Symbolic& S, Int n, Int nz, const Int* rows,
 
 Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
                         const Int* ptr, const double* vals) {
-  if (!static_reg_.empty() && static_cast<Int>(static_reg_.size()) != n)
+  const std::vector<double>& static_reg = memory_.static_reg;
+  if (!static_reg.empty() && static_cast<Int>(static_reg.size()) != n)
     return kRetInvalidInput;
-  scratch_.init();
-  Factorise fact_obj(S, N_, n, nz, rows, ptr, vals, matrix_, static_reg_,
-                     static_reg_permuted_, options_, *logger_, data_, factor_,
-                     &serial_stack_, schur_contribution_, scratch_);
+  memory_.scratch.init();
+  Factorise fact_obj(S, N_, n, nz, rows, ptr, vals, memory_, options_, *logger_,
+                     data_);
   return fact_obj.run();
 }
 

@@ -4,18 +4,14 @@
 #include <atomic>
 #include <cmath>
 
-#include "CliqueStack.h"
 #include "FactorHighsOptions.h"
-#include "FactorStorage.h"
+#include "FactoriseMemory.h"
 #include "Numeric.h"
-#include "PermutedMatrix.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {
-
-class ScratchArena;
 
 class Factorise {
  public:
@@ -76,7 +72,7 @@ class Factorise {
   DataCollector& data_;
   const FHoptions& FH_opt_;
 
-  CliqueStack* stack_;
+  CliqueStack& stack_;
 
   // scratch memory of the dense kernels, managed outside of Factorise
   ScratchArena& scratch_;
@@ -87,13 +83,8 @@ class Factorise {
 
  public:
   Factorise(const Symbolic& S, Numeric& num, Int n, Int nz, const Int* rows,
-            const Int* ptr, const double* val, PermutedMatrix& matrix,
-            const std::vector<double>& static_reg,
-            std::vector<double>& static_reg_permuted, const FHoptions& FH_opt,
-            const Logger& logger, DataCollector& data, FactorStorage& factor,
-            CliqueStack* stack,
-            std::vector<std::vector<double>>& schur_contribution,
-            ScratchArena& scratch);
+            const Int* ptr, const double* val, FactoriseMemory& memory,
+            const FHoptions& FH_opt, const Logger& logger, DataCollector& data);
 
   bool run();
 };

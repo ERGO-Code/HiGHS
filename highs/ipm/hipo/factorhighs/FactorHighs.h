@@ -4,14 +4,11 @@
 #include <functional>
 #include <utility>
 
-#include "CliqueStack.h"
 #include "DataCollector.h"
 #include "FactorHighsInfo.h"
 #include "FactorHighsOptions.h"
-#include "FactorStorage.h"
+#include "FactoriseMemory.h"
 #include "Numeric.h"
-#include "PermutedMatrix.h"
-#include "ScratchArena.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 
@@ -99,10 +96,7 @@ class FHsolver {
   // Never nullptr. Not owned by FHsolver.
   const Logger* logger_ = &Logger::silent();
   DataCollector data_;
-  PermutedMatrix matrix_;
   Numeric N_;
-  CliqueStack serial_stack_;
-  std::vector<std::vector<double>> schur_contribution_;
 
  public:
   using StopCallback = FHoptions::StopCallback;
@@ -110,19 +104,8 @@ class FHsolver {
  private:
   FHoptions options_{};
 
-  // Static regularisation of each pivot, in two orders: static_reg_ in the
-  // original order, as given by setRegularisationEntries (empty if not used);
-  // static_reg_permuted_ in the order of the factorisation, which depends on
-  // the symbolic factorisation, so each factorisation writes it again.
-  std::vector<double> static_reg_;
-  std::vector<double> static_reg_permuted_;
-
-  // Columns of factorisation, stored by supernode.
-  // The memory is kept between factorisations and grows only when needed.
-  FactorStorage factor_;
-
-  // Scratch memory of the dense kernels and solves, kept between calls.
-  ScratchArena scratch_;
+  // memory of the factorisation, kept between calls
+  FactoriseMemory memory_;
 
  public:
   // Print collected data (if any) and terminate DataCollector
