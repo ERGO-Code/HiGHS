@@ -63,6 +63,8 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
     logger_.printInfo(
         "Matrix provided to Factorise has pattern incompatible with symbolic "
         "object.\n");
+    // drop the pattern, so that the next call builds it again
+    matrix_ = PermutedMatrix();
     invalid_input_ = true;
     return;
   }
