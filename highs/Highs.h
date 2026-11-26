@@ -1367,8 +1367,9 @@ class Highs {
   /**
    * @brief Initialize optional extras and cache the result.
    *
-   * An empty directory searches default library directories only when
-   * search_if_empty is true. Statically linked extras ignore both arguments.
+   * The directory is UTF-8 encoded. An empty directory searches default
+   * library directories only when search_if_empty is true. Statically linked
+   * extras ignore both arguments.
    *
    * @return HighsStatus::kOk on success, HighsStatus::kError on failure.
    * Subsequent calls return the cached result without retrying, unless
