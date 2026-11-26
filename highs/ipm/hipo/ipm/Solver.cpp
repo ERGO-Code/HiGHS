@@ -186,9 +186,13 @@ void Solver::runIpm() {
   if (initialise()) return;
 
   while (iter_ < options_.max_iter) {
-    if (prepareIter()) break;
+    if (prepareIter()) {
+      resetAfterNan(iter_);
+      break;
+    }
     if (computeDirection()) {
       if (restartWithMultifrontal()) continue;
+      resetAfterNan(iter_ - 1);
       break;
     }
     makeStep();
@@ -238,8 +242,9 @@ isFailure Solver::initialise() {
 shouldTerminate Solver::prepareIter() {
   Clock clock;
 
-  it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
+  // a nan iterate must not be saved as best, and the norms can hide nan
   if (checkIterate()) return true;
+  it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
 
   it_->computeInfeasDrop(crossoverIsOn(), options_.feasibility_tol,
                          options_.optimality_tol);
@@ -1710,6 +1715,22 @@ double Solver::checkDualRay(const HighsSolution& point) const {
   logger_.printDetailed("Dual ray radius %.2e, threshold %.2e\n", radius,
                         threshold);
   return radius < threshold ? 0.0 : radius;
+}
+
+void Solver::resetAfterNan(Int iter) {
+  if (info_.error != kErrorNan) return;
+  resetToBestIter(iter);
+
+  // no valid iterate to pass to IPX, e.g. no best iterate saved yet
+  if (it_->isNan() || it_->isInf()) return;
+
+  logger_.printInfo("Stopping at the best iterate because of nan\n");
+  info_.error = kOk;
+  // as for stop, IPX refines the best iterate, or runs crossover from it
+  if (getStatus1() == kStatusOptimal)
+    setStatus2(kStatusNoProgress);
+  else
+    setStatus1(kStatusNoProgress);
 }
 
 void Solver::terminateStagnation() {

@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "Control.h"
 #include "Centring.h"
+#include "Control.h"
 #include "Diagnostics.h"
 #include "FactorHighsSolver.h"
 #include "Info.h"
@@ -349,6 +349,13 @@ class Solver {
   // otherwise reset to the best iterate, and set the status.
   // ===================================================================================
   void terminateStagnation();
+
+  // ===================================================================================
+  // If the iterate or the direction is nan or inf, clear the error, reset to
+  // the best iterate and set the status so that IPX takes over, as for stop.
+  // The error stays if there is no valid iterate to reset to.
+  // ===================================================================================
+  void resetAfterNan(Int iter);
 
   // ===================================================================================
   // Check for reasons to stop other than optimality: a verified certificate of
