@@ -237,6 +237,7 @@ TEST_NAMES = [
     "TestSetup",
     "TestSolverSelect",
     "TestSort",
+    "TestSparseGraphUtils",
     "TestSpecialLps",
     "TestThrow",
 ]

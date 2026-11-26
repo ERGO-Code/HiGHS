@@ -3,106 +3,151 @@
 
 namespace ipx {
 
+// Iterative depth-first search. The recursion is simulated with two parallel
+// stacks indexed by depth d:
+//   work[d]   node being expanded at depth d,
+//   istack[d] position in Ai of the next neighbour of work[d] to examine.
+// Finished nodes are written to istack from position top-1 downwards, so the
+// output occupies istack[top..] while the cursor stack grows from istack[0].
+// At any time (depth + #finished) <= #newly reached nodes <= top, so the two
+// regions of istack never overlap.
 Int DepthFirstSearch(Int istart, const Int* Ap, const Int* Ai,
                      const Int* colmap, Int top, Int* istack, Int* marked,
                      Int marker, Int* work) {
-    // The current node i and the position p in its list of neighbours are
-    // kept in local variables. When moving to a neighbour, (i,p) is saved in
-    // istack[depth], work[depth]. Nodes are marked when reached and moved to
-    // the output when all their neighbours have been processed.
     assert(marked[istart] != marker);
-    Int depth = 0;
-    Int i = istart;
-    marked[i] = marker;
-    Int j = colmap ? colmap[i] : i;
-    Int p = j >= 0 ? Ap[j] : 0;
-    Int pend = j >= 0 ? Ap[j+1] : 0;
-    for (;;) {
-        if (p < pend) {
-            const Int inext = Ai[p++];
-            if (marked[inext] != marker) {
-                // save current node and go to neighbour
-                marked[inext] = marker;
-                istack[depth] = i;
-                work[depth] = p;
-                depth++;
-                i = inext;
-                j = colmap ? colmap[i] : i;
-                p = j >= 0 ? Ap[j] : 0;
-                pend = j >= 0 ? Ap[j+1] : 0;
-            }
+
+    // Range [begin,end) of neighbours of node i in Ai. Empty if i has none.
+    auto neighbours = [&](Int i, Int& begin, Int& end) {
+        const Int j = colmap ? colmap[i] : i;
+        if (j < 0) {
+            begin = end = 0;
         } else {
-            // node finished, go back to the last saved node
-            istack[--top] = i;
-            if (depth == 0)
-                break;
+            begin = Ap[j];
+            end = Ap[j+1];
+        }
+    };
+
+    Int depth = 0;
+    Int begin, end;
+    marked[istart] = marker;
+    work[0] = istart;
+    neighbours(istart, begin, end);
+    istack[0] = begin;
+
+    while (depth >= 0) {
+        const Int node = work[depth];
+        neighbours(node, begin, end);
+        Int pos = istack[depth];
+
+        // Advance to the first neighbour that has not been reached yet.
+        while (pos < end && marked[Ai[pos]] == marker)
+            pos++;
+
+        if (pos < end) {
+            // Descend into an unvisited neighbour. Remember where to resume.
+            const Int child = Ai[pos];
+            istack[depth] = pos + 1;
+            depth++;
+            assert(depth < top);
+            marked[child] = marker;
+            work[depth] = child;
+            neighbours(child, begin, end);
+            istack[depth] = begin;
+        } else {
+            // All neighbours done: node is finished.
             depth--;
-            i = istack[depth];
-            p = work[depth];
-            j = colmap ? colmap[i] : i;
-            pend = j >= 0 ? Ap[j+1] : 0;
+            istack[--top] = node;
         }
     }
     return top;
 }
 
-// Returns a free row in column j, or -1 if there is none. Rows of column j
-// before position cheap[j] are known to be matched.
-static Int FindFreeRow(Int j, const Int* Ap, const Int* Ai, const Int* jmatch,
-                       Int* cheap) {
-    for (Int p = cheap[j]; p < Ap[j+1]; p++) {
-        if (jmatch[Ai[p]] == -1) {
-            cheap[j] = p+1;
-            return Ai[p];
-        }
-    }
-    cheap[j] = Ap[j+1];
-    return -1;
-}
-
+// Searches for an alternating path that starts at column jstart and ends at a
+// free row; on success the matching is flipped along the path.
+//
+// The search is a depth-first search over columns. Column c is entered from a
+// row r that is currently matched to c; the path then continues from c via
+// one of its other rows. Stacks indexed by depth d:
+//   work2[d]  column at depth d (work2[0] == jstart),
+//   work3[d]  next position in Ai to examine for column work2[d],
+//   work[d]   row used to step from column work2[d] to column work2[d+1].
+// Each column on the path other than jstart is matched to a distinct row, so
+// the depth is at most m, which fits the sizes m+1 and m.
+//
+// When a column is entered for the first time it is checked for a directly
+// adjacent free row. Since a matched row never becomes free again, that check
+// resumes where it stopped last time (cheap[c]), giving amortised linear cost
+// over all calls.
 bool AugmentingPath(Int jstart, const Int* Ap, const Int* Ai, Int* jmatch,
-                    Int* cheap, Int* marked, Int* work, Int* work2, Int* work3){
-    // Depth first search for an alternating path from column jstart to a free
-    // row. The current column j and the position p in it are kept in local
-    // variables. When the path moves along row i to column jmatch[i],
-    // (i,j,p) is saved in work[depth], work2[depth], work3[depth].
-    Int depth = 0;
-    Int j = jstart;
-    marked[j] = jstart;
-    Int ifree = FindFreeRow(j, Ap, Ai, jmatch, cheap);
-    Int p = Ap[j];
-    while (ifree < 0) {
-        if (p < Ap[j+1]) {
-            const Int i = Ai[p++];
-            const Int jnext = jmatch[i];
-            assert(jnext != -1);
-            // follow row i unless it is to be ignored or its column is
-            // already in the path
-            if (jnext >= 0 && marked[jnext] != jstart) {
-                work[depth] = i;
-                work2[depth] = j;
-                work3[depth] = p;
-                depth++;
-                j = jnext;
-                marked[j] = jstart;
-                ifree = FindFreeRow(j, Ap, Ai, jmatch, cheap);
-                p = Ap[j];
-            }
-        } else {
-            // no path through column j, go back
-            if (depth == 0)
-                return false;
-            depth--;
-            j = work2[depth];
-            p = work3[depth];
+                    Int* cheap, Int* marked, Int* work, Int* work2,
+                    Int* work3) {
+    Int* col_stack = work2;
+    Int* pos_stack = work3;
+    Int* row_stack = work;
+
+    // Looks for a free row in column c starting from cheap[c]. Returns the row
+    // or -1.
+    auto take_free_row = [&](Int c) -> Int {
+        Int p = cheap[c];
+        const Int end = Ap[c+1];
+        while (p < end && jmatch[Ai[p]] != -1)
+            p++;
+        if (p == end) {
+            cheap[c] = end;
+            return -1;
         }
+        // The row found here becomes matched, so the next scan of column c
+        // can start after it.
+        cheap[c] = p + 1;
+        return Ai[p];
+    };
+
+    Int depth = 0;
+    Int free_row = -1;
+    assert(marked[jstart] != jstart);
+    marked[jstart] = jstart;
+    col_stack[0] = jstart;
+    pos_stack[0] = Ap[jstart];
+    free_row = take_free_row(jstart);
+
+    while (free_row < 0 && depth >= 0) {
+        const Int c = col_stack[depth];
+        const Int end = Ap[c+1];
+        Int p = pos_stack[depth];
+        Int next_col = -1;
+
+        // Find a row of column c whose partner column is not yet on the
+        // search tree.
+        for (; p < end; p++) {
+            const Int partner = jmatch[Ai[p]];
+            if (partner >= 0 && marked[partner] != jstart) {
+                next_col = partner;
+                break;
+            }
+        }
+
+        if (next_col < 0) {
+            depth--;  // column c is exhausted; backtrack
+            continue;
+        }
+
+        row_stack[depth] = Ai[p];
+        pos_stack[depth] = p + 1;
+        depth++;
+        marked[next_col] = jstart;
+        col_stack[depth] = next_col;
+        pos_stack[depth] = Ap[next_col];
+        free_row = take_free_row(next_col);
     }
-    // match ifree to the last column and each saved row to its saved column
-    jmatch[ifree] = j;
-    while (depth > 0) {
-        depth--;
-        jmatch[work[depth]] = work2[depth];
-    }
+
+    if (free_row < 0)
+        return false;
+
+    // Flip the matching along the path: the free row goes to the deepest
+    // column, and each row used to step down goes to the column above it.
+    jmatch[free_row] = col_stack[depth];
+    for (Int d = depth - 1; d >= 0; d--)
+        jmatch[row_stack[d]] = col_stack[d];
     return true;
 }
 

@@ -9,15 +9,6 @@
 
 #include "ipm/basiclu/lu_internal.h"
 
-static lu_int dfs_end(
-    lu_int i, const lu_int *begin, const lu_int *end, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M);
-
-static lu_int dfs(
-    lu_int i, const lu_int *begin, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M);
-
-
 /*
  * lu_dfs() - compute reach(i) in a graph by depth first search
  *
@@ -37,109 +28,74 @@ static lu_int dfs(
  *
  * If node i is marked on entry, the function does nothing.
  *
+ * Method: iterative depth first search [1,2]. A node is appended to the
+ * output when the search from it has finished. Writing the output from
+ * xi[top-1] downwards then gives a topological order of the reached nodes [2].
+ *
+ * The simulated recursion uses two stacks indexed by depth d:
+ *   pstack[d]  node being expanded at depth d,
+ *   xi[d]      position in index[] of the next neighbour of pstack[d].
+ * The second stack occupies xi[0..depth] while the output grows downward
+ * from xi[top-1]. Every node on either stack is newly reached, and the
+ * caller guarantees room for all newly reached nodes below top, so the two
+ * never overlap.
+ *
+ * [1] R. Tarjan, "Depth-first search and linear graph algorithms",
+ *     SIAM J. Comput. 1 (1972), pp. 146-160.
+ * [2] J. Gilbert and T. Peierls, "Sparse partial pivoting in time
+ *     proportional to arithmetic operations", SIAM J. Sci. Stat. Comput. 9
+ *     (1988), pp. 862-874.
  */
-
 lu_int lu_dfs(
     lu_int i, const lu_int *begin, const lu_int *end, const lu_int *index,
     lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M)
 {
+    lu_int depth, node, pos, child;
+
     if (marked[i] == M)
         return top;
 
-    return end ?
-        dfs_end(i, begin, end, index, top, xi, pstack, marked, M) :
-        dfs(i, begin, index, top, xi, pstack, marked, M);
-}
-
-
-/* ==========================================================================
- * dfs_end
- *
- * The current node i and the position p in its list of neighbours are kept in
- * local variables. When moving to a neighbour, (i,p) is saved in xi[depth],
- * pstack[depth]. Nodes are marked when reached and moved to the output when
- * all their neighbours have been processed.
- * ========================================================================== */
-
-static lu_int dfs_end(
-    lu_int i, const lu_int *begin, const lu_int *end, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M)
-{
-    lu_int inext, p, depth = 0;
-    assert(marked[i] != M);
-
+    depth = 0;
     marked[i] = M;
-    p = begin[i];
-    for (;;)
+    pstack[0] = i;
+    xi[0] = begin[i];
+
+    while (depth >= 0)
     {
-        if (p < end[i])
+        node = pstack[depth];
+        pos = xi[depth];
+
+        /* Skip neighbours that have been reached already. The neighbour list
+         * ends at end[node], or at a negative entry when end is NULL. */
+        if (end)
         {
-            inext = index[p++];
-            if (marked[inext] != M) /* save node i and go to neighbour */
-            {
-                marked[inext] = M;
-                xi[depth] = i;
-                pstack[depth] = p;
-                depth++;
-                i = inext;
-                p = begin[i];
-            }
+            while (pos < end[node] && marked[index[pos]] == M)
+                pos++;
+            child = pos < end[node] ? index[pos] : -1;
         }
-        else                    /* node i finished, go back */
+        else
         {
-            xi[--top] = i;
-            if (depth == 0)
-                break;
+            while (index[pos] >= 0 && marked[index[pos]] == M)
+                pos++;
+            child = index[pos];
+        }
+
+        if (child >= 0)
+        {
+            /* Descend into child; resume node after it later. */
+            xi[depth] = pos + 1;
+            depth++;
+            assert(depth < top);
+            marked[child] = M;
+            pstack[depth] = child;
+            xi[depth] = begin[child];
+        }
+        else
+        {
+            /* All neighbours of node done. */
             depth--;
-            i = xi[depth];
-            p = pstack[depth];
+            xi[--top] = node;
         }
     }
-
-    return top;
-}
-
-
-/* ==========================================================================
- * dfs
- *
- * Same as dfs_end, but the neighbour lists are terminated by a negative index.
- * ========================================================================== */
-
-static lu_int dfs(
-    lu_int i, const lu_int *begin, const lu_int *index,
-    lu_int top, lu_int *xi, lu_int *pstack, lu_int *marked, const lu_int M)
-{
-    lu_int inext, p, depth = 0;
-    assert(marked[i] != M);
-
-    marked[i] = M;
-    p = begin[i];
-    for (;;)
-    {
-        if ((inext = index[p]) >= 0)
-        {
-            p++;
-            if (marked[inext] != M) /* save node i and go to neighbour */
-            {
-                marked[inext] = M;
-                xi[depth] = i;
-                pstack[depth] = p;
-                depth++;
-                i = inext;
-                p = begin[i];
-            }
-        }
-        else                    /* node i finished, go back */
-        {
-            xi[--top] = i;
-            if (depth == 0)
-                break;
-            depth--;
-            i = xi[depth];
-            p = pstack[depth];
-        }
-    }
-
     return top;
 }
