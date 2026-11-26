@@ -345,6 +345,15 @@ if (HIPO_PYTHON AND NOT DEFINED BUILD_SHARED_LIBS AND NOT (CUPDLP_GPU OR HIPDLP_
   set(BUILD_SHARED_LIBS OFF)
 endif()
 
+# With HiGHS linked statically, export only the module's entry point. Otherwise
+# another libhighs in the process (OR-Tools ships one) can take over highspy's
+# weak or interposable HiGHS symbols, e.g. HighsTaskExecutor::run_worker (#3797)
+if (HIPO_PYTHON AND DEFINED BUILD_SHARED_LIBS AND NOT BUILD_SHARED_LIBS)
+  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+  set(CMAKE_C_VISIBILITY_PRESET hidden)
+  set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+endif()
+
 if(BUILD_STATIC_EXE)
   set(BUILD_SHARED_LIBS OFF)
 

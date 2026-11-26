@@ -609,6 +609,21 @@ public class HighsLpSolver : IDisposable
     [DllImport(highslibname)]
     private static extern int Highs_writeOptionsDeviations(IntPtr highs, string filename);
 
+    [DllImport(highslibname)]
+    private static extern int Highs_initializeExtras(byte[] directory, int search_if_empty);
+
+    // Loads highs_extras from directory, for apps where it is not next to the
+    // highs library. Call before creating a solver: the first load attempt,
+    // including the implicit one, fixes the result for the process.
+    public static HighsStatus initializeExtras(string directory, bool searchIfEmpty = true)
+    {
+        // Windows loads from an absolute folder only
+        if (!string.IsNullOrEmpty(directory)) directory = System.IO.Path.GetFullPath(directory);
+        // null-terminated UTF-8 by hand: netstandard2.0 has no LPUTF8Str
+        byte[] utf8 = directory == null ? null : Encoding.UTF8.GetBytes(directory + "\0");
+        return (HighsStatus)Highs_initializeExtras(utf8, searchIfEmpty ? 1 : 0);
+    }
+
     public static HighsStatus call(HighsModel model, ref HighsSolution sol, ref HighsBasis bas, ref HighsModelStatus modelstatus)
     {
         int nc = model.colcost.Length;
