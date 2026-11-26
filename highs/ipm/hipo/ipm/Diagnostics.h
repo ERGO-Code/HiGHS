@@ -33,6 +33,13 @@ struct Diagnostics {
                                               kHighsInf};
   Int progress_iter[kNumProgressQuantities]{};
 
+  // data for frozen test, in the last kProgressMaxIter + 1 iterations, oldest
+  // first
+  struct FrozenPoint {
+    double pinf, dinf, pdgap;
+  };
+  std::vector<FrozenPoint> frozen_history;
+
   explicit Diagnostics(const Model& model_input);
 
   // ===================================================================================
@@ -42,7 +49,8 @@ struct Diagnostics {
   // - kLargeResIncrease, if residualReductionTest found a residual increased
   //   by more than a factor kResReductionLargeIncrease;
   // - kNoProgress and kOscillation, if the window and best-value parts of
-  //   progressTest failed.
+  //   progressTest failed;
+  // - kNoProgress, if frozenTest found the iterate not moving.
   // Must be called after the step, while it.delta still holds the direction.
   // ===================================================================================
   void stagnation(const Iterate& it, Int iter, double feas_tol, double opt_tol,
@@ -119,6 +127,14 @@ struct Diagnostics {
                     double opt_tol, double crossover_tol,
                     bool& no_window_progress, bool& no_best_progress,
                     std::stringstream& log_stream);
+
+  // ===================================================================================
+  // Check if the iterate is not moving: in the last kProgressMaxIter
+  // iterations, pinf, dinf and pdgap each changed by less than a fraction
+  // kFrozenTol of their largest value. mu can keep falling at such a point,
+  // e.g. while Theta diverges, so progressTest does not detect it.
+  // ===================================================================================
+  bool frozenTest(const Iterate& it, std::stringstream& log_stream);
 
   // ===================================================================================
   // Clear the data used by the tests. The windows of the progress test restart

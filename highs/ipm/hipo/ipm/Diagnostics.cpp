@@ -54,9 +54,11 @@ void Diagnostics::stagnation(const Iterate& it, Int iter, double feas_tol,
   progressTest(it, iter, feas_tol, opt_tol, crossover_tol, no_window_progress,
                no_best_progress, log_stream);
 
+  const bool frozen = frozenTest(it, log_stream);
+
   if (bad_residuals) report.add(IssueType::kBadResReduction);
   if (large_increase) report.add(IssueType::kLargeResIncrease);
-  if (no_window_progress) report.add(IssueType::kNoProgress);
+  if (no_window_progress || frozen) report.add(IssueType::kNoProgress);
   if (no_best_progress) report.add(IssueType::kOscillation);
 }
 
@@ -334,8 +336,34 @@ bool Diagnostics::progressTest(const Iterate& it, Int iter, double feas_tol,
   return window_passed && best_passed;
 }
 
+bool Diagnostics::frozenTest(const Iterate& it, std::stringstream& log_stream) {
+  frozen_history.push_back({it.pinf, it.dinf, it.pdgap});
+  if (static_cast<Int>(frozen_history.size()) > kProgressMaxIter + 1)
+    frozen_history.erase(frozen_history.begin());
+  if (static_cast<Int>(frozen_history.size()) <= kProgressMaxIter) return false;
+
+  auto unchanged = [&](double FrozenPoint::*value) {
+    double lo = kHighsInf;
+    double hi = -kHighsInf;
+    for (const FrozenPoint& p : frozen_history) {
+      lo = std::min(lo, p.*value);
+      hi = std::max(hi, p.*value);
+    }
+    return hi - lo <= kFrozenTol * hi;
+  };
+  if (!unchanged(&FrozenPoint::pinf) || !unchanged(&FrozenPoint::dinf) ||
+      !unchanged(&FrozenPoint::pdgap))
+    return false;
+
+  log_stream << "Iterate not moving in last " << kProgressMaxIter
+             << " iterations: pinf " << sci(it.pinf, 0, 1) << " dinf "
+             << sci(it.dinf, 0, 1) << " pdgap " << sci(it.pdgap, 0, 1) << "\n";
+  return true;
+}
+
 void Diagnostics::clear(Int iter) {
   bad_res_history = 0;
+  frozen_history.clear();
 
   for (Int k = 0; k < kNumProgressQuantities; ++k) {
     progress_history[k].clear();

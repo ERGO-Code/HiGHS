@@ -27,6 +27,7 @@ const Int kBadResMaxIter = 5;
 const double kProgressFactor = 0.95;
 const Int kProgressMaxIter = 5;
 const Int kProgressBestMaxIter = 20;
+const double kFrozenTol = 1e-3;
 
 // parameters for correctors
 const double kGammaCorrector = 0.1;
