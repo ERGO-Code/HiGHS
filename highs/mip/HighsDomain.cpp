@@ -2341,14 +2341,29 @@ void HighsDomain::changeBound(HighsDomainChange boundchg, Reason reason) {
   domchgstack_.push_back(boundchg);
   domchgreason_.push_back(reason);
 
-  if (binary && !infeasible_ && isFixed(boundchg.column)) {
+  if (!binary || infeasible_ || !isFixed(boundchg.column)) return;
+  // Limit how deep the recursion can go
+  constexpr HighsInt kMaxImplicationDepth = 256;
+  if (implicationDepth_ == kMaxImplicationDepth) {
+    pendingImplications_.push_back(boundchg.column);
+    return;
+  }
+  const bool atMaxRecursiveDepth = ++implicationDepth_ == kMaxImplicationDepth;
+  HighsInt implicationCol = boundchg.column;
+  while (true) {
     mipsolver->mipdata_->cliquetable.addImplications(
-        *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
+        *this, implicationCol, col_lower_[implicationCol] > 0.5);
     if (!infeasible_) {
       mipsolver->mipdata_->implications.applyImplications(
-          *this, boundchg.column, col_lower_[boundchg.column] > 0.5);
+          *this, implicationCol, col_lower_[implicationCol] > 0.5);
     }
+    if (!atMaxRecursiveDepth || pendingImplications_.empty() || infeasible_)
+      break;
+    implicationCol = pendingImplications_.back();
+    pendingImplications_.pop_back();
   }
+  if (atMaxRecursiveDepth) pendingImplications_.clear();
+  --implicationDepth_;
 }
 
 bool HighsDomain::checkChangeBound(HighsBoundType boundtype, HighsInt col,

@@ -456,6 +456,8 @@ class HighsDomain {
   bool infeasible_ = false;
   Reason infeasible_reason;
   HighsInt infeasible_pos;
+  HighsInt implicationDepth_ = 0;
+  std::vector<HighsInt> pendingImplications_;
 
   void updateActivityLbChange(HighsInt col, double oldbound, double newbound);
 
