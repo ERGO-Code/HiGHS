@@ -11,10 +11,10 @@ HiGHS can be used via AMPL, see the [AMPL Documentation](https://dev.ampl.com/so
 
 ## GAMS
 
-The interface is available at [GAMSlinks](https://github.com/coin-or/GAMSlinks/),
-including [pre-build libraries](https://github.com/coin-or/GAMSlinks/releases).
-The last release was in February 2023, so it does not include recent versions of
-HiGHS.
+HiGHS is included in GAMS distributions from GAMS 40 onward, see the
+[GAMS/HiGHS documentation](https://www.gams.com/latest/docs/S_HIGHS.html).
+GAMS provides the HiGHS LP and MIP solvers, including the CPU and NVIDIA GPU
+versions of PDLP.
 
 ## Javascript
 
