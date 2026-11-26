@@ -1121,16 +1121,21 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
                                   options.primal_feasibility_tolerance);
   }
   HighsLp& mip = has_semi_variables ? use_lp : lp;
-  // For issue-3726 unit test, the following lines ensure that solving
-  // the MIP yields HighsModelStatus::kOptimal with objecive of 13,
-  // but without them it yields HighsModelStatus::kInfeasible
-  /*
+  // For issue-3726-mip unit test, the following lines ensure that
+  // solving the MIP yields HighsModelStatus::kOptimal with objective
+  // of 13, but without them it yields HighsModelStatus::kInfeasible
+  const double objective_bound = options.objective_bound;
   if (options.objective_bound < kHighsInf) {
-    printf("HighsMipSolver objective_bound = %g: change to %g\n",
-           options.objective_bound, kHighsInf);
+    highsLogUser(
+        options.log_options, HighsLogType::kWarning,
+        "The objective_bound option is for the dual simplex solver, and is "
+        "currently interpreted incorrectly in the MIP solver\n");
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Resetting the objective_bound value of %g to the default of "
+                 "%g for the duration of the MIP solve\n",
+                 options.objective_bound, kHighsInf);
     options.objective_bound = kHighsInf;
   }
-  */
   HighsMipSolver solver(callback, options, mip, solution);
   solver.setProfiling(profiling);
   profiling->start(kSubSolverMip);
