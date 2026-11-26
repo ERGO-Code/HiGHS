@@ -36,7 +36,6 @@ Int64 Symbolic::cliqueSize(Int sn) const {
 }
 Int64 Symbolic::maxStackSize() const { return max_stack_size_; }
 Int Symbolic::largestFront() const { return largest_front_; }
-double Symbolic::storage() const { return serial_storage_; }
 Int Symbolic::depth() const { return tree_depth_; }
 double Symbolic::solveTreeSpeedup() const {
   return ops_solve_ / critops_solve_;
@@ -70,7 +69,7 @@ void Symbolic::print(const Logger& logger, bool verbose) const {
   log_stream << textline("Size:") << sci(n_, 0, 2) << '\n';
   log_stream << textline("Nnz:") << sci(nz_, 0, 2) << '\n';
   log_stream << textline("Fill-in:") << fix(fillin_, 0, 2) << '\n';
-  log_stream << textline("Serial memory:") << memoryString(serial_storage_)
+  log_stream << textline("Serial memory:") << memoryString(memory_estimate_)
              << '\n';
   log_stream << textline("Flops:") << sci(flops_, 0, 1) << '\n';
   if (verbose) {

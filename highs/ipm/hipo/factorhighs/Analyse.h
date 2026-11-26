@@ -73,8 +73,8 @@ class Analyse {
   // information about consecutive indices in relindClique
   std::vector<std::vector<Int>> consecutive_sums_{};
 
-  // estimate of maximum storage
-  double serial_storage_{};
+  // estimate of the memory held by FHsolver to factorise in serial
+  double memory_estimate_{};
 
   Int64 max_stack_size_{};
 

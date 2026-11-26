@@ -13,6 +13,7 @@
 #include "DataCollector.h"
 #include "FactorHighsSettings.h"
 #include "ReturnValues.h"
+#include "ipm/hipo/auxiliary/AlignedMemory.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 #include "util/HighsDisjointSets.h"
@@ -1228,7 +1229,14 @@ void Analyse::computeStackSize() {
 
   std::vector<Int64> clique_entries(sn_count_);
   std::vector<Int64> stack_subtrees(sn_count_);
-  Int64 total_frontal{};
+
+  // the factor as laid out by FactorStorage: each supernode starts on a
+  // kCacheAlignBytes boundary
+  const Int64 align_entries = kCacheAlignBytes / sizeof(double);
+  Int64 total_frontal_aligned{};
+  Int largest_front{};
+  // largest copy of a block column in the dense kernels
+  Int64 largest_block_column{};
 
   // initialise data of supernodes
   for (Int sn = 0; sn < sn_count_; ++sn) {
@@ -1243,7 +1251,11 @@ void Analyse::computeStackSize() {
     // compute storage based on format used
     computeStorage(fr, sz, frontal_entries, clique_entries[sn]);
 
-    total_frontal += frontal_entries;
+    total_frontal_aligned +=
+        (frontal_entries + align_entries - 1) / align_entries * align_entries;
+    largest_front = std::max(largest_front, fr);
+    largest_block_column =
+        std::max(largest_block_column, (Int64)fr * std::min(FH_opt_.nb, sz));
   }
 
   // linked lists of children
@@ -1282,10 +1294,26 @@ void Analyse::computeStackSize() {
     max_stack_size_ = std::max(max_stack_size_, stack_subtrees[sn]);
   }
 
-  // minimum storage in serial is equal to the space needed to store the
-  // factorisation and the maximum size of the stack. Times 8 to obtain the
-  // number of bytes.
-  serial_storage_ = (total_frontal + max_stack_size_) * 8;
+  // Approximate memory held by FHsolver to factorise in serial:
+  // - factor, with the alignment of each supernode and its start and size;
+  // - stack of cliques;
+  // - permuted matrix: column pointers, map and values (assuming the input has
+  //   no entries in the upper triangle);
+  // - static regularisation, in two orders;
+  // - scratch memory: the largest copy of a block column in the dense kernels,
+  //   or a vector of size n in the solves, and, on top of it, the smaller
+  //   buffers of the kernels and the gemv workspace of the solves.
+  const double factor_bytes = total_frontal_aligned * sizeof(double) +
+                              (2.0 * sn_count_ + 1) * sizeof(Int64);
+  const double stack_bytes = max_stack_size_ * sizeof(double);
+  const double matrix_bytes =
+      (n_ + 1.0 + nz_) * sizeof(Int) + (double)nz_ * sizeof(double);
+  const double reg_bytes = 2.0 * n_ * sizeof(double);
+  const double scratch_bytes = (std::max(largest_block_column, (Int64)n_) +
+                                2.0 * largest_front + 4.0 * FH_opt_.nb) *
+                               sizeof(double);
+  memory_estimate_ =
+      factor_bytes + stack_bytes + matrix_bytes + reg_bytes + scratch_bytes;
 }
 
 void Analyse::computeTreeScheduleSolve() {
@@ -1437,7 +1465,7 @@ Int Analyse::run(Symbolic& S) {
       sn_indices_.empty()
           ? 0
           : *std::max_element(sn_indices_.begin(), sn_indices_.end());
-  S.serial_storage_ = serial_storage_;
+  S.memory_estimate_ = memory_estimate_;
   S.flops_ = dense_ops_;
   S.max_stack_size_ = max_stack_size_;
   S.tree_depth_ = maxDepthTree(sn_parent_);

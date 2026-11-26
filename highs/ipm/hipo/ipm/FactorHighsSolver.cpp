@@ -218,7 +218,8 @@ Int FactorHighsSolver::setup() {
 
     kkt_.S.print(logger_, logger_.debug(1));
 
-    if (kkt_.S.storage() > kParallelLargeStorageGB * 1024 * 1024 * 1024) {
+    if (kkt_.S.memoryEstimate() >
+        kParallelLargeStorageGB * 1024 * 1024 * 1024) {
       logger_.printw("Large amount of memory required\n");
     }
 
@@ -229,11 +230,12 @@ Int FactorHighsSolver::setup() {
 }
 
 void FactorHighsSolver::checkMemory() const {
-  // storage() is the serial factorisation only, so allow a margin over it
+  // memoryEstimate() is the serial factorisation only, so allow a margin over
+  // it
   const double margin = options_.getParallel(ParallelTechnique::kTree)
                             ? kMemoryMarginParallelTree
                             : kMemoryMarginSerial;
-  const double required = margin * kkt_.S.storage();
+  const double required = margin * kkt_.S.memoryEstimate();
   if (required < kMemoryCheckMinBytes && !availableMemoryBytesSetForTesting())
     return;
   const double available = availableMemoryBytes();
@@ -548,8 +550,8 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
     double best_memory = kHighsInf;
     Int ind_best_memory = -1;
     for (Int i = 0; i < k; ++i) {
-      if (symbolics[i].storage() < best_memory) {
-        best_memory = symbolics[i].storage();
+      if (symbolics[i].memoryEstimate() < best_memory) {
+        best_memory = symbolics[i].memoryEstimate();
         ind_best_memory = i;
       }
     }
@@ -678,7 +680,7 @@ void FactorHighsSolver::setParallelAfterSymbolic() {
 
   // If serial memory is too large, switch off tree parallelism to avoid
   // running out of memory
-  double num_GB = kkt_.S.storage() / 1024 / 1024 / 1024;
+  double num_GB = kkt_.S.memoryEstimate() / 1024 / 1024 / 1024;
   if (num_GB > kParallelLargeStorageGB) {
     parallel_tree = false;
   }

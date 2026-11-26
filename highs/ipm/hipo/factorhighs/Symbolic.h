@@ -36,7 +36,7 @@ class Symbolic {
   double critops_{};
   Int64 artificial_nz_{};
   double artificial_ops_{};
-  double serial_storage_{};
+  double memory_estimate_{};
   Int largest_front_{};
   Int largest_sn_{};
   Int sn_size_1_{};
@@ -151,13 +151,11 @@ class Symbolic {
   Int largestFront() const;
   Int depth() const;
   double solveTreeSpeedup() const;
-  double storage() const;
+  double memoryEstimate() const { return memory_estimate_; }
   const std::vector<Int64>& ptr() const;
   const std::vector<Int>& iperm() const;
   const std::vector<Int>& snParent() const;
   const std::vector<Int>& snStart() const;
-  // first and next child of supernode sn, -1 if none, in forward or reverse
-  // order
   Int firstChild(Int sn) const { return first_child_[sn]; }
   Int nextChild(Int sn) const { return next_child_[sn]; }
   Int firstChildReverse(Int sn) const { return first_child_reverse_[sn]; }
