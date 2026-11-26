@@ -15,7 +15,8 @@
 namespace hipo {
 
 Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
-                     const Int* rowsM, const Int* ptrM, const double* valM,
+                     const Int* rows, const Int* ptr, const double* val,
+                     PermutedMatrix& matrix,
                      const std::vector<double>& static_reg,
                      std::vector<double>& static_reg_permuted,
                      const FHoptions& FH_opt, const Logger& logger,
@@ -23,7 +24,8 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
                      CliqueStack* stack,
                      std::vector<std::vector<double>>& schur_contribution,
                      ScratchArena& scratch)
-    : S_{S},
+    : matrix_{matrix},
+      S_{S},
       num_{num},
       schur_contribution_{schur_contribution},
       factor_{factor},
@@ -51,20 +53,10 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
     return;
   }
 
-  // Make a copy of the matrix to be factorised
-  rowsM_ = std::vector<Int>(rowsM, rowsM + nz);
-  valM_ = std::vector<double>(valM, valM + nz);
-  ptrM_ = std::vector<Int>(ptrM, ptrM + n + 1);
+  if (!matrix_.matches(S_, nz, FH_opt_.one_indexing))
+    matrix_.build(S_, nz, rows, ptr, FH_opt_.one_indexing);
 
-  // adjust data if one-based indexing is used
-  if (FH_opt_.one_indexing) {
-    for (Int& i : rowsM_) --i;
-    for (Int& i : ptrM_) --i;
-  }
-
-  // Permute the matrix.
-  // This also removes any entry not in the lower triangle.
-  permute(S_.iperm());
+  M_norm1_ = matrix_.fill(rows, ptr, val, scratch_);
 
   // static regularisation in the same order as the permuted matrix: the given
   // values, or reg_p for negative pivots and reg_d for the others
@@ -77,33 +69,6 @@ Factorise::Factorise(const Symbolic& S, Numeric& num, Int n, Int nz,
     for (Int i = 0; i < n_; ++i)
       static_reg_[i] = sign[i] < 0 ? FH_opt_.reg_p : FH_opt_.reg_d;
   }
-
-  nzM_ = ptrM_.back();
-
-  // Double transpose to sort columns
-  std::vector<Int> temp_ptr(n_ + 1);
-  std::vector<Int> temp_rows(nzM_);
-  std::vector<double> temp_val(nzM_);
-  transpose(ptrM_, rowsM_, valM_, temp_ptr, temp_rows, temp_val);
-  transpose(temp_ptr, temp_rows, temp_val, ptrM_, rowsM_, valM_);
-
-  // one norm of columns of M
-  std::vector<double> one_norm_cols(n_, 0.0);
-  for (Int col = 0; col < n_; ++col) {
-    for (Int el = ptrM_[col]; el < ptrM_[col + 1]; ++el) {
-      Int row = rowsM_[el];
-      double val = valM_[el];
-      one_norm_cols[col] += std::abs(val);
-      if (row != col) one_norm_cols[row] += std::abs(val);
-    }
-  }
-  M_norm1_ = one_norm_cols.empty() ? 0.0
-                                   : *std::max_element(one_norm_cols.begin(),
-                                                       one_norm_cols.end());
-}
-
-void Factorise::permute(const std::vector<Int>& iperm) {
-  permuteSym(iperm, ptrM_, rowsM_, valM_, true);
 }
 
 void Factorise::processSupernode(Int sn) {
@@ -174,11 +139,11 @@ void Factorise::processSupernode(Int sn) {
     const Int col = sn_begin + j;
 
     // go through the column
-    for (Int el = ptrM_[col]; el < ptrM_[col + 1]; ++el) {
+    for (Int el = matrix_.ptr()[col]; el < matrix_.ptr()[col + 1]; ++el) {
       // relative row index in the frontal matrix
       const Int i = S_.relindCols(el);
 
-      FH->assembleFrontal(i, j, valM_[el]);
+      FH->assembleFrontal(i, j, matrix_.val()[el]);
     }
   }
   HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleOriginal);

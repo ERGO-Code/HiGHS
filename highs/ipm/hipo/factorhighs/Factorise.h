@@ -8,6 +8,7 @@
 #include "FactorHighsOptions.h"
 #include "FactorStorage.h"
 #include "Numeric.h"
+#include "PermutedMatrix.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -18,12 +19,8 @@ class ScratchArena;
 
 class Factorise {
  public:
-  // matrix to factorise
-  std::vector<Int> rowsM_{};
-  std::vector<Int> ptrM_{};
-  std::vector<double> valM_{};
+  PermutedMatrix& matrix_;
   Int n_{};
-  Int nzM_{};
 
   // symbolic factorisation
   const Symbolic& S_;
@@ -79,14 +76,13 @@ class Factorise {
   // scratch memory of the dense kernels, managed outside of Factorise
   ScratchArena& scratch_;
 
-  void permute(const std::vector<Int>& iperm);
   void processTreeSerial();
   void processTreeParallel();
   void processSupernode(Int sn);
 
  public:
-  Factorise(const Symbolic& S, Numeric& num, Int n, Int nz, const Int* rowsM,
-            const Int* ptrM, const double* valM,
+  Factorise(const Symbolic& S, Numeric& num, Int n, Int nz, const Int* rows,
+            const Int* ptr, const double* val, PermutedMatrix& matrix,
             const std::vector<double>& static_reg,
             std::vector<double>& static_reg_permuted, const FHoptions& FH_opt,
             const Logger& logger, DataCollector& data, FactorStorage& factor,

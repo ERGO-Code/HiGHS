@@ -10,6 +10,7 @@
 #include "FactorHighsOptions.h"
 #include "FactorStorage.h"
 #include "Numeric.h"
+#include "PermutedMatrix.h"
 #include "ScratchArena.h"
 #include "Symbolic.h"
 #include "ipm/hipo/auxiliary/Logger.h"
@@ -96,6 +97,7 @@ class FHsolver {
   // Never nullptr. Not owned by FHsolver.
   const Logger* logger_ = &Logger::silent();
   DataCollector data_;
+  PermutedMatrix matrix_;
   Numeric N_;
   CliqueStack serial_stack_;
   std::vector<std::vector<double>> schur_contribution_;

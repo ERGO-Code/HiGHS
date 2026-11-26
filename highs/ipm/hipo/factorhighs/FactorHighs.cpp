@@ -36,7 +36,7 @@ Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
   if (!static_reg_.empty() && static_cast<Int>(static_reg_.size()) != n)
     return kRetInvalidInput;
   scratch_.init();
-  Factorise fact_obj(S, N_, n, nz, rows, ptr, vals, static_reg_,
+  Factorise fact_obj(S, N_, n, nz, rows, ptr, vals, matrix_, static_reg_,
                      static_reg_permuted_, options_, *logger_, data_, factor_,
                      &serial_stack_, schur_contribution_, scratch_);
   return fact_obj.run();
