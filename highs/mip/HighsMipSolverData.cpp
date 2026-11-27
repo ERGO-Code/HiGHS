@@ -2476,8 +2476,9 @@ restart:
       double nextprogress = (1.0 - alpha) * smoothprogress + alpha * progress;
 
       if (nextprogress < smoothprogress * 1.01 &&
-          (getLp().getObjective() - firstlpsolobj) <=
-              (rootlpsolobj - firstlpsolobj) * 1.001)
+          (getLp().getObjective() - firstlpsolobj <=
+               (rootlpsolobj - firstlpsolobj) * 1.001 ||
+           getLp().getObjective() - rootlpsolobj < 0.0001 * feastol))
         ++stall;
       else {
         stall = 0;
