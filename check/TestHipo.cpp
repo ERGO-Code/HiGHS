@@ -35,8 +35,8 @@ void runHipoTest(Highs& highs, const std::string& model,
 
   if (expected_model_status == HighsModelStatus::kOptimal) {
     const double actual_obj = highs.getObjectiveValue();
-    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
-            1e-4);
+    const double scale = expected_obj == 0 ? 1.0 : std::abs(expected_obj);
+    REQUIRE(std::abs(actual_obj - expected_obj) / scale < 1e-4);
   }
 }
 
@@ -127,12 +127,11 @@ TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
 }
 
 TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
-  const HighsModelStatus expected_status = HighsModelStatus::kOptimal;
   Highs highs;
   highs.setOptionValue("presolve", kHighsOnString);
-  runHipoTest(highs, "perold.mps", -9.381e3, expected_status);
+  runHipoTest(highs, "perold.mps", -9.381e3);
   highs.setOptionValue("presolve", kHighsOffString);
-  runHipoTest(highs, "perold.mps", -9.381e3, expected_status);
+  runHipoTest(highs, "perold.mps", -9.381e3);
   highs.resetThreadScheduler(true);
 }
 
@@ -265,11 +264,10 @@ TEST_CASE("issue-3718", "[highs_hipo]") {
   // HiPO was stagnating, kktCheck accepted the solution anyway, but the
   // tolerance was slightly violated.
 
-  const HighsModelStatus expected_status = HighsModelStatus::kOptimal;
   Highs highs;
   highs.setOptionValue("solve_relaxation", true);
   highs.setOptionValue("run_crossover", kHighsOffString);
-  runHipoTest(highs, "3015.mps", -1.4080e+06, expected_status);
+  runHipoTest(highs, "3015.mps", -1.4080e+06);
   REQUIRE(highs.getInfo().primal_dual_objective_error < 1e-7);
   highs.resetThreadScheduler(true);
 }
@@ -277,12 +275,21 @@ TEST_CASE("issue-3718", "[highs_hipo]") {
 TEST_CASE("issue-3736", "[highs_hipo]") {
   // HiPO was stopping with a nan when using the uplooking factorisation.
 
-  const HighsModelStatus expected_status = HighsModelStatus::kOptimal;
   Highs highs;
   highs.setOptionValue("presolve", kHighsOffString);
   highs.setOptionValue("run_crossover", kHighsOffString);
   highs.setOptionValue(kHipoFactorString, kHipoFactorUplooking);
-  runHipoTest(highs, "3736.mps", 8, expected_status);
+  runHipoTest(highs, "3736.mps", 8);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3746", "[highs_hipo]") {
+  // HiPO was reporting infeasible for these models
+
+  Highs highs;
+  highs.setOptionValue("presolve", kHighsOffString);
+  runHipoTest(highs, "3746-small.mps", 0);
+  runHipoTest(highs, "3746.mps", 0);
   highs.resetThreadScheduler(true);
 }
 
