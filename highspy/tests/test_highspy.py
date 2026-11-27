@@ -1910,6 +1910,28 @@ class TestHighsLinearExpressionPy(unittest.TestCase):
         self.assertRaises(HighsError, lambda: x + 4 >= self.h)  # type: ignore[operator]
         self.assertRaises(HighsError, lambda: x + 4 >= (y <= 2))
 
+    def test_chain_mismatch_error_message(self):
+        # issue #3602: the error explains the rule, shows both sides as compared, and how to fix it
+        x, y, z = self.x[:3]
+
+        def message(make_chain):
+            with self.assertRaises(HighsError) as ctx:
+                make_chain()
+            return str(ctx.exception)
+
+        msg = message(lambda: 2 * x + 0.1 * y <= z <= x + x + 0.1 * y + 5)
+        self.assertTrue(msg.startswith("Mismatched variables in chain comparison"))
+        self.assertIn("compared in floating point", msg)
+        self.assertIn("Move the variables into the middle term", msg)
+
+        msg = message(lambda: 2 * x + 0.1 * y <= z <= 2 * x + 0.2 * y + 5)
+        self.assertIn(
+            f"lhs has `2.0*v{x.index} + 0.1*v{y.index}` and rhs has `2.0*v{x.index} + 0.2*v{y.index}`", msg
+        )
+
+        msg = message(lambda: x <= y <= 1)
+        self.assertIn(f"lhs has `1.0*v{x.index}` and rhs has `no variables`", msg)
+
     def test_chain_inequality(self):
         x, y, _z = self.x[0:3]
 
