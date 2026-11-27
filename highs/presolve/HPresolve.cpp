@@ -398,6 +398,7 @@ void HPresolve::chooseRules() {
     allow_rule_[kPresolveRuleZeroCostSingleton] = false;
     allow_rule_[kPresolveRuleColStuffing] = false;
     allow_rule_[kPresolveRuleFourierMotzkin] = false;
+    allow_rule_[kPresolveRuleKnapsack] = false;
   };
 
   auto setRulesForInitialSweepMode = [&]() {
@@ -4184,6 +4185,7 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
     bool trySparsify = !may_require_basis_postsolve_;
     bool tryProbing = mipsolver != nullptr;
     bool tryFourierMotzkin = mipsolver != nullptr;
+    bool tryKnapsack = mipsolver != nullptr;
     HighsInt numCliquesBeforeProbing = -1;
     bool domcolAfterProbingCalled = false;
     bool dependentEquationsCalled = mipsolver != nullptr;
@@ -4299,6 +4301,14 @@ HPresolve::Result HPresolve::presolve(HighsPostsolveStack& postsolve_stack) {
         if (problemSizeReduction() > 0.0)
           HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
         if (problemSizeReduction() > 0.05) continue;
+      }
+
+      // Knapsack specific techniques
+      if (this->allow_rule_[kPresolveRuleKnapsack] && tryKnapsack) {
+        HPRESOLVE_TIMED_CHECKED_CALL(kPresolveClockKnapsack,
+                                     strengthenKnapsacks(postsolve_stack));
+        tryKnapsack = false;
+        HPRESOLVE_CHECKED_CALL(fastPresolveLoop(postsolve_stack));
       }
 
       // enumerate solutions

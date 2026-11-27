@@ -313,7 +313,8 @@ enum PresolveRuleType : int {
   kPresolveRuleInitialSweep,
   kPresolveRuleFourierMotzkin,
   kPresolveRuleWeaklyDominatedCol,
-  kPresolveRuleMax = kPresolveRuleWeaklyDominatedCol,
+  kPresolveRuleKnapsack,
+  kPresolveRuleMax = kPresolveRuleKnapsack,
   kPresolveRuleLastAllowOff = kPresolveRuleMax,
   kPresolveRuleCount
 };

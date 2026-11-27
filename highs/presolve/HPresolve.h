@@ -567,6 +567,8 @@ class HPresolve {
   Result strengthenInequalities(HighsPostsolveStack& postsolve_stack,
                                 HighsInt& num_strengthened);
 
+  Result strengthenKnapsacks(HighsPostsolveStack& postsolve_stack);
+
   Result detectImpliedIntegers();
 
   Result detectParallelRowsAndCols(HighsPostsolveStack& postsolve_stack);
