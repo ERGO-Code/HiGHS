@@ -18,6 +18,8 @@ HPresolve::Result HPresolve::presolveRuleTest(
     return presolveRuleTestParallelRowsAndCols(postsolve_stack);
   } else if (options->presolve_rule_test == kPresolveRuleProbing) {
     return presolveRuleTestProbing(postsolve_stack);
+  } else if (options->presolve_rule_test == kPresolveRuleEnumeration) {
+    return presolveRuleTestEnumeration(postsolve_stack);
   } else if (options->presolve_rule_test == kPresolveRuleFourierMotzkin) {
     return presolveRuleTestFourierMotzkin(postsolve_stack);
   } else if (options->presolve_rule_test == kPresolveRuleAggregator) {
@@ -59,6 +61,14 @@ HPresolve::Result HPresolve::presolveRuleTestProbing(
                "HPresolve::presolveRuleTestProbing\n");
   if (mipsolver == nullptr) return Result::kStopped;
   return runProbing(postsolve_stack);
+}
+HPresolve::Result HPresolve::presolveRuleTestEnumeration(
+    HighsPostsolveStack& postsolve_stack) {
+  assert(options->presolve_rule_test == kPresolveRuleEnumeration);
+  highsLogUser(options->log_options, HighsLogType::kInfo,
+               "HPresolve::presolveRuleTestEnumeration\n");
+  if (mipsolver == nullptr) return Result::kStopped;
+  return enumerateSolutions(postsolve_stack);
 }
 HPresolve::Result HPresolve::presolveRuleTestFourierMotzkin(
     HighsPostsolveStack& postsolve_stack) {

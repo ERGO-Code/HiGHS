@@ -392,7 +392,8 @@ class HPresolve {
   Result scaleMIP(HighsPostsolveStack& postsolve_stack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postsolve_stack,
-                                         HighsInt& numDelCol);
+                                         HighsInt& numDelCol,
+                                         HighsDomain* domain = nullptr);
 
   Result fastPresolveLoop(HighsPostsolveStack& postsolve_stack);
 
@@ -608,6 +609,7 @@ class HPresolve {
   Result presolveRuleTestParallelRowsAndCols(
       HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestProbing(HighsPostsolveStack& postsolve_stack);
+  Result presolveRuleTestEnumeration(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestFourierMotzkin(HighsPostsolveStack& postsolve_stack);
   Result presolveRuleTestAggregator(HighsPostsolveStack& postsolve_stack);
   Result presolveTestTransformColumn(HighsPostsolveStack& postsolve_stack,
