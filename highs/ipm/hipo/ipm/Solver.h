@@ -353,7 +353,7 @@ class Solver {
   // ===================================================================================
   // If the iterate or the direction is nan or inf, clear the error, reset to
   // the best iterate and set the status so that IPX takes over, as for stop.
-  // The error stays if there is no valid iterate to reset to.
+  // The error stays if no best iterate was saved.
   // ===================================================================================
   void resetAfterNan(Int iter);
 

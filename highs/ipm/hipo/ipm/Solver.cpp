@@ -1718,12 +1718,9 @@ double Solver::checkDualRay(const HighsSolution& point) const {
 }
 
 void Solver::resetAfterNan(Int iter) {
-  if (info_.error != kErrorNan) return;
+  // no best iterate saved, so no valid iterate to pass to IPX
+  if (info_.error != kErrorNan || it_->best_iter < 0) return;
   resetToBestIter(iter);
-
-  // no valid iterate to pass to IPX, e.g. no best iterate saved yet
-  if (it_->isNan() || it_->isInf()) return;
-
   logger_.printInfo("Stopping at the best iterate because of nan\n");
   info_.error = kOk;
   // as for stop, IPX refines the best iterate, or runs crossover from it
