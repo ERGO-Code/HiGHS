@@ -272,10 +272,11 @@ Int maxDepthTree(const std::vector<Int>& parent) {
   return max_depth;
 }
 
-void fullFromLower(Int n, Int nz, const Int* ptrL, const Int* rowsL,
-                   std::vector<Int>& ptrF, std::vector<Int>& rowsF) {
+Int fullFromLower(Int n, Int nz, const Int* ptrL, const Int* rowsL,
+                  std::vector<Int>& ptrF, std::vector<Int>& rowsF) {
   // Given a sparse matrix in lower triangular format, build the same matrix in
   // full format, without diagonal entries.
+  // Return 1 if the result cannot be addressed with Int.
 
   std::vector<Int> rowsU(nz);
   std::vector<Int> ptrU(n + 1);
@@ -291,6 +292,14 @@ void fullFromLower(Int n, Int nz, const Int* ptrL, const Int* rowsL,
     }
   }
 
+  Int64 full_nz = 0;
+  for (Int j = 0; j < n; ++j) full_nz += work[j];
+  if (full_nz >= kHighsIInf) {
+    ptrF.clear();
+    rowsF.clear();
+    return 1;
+  }
+
   ptrF.assign(n + 1, 0);
   counts2Ptr(n, ptrF.data(), work.data());
   rowsF.assign(ptrF.back(), 0);
@@ -302,6 +311,8 @@ void fullFromLower(Int n, Int nz, const Int* ptrL, const Int* rowsL,
       rowsF[work[i]++] = j;
     }
   }
+
+  return 0;
 }
 
 double snFlops(double size, double clique_size) {

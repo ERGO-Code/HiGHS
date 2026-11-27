@@ -34,6 +34,7 @@ class Model {
   Int n_orig_{};
   Int m_orig_{};
   const HighsLp* lp_orig_ = nullptr;
+  const HighsHessian* Q_orig_ = nullptr;
   double offset_;
   std::vector<double> rhs_orig_;
   std::vector<char> constraints_orig_;
@@ -60,9 +61,9 @@ class Model {
 
   Preprocessor preprocessor_;
 
-  // norms of rows and cols of A
-  std::vector<double> one_norm_cols_, one_norm_rows_, inf_norm_cols_,
-      inf_norm_rows_;
+  // row sums of |A|, |A^T| and |Q|, and their maximum (infinity norms)
+  std::vector<double> one_norm_rows_, one_norm_cols_, one_norm_Q_;
+  double norm_A_{}, norm_At_{}, norm_Q_{};
 
   std::vector<Int> free_variables_;
 
@@ -91,7 +92,8 @@ class Model {
 
   void nzBounds();
 
-  void adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
+  // returns true if any bound was changed
+  bool adjustFreeVars(std::vector<double>& x, std::vector<double>& xl,
                       std::vector<double>& xu, const Logger& logger);
 
   void saveBounds();
@@ -105,6 +107,7 @@ class Model {
   Int n_orig() const { return n_orig_; }
   Int m_orig() const { return m_orig_; }
   const HighsLp* lpOrig() const { return lp_orig_; }
+  const HighsHessian* QOrig() const { return Q_orig_; }
   const std::vector<double>& rhsOrig() const { return rhs_orig_; }
   const std::vector<char>& constraintsOrig() const { return constraints_orig_; }
   bool qp() const { return !Q_.empty(); }
@@ -123,8 +126,10 @@ class Model {
   double offset() const { return offset_; }
   double oneNormRows(Int i) const { return one_norm_rows_[i]; }
   double oneNormCols(Int i) const { return one_norm_cols_[i]; }
-  double infNormRows(Int i) const { return inf_norm_rows_[i]; }
-  double infNormCols(Int i) const { return inf_norm_cols_[i]; }
+  double oneNormQ(Int i) const { return one_norm_Q_[i]; }
+  double normA() const { return norm_A_; }
+  double normAt() const { return norm_At_; }
+  double normQ() const { return norm_Q_; }
   Int64 nzAS() const { return AS_nz_; }
   Int64 nzNElb() const { return NE_nz_lb_; }
   Int64 nzNEub() const { return NE_nz_ub_; }

@@ -1,6 +1,7 @@
 #ifndef FACTORHIGHS_FACTORISE_H
 #define FACTORHIGHS_FACTORISE_H
 
+#include <atomic>
 #include <cmath>
 
 #include "CliqueStack.h"
@@ -49,18 +50,22 @@ class Factorise {
   //  the off-diagonal pivot entry (of the 2x2 inverse).
   std::vector<std::vector<double>> pivot_2x2_{};
 
-  // largest diagonal element in the original matrix and norms of columns
-  double max_diag_{};
-  double min_diag_{};
+  // one norm of the original matrix, sets the dynamic regularisation threshold
   double M_norm1_{};
 
   // regularisation
   std::vector<double> total_reg_{};
 
+  // 1x1 pivots before regularisation, infinite for 2x2 pivots
+  std::vector<double> unreg_pivots_{};
+
+  // static regularisation of each pivot, permuted
+  std::vector<double> static_reg_{};
+
   // flag to stop computation
   std::atomic<bool> flag_stop_{false};
 
-  const Logger* logger_;
+  const Logger& logger_;
   DataCollector& data_;
   const FHoptions& FH_opt_;
 
@@ -73,9 +78,9 @@ class Factorise {
 
  public:
   Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM, const Int* ptrM,
-            const double* valM, const FHoptions& FH_opt, const Logger* logger,
-            DataCollector& data, std::vector<std::vector<double>>& sn_columns,
-            CliqueStack* stack);
+            const double* valM, const std::vector<double>& static_reg,
+            const FHoptions& FH_opt, const Logger& logger, DataCollector& data,
+            std::vector<std::vector<double>>& sn_columns, CliqueStack* stack);
 
   bool run(Numeric& num);
 };

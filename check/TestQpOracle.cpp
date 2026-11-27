@@ -463,6 +463,9 @@ TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
   std::vector<double> solution;
   for (auto& solver : solvers) {
     h.setOptionValue("solver", solver);
+    // with the default tolerance, the ipm solution is accurate only to ~1e-5
+    if (solver == kHipoString)
+      h.setOptionValue("ipm_optimality_tolerance", 1e-10);
     h.run();
     if (solver == kQpAsmString) {
       REQUIRE(h.writeModel(write_model_filename) == HighsStatus::kError);

@@ -6,7 +6,6 @@
 
 // Defined in lp_data/Highs.cpp
 const char* highsVersion();
-
 const char* FactorHighs_version(void) { return highsVersion(); }
 
 HighsInt FactorHighs_initialise(HighsInt threads) {
@@ -62,8 +61,6 @@ void FactorHighs_getRegularisation(void* FH, double* reg) {
   ((hipo::FHsolver*)FH)->getRegularisation(reg);
 }
 
-void FactorHighs_newIter(void* FH) { ((hipo::FHsolver*)FH)->newIter(); }
-
 void FactorHighs_setBlockSize(void* FH, HighsInt nb) {
   ((hipo::FHsolver*)FH)->setBlockSize(nb);
 }
@@ -108,15 +105,15 @@ void FactorHighs_setOneIndexing(void* FH, HighsInt one_indexing) {
 HighsInt FactorHighs_reorderMetis(void* FH, HighsInt n, HighsInt nz,
                                   const HighsInt* rows, const HighsInt* ptr,
                                   HighsInt* perm) {
-  return ((hipo::FHsolver*)FH)->reorderMetis(n, nz, rows, ptr, perm, 0, 0);
+  return ((hipo::FHsolver*)FH)->reorderMetis(n, nz, rows, ptr, perm, 0, 0) != 0;
 }
 HighsInt FactorHighs_reorderAmd(void* FH, HighsInt n, HighsInt nz,
                                 const HighsInt* rows, const HighsInt* ptr,
                                 HighsInt* perm) {
-  return ((hipo::FHsolver*)FH)->reorderAmd(n, nz, rows, ptr, perm, 0);
+  return ((hipo::FHsolver*)FH)->reorderAmd(n, nz, rows, ptr, perm, 0) != 0;
 }
 HighsInt FactorHighs_reorderRcm(void* FH, HighsInt n, HighsInt nz,
                                 const HighsInt* rows, const HighsInt* ptr,
                                 HighsInt* perm) {
-  return ((hipo::FHsolver*)FH)->reorderRcm(n, nz, rows, ptr, perm, 0);
+  return ((hipo::FHsolver*)FH)->reorderRcm(n, nz, rows, ptr, perm, 0) != 0;
 }

@@ -4,36 +4,39 @@
 #include "DataCollector.h"
 #include "Factorise.h"
 #include "HighsExternalApi.h"
+#include "ReturnValues.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/Logger.h"
 
 namespace hipo {
 
-FHsolver::~FHsolver() {
-  if (logger_) {
-    data_.printTimes(*logger_);
-    data_.printIter(*logger_);
-  }
-  if (local_logger_ && logger_) delete logger_;
-}
-
-void FHsolver::newIter() { data_.append(); }
+FHsolver::~FHsolver() { data_.printTimes(*logger_); }
 
 void FHsolver::setRegularisation(double reg_p, double reg_d) {
   options_.reg_p = reg_p;
   options_.reg_d = reg_d;
+  static_reg_.clear();
+}
+
+void FHsolver::setRegularisationEntries(const double* reg, Int n) {
+  if (reg)
+    static_reg_.assign(reg, reg + n);
+  else
+    static_reg_.clear();
 }
 
 Int FHsolver::analyse(Symbolic& S, Int n, Int nz, const Int* rows,
                       const Int* ptr, const Int* signs, const Int* perm) {
-  Analyse an_obj(n, nz, rows, ptr, signs, options_, logger_, data_, perm);
+  Analyse an_obj(n, nz, rows, ptr, signs, options_, *logger_, data_, perm);
   return an_obj.run(S);
 }
 
 Int FHsolver::factorise(const Symbolic& S, Int n, Int nz, const Int* rows,
                         const Int* ptr, const double* vals) {
-  Factorise fact_obj(S, n, nz, rows, ptr, vals, options_, logger_, data_,
-                     sn_columns_, &serial_stack_);
+  if (!static_reg_.empty() && static_cast<Int>(static_reg_.size()) != n)
+    return kRetInvalidInput;
+  Factorise fact_obj(S, n, nz, rows, ptr, vals, static_reg_, options_, *logger_,
+                     data_, sn_columns_, &serial_stack_);
   return fact_obj.run(N_);
 }
 
@@ -47,12 +50,22 @@ Int FHsolver::backwardSolve(double* x, Int k) const {
 }
 
 void FHsolver::getRegularisation(double* reg) { N_.getReg(reg); }
+void FHsolver::getInfo(FHinfo& info, double zero_tol) const {
+  N_.getUnregPivots(info.unreg_pivots);
+  info.num_2x2 = N_.num2x2();
+  info.num_pos = 0;
+  info.num_neg = 0;
+  info.num_zero = 0;
+  N_.inertia(info.num_pos, info.num_neg, info.num_zero, zero_tol);
+}
 
 void FHsolver::setBlockSize(Int nb) {
   if (nb > 0) options_.nb = nb;
 }
 
 void FHsolver::setPivoting(bool pivoting) { options_.pivoting = pivoting; }
+
+void FHsolver::setDropBadPivots(bool drop) { options_.drop_bad_pivots = drop; }
 
 void FHsolver::setParallel(bool tree, bool node) {
   options_.parallel_tree = tree;
@@ -65,25 +78,14 @@ void FHsolver::setParallelSolve(bool forward, bool backward, bool diag) {
   options_.parallel_diag = diag;
 }
 
-void FHsolver::setLogger(const Logger* logger, bool use_printf) {
-  if (local_logger_ && logger_) delete logger_;
-  local_logger_ = false;
+void FHsolver::setLogger(const Logger* logger, bool to_console) {
+  if (logger)
+    logger_ = logger;
+  else
+    logger_ = to_console ? &Logger::console() : &Logger::silent();
 
-  logger_ = logger;
-  if (!logger_) {
-    logger_ = new Logger(use_printf);
-    if (logger_) local_logger_ = true;
-  }
-
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  if (logger_)
-    logger_->printw(
-        "Running in debug mode: COLLECTING EXPENSIVE FACTORISATION DATA\n");
-#endif
 #if HIPO_TIMING_LEVEL > 0
-  if (logger_)
-    logger_->printw(
-        "Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
+  logger_->printw("Running in debug mode: COLLECTING EXPENSIVE TIMING DATA\n");
 #endif
 }
 
@@ -108,9 +110,9 @@ void FHsolver::iperm(const Symbolic& S, Int* ip) const {
   }
 }
 
-static void getFull(Int n, Int nz, const Int* rows, const Int* ptr,
-                    bool one_indexing, std::vector<Int>& full_ptr_v,
-                    std::vector<Int>& full_rows_v) {
+static Int getFull(Int n, Int nz, const Int* rows, const Int* ptr,
+                   bool one_indexing, std::vector<Int>& full_ptr_v,
+                   std::vector<Int>& full_rows_v) {
   std::vector<Int> rows_tmp(nz);
   std::vector<Int> ptr_tmp(n + 1);
   for (Int i = 0; i < nz; ++i) rows_tmp[i] = rows[i];
@@ -123,8 +125,8 @@ static void getFull(Int n, Int nz, const Int* rows, const Int* ptr,
 
   // metis, amd, rcm require a full copy of the matrix, without diagonal
   // entries
-  fullFromLower(n, nz, ptr_tmp.data(), rows_tmp.data(), full_ptr_v,
-                full_rows_v);
+  return fullFromLower(n, nz, ptr_tmp.data(), rows_tmp.data(), full_ptr_v,
+                       full_rows_v);
 }
 
 Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
@@ -135,7 +137,9 @@ Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
     full_ptr = ptr;
     full_rows = rows;
   } else {
-    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    if (getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v,
+                full_rows_v))
+      return kRetIntOverflow;
     full_ptr = full_ptr_v.data();
     full_rows = full_rows_v.data();
   }
@@ -151,9 +155,9 @@ Int FHsolver::reorderMetis(Int n, Int nz, const Int* rows, const Int* ptr,
 
   std::vector<Int> iperm(n);
 
-  Int status =
-      HighsExtras::metis::nodeND(&n, full_ptr, full_rows, nullptr, options,
-                                 perm, iperm.data(), options_.should_stop, options_.stop_data);
+  Int status = HighsExtras::metis::nodeND(
+      &n, full_ptr, full_rows, nullptr, options, perm, iperm.data(),
+      options_.should_stop, options_.stop_data);
 
   if (options_.one_indexing)
     for (Int i = 0; i < n; ++i) perm[i]++;
@@ -169,7 +173,9 @@ Int FHsolver::reorderAmd(Int n, Int nz, const Int* rows, const Int* ptr,
     full_ptr = ptr;
     full_rows = rows;
   } else {
-    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    if (getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v,
+                full_rows_v))
+      return kRetIntOverflow;
     full_ptr = full_ptr_v.data();
     full_rows = full_rows_v.data();
   }
@@ -182,10 +188,13 @@ Int FHsolver::reorderAmd(Int n, Int nz, const Int* rows, const Int* ptr,
       HighsExtras::amd::order(n, full_ptr, full_rows, perm, control, info,
                               options_.should_stop, options_.stop_data);
 
+  // Accept AMD_OK_BUT_JUMBLED as success
+  if (status < 0) return status;
+
   if (options_.one_indexing)
     for (Int i = 0; i < n; ++i) perm[i]++;
 
-  return status != AMD_OK;
+  return 0;
 }
 
 Int FHsolver::reorderRcm(Int n, Int nz, const Int* rows, const Int* ptr,
@@ -196,7 +205,9 @@ Int FHsolver::reorderRcm(Int n, Int nz, const Int* rows, const Int* ptr,
     full_ptr = ptr;
     full_rows = rows;
   } else {
-    getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v, full_rows_v);
+    if (getFull(n, nz, rows, ptr, options_.one_indexing, full_ptr_v,
+                full_rows_v))
+      return kRetIntOverflow;
     full_ptr = full_ptr_v.data();
     full_rows = full_rows_v.data();
   }

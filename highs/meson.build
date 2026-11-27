@@ -192,15 +192,17 @@ _ipx_srcs = [
 ]
 
 _hipo_srcs = [
-    'ipm/hipo/ipm/IpmData.cpp',
+    'ipm/hipo/ipm/IterationHistory.cpp',
     'ipm/hipo/ipm/FactorHighsSolver.cpp',
     'ipm/hipo/ipm/Control.cpp',
     'ipm/hipo/ipm/Iterate.cpp',
     'ipm/hipo/ipm/KktMatrix.cpp',
     'ipm/hipo/ipm/Model.cpp',
     'ipm/hipo/ipm/PreProcess.cpp',
+    'ipm/hipo/ipm/Recovery.cpp',
     'ipm/hipo/ipm/Refine.cpp',
     'ipm/hipo/ipm/Solver.cpp',
+    'ipm/hipo/ipm/Diagnostics.cpp',
     'ipm/hipo/ipm/UpLookingSolver.cpp',
     'ipm/hipo/factorhighs/Analyse.cpp',
     'ipm/hipo/factorhighs/CallAndTimeBlas.cpp',

@@ -23,7 +23,7 @@ enum TimeProfileItem {
   kSolveTime,
   kInsertSplitTime,
   kRefinementResTime,
-  kRefinementOmegaTime,
+  kRefinementErrorTime,
   // ipm phases
   kInitialiseTime,
   kPrepareTime,

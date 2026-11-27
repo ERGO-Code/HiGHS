@@ -3,7 +3,7 @@
 
 #include "Control.h"
 #include "Info.h"
-#include "IpmData.h"
+#include "IterationHistory.h"
 #include "KktMatrix.h"
 #include "LinearSolver.h"
 #include "Model.h"
@@ -31,6 +31,7 @@ class UpLookingSolver : public LinearSolver {
   std::vector<double> valL_;
 
   std::vector<double> regularisation_;
+  std::vector<double> unreg_pivots_;
   std::vector<Int> signs_;
 
   const double reg_threshold_ = 1e-13;
@@ -42,8 +43,8 @@ class UpLookingSolver : public LinearSolver {
   std::vector<double> as_buffer_;
 
   Info& info_;
-  IpmData& data_;
-  const Regularisation& regul_;
+  IterationHistory& history_;
+  const SolverControls& controls_;
   const Model& model_;
   const Control& control_;
 
@@ -54,8 +55,8 @@ class UpLookingSolver : public LinearSolver {
   void solve(std::vector<double>& x);
 
  public:
-  UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
-                  const Regularisation& regul, const Model& model,
+  UpLookingSolver(KktMatrix& kkt, Info& info, IterationHistory& history,
+                  const SolverControls& controls, const Model& model,
                   const Control& control);
 
   Int factorAS(const std::vector<double>& scaling) override;
@@ -70,7 +71,8 @@ class UpLookingSolver : public LinearSolver {
   double flops() const override { return flops_; }
   double spops() const override { return 0; }
   double nz() const override { return valL_.size(); }
-  void getReg(std::vector<double>& reg) override;
+  void getReg(std::vector<double>& Rp, std::vector<double>& Rd) override;
+  void getFactorInfo(FactorInfo& info) override;
 
   LinearSolverType type() const override { return kUpLookingType; }
 };

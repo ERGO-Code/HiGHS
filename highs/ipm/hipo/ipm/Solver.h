@@ -3,7 +3,9 @@
 
 #include <string>
 
+#include "Centring.h"
 #include "Control.h"
+#include "Diagnostics.h"
 #include "FactorHighsSolver.h"
 #include "Info.h"
 #include "Iterate.h"
@@ -11,6 +13,7 @@
 #include "Model.h"
 #include "Options.h"
 #include "Parameters.h"
+#include "Recovery.h"
 #include "Status.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -18,6 +21,7 @@
 #include "ipm/hipo/auxiliary/VectorOperations.h"
 #include "ipm/hipo/factorhighs/FactorHighs.h"
 #include "ipm/ipx/lp_solver.h"
+#include "lp_data/HStruct.h"
 #include "lp_data/HighsCallback.h"
 #include "lp_data/HighsInfo.h"
 #include "lp_data/HighsLp.h"
@@ -39,7 +43,8 @@ class Solver {
   Int iter_{};
   double alpha_primal_{}, alpha_dual_{};
   double sigma_{};
-  Regularisation regul_{};
+  SolverControls controls_{};
+  Recovery recovery_{};
   Info info_;
   Control control_;
   Options options_{};
@@ -58,6 +63,22 @@ class Solver {
   // crossover if it is run, in which case ipx status_crossover is converted to
   // hipo status.
   Status status_phase2 = kStatusNotSet;
+
+  // Point of the last iteration in which infeasibility was suspected, in the
+  // original space, used to compute candidate certificates of infeasibility.
+  // Invalidated when the iterate is reset.
+  HighsSolution prev_point_;
+  bool prev_point_valid_ = false;
+
+  // rows and columns absorbed by the regularisation at the last factorisation
+  std::vector<Int> absorbed_rows_;
+  std::vector<Int> absorbed_cols_;
+
+  // centring mode, started by the centre action
+  Centring centring_{};
+
+  // columns whose primal regularisation was increased by the short-step guard
+  std::vector<Int> guard_cols_;
 
  public:
   // ===================================================================================
@@ -112,7 +133,28 @@ class Solver {
   void runIpm();
   isFailure initialise();
   shouldTerminate prepareIter();
+
+  // ===================================================================================
+  // Compute the direction of the iteration: predictor, solved again if the
+  // short-step guard changes the regularisation, then correctors.
+  // ===================================================================================
+  isFailure computeDirection();
+
   isFailure predictor();
+
+  // ===================================================================================
+  // Short-step guard, for LPs: if the step of the predictor is below
+  // kGuardAlpha and nearly free columns block it, multiply their primal
+  // regularisation by kGuardRegFactor and return true, so that the predictor is
+  // solved again.
+  // ===================================================================================
+  bool shortStepGuard();
+
+  // ===================================================================================
+  // Give back the default primal regularisation to the columns of the guard
+  // that are no longer nearly free.
+  // ===================================================================================
+  void releaseGuardColumns();
   isFailure correctors();
 
   // ===================================================================================
@@ -176,7 +218,17 @@ class Solver {
   // Functions for iterative refinement on the large 6x6 system
   // ===================================================================================
   void refine(NewtonDir& delta);
-  double computeOmega(const NewtonDir& delta) const;
+  double computeComponentwiseError(const NewtonDir& delta) const;
+  double computeBlockwiseError(const NewtonDir& delta) const;
+
+  // ===================================================================================
+  // Signals collected in it_->history, to detect numerical trouble:
+  // - pivot statistics, nearly free columns, absorbed rows and columns, after
+  //   each factorisation (needs it_->Rp, it_->Rd, it_->res);
+  // - infinity norms of r1, r2, r3, r4 of it_->res.
+  // ===================================================================================
+  void recordFactorisationSignals();
+  void residualNorms(double* norms) const;
 
   // ===================================================================================
   // Steps to boundary are computed so that
@@ -235,18 +287,21 @@ class Solver {
   //  1.0   |--------|------------|
   //        |        |    0.01    |
   //  0.5   |        |------------|
-  //        |        |    0.10    |
+  //        |  0.01  |    0.10    |
   //  0.2   |        |------------|
-  //        |  0.01  |    0.25    |
-  //  0.1   |        |------------|
-  //        |        |    0.50    |
-  //  0.05  |        |------------|
-  //        |        |    0.90    |
+  //        |        |    0.25    |
+  //  0.1   |--------|------------|
+  //        |  0.50  |    0.50    |
+  //  0.05  |--------|------------|
+  //        |  0.90  |    0.90    |
   //  0.0   |--------|------------|
   //
+  // With small steps, the affine direction is re-centred too, so that it is
+  // not blocked by aiming at a much smaller mu.
   // ===================================================================================
   void sigmaAffine();
   void sigmaCorrectors();
+  double sigmaFromStepsizes() const;
 
   // ===================================================================================
   // Compute the residuals for the computation of multiple centrality
@@ -276,11 +331,63 @@ class Solver {
   shouldTerminate checkIterate();
 
   // ===================================================================================
-  // Stop if detection is detected, or if the problem is primal or dual
-  // infeasible.
+  // Run the detectors at the end of an iteration, on its iterate and record,
+  // and store the issues and messages in the record. The stagnation and
+  // numerical tests run only after the first iteration.
   // ===================================================================================
-  shouldTerminate checkStagnation();
-  shouldTerminate checkBadIter();
+  void runDiagnostics();
+
+  // ===================================================================================
+  // Apply the action chosen by recovery_ for the issues in record, resetting to
+  // the best iterate if record says so. Return true if the ipm should terminate
+  // (stop).
+  // ===================================================================================
+  shouldTerminate applyAction(IterationRecord& record);
+
+  // ===================================================================================
+  // Give up because of stagnation: accept the point if it passes the KKT check,
+  // otherwise reset to the best iterate, and set the status.
+  // ===================================================================================
+  void terminateStagnation();
+
+  // ===================================================================================
+  // If the iterate or the direction is nan or inf, clear the error, reset to
+  // the best iterate and set the status so that IPX takes over, as for stop.
+  // The error stays if no best iterate was saved.
+  // ===================================================================================
+  void resetAfterNan(Int iter);
+
+  // ===================================================================================
+  // Check for reasons to stop other than optimality: a verified certificate of
+  // primal or dual infeasibility (see handleInfeasible), or the stop chosen by
+  // recovery_ (see applyAction), using the report stored by runDiagnostics.
+  // Return true if the ipm should terminate.
+  // ===================================================================================
+  shouldTerminate checkInfeasibilityOrStagnation();
+
+  // ===================================================================================
+  // Check if point, or the displacement between point and prev_point_ (in the
+  // original space), is a certificate of dual infeasibility (primal ray) or of
+  // primal infeasibility (dual ray, i.e. Farkas certificate).
+  // An approximate certificate proves that any dual (resp primal) feasible
+  // point has norm at least R, as computed by primalRayRadius (resp
+  // dualRayRadius). The certificate is accepted if R is larger than the norm of
+  // the problem data (costs, resp bounds) times kCertificateMinRadius.
+  // Return R if the certificate is accepted, zero otherwise.
+  // ===================================================================================
+  double checkPrimalRay(const HighsSolution& point) const;
+  double checkDualRay(const HighsSolution& point) const;
+  double primalRayRadius(const std::vector<double>& ray) const;
+  double dualRayRadius(const std::vector<double>& ray) const;
+
+  // ===================================================================================
+  // If report has divergence or stagnation issues, look for a certificate of
+  // primal or dual infeasibility and, if one is verified, set the status.
+  // Return true if the ipm should terminate. When infeasibility is suspected,
+  // the current point is saved in prev_point_, used to compute the candidates
+  // at the next suspicious iteration.
+  // ===================================================================================
+  shouldTerminate handleInfeasible(const IterationReport& report);
 
   // ===================================================================================
   // Check the termination criterion:
@@ -289,7 +396,7 @@ class Solver {
   //  - relative dual gap    < tolerance
   // ===================================================================================
   shouldTerminate checkTermination();
-  isSuccess checkTerminationKkt();
+  isSuccess checkTerminationKkt(bool stagnation = false);
 
   // ===================================================================================
   // Check for user interrupt or time limit
@@ -319,6 +426,7 @@ class Solver {
   void printInfo() const;
   void printHeader() const;
   void printOutput(bool reset = false) const;
+  void printDiagnostics() const;
   void printSummary() const;
 
   void resetOptions();
@@ -327,6 +435,7 @@ class Solver {
 
   isFailure initialiseLinearSolver();
   isSuccess switchToMultifrontal();
+  isSuccess restartWithMultifrontal();
 
   void chooseAllowedParallelism(const HighsOptions& highs_options);
 };

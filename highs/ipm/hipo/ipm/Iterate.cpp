@@ -1,5 +1,7 @@
 #include "Iterate.h"
 
+#include <cmath>
+
 #include "Parameters.h"
 #include "ipm/IpxWrapper.h"
 #include "ipm/hipo/factorhighs/FactorHighsSettings.h"
@@ -28,15 +30,16 @@ void NewtonDir::add(const NewtonDir& d) {
   vectorAdd(zu, 1.0, d.zu, 1.0);
 }
 
-Iterate::Iterate(Model& model_input, Info& info_input, Regularisation& r)
+Iterate::Iterate(Model& model_input, Info& info_input, const SolverControls& c)
     : model{model_input},
       info{info_input},
       delta(model.m(), model.n()),
-      regul{r} {
+      controls{c},
+      diagnostics(model) {
   clearIter();
   clearRes();
   clearIres();
-  best_mu = 0;
+  min_mu = 0;
 }
 
 bool Iterate::isNan() const {
@@ -65,24 +68,24 @@ bool Iterate::isDirInf(const NewtonDir& d) const {
 }
 
 void Iterate::computeMu() {
-  mu = 0.0;
+  compl_sum = 0.0;
   Int number_finite_bounds{};
   for (Int i = 0; i < model.n(); ++i) {
     if (model.hasLb(i)) {
-      mu += xl[i] * zl[i];
+      compl_sum += xl[i] * zl[i];
       ++number_finite_bounds;
     }
     if (model.hasUb(i)) {
-      mu += xu[i] * zu[i];
+      compl_sum += xu[i] * zu[i];
       ++number_finite_bounds;
     }
   }
-  mu /= number_finite_bounds;
+  mu = compl_sum / number_finite_bounds;
 
-  if (best_mu > 0.0)
-    best_mu = std::min(best_mu, mu);
+  if (min_mu > 0.0)
+    min_mu = std::min(min_mu, mu);
   else
-    best_mu = mu;
+    min_mu = mu;
 }
 void Iterate::computeScaling() {
   scaling.assign(model.n(), 0.0);
@@ -96,20 +99,20 @@ void Iterate::computeScaling() {
   }
 
   // compute extremes of theta
-  data.back().min_theta = kHighsInf;
-  data.back().max_theta = 0.0;
+  history.back().min_theta = kHighsInf;
+  history.back().max_theta = 0.0;
   for (double d : scaling) {
     if (d != 0.0) {
-      data.back().min_theta = std::min(data.back().min_theta, 1.0 / d);
-      data.back().max_theta = std::max(data.back().max_theta, 1.0 / d);
+      history.back().min_theta = std::min(history.back().min_theta, 1.0 / d);
+      history.back().max_theta = std::max(history.back().max_theta, 1.0 / d);
     }
   }
 }
 void Iterate::products() {
-  double& min_prod = data.back().min_prod;
-  double& max_prod = data.back().max_prod;
-  Int& num_small = data.back().num_small_prod;
-  Int& num_large = data.back().num_large_prod;
+  double& min_prod = history.back().min_prod;
+  double& max_prod = history.back().max_prod;
+  Int& num_small = history.back().num_small_prod;
+  Int& num_large = history.back().num_large_prod;
 
   min_prod = kHighsInf;
   max_prod = 0.0;
@@ -163,8 +166,10 @@ void Iterate::pdGap() {
   // much earlier than it should.
   // If offset ~ -p, -d, then |pobj+dobj| ~ 0, so the gap gets small much later
   // than it should.
-  pdgap = std::abs(pobj - dobj) /
-          (1.0 + 0.5 * std::abs(pobj + dobj - 2 * model.offset()));
+  const double denom = 1.0 + 0.5 * std::abs(pobj + dobj - 2 * model.offset());
+  pdgap = std::abs(pobj - dobj) / denom;
+
+  compl_gap = compl_sum / denom;
 }
 
 void Iterate::primalInfeas() {
@@ -277,7 +282,7 @@ std::vector<double> Iterate::residual8(const Residuals& r,
 
   // temp = (Theta^-1+Rp+Q)^-1 * res7
   for (Int i = 0; i < model.n(); ++i) {
-    double denom = scaling[i] + regul.primal;
+    double denom = scaling[i] + controls.regP(i);
     if (model.qp()) denom += model.Q().diag(i);
     temp[i] /= denom;
   }
@@ -312,6 +317,12 @@ void Iterate::clearIres() {
   ires.r4.assign(model.n(), 0.0);
   ires.r5.assign(model.n(), 0.0);
   ires.r6.assign(model.n(), 0.0);
+  iabs.r1.assign(model.m(), 0.0);
+  iabs.r2.assign(model.n(), 0.0);
+  iabs.r3.assign(model.n(), 0.0);
+  iabs.r4.assign(model.n(), 0.0);
+  iabs.r5.assign(model.n(), 0.0);
+  iabs.r6.assign(model.n(), 0.0);
 }
 
 void Iterate::dropToComplementarity(std::vector<double>& x_cmp,
@@ -501,26 +512,7 @@ void Iterate::finalResiduals() const {
   }
 }
 
-void Iterate::getReg(LinearSolver& LS, const std::string& nla) {
-  if (nla == kHipoNormalEqString)
-    total_reg.resize(model.m());
-  else
-    total_reg.resize(model.m() + model.n());
-
-  // extract regularisation
-  LS.getReg(total_reg);
-
-  // easy access to primal/dual regularisation
-  if (nla == kHipoNormalEqString) {
-    Rp = nullptr;
-    Rd = total_reg.data();
-  } else {
-    Rp = total_reg.data();
-    Rd = model.m() > 0 ? &total_reg[model.n()] : nullptr;
-  }
-}
-
-void Iterate::residuals6x6(const NewtonDir& d) {
+void Iterate::residuals6x6(const NewtonDir& d, bool compute_abs) {
   const std::vector<double>& dx = d.x;
   const std::vector<double>& dy = d.y;
   const std::vector<double>& dxl = d.xl;
@@ -529,58 +521,149 @@ void Iterate::residuals6x6(const NewtonDir& d) {
   const std::vector<double>& dzu = d.zu;
   const Int m = model.m();
   const Int n = model.n();
-  assert(Rd || m == 0);
+  assert((Int)Rp.size() == n && (Int)Rd.size() == m);
 
   // res1,2,3,4,5,6 contain the rhs of the linear system
 
   // ires1 = res1 - A * dx - Rd * dy
-  ires.r1 = res.r1;
-  model.A().alphaProductPlusY(-1.0, dx, ires.r1);
-  for (Int i = 0; i < m; ++i) {
-    ires.r1[i] -= Rd[i] * dy[i];
+  // iabs1 = |A| * |dx| + |Rd| * |dy|
+  // ires4 = res4 - A^T * dy - dzl + dzu + Q * dx + Rp * dx
+  // iabs4 = |A^T| * |dy| + |dzl| + |dzu| + |Q| * |dx| + |Rp| * |dx|
+  // A is accessed column-wise, so that A * dx and A^T * dy are computed with
+  // a single pass over A. The loops over A and Q are duplicated, to avoid
+  // checking compute_abs in the inner loops.
+
+  const HighsSparseMatrix& A = model.A();
+  assert(A.isColwise());
+
+  for (Int i = 0; i < m; ++i) ires.r1[i] = res.r1[i] - Rd[i] * dy[i];
+
+  if (compute_abs) {
+    for (Int i = 0; i < m; ++i) iabs.r1[i] = std::abs(Rd[i]) * std::abs(dy[i]);
+
+    for (Int col = 0; col < n; ++col) {
+      const double dx_col = dx[col];
+      const double abs_dx_col = std::abs(dx_col);
+      double prod = 0.0;
+      double abs_prod = 0.0;
+      for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
+        const Int row = A.index_[el];
+        const double val = A.value_[el];
+        const double abs_val = std::abs(val);
+        ires.r1[row] -= val * dx_col;
+        iabs.r1[row] += abs_val * abs_dx_col;
+        prod += val * dy[row];
+        abs_prod += abs_val * std::abs(dy[row]);
+      }
+      ires.r4[col] = res.r4[col] - prod;
+      iabs.r4[col] = abs_prod;
+    }
+  } else {
+    for (Int col = 0; col < n; ++col) {
+      const double dx_col = dx[col];
+      double prod = 0.0;
+      for (Int el = A.start_[col]; el < A.start_[col + 1]; ++el) {
+        const Int row = A.index_[el];
+        const double val = A.value_[el];
+        ires.r1[row] -= val * dx_col;
+        prod += val * dy[row];
+      }
+      ires.r4[col] = res.r4[col] - prod;
+    }
   }
 
-  // ires2 = res2 - dx + dxl
-  for (Int i = 0; i < n; ++i)
-    if (model.hasLb(i))
-      ires.r2[i] = res.r2[i] - dx[i] + dxl[i];
-    else
-      ires.r2[i] = 0.0;
-
-  // ires3 = res3 - dx - dxu
-  for (Int i = 0; i < n; ++i)
-    if (model.hasUb(i))
-      ires.r3[i] = res.r3[i] - dx[i] - dxu[i];
-    else
-      ires.r3[i] = 0.0;
-
-  // ires4 = res4 - A^T * dy - dzl + dzu + Q * dx + Rp * dx
-  ires.r4 = res.r4;
   for (Int i = 0; i < n; ++i) {
     if (model.hasLb(i)) ires.r4[i] -= dzl[i];
     if (model.hasUb(i)) ires.r4[i] += dzu[i];
+    ires.r4[i] += Rp[i] * dx[i];
+
+    if (compute_abs) {
+      if (model.hasLb(i)) iabs.r4[i] += std::abs(dzl[i]);
+      if (model.hasUb(i)) iabs.r4[i] += std::abs(dzu[i]);
+      iabs.r4[i] += std::abs(Rp[i]) * std::abs(dx[i]);
+    }
   }
-  model.A().alphaProductPlusY(-1.0, dy, ires.r4, true);
+
+  if (model.qp()) {
+    // Q is stored as lower triangle
+    const HighsHessian& Q = model.Q();
+    assert(Q.format_ == HessianFormat::kTriangular);
+    if (compute_abs) {
+      for (Int col = 0; col < n; ++col) {
+        for (Int el = Q.start_[col]; el < Q.start_[col + 1]; ++el) {
+          const Int row = Q.index_[el];
+          const double val = Q.value_[el];
+          const double abs_val = std::abs(val);
+          ires.r4[row] += val * dx[col];
+          iabs.r4[row] += abs_val * std::abs(dx[col]);
+          if (row != col) {
+            ires.r4[col] += val * dx[row];
+            iabs.r4[col] += abs_val * std::abs(dx[row]);
+          }
+        }
+      }
+    } else {
+      for (Int col = 0; col < n; ++col) {
+        for (Int el = Q.start_[col]; el < Q.start_[col + 1]; ++el) {
+          const Int row = Q.index_[el];
+          const double val = Q.value_[el];
+          ires.r4[row] += val * dx[col];
+          if (row != col) ires.r4[col] += val * dx[row];
+        }
+      }
+    }
+  }
+
+  // ires2 = res2 - dx + dxl
+  // iabs2 = |dx| + |dxl|
   for (Int i = 0; i < n; ++i) {
-    double reg_p = Rp ? Rp[i] : regul.primal;
-    ires.r4[i] += reg_p * dx[i];
+    if (model.hasLb(i)) {
+      ires.r2[i] = res.r2[i] - dx[i] + dxl[i];
+      if (compute_abs) iabs.r2[i] = std::abs(dx[i]) + std::abs(dxl[i]);
+    } else {
+      ires.r2[i] = 0.0;
+      if (compute_abs) iabs.r2[i] = 0.0;
+    }
   }
-  if (model.qp()) model.Q().alphaProductPlusY(1.0, dx, ires.r4);
+
+  // ires3 = res3 - dx - dxu
+  // iabs3 = |dx| + |dxu|
+  for (Int i = 0; i < n; ++i) {
+    if (model.hasUb(i)) {
+      ires.r3[i] = res.r3[i] - dx[i] - dxu[i];
+      if (compute_abs) iabs.r3[i] = std::abs(dx[i]) + std::abs(dxu[i]);
+    } else {
+      ires.r3[i] = 0.0;
+      if (compute_abs) iabs.r3[i] = 0.0;
+    }
+  }
 
   // ires5 = res5 - zl * dxl - xl * dzl
+  // iabs5 = |zl| * |dxl| + |xl| * |dzl|
   for (Int i = 0; i < n; ++i) {
-    if (model.hasLb(i))
+    if (model.hasLb(i)) {
       ires.r5[i] = res.r5[i] - zl[i] * dxl[i] - xl[i] * dzl[i];
-    else
+      if (compute_abs)
+        iabs.r5[i] = std::abs(zl[i]) * std::abs(dxl[i]) +
+                     std::abs(xl[i]) * std::abs(dzl[i]);
+    } else {
       ires.r5[i] = 0.0;
+      if (compute_abs) iabs.r5[i] = 0.0;
+    }
   }
 
   // ires6 = res6 - zu * dxu - xu * dzu
+  // iabs6 = |zu| * |dxu| + |xu| * |dzu|
   for (Int i = 0; i < n; ++i) {
-    if (model.hasUb(i))
+    if (model.hasUb(i)) {
       ires.r6[i] = res.r6[i] - zu[i] * dxu[i] - xu[i] * dzu[i];
-    else
+      if (compute_abs)
+        iabs.r6[i] = std::abs(zu[i]) * std::abs(dxu[i]) +
+                     std::abs(xu[i]) * std::abs(dzu[i]);
+    } else {
       ires.r6[i] = 0.0;
+      if (compute_abs) iabs.r6[i] = 0.0;
+    }
   }
 }
 
@@ -594,11 +677,6 @@ void Iterate::assertConsistency(Int n, Int m) const {
 }
 
 void Iterate::makeStep(double alpha_primal, double alpha_dual) {
-  if (std::min(alpha_primal, alpha_dual) < 0.05)
-    ++bad_iter_;
-  else
-    bad_iter_ = 0;
-
   vectorAdd(x, 1.0, delta.x, alpha_primal);
   vectorAdd(xl, 1.0, delta.xl, alpha_primal);
   vectorAdd(xu, 1.0, delta.xu, alpha_primal);
@@ -610,12 +688,25 @@ void Iterate::makeStep(double alpha_primal, double alpha_dual) {
 void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
   const double primal_violation = pinf / feas_tol;
   const double dual_violation = dinf / feas_tol;
-  const double gap_violation = pdgap / opt_tol;
+  // pdgap alone is not reliable: at an infeasible point, pobj - dobj can
+  // change sign and pass close to zero while the point is far from optimal.
+  // Such a point would be saved as best, even if later iterates are much
+  // better. compl_gap is used as well, because it cannot have false minima.
+  const double gap_violation = std::max(pdgap, compl_gap) / opt_tol;
 
   double violation = std::max(primal_violation, dual_violation);
   violation = std::max(violation, gap_violation);
 
-  if (violation < best_violation) {
+  // Rank by the orders of magnitude of violation. Ties are broken by the
+  // largest violation.
+  const double violation_magnitude =
+      std::log10(std::max(primal_violation, 1.0)) +
+      std::log10(std::max(dual_violation, 1.0)) +
+      std::log10(std::max(gap_violation, 1.0));
+
+  if (violation_magnitude < best_violation_magnitude ||
+      (violation_magnitude == best_violation_magnitude &&
+       violation < best_violation)) {
     best_x = x;
     best_xl = xl;
     best_xu = xu;
@@ -623,13 +714,16 @@ void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
     best_zl = zl;
     best_zu = zu;
     best_violation = violation;
+    best_violation_magnitude = violation_magnitude;
     best_iter = iter;
+    best_mu = min_mu;
     model.saveBounds();
   }
 }
 
 bool Iterate::resetBest(Int iter) {
-  if (iter == best_iter) return false;
+  // Nothing to reset to if no best iterate has been saved
+  if (best_iter < 0 || iter == best_iter) return false;
 
   x = best_x;
   xl = best_xl;
@@ -637,6 +731,7 @@ bool Iterate::resetBest(Int iter) {
   y = best_y;
   zl = best_zl;
   zu = best_zu;
+  min_mu = best_mu;
   model.resetBounds();
 
   computeMu();
@@ -646,51 +741,11 @@ bool Iterate::resetBest(Int iter) {
   return true;
 }
 
-bool Iterate::stagnation(std::stringstream& log_stream) {
-  // too many iterations in a row with small stepsize
-  bool stagnation = (bad_iter_ >= kMaxBadIter);
-
-  // the next tests are aimed at problems where things are going
-  // catastrophically bad, which may continue iterating forever otherwise.
-
-  // dx / x or dy / y becoming way too small
-  const double thresh_dxy_xy = 1e-30;
-
-  std::vector<double> temp = delta.x;
-  vectorDivide(temp, x);
-  const double dx_x_max = infNorm(temp);
-
-  temp = delta.y;
-  vectorDivide(temp, y);
-  const double dy_y_max = infNorm(temp);
-
-  largest_dx_x_ = std::max(largest_dx_x_, dx_x_max);
-  largest_dy_y_ = std::max(largest_dy_y_, dy_y_max);
-
-  if (dx_x_max < largest_dx_x_ * thresh_dxy_xy ||
-      dy_y_max < largest_dy_y_ * thresh_dxy_xy) {
-    stagnation = true;
-    log_stream << "Bad direction ratios, dx_x " << sci(dx_x_max, 0, 1)
-               << " (max " << sci(largest_dx_x_, 0, 1) << "), dy_y "
-               << sci(dy_y_max, 0, 1) << " (max " << sci(largest_dy_y_, 0, 1)
-               << ")\n";
-  }
-
-  // infeasibilities jumping back up
-  const double thresh_inf_to_best = 1e12;
-
-  if (pinf > 0.0) best_pinf_ = std::min(best_pinf_, pinf);
-  if (dinf > 0.0) best_dinf_ = std::min(best_dinf_, dinf);
-
-  if (pinf > thresh_inf_to_best * best_pinf_ ||
-      dinf > thresh_inf_to_best * best_dinf_) {
-    stagnation = true;
-    log_stream << "Bad infeasibility, pinf " << sci(pinf, 0, 1) << " (best "
-               << sci(best_pinf_, 0, 1) << "), dinf " << sci(dinf, 0, 1)
-               << " (best " << sci(best_dinf_, 0, 1) << ")\n";
-  }
-
-  return stagnation;
+void Iterate::computeInfeasDrop(bool crossover_on, double feas_tol,
+                                double opt_tol) {
+  const bool feasible_optimal =
+      pinf < feas_tol && dinf < feas_tol && pdgap < opt_tol;
+  infeas_drop = crossover_on && feasible_optimal ? infeasAfterDropping() : 0.0;
 }
 
 }  // namespace hipo

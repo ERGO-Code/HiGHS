@@ -23,7 +23,7 @@ const Int64 int64_limit = std::numeric_limits<int64_t>::max();
 
 Analyse::Analyse(Int n, Int nz, const Int* rows, const Int* ptr,
                  const Int* signs, const FHoptions& FH_opt,
-                 const Logger* logger, DataCollector& data, const Int* perm)
+                 const Logger& logger, DataCollector& data, const Int* perm)
     : FH_opt_{FH_opt}, logger_{logger}, data_{data} {
   // Input the symmetric matrix to be analysed in CSC format.
   // rows contains the row indices.
@@ -366,14 +366,12 @@ void Analyse::relaxSnNetOps(double& flops, double& spops) {
       // how many artificial nonzeros would the merged supernode have
       const Int64 total_art_nz = nz_added + fake_nz_[sn] + fake_nz_[child];
 
+      const double rf = rows_filled;
+      const double sc = sn_size[child];
+      const double cc = clique_size[child];
       const double flops_added =
-          rows_filled * rows_filled * sn_size[child] +
-          2 * rows_filled *
-              (sn_size[child] * (sn_size[child] + clique_size[child]) -
-               sn_size[child] * (sn_size[child] + 1) / 2);
-
-      const double spops_removed =
-          clique_size[child] * (clique_size[child] + 1) / 2;
+          rf * rf * sc + 2 * rf * (sc * (sc + cc) - sc * (sc + 1) / 2);
+      const double spops_removed = cc * (cc + 1) / 2;
 
       const double net_ops = flops_added - kSpopsWeightSn * spops_removed;
 
@@ -909,7 +907,7 @@ void Analyse::relativeIndClique() {
       } else if (consecutive_sums_[sn][i] == 1) {
         consecutive_sums_[sn][i] = consecutive_sums_[sn][i + 1] + 1;
       } else {
-        if (logger_) logger_->printInfo("Error in consecutiveSums\n");
+        logger_.printInfo("Error in consecutiveSums\n");
       }
     }
   }
@@ -1367,7 +1365,7 @@ void Analyse::computeTreeScheduleSolve() {
     const Int this_parent = schedule_solve_.task_parent[task];
     if (this_parent != -1 && this_parent <= task) {
       schedule_solve_.clear();
-      logger_->printInfo("Task tree does not have topological ordering\n");
+      logger_.printInfo("Task tree does not have topological ordering\n");
       break;
     }
   }
@@ -1427,7 +1425,10 @@ Int Analyse::run(Symbolic& S) {
   S.artificial_ops_ = dense_ops_ - dense_ops_norelax_;
   S.spops_ = sparse_ops_;
   S.critops_ = critical_ops_;
-  S.largest_front_ = *std::max_element(sn_indices_.begin(), sn_indices_.end());
+  S.largest_front_ =
+      sn_indices_.empty()
+          ? 0
+          : *std::max_element(sn_indices_.begin(), sn_indices_.end());
   S.serial_storage_ = serial_storage_;
   S.flops_ = dense_ops_;
   S.max_stack_size_ = max_stack_size_;
@@ -1438,7 +1439,8 @@ Int Analyse::run(Symbolic& S) {
   // compute largest supernode
   std::vector<Int> sn_size(sn_start_.begin() + 1, sn_start_.end());
   for (Int i = sn_count_ - 1; i > 0; --i) sn_size[i] -= sn_size[i - 1];
-  S.largest_sn_ = *std::max_element(sn_size.begin(), sn_size.end());
+  S.largest_sn_ =
+      sn_size.empty() ? 0 : *std::max_element(sn_size.begin(), sn_size.end());
 
   // build statistics about supernodes size
   for (Int i : sn_size) {
@@ -1448,7 +1450,7 @@ Int Analyse::run(Symbolic& S) {
   }
 
   if (checkOverflow()) {
-    if (logger_) logger_->printe("Integer overflow in analyse phase\n");
+    logger_.printe("Integer overflow in analyse phase\n");
     return kRetIntOverflow;
   }
 

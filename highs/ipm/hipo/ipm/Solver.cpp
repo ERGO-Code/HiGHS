@@ -132,7 +132,13 @@ void Solver::reset() {
   alpha_primal_ = 0.0;
   alpha_dual_ = 0.0;
   sigma_ = 0.0;
-  regul_ = Regularisation{};
+  controls_ = SolverControls{};
+  controls_.reg_p_factor.assign(n_, 1.0);
+  controls_.reg_d_factor.assign(m_, 1.0);
+  recovery_ = Recovery{};
+  centring_ = Centring{};
+  guard_cols_.clear();
+  prev_point_valid_ = false;
 
   LS_.reset();
   it_.reset();
@@ -159,17 +165,14 @@ void Solver::doSolve() {
   reset();
 
   // iterate object needs to be initialised before potentially interrupting
-  it_.reset(new Iterate(model_, info_, regul_));
-  if (!it_) {
-    info_.error = kErrorFailedAllocation;
-    return;
-  }
+  it_.reset(new Iterate(model_, info_, controls_));
 
   if (checkInterrupt()) return;
 
   printInfo();
 
   runIpm();
+  printDiagnostics();
   // A factorisation stopped by the time limit is reported by finaliseStatus
   if (errorOrInterrupt()) return;
 
@@ -183,12 +186,26 @@ void Solver::runIpm() {
   if (initialise()) return;
 
   while (iter_ < options_.max_iter) {
-    if (prepareIter()) break;
-    if (predictor()) break;
-    if (correctors()) break;
+    if (prepareIter()) {
+      resetAfterNan(iter_);
+      break;
+    }
+    if (computeDirection()) {
+      if (restartWithMultifrontal()) continue;
+      resetAfterNan(iter_ - 1);
+      break;
+    }
     makeStep();
+    runDiagnostics();
     printOutput();
   }
+}
+
+isFailure Solver::computeDirection() {
+  if (predictor()) return true;
+  for (Int pass = 0; pass < kGuardPasses && shortStepGuard(); ++pass)
+    if (predictor()) return true;
+  return correctors();
 }
 
 isFailure Solver::initialise() {
@@ -196,16 +213,12 @@ isFailure Solver::initialise() {
 
   start_time_ = control_.elapsed();
 
-  kkt_.reset(new KktMatrix(model_, regul_, info_, logger_, options_));
-  if (!kkt_) {
-    info_.error = kErrorFailedAllocation;
-    return true;
-  }
+  kkt_.reset(new KktMatrix(model_, controls_, info_, logger_, options_));
 
   if (initialiseLinearSolver()) return true;
 
-  it_->data.append();
-  it_->data.back().factorisation_used = LS_->type();
+  it_->history.append();
+  it_->history.back().factorisation_used = LS_->type();
 
   if (checkInterrupt()) return true;
 
@@ -217,6 +230,7 @@ isFailure Solver::initialise() {
   it_->computeMu();
   it_->indicators();
 
+  runDiagnostics();
   printOutput();
 
   if (checkInterrupt()) return true;
@@ -228,27 +242,100 @@ isFailure Solver::initialise() {
 shouldTerminate Solver::prepareIter() {
   Clock clock;
 
-  it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
+  // a nan iterate must not be saved as best, and the norms can hide nan
   if (checkIterate()) return true;
-  if (checkBadIter()) return true;
+  it_->saveBest(options_.feasibility_tol, options_.optimality_tol, iter_);
+
+  it_->computeInfeasDrop(crossoverIsOn(), options_.feasibility_tol,
+                         options_.optimality_tol);
+
+  // Termination is checked first, so that an iterate that satisfies the
+  // termination criteria is accepted even if stagnation is detected.
   if (checkTermination()) return true;
+  if (checkInfeasibilityOrStagnation()) return true;
   if (checkInterrupt()) return true;
 
   ++iter_;
 
-  model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_);
+  if (model_.adjustFreeVars(it_->x, it_->xl, it_->xu, logger_)) {
+    it_->residual1234();
+    it_->computeMu();
+  }
 
   it_->clearDir();
 
   LS_->clear();
 
-  it_->data.append();
-  it_->data.back().factorisation_used = LS_->type();
+  it_->history.append();
+  it_->history.back().factorisation_used = LS_->type();
 
   it_->computeScaling();
+  releaseGuardColumns();
 
   info_.times[kPrepareTime] += clock.stop();
   return false;
+}
+
+bool Solver::shortStepGuard() {
+  // Columns far from both bounds with tiny z can form directions in which
+  // A * dx is nearly zero. Their regularised pivots give them almost no
+  // curvature, so the direction moves them by many times their distance to
+  // the bounds and the step collapses. More primal regularisation on those
+  // columns only gives them curvature.
+  if (model_.qp()) return false;
+
+  double alpha_p, alpha_d;
+  stepsToBoundary(alpha_p, alpha_d, it_->delta);
+  if (std::min(alpha_p, alpha_d) >= kGuardAlpha) return false;
+
+  // nearly free columns, not guarded yet, that block the step
+  const NewtonDir& d = it_->delta;
+  const double near_free = kNearFreeRatio * controls_.baseRegP();
+  std::vector<HighsBool> guarded(n_, false);
+  for (Int j : guard_cols_) guarded[j] = true;
+
+  Int added = 0;
+  for (Int j = 0; j < n_; ++j) {
+    if (guarded[j] || !(it_->scaling[j] < near_free)) continue;
+    double ratio = 1.0;
+    if (model_.hasLb(j)) {
+      if (d.xl[j] < 0) ratio = std::min(ratio, -it_->xl[j] / d.xl[j]);
+      if (d.zl[j] < 0) ratio = std::min(ratio, -it_->zl[j] / d.zl[j]);
+    }
+    if (model_.hasUb(j)) {
+      if (d.xu[j] < 0) ratio = std::min(ratio, -it_->xu[j] / d.xu[j]);
+      if (d.zu[j] < 0) ratio = std::min(ratio, -it_->zu[j] / d.zu[j]);
+    }
+    if (ratio < kGuardRatio) {
+      guard_cols_.push_back(j);
+      controls_.reg_p_factor[j] *= kGuardRegFactor;
+      ++added;
+    }
+  }
+  if (added == 0) return false;
+
+  std::stringstream log_stream;
+  log_stream << "Short-step guard: steps " << sci(alpha_p, 0, 1) << " "
+             << sci(alpha_d, 0, 1) << ", primal regularisation of " << added
+             << " nearly free columns times " << sci(kGuardRegFactor, 0, 1)
+             << "\n";
+  it_->history.back().messages += log_stream.str();
+
+  // refactorise with the new regularisation
+  LS_->clear();
+  return true;
+}
+
+void Solver::releaseGuardColumns() {
+  const double near_free = kNearFreeRatio * controls_.baseRegP();
+  size_t kept = 0;
+  for (Int j : guard_cols_) {
+    if (it_->scaling[j] < near_free)
+      guard_cols_[kept++] = j;
+    else
+      controls_.reg_p_factor[j] /= kGuardRegFactor;
+  }
+  guard_cols_.resize(kept);
 }
 
 isFailure Solver::predictor() {
@@ -258,6 +345,7 @@ isFailure Solver::predictor() {
 
   sigmaAffine();
   it_->residual56(sigma_);
+  residualNorms(it_->history.back().res_norm_before);
 
   if (solveNewtonSystem(it_->delta)) return true;
 
@@ -396,39 +484,32 @@ void Solver::crossoverWithIpx() {
 
 isFailure Solver::solveNewtonSystem(NewtonDir& delta) {
   solve6x6(delta, it_->res);
-  bool terminate = info_.error;
+  if (info_.error) return true;
 
-  if (!terminate) {
-    refine(delta);
-    if (it_->isDirNan(delta)) {
-      logger_.printInfo("Direction is nan\n");
-      terminate = true;
-      info_.error = kErrorNan;
-    } else if (it_->isDirInf(delta)) {
-      logger_.printInfo("Direction is inf\n");
-      terminate = true;
-      info_.error = kErrorNan;
-    }
+  refine(delta);
+  if (it_->isDirNan(delta)) {
+    logger_.printInfo("Direction is nan\n");
+    info_.error = kErrorNan;
+    return true;
+  }
+  if (it_->isDirInf(delta)) {
+    logger_.printInfo("Direction is inf\n");
+    info_.error = kErrorNan;
+    return true;
   }
 
+  return false;
+}
+
+isSuccess Solver::restartWithMultifrontal() {
+  if (!info_.error) return false;
   // If the time limit is reached, the failure may be due to the factorisation
   // being interrupted, so don't try again with another factorisation.
-  if (terminate && !control_.timeLimitReached()) {
-    if (switchToMultifrontal()) {
-      // try FactorHighs factorisation before giving up
-      it_->data.back().factorisation_used = LS_->type();
-      logger_.printInfo("Switching to FactorHighs because of bad direction\n");
-      resetToBestIter(iter_ - 1);
-
-      // Solve again. This does not create an infinite loop, as
-      // switchToMultifrontal() is false in the second solve.
-      delta.clear();
-      it_->data.back().omega = 0.0;
-      terminate = solveNewtonSystem(delta);
-    }
-  }
-
-  return terminate;
+  if (control_.timeLimitReached()) return false;
+  if (!switchToMultifrontal()) return false;
+  logger_.printInfo("Switching to FactorHighs because of bad direction\n");
+  resetToBestIter(iter_ - 1);
+  return true;
 }
 
 void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
@@ -448,7 +529,8 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
         logger_.printInfo("Error while factorising normal equations\n");
         return;
       }
-      it_->getReg(*LS_, options_.nla);
+      LS_->getReg(it_->Rp, it_->Rd);
+      recordFactorisationSignals();
     }
 
     info_.error = LS_->solveNE(res8, delta.y);
@@ -465,7 +547,7 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
 
     // Deltax = (Theta^-1+Rp+Q)^-1 * Deltax
     for (Int i = 0; i < n_; ++i) {
-      double denom = theta_inv[i] + regul_.primal;
+      double denom = theta_inv[i] + controls_.regP(i);
       if (model_.qp()) denom += model_.Q().diag(i);
       delta.x[i] /= denom;
     }
@@ -480,7 +562,8 @@ void Solver::solve2x2(NewtonDir& delta, const Residuals& rhs) {
         logger_.printInfo("Error while factorising augmented system\n");
         return;
       }
-      it_->getReg(*LS_, options_.nla);
+      LS_->getReg(it_->Rp, it_->Rd);
+      recordFactorisationSignals();
     }
 
     info_.error = LS_->solveAS(res7, rhs.r1, delta.x, delta.y);
@@ -532,6 +615,96 @@ void Solver::recoverDirection(NewtonDir& delta, const Residuals& rhs) {
   }
 
   info_.times[kRecoverTime] += clock.stop();
+}
+
+void Solver::recordFactorisationSignals() {
+  IterationRecord& record = it_->history.back();
+  const double eps = std::numeric_limits<double>::epsilon();
+
+  FactorInfo info;
+  LS_->getFactorInfo(info);
+  const std::vector<double>& Px = info.Px;
+  const std::vector<double>& Py = info.Py;
+
+  // 2x2 pivots and inertia: n negative pivots for the augmented system, none
+  // for the normal equations
+  record.num_2x2 = info.num_2x2;
+  const bool normal_eq = options_.nla == kHipoNormalEqString;
+  const Int expected_neg = normal_eq ? 0 : n_;
+  record.wrong_inertia = std::abs(info.num_neg - expected_neg) + info.num_zero;
+  record.num_pivots = normal_eq ? m_ : n_ + m_;
+
+  // pivot statistics, 1x1 pivots only
+  record.num_dynamic_reg = 0;
+  record.num_wrong_sign = 0;
+  record.num_reg_dominated = 0;
+  record.max_reg = 0.0;
+  record.min_pivot = kHighsInf;
+  record.max_pivot = 0.0;
+
+  auto addPivot = [&](double p, double reg, double static_reg) {
+    if (!std::isfinite(p)) return;
+    // the computed regularisation is exact up to rounding of the pivot
+    if (std::abs(reg - static_reg) >
+        1e-6 * static_reg + 1e2 * eps * std::abs(p))
+      ++record.num_dynamic_reg;
+    if (p + reg < 0.0) ++record.num_wrong_sign;
+    if (std::abs(p) < kPivotRegDominatedRatio * reg) ++record.num_reg_dominated;
+    record.max_reg = std::max(record.max_reg, reg);
+    record.min_pivot = std::min(record.min_pivot, std::abs(p + reg));
+    record.max_pivot = std::max(record.max_pivot, std::abs(p + reg));
+  };
+
+  for (Int i = 0; i < (Int)Px.size(); ++i)
+    addPivot(Px[i], it_->Rp[i], controls_.regP(i));
+  for (Int i = 0; i < (Int)Py.size(); ++i)
+    addPivot(Py[i], it_->Rd[i], controls_.regD(i));
+
+  // nearly free columns, only for LPs: the bound m used by the detector holds
+  // only at a vertex
+  const std::vector<double>& theta_inv = it_->scaling;
+  record.num_near_free = 0;
+  if (!model_.qp()) {
+    for (Int j = 0; j < n_; ++j)
+      if (theta_inv[j] < kNearFreeRatio * it_->Rp[j]) ++record.num_near_free;
+  }
+
+  // rows with a large residual absorbed by the regularisation
+  const HighsSparseMatrix& A = model_.A();
+  std::vector<double> diag(m_, 0.0);
+  for (Int j = 0; j < n_; ++j) {
+    double denom = theta_inv[j] + it_->Rp[j];
+    if (model_.qp()) denom += model_.Q().diag(j);
+    for (Int el = A.start_[j]; el < A.start_[j + 1]; ++el)
+      diag[A.index_[el]] += A.value_[el] * A.value_[el] / denom;
+  }
+  absorbed_rows_.clear();
+  for (Int i = 0; i < m_; ++i) {
+    const double tol =
+        options_.feasibility_tol * (1.0 + std::abs(model_.b()[i]));
+    if (diag[i] < it_->Rd[i] && std::abs(it_->res.r1[i]) > tol)
+      absorbed_rows_.push_back(i);
+  }
+  record.num_absorbed_rows = absorbed_rows_.size();
+
+  // columns with a large dual residual absorbed by the regularisation
+  absorbed_cols_.clear();
+  const double dual_tol =
+      options_.feasibility_tol * (1.0 + model_.normScaledObj());
+  for (Int j = 0; j < n_; ++j) {
+    double diag_j = theta_inv[j];
+    if (model_.qp()) diag_j += model_.Q().diag(j);
+    if (diag_j < it_->Rp[j] && std::abs(it_->res.r4[j]) > dual_tol)
+      absorbed_cols_.push_back(j);
+  }
+  record.num_absorbed_cols = absorbed_cols_.size();
+}
+
+void Solver::residualNorms(double* norms) const {
+  norms[0] = infNorm(it_->res.r1);
+  norms[1] = infNorm(it_->res.r2);
+  norms[2] = infNorm(it_->res.r3);
+  norms[3] = infNorm(it_->res.r4);
 }
 
 double Solver::stepToBoundary(const std::vector<double>& x,
@@ -594,7 +767,7 @@ void Solver::stepSizes() {
   std::vector<double>& dzu = it_->delta.zu;
 
   // parameters for Mehrotra heuristic
-  const double gamma_f = 0.9;
+  const double gamma_f = controls_.step_fraction;
   const double gamma_a = 1.0 / (1.0 - gamma_f);
 
   // compute stepsizes and blocking components
@@ -661,8 +834,13 @@ void Solver::stepSizes() {
     assert(block_d >= 0);
   }
 
-  alpha_primal_ = std::min(alpha_p, 1.0 - 1e-4);
-  alpha_dual_ = std::min(alpha_d, 1.0 - 1e-4);
+  alpha_primal_ = std::min(alpha_p, controls_.max_step);
+  alpha_dual_ = std::min(alpha_d, controls_.max_step);
+
+  if (model_.qp()) {
+    alpha_primal_ = std::min(alpha_primal_, alpha_dual_);
+    alpha_dual_ = alpha_primal_;
+  }
 
   assert(alpha_primal_ > 0 && alpha_primal_ < 1 && alpha_dual_ > 0 &&
          alpha_dual_ < 1);
@@ -675,6 +853,12 @@ void Solver::makeStep() {
   it_->residual1234();
   it_->computeMu();
   it_->indicators();
+
+  IterationRecord& record = it_->history.back();
+  record.alpha_primal = alpha_primal_;
+  record.alpha_dual = alpha_dual_;
+  residualNorms(record.res_norm_after);
+
   info_.times[kStepTime] += clock.stop();
 }
 
@@ -901,25 +1085,26 @@ isFailure Solver::startingPoint() {
 }
 
 void Solver::sigmaAffine() {
-  sigma_ = kSigmaAffine;
+  const bool small_steps =
+      std::min(alpha_primal_, alpha_dual_) < kSigmaAffineSmallStep;
+  sigma_ = small_steps ? sigmaFromStepsizes() : kSigmaAffine;
+  sigma_ = centring_.apply(sigma_);
 
-  it_->data.back().sigma_aff = sigma_;
+  it_->history.back().sigma_aff = sigma_;
 }
 
 void Solver::sigmaCorrectors() {
-  if ((alpha_primal_ > 0.5 && alpha_dual_ > 0.5) || iter_ == 1) {
-    sigma_ = 0.01;
-  } else if (alpha_primal_ > 0.2 && alpha_dual_ > 0.2) {
-    sigma_ = 0.1;
-  } else if (alpha_primal_ > 0.1 && alpha_dual_ > 0.1) {
-    sigma_ = 0.25;
-  } else if (alpha_primal_ > 0.05 && alpha_dual_ > 0.05) {
-    sigma_ = 0.5;
-  } else {
-    sigma_ = 0.9;
-  }
+  sigma_ = centring_.apply(sigmaFromStepsizes());
 
-  it_->data.back().sigma = sigma_;
+  it_->history.back().sigma = sigma_;
+}
+
+double Solver::sigmaFromStepsizes() const {
+  if ((alpha_primal_ > 0.5 && alpha_dual_ > 0.5) || iter_ == 1) return 0.01;
+  if (alpha_primal_ > 0.2 && alpha_dual_ > 0.2) return 0.1;
+  if (alpha_primal_ > 0.1 && alpha_dual_ > 0.1) return 0.25;
+  if (alpha_primal_ > 0.05 && alpha_dual_ > 0.05) return 0.5;
+  return 0.9;
 }
 
 void Solver::residualsMcc() {
@@ -1008,7 +1193,8 @@ isFailure Solver::centralityCorrectors() {
   stepsToBoundary(alpha_p_old, alpha_d_old, it_->delta);
 
   Int cor;
-  for (cor = 0; cor < info_.correctors; ++cor) {
+  const Int max_cor = std::min(info_.correctors, controls_.max_correctors);
+  for (cor = 0; cor < max_cor; ++cor) {
     residualsMcc();
 
     NewtonDir corrector(m_, n_);
@@ -1019,25 +1205,51 @@ isFailure Solver::centralityCorrectors() {
     double wd = wp;
     bestWeight(it_->delta, corrector, wp, wd, alpha_p, alpha_d);
 
-    if (alpha_p < alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin &&
-        alpha_d < alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
-      // reject corrector
-      break;
-    }
+    const double min_increase = kMccIncreaseAlpha * kMccIncreaseMin;
 
-    if (alpha_p >= alpha_p_old + kMccIncreaseAlpha * kMccIncreaseMin) {
-      // accept primal corrector
+    if (model_.qp()) {
+      // For QPs, the primal and dual correctors are accepted or rejected
+      // together, with the same weight, otherwise the direction does not
+      // satisfy the Newton equations, because of the term Q * dx in the dual
+      // residual. The corrector is accepted if it increases the smallest
+      // stepsize, since primal and dual stepsizes are the same.
+      if (std::min(alpha_p, alpha_d) <
+          std::min(alpha_p_old, alpha_d_old) + min_increase) {
+        // reject corrector
+        break;
+      }
+
+      assert(wp == wd);
       vectorAdd(it_->delta.x, 1.0, corrector.x, wp);
       vectorAdd(it_->delta.xl, 1.0, corrector.xl, wp);
       vectorAdd(it_->delta.xu, 1.0, corrector.xu, wp);
-      alpha_p_old = alpha_p;
-    }
-    if (alpha_d >= alpha_d_old + kMccIncreaseAlpha * kMccIncreaseMin) {
-      // accept dual corrector
       vectorAdd(it_->delta.y, 1.0, corrector.y, wd);
       vectorAdd(it_->delta.zl, 1.0, corrector.zl, wd);
       vectorAdd(it_->delta.zu, 1.0, corrector.zu, wd);
+      alpha_p_old = alpha_p;
       alpha_d_old = alpha_d;
+
+    } else {
+      if (alpha_p < alpha_p_old + min_increase &&
+          alpha_d < alpha_d_old + min_increase) {
+        // reject corrector
+        break;
+      }
+
+      if (alpha_p >= alpha_p_old + min_increase) {
+        // accept primal corrector
+        vectorAdd(it_->delta.x, 1.0, corrector.x, wp);
+        vectorAdd(it_->delta.xl, 1.0, corrector.xl, wp);
+        vectorAdd(it_->delta.xu, 1.0, corrector.xu, wp);
+        alpha_p_old = alpha_p;
+      }
+      if (alpha_d >= alpha_d_old + min_increase) {
+        // accept dual corrector
+        vectorAdd(it_->delta.y, 1.0, corrector.y, wd);
+        vectorAdd(it_->delta.zl, 1.0, corrector.zl, wd);
+        vectorAdd(it_->delta.zu, 1.0, corrector.zu, wd);
+        alpha_d_old = alpha_d;
+      }
     }
 
     if (alpha_p > 0.95 && alpha_d > 0.95) {
@@ -1049,7 +1261,7 @@ isFailure Solver::centralityCorrectors() {
     // else, keep computing correctors
   }
 
-  it_->data.back().correctors = cor;
+  it_->history.back().correctors = cor;
 
   return false;
 }
@@ -1072,17 +1284,31 @@ void Solver::bestWeight(const NewtonDir& delta, const NewtonDir& corrector,
   // divide interval into 9 points
   const double step = (1.0 - w) / 8;
 
+  // For QPs, primal and dual weights must be the same (see
+  // centralityCorrectors), and the weight is chosen to maximise the smallest
+  // stepsize.
+  const bool same_weight = model_.qp();
+
   // for each weight, compute stepsizes and save best ones
   for (; w <= 1.0; w += step) {
     double ap, ad;
     stepsToBoundary(ap, ad, delta, &corrector, w);
-    if (ap > alpha_p) {
-      alpha_p = ap;
-      wp = w;
-    }
-    if (ad > alpha_d) {
-      alpha_d = ad;
-      wd = w;
+    if (same_weight) {
+      if (std::min(ap, ad) > std::min(alpha_p, alpha_d)) {
+        alpha_p = ap;
+        alpha_d = ad;
+        wp = w;
+        wd = w;
+      }
+    } else {
+      if (ap > alpha_p) {
+        alpha_p = ap;
+        wp = w;
+      }
+      if (ad > alpha_d) {
+        alpha_d = ad;
+        wd = w;
+      }
     }
 
     if (step == 0.0) break;
@@ -1099,7 +1325,7 @@ shouldTerminate Solver::checkIterate() {
   } else if (it_->isInf()) {
     logger_.printInfo("\nIterate is inf\n");
     info_.error = kErrorNan;
-    bool terminate = true;
+    terminate = true;
   } else {
     for (Int i = 0; i < n_; ++i) {
       if ((model_.hasLb(i) && it_->xl[i] < 0) ||
@@ -1116,73 +1342,410 @@ shouldTerminate Solver::checkIterate() {
   return terminate;
 }
 
-shouldTerminate Solver::checkStagnation() {
+void Solver::runDiagnostics() {
+  // needed by the progress test; also computed in prepareIter, for termination
+  it_->computeInfeasDrop(crossoverIsOn(), options_.feasibility_tol,
+                         options_.optimality_tol);
+
+  IterationRecord& record = it_->history.back();
+  record.report = IterationReport{};
+  record.report.iter = iter_;
+
   std::stringstream log_stream;
-  bool stagnation = it_->stagnation(log_stream);
-  logger_.printInfo(log_stream.str().c_str());
-  return stagnation;
+  if (iter_ > 0) {
+    it_->diagnostics.stagnation(*it_, iter_, options_.feasibility_tol,
+                                options_.optimality_tol, options_.crossover_tol,
+                                record.report, log_stream);
+    it_->diagnostics.numerical(*it_, record.report, log_stream);
+    it_->diagnostics.centrality(*it_, record.report, log_stream);
+  }
+  it_->diagnostics.divergence(*it_, iter_, record.report);
+  record.report.alpha_min = std::min(record.alpha_primal, record.alpha_dual);
+
+  SolverCapabilities capabilities;
+  capabilities.can_switch = LS_ && LS_->type() == kUpLookingType &&
+                            options_.factor == kHighsChooseString;
+  capabilities.can_drop_pivots =
+      LS_ && LS_->canDropPivots() && options_.nla == kHipoNormalEqString;
+  const Recovery::ProposedAction proposed =
+      recovery_.proposeAction(record.report, capabilities);
+  record.action = proposed.action;
+  record.reset_to_best = proposed.reset_to_best;
+
+  // the short-step guard may have added messages already
+  record.messages += log_stream.str();
 }
 
-shouldTerminate Solver::checkBadIter() {
-  bool terminate = false;
-  bool stagnation = iter_ > 0 ? checkStagnation() : false;
+shouldTerminate Solver::applyAction(IterationRecord& record) {
+  // changes of regularisation take effect at the next factorisation, the
+  // others at the next iteration
+  const char* name = actionProperties(record.action).name;
+  std::stringstream log_stream;
+  switch (record.action) {
+    case RecoveryAction::kDropBadPivots:
+      LS_->dropBadPivots();
+      log_stream << "Applied " << name << " bad pivots\n";
+      break;
 
-  // check for infeasibility
-  bool mu_is_large =
-      it_->best_mu > 0.0 ? it_->mu > it_->best_mu * kDivergeTol : false;
-  bool pobj_is_very_large =
-      it_->pobj <
-      -std::max(std::abs(it_->dobj) * kDivergeTol * kDivergeTol, 1.0);
-  bool dobj_is_very_large =
-      it_->dobj >
-      std::max(std::abs(it_->pobj) * kDivergeTol * kDivergeTol, 1.0);
-  bool clearly_infeasible =
-      iter_ > 5 && (pobj_is_very_large || dobj_is_very_large);
+    case RecoveryAction::kRecentre:
+      centring_.start(kRecentreSigmaMin, kRecentreIter, true);
+      log_stream << "Applied " << name << ", sigma at least "
+                 << sci(kRecentreSigmaMin, 0, 1) << " for up to "
+                 << kRecentreIter << " iterations\n";
+      break;
 
-  if (stagnation || mu_is_large || clearly_infeasible) {
-    bool pobj_is_larger =
-        it_->pobj < -std::max(std::abs(it_->dobj) * kDivergeTol, 1.0);
-    bool dobj_is_larger =
-        it_->dobj > std::max(std::abs(it_->pobj) * kDivergeTol, 1.0);
+    case RecoveryAction::kIncreaseReg:
+      controls_.reg_p_scale *= kRegScaleFactor;
+      controls_.reg_d_scale *= kRegScaleFactor;
+      log_stream << "Applied " << name << ", regularisation scales "
+                 << sci(controls_.reg_p_scale, 0, 1) << " "
+                 << sci(controls_.reg_d_scale, 0, 1) << "\n";
+      break;
 
-    if (pobj_is_larger) {
-      // problem is likely to be primal unbounded, i.e. dual infeasible
-      logger_.print("=== Dual infeasible\n");
-      setStatus(kStatusDualInfeasible);
-      terminate = true;
-    } else if (dobj_is_larger) {
-      // problem is likely to be dual unbounded, i.e. primal infeasible
-      logger_.print("=== Primal infeasible\n");
-      setStatus(kStatusPrimalInfeasible);
-      terminate = true;
-    } else if (stagnation) {
-      if (switchToMultifrontal()) {
-        logger_.printInfo("Switching to FactorHighs because of no progress\n");
-        resetToBestIter(iter_);
-      } else {
-        if (getStatus1() == kStatusOptimal) {
-          assert(crossoverIsOn());
-          setStatus2(kStatusNoProgress);
-          resetToBestIter(iter_);
-        } else {
-          if (checkTerminationKkt()) {
-            logger_.printw(
-                "HiPO stagnated but HiGHS considers the solution "
-                "acceptable\n");
-            logger_.print("=== Primal-dual feasible point found\n");
-            setStatus1(kStatusOptimal);
-          } else {
-            setStatus1(kStatusNoProgress);
-            resetToBestIter(iter_);
+    case RecoveryAction::kDecreaseLocalReg: {
+      // dual regularisation of the absorbed rows and primal regularisation of
+      // the absorbed columns, down to a floor
+      auto decrease = [](std::vector<double>& factors,
+                         const std::vector<Int>& indices) {
+        Int changed = 0;
+        for (Int k : indices) {
+          double& factor = factors[k];
+          const double new_factor =
+              std::max(factor / kRegScaleFactor, kMinRegFactor);
+          if (new_factor < factor) {
+            factor = new_factor;
+            ++changed;
           }
         }
-
-        terminate = true;
+        return changed;
+      };
+      const Int rows = decrease(controls_.reg_d_factor, absorbed_rows_);
+      const Int cols = decrease(controls_.reg_p_factor, absorbed_cols_);
+      if (rows + cols == 0) {
+        record.messages += std::string("Would apply ") + name +
+                           ", rows and columns at minimum\n";
+        return false;
       }
+      log_stream << "Applied " << name << " to " << rows << " rows and " << cols
+                 << " columns\n";
+      break;
     }
+
+    case RecoveryAction::kDecreaseReg:
+      controls_.reg_p_scale =
+          std::max(1.0, controls_.reg_p_scale / kRegScaleFactor);
+      log_stream << "Applied " << name << ", primal regularisation scale "
+                 << sci(controls_.reg_p_scale, 0, 1) << "\n";
+      break;
+
+    case RecoveryAction::kUndoDecreaseReg:
+      controls_.reg_p_scale *= kRegScaleFactor;
+      log_stream << "Applied " << name << ", primal regularisation scale "
+                 << sci(controls_.reg_p_scale, 0, 1) << "\n";
+      break;
+
+    case RecoveryAction::kSwitchFactorisation:
+      // proposed only if possible; otherwise give up, as for stop
+      if (!switchToMultifrontal()) {
+        record.messages += "Could not apply switch, applied stop\n";
+        terminateStagnation();
+        return true;
+      }
+      logger_.printInfo("Switching to FactorHighs because of no progress\n");
+      log_stream << "Applied " << name << " to FactorHighs\n";
+      break;
+
+    case RecoveryAction::kTerminate:
+      record.messages += std::string("Applied ") + name + "\n";
+      terminateStagnation();
+      return true;
+
+    case RecoveryAction::kNone:
+      return false;
   }
 
+  if (record.reset_to_best) {
+    resetToBestIter(iter_);
+    it_->diagnostics.clear(iter_);
+    log_stream << "Reset to the best iterate\n";
+  }
+  record.messages += log_stream.str();
+  return false;
+}
+
+shouldTerminate Solver::checkInfeasibilityOrStagnation() {
+  IterationRecord& record = it_->history.back();
+  if (handleInfeasible(record.report)) return true;
+  if (centring_.step(record)) record.messages += "Centring finished\n";
+  return applyAction(record);
+}
+
+shouldTerminate Solver::handleInfeasible(const IterationReport& report) {
+  // Divergence and stagnation are possible signs of infeasibility.
+  const bool suspect_infeasible =
+      report.stagnation() || report.has(IssueType::kDivergence);
+
+  // The signs of divergence only trigger the search for a certificate. The
+  // status is declared only if the certificate is verified on the original
+  // problem. The point is computed and saved only when infeasibility is
+  // suspected, so prev_point_ is the point of the last suspicious iteration.
+  const bool have_point = model_.lpOrig() && (!model_.qp() || model_.QOrig());
+  if (!suspect_infeasible || !have_point) return false;
+
+  HighsSolution point;
+  Hoptions_.output_flag = logger_.debug(2);
+  getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
+                           model_.m_orig(), model_.rhsOrig(),
+                           model_.constraintsOrig(), *this,
+                           HighsModelStatus::kUnknown, point);
+
+  bool terminate = false;
+  const double primal_radius = checkPrimalRay(point);
+  const double dual_radius = primal_radius > 0.0 ? 0.0 : checkDualRay(point);
+  if (primal_radius > 0.0) {
+    logger_.print("=== Dual infeasible\n");
+    logger_.print("* Certificate: dual feasible points have norm >= %.2e\n",
+                  primal_radius);
+    setStatus(kStatusDualInfeasible);
+    terminate = true;
+  } else if (dual_radius > 0.0) {
+    logger_.print("=== Primal infeasible\n");
+    logger_.print("* Certificate: primal feasible points have norm >= %.2e\n",
+                  dual_radius);
+    setStatus(kStatusPrimalInfeasible);
+    terminate = true;
+  }
+
+  prev_point_ = std::move(point);
+  prev_point_valid_ = true;
+
   return terminate;
+}
+
+double Solver::primalRayRadius(const std::vector<double>& ray) const {
+  // Let d be a candidate primal ray. Any dual feasible point (x, y, z) of the
+  // problem, scaled by the sense so that it is a minimisation, satisfies
+  //  c + Q * x = A^T * y + z
+  // with y, z having the signs required by the bounds, so that
+  //  c^T * d = -x^T * Q * d + y^T * (A * d) + z^T * d.
+  // If d is in the recession cone of the column bounds and A * d is in the
+  // recession cone of the row bounds, the last two terms are nonnegative.
+  // Otherwise, they are bounded below by -||(y, z)||_inf * V, with V the sum of
+  // the violations of the recession cones. The first term is bounded below by
+  // -||x||_inf * ||Q * d||_1, which is added to V.
+  // Hence, if c^T * d < 0, any dual feasible point has
+  //  ||(x, y, z)||_inf >= R = -c^T * d / V.
+  // Returns R, which is infinite if d is an exact primal ray, and zero if d is
+  // not a descent direction. R does not depend on the scaling of d.
+  const HighsLp& lp = *model_.lpOrig();
+  const Int n = lp.num_col_;
+  const Int m = lp.num_row_;
+  const double sense = static_cast<double>(static_cast<HighsInt>(lp.sense_));
+
+  double d_norm = 0.0;
+  for (Int j = 0; j < n; ++j) d_norm = std::max(d_norm, std::abs(ray[j]));
+  if (d_norm == 0.0 || !std::isfinite(d_norm)) return 0.0;
+  std::vector<double> d(n);
+  for (Int j = 0; j < n; ++j) d[j] = ray[j] / d_norm;
+
+  // descent, with a guard against cancellation
+  double cd = 0.0;
+  double cd_scale = 0.0;
+  for (Int j = 0; j < n; ++j) {
+    cd += sense * lp.col_cost_[j] * d[j];
+    cd_scale += std::abs(lp.col_cost_[j] * d[j]);
+  }
+  if (!(cd < -kCertificateTol * cd_scale)) return 0.0;
+
+  double viol = 0.0;
+  for (Int j = 0; j < n; ++j) {
+    if (lp.col_lower_[j] > -kHighsInf) viol += std::max(0.0, -d[j]);
+    if (lp.col_upper_[j] < kHighsInf) viol += std::max(0.0, d[j]);
+  }
+
+  std::vector<double> Ad;
+  lp.a_matrix_.product(Ad, d);
+  for (Int i = 0; i < m; ++i) {
+    if (lp.row_lower_[i] > -kHighsInf) viol += std::max(0.0, -Ad[i]);
+    if (lp.row_upper_[i] < kHighsInf) viol += std::max(0.0, Ad[i]);
+  }
+
+  if (model_.qp()) {
+    std::vector<double> Qd;
+    model_.QOrig()->product(d, Qd);
+    for (Int j = 0; j < n; ++j) viol += std::abs(Qd[j]);
+  }
+
+  return viol > 0.0 ? -cd / viol : kHighsInf;
+}
+
+double Solver::dualRayRadius(const std::vector<double>& ray) const {
+  // Let y be a candidate dual ray (Farkas certificate) and w = A^T * y. Any
+  // primal feasible x,
+  // with r = A * x, satisfies y^T * r = w^T * x. Each entry of y (resp w) is
+  // consistent with the bounds if the row (resp column) bound on the side
+  // given by its sign is finite. Then
+  //  y^T * r >= g - sum_{i inconsistent} |y_i| * |r_i|
+  //          >= g - ||x||_inf * sum_{i inconsistent} |y_i| * ||A_i||_1
+  //  w^T * x <= h + ||x||_inf * sum_{j inconsistent} |w_j|
+  // with
+  //  g = sum_{i consistent} y_i * (y_i > 0 ? row_lower_i : row_upper_i)
+  //  h = sum_{j consistent} w_j * (w_j > 0 ? col_upper_j : col_lower_j).
+  // Hence, if g > h, any feasible x has ||x||_inf >= R = (g - h) / V, with V
+  // the sum of the inconsistent terms.
+  // The sign convention of the duals is irrelevant, since any y with g > h is
+  // a certificate, so both y and -y are tried and the largest R is returned.
+  // R is infinite if y is an exact dual ray, and zero if g <= h. R does not
+  // depend on the scaling of y.
+  const HighsLp& lp = *model_.lpOrig();
+  const Int n = lp.num_col_;
+  const Int m = lp.num_row_;
+  if (m == 0) return 0.0;
+
+  double y_norm = 0.0;
+  for (Int i = 0; i < m; ++i) y_norm = std::max(y_norm, std::abs(ray[i]));
+  if (y_norm == 0.0 || !std::isfinite(y_norm)) return 0.0;
+  std::vector<double> y(m);
+  for (Int i = 0; i < m; ++i) y[i] = ray[i] / y_norm;
+
+  std::vector<double> w;
+  lp.a_matrix_.productTranspose(w, y);
+
+  std::vector<double> row_norm(m, 0.0);
+  for (Int j = 0; j < n; ++j)
+    for (Int el = lp.a_matrix_.start_[j]; el < lp.a_matrix_.start_[j + 1]; ++el)
+      row_norm[lp.a_matrix_.index_[el]] += std::abs(lp.a_matrix_.value_[el]);
+
+  // Add the contribution of entry v, using bound lo if v > 0 and bound up if
+  // v < 0, to sum if the bound is finite, or to viol otherwise.
+  auto add = [](double v, double lo, double up, double weight, double& sum,
+                double& scale, double& viol) {
+    if (v == 0.0) return;
+    const double bound = v > 0 ? lo : up;
+    if (std::abs(bound) >= kHighsInf) {
+      viol += std::abs(v) * weight;
+    } else {
+      sum += v * bound;
+      scale += std::abs(v * bound);
+    }
+  };
+
+  double radius = 0.0;
+  for (double sign : {1.0, -1.0}) {
+    double g = 0.0;
+    double h = 0.0;
+    double scale = 0.0;
+    double viol = 0.0;
+    for (Int i = 0; i < m; ++i)
+      add(sign * y[i], lp.row_lower_[i], lp.row_upper_[i], row_norm[i], g,
+          scale, viol);
+    // h is a maximum, so the bounds are swapped
+    for (Int j = 0; j < n; ++j)
+      add(sign * w[j], lp.col_upper_[j], lp.col_lower_[j], 1.0, h, scale, viol);
+
+    // guard against cancellation in g and h
+    if (!(g - h > kCertificateTol * std::max(scale, 1.0))) continue;
+
+    radius = std::max(radius, viol > 0.0 ? (g - h) / viol : kHighsInf);
+  }
+
+  return radius;
+}
+
+double Solver::checkPrimalRay(const HighsSolution& point) const {
+  // Candidates are the current point and the displacement from the previous
+  // point. If the iterates diverge, both are dominated by the direction of
+  // divergence. The certificate is accepted if any dual feasible point must be
+  // much larger than the problem data.
+  const HighsLp& lp = *model_.lpOrig();
+  if (!lp.a_matrix_.isColwise()) return 0.0;
+  const Int n = lp.num_col_;
+
+  double radius = primalRayRadius(point.col_value);
+  if (prev_point_valid_) {
+    std::vector<double> d(n);
+    for (Int j = 0; j < n; ++j)
+      d[j] = point.col_value[j] - prev_point_.col_value[j];
+    radius = std::max(radius, primalRayRadius(d));
+  }
+
+  double c_norm = 0.0;
+  for (Int j = 0; j < n; ++j)
+    c_norm = std::max(c_norm, std::abs(lp.col_cost_[j]));
+  const double threshold = kCertificateMinRadius * (1.0 + c_norm);
+
+  logger_.printDetailed("Primal ray radius %.2e, threshold %.2e\n", radius,
+                        threshold);
+  return radius < threshold ? 0.0 : radius;
+}
+
+double Solver::checkDualRay(const HighsSolution& point) const {
+  // Candidates are the current row duals and the displacement from the
+  // previous point. If the iterates diverge, both are dominated by the
+  // direction of divergence. The certificate is accepted if any feasible point
+  // must be much larger than the problem data.
+  const HighsLp& lp = *model_.lpOrig();
+  if (!lp.a_matrix_.isColwise()) return 0.0;
+  const Int n = lp.num_col_;
+  const Int m = lp.num_row_;
+
+  double radius = dualRayRadius(point.row_dual);
+  if (prev_point_valid_) {
+    std::vector<double> y(m);
+    for (Int i = 0; i < m; ++i)
+      y[i] = point.row_dual[i] - prev_point_.row_dual[i];
+    radius = std::max(radius, dualRayRadius(y));
+  }
+
+  double bound_norm = 0.0;
+  for (Int j = 0; j < n; ++j) {
+    if (lp.col_lower_[j] > -kHighsInf)
+      bound_norm = std::max(bound_norm, std::abs(lp.col_lower_[j]));
+    if (lp.col_upper_[j] < kHighsInf)
+      bound_norm = std::max(bound_norm, std::abs(lp.col_upper_[j]));
+  }
+  for (Int i = 0; i < m; ++i) {
+    if (lp.row_lower_[i] > -kHighsInf)
+      bound_norm = std::max(bound_norm, std::abs(lp.row_lower_[i]));
+    if (lp.row_upper_[i] < kHighsInf)
+      bound_norm = std::max(bound_norm, std::abs(lp.row_upper_[i]));
+  }
+  const double threshold = kCertificateMinRadius * (1.0 + bound_norm);
+
+  logger_.printDetailed("Dual ray radius %.2e, threshold %.2e\n", radius,
+                        threshold);
+  return radius < threshold ? 0.0 : radius;
+}
+
+void Solver::resetAfterNan(Int iter) {
+  // no best iterate saved, so no valid iterate to pass to IPX
+  if (info_.error != kErrorNan || it_->best_iter < 0) return;
+  resetToBestIter(iter);
+  logger_.printInfo("Stopping at the best iterate because of nan\n");
+  info_.error = kOk;
+  // as for stop, IPX refines the best iterate, or runs crossover from it
+  if (getStatus1() == kStatusOptimal)
+    setStatus2(kStatusNoProgress);
+  else
+    setStatus1(kStatusNoProgress);
+}
+
+void Solver::terminateStagnation() {
+  if (getStatus1() == kStatusOptimal) {
+    assert(crossoverIsOn());
+    setStatus2(kStatusNoProgress);
+    resetToBestIter(iter_);
+  } else {
+    if (checkTerminationKkt(true)) {
+      logger_.printw(
+          "HiPO stagnated but HiGHS considers the solution acceptable\n");
+      logger_.print("=== Primal-dual feasible point found\n");
+      setStatus1(kStatusOptimal);
+    } else {
+      setStatus1(kStatusNoProgress);
+      resetToBestIter(iter_);
+    }
+  }
 }
 
 shouldTerminate Solver::checkTermination() {
@@ -1198,15 +1761,14 @@ shouldTerminate Solver::checkTermination() {
         logger_.print("=== Primal-dual feasible point found\n");
         setStatus1(kStatusOptimal);
       }
-      bool ready_for_crossover =
-          it_->infeasAfterDropping() < options_.crossover_tol;
+      bool ready_for_crossover = it_->infeas_drop < options_.crossover_tol;
       if (ready_for_crossover) {
         logger_.print("=== Ready for crossover\n");
         terminate = true;
       }
 
     } else {
-      terminate = model_.qp() ? true : checkTerminationKkt();
+      terminate = checkTerminationKkt();
       if (terminate) {
         logger_.print("=== Primal-dual feasible point found\n");
         setStatus1(kStatusOptimal);
@@ -1217,41 +1779,53 @@ shouldTerminate Solver::checkTermination() {
   return terminate;
 }
 
-isSuccess Solver::checkTerminationKkt() {
+isSuccess Solver::checkTerminationKkt(bool stagnation) {
+  if (!model_.lpOrig()) return false;
+  if (model_.qp() && !model_.QOrig()) return false;
+
+  const HighsLp& lp = *model_.lpOrig();
+  HighsModelStatus model_status = HighsModelStatus::kOptimal;
+  HighsInfo highs_info;
+  HighsSolution highs_solution;
+
+  // Allow kktCheck to print only in debug mode (this is a copy of highs
+  // options, not the original)
+  Hoptions_.output_flag = logger_.debug(2);
+
+  getHipoNonVertexSolution(Hoptions_, lp, model_.n_orig(), model_.m_orig(),
+                           model_.rhsOrig(), model_.constraintsOrig(), *this,
+                           model_status, highs_solution);
+
+  bool success = false;
+
   if (model_.qp()) {
-    // Not yet implemented for QP
-    logger_.printInfo("kktCheck skipped for QP\n");
-    return false;
+    // HiGHS QP check does not check the optimality gap
+    if (it_->pdgap < options_.optimality_tol) {
+      std::vector<double> gradient;
+      model_.QOrig()->product(highs_solution.col_value, gradient);
+      for (Int i = 0; i < lp.num_col_; ++i) gradient[i] += lp.col_cost_[i];
+
+      getKktFailures(Hoptions_, true, lp, gradient, highs_solution, highs_info);
+
+      success = highs_info.num_primal_infeasibilities == 0 &&
+                highs_info.num_dual_infeasibilities <= 0 &&
+                highs_info.num_semi_infeasibilities <= 0;
+    }
 
   } else {
-    // LP check
-    logger_.printInfo("Solution may be optimal, perform kktCheck\n");
-    HighsModelStatus model_status = HighsModelStatus::kOptimal;
-    HighsInfo highs_info;
-    HighsSolution highs_solution;
-
-    // Allow kktCheck to print only in debug mode (this is a copy of highs
-    // options, not the original)
-    Hoptions_.output_flag = logger_.debug(2);
-
-    if (!model_.lpOrig()) return false;
-
-    getHipoNonVertexSolution(Hoptions_, *model_.lpOrig(), model_.n_orig(),
-                             model_.m_orig(), model_.rhsOrig(),
-                             model_.constraintsOrig(), *this, model_status,
-                             highs_solution);
-
-    lpNoBasisKktCheck(model_status, highs_info, *model_.lpOrig(),
-                      highs_solution, Hoptions_, "During HiPO solve");
-
-    if (model_status == HighsModelStatus::kOptimal) {
-      logger_.printInfo("Check successful\n");
-      return true;
-    } else
-      logger_.printInfo("Check failed\n");
+    const double max_violation = stagnation ? kKktStagnationRelativeViolation
+                                            : kKktMaxAllowedRelativeViolation;
+    lpNoBasisKktCheck(model_status, highs_info, lp, highs_solution, Hoptions_,
+                      "During HiPO solve", max_violation);
+    success = model_status == HighsModelStatus::kOptimal;
   }
 
-  return false;
+  if (success)
+    logger_.printInfo("Kkt check successful\n");
+  else
+    logger_.printInfo("Kkt check failed\n");
+
+  return success;
 }
 
 shouldTerminate Solver::checkInterrupt() {
@@ -1266,16 +1840,13 @@ shouldTerminate Solver::checkInterrupt() {
 
 void Solver::resetToBestIter(Int iter, bool print) {
   bool did_reset = it_->resetBest(iter);
+  if (did_reset) prev_point_valid_ = false;
   if (did_reset && print) printOutput(true);
 }
 
 isFailure Solver::initialiseLinearSolver() {
-  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                  it_->data, logger_, control_));
-  if (!LS_) {
-    info_.error = kErrorFailedAllocation;
-    return true;
-  }
+  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, controls_, info_,
+                                  it_->history, logger_, control_));
   info_.error = LS_->setup();
   if (info_.error) return true;
 
@@ -1304,12 +1875,8 @@ isFailure Solver::initialiseLinearSolver() {
   LS_->checkMemory();
 
   if (do_switch) {
-    LS_.reset(
-        new UpLookingSolver(*kkt_, info_, it_->data, regul_, model_, control_));
-    if (!LS_) {
-      info_.error = kErrorFailedAllocation;
-      return true;
-    }
+    LS_.reset(new UpLookingSolver(*kkt_, info_, it_->history, controls_, model_,
+                                  control_));
     LS_->setup();
     LS_->clear();
   }
@@ -1318,42 +1885,40 @@ isFailure Solver::initialiseLinearSolver() {
 }
 
 isSuccess Solver::switchToMultifrontal() {
-  bool switch_successful = false;
+  if (LS_->type() != kUpLookingType || options_.factor != kHighsChooseString)
+    return false;
 
-  if (LS_->type() == kUpLookingType && options_.factor == kHighsChooseString) {
-    LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, regul_, info_,
-                                    it_->data, logger_, control_));
-    if (!LS_) {
-      info_.error = kErrorFailedAllocation;
-    } else {
-      LS_->clear();
-      it_->bad_iter_ = 0;
-      it_->best_pinf_ = kHighsInf;
-      it_->best_dinf_ = kHighsInf;
-      it_->largest_dx_x_ = 0;
-      it_->largest_dy_y_ = 0;
-      info_.error = kOk;
-      switch_successful = true;
-    }
-  }
-
-  return switch_successful;
+  LS_.reset(new FactorHighsSolver(*kkt_, options_, model_, controls_, info_,
+                                  it_->history, logger_, control_));
+  LS_->clear();
+  it_->diagnostics.clear(iter_);
+  info_.error = kOk;
+  return true;
 }
 
 void Solver::printHeader() const {
   if (iter_ % 20 == 0) {
-    logger_.print(
-        " iter       primal obj         dual obj       pinf       dinf       "
-        "gap");
-    if (!options_.timeless_log) logger_.print("    time");
+    logger_.print("%5s %16s %16s %10s %10s %9s", "iter", "primal obj",
+                  "dual obj", "pinf", "dinf", "gap");
+    if (!options_.timeless_log) logger_.print(" %7s", "time");
     if (logger_.debug(1)) {
-      logger_.print(
-          "     alpha p/d   sigma af/co   cor  solv  fact    static reg p/d  "
-          "  "
-          " minT     maxT  (xj * zj / mu)_range_&_num   max_res");
+      logger_.print(" %13s %13s %5s %5s %5s %17s %17s %27s", "alpha p/d",
+                    "sigma af/co", "cor", "solv", "fact", "static reg p/d",
+                    "min/max Theta", "(xj * zj / mu)_range_&_num");
+      logger_.print(" %17s %17s %17s %8s %5s %5s %6s %13s %s", "bw/cw error",
+                    "piv dyn/sgn/dom", "min/max pivot", "max reg", "2x2",
+                    "inert", "free", "absorb r/c", "issues");
     }
     logger_.print("\n");
   }
+}
+
+// issue codes, followed by the action of the dry run, e.g. "RG >reg+"
+static std::string issuesAndAction(const IterationRecord& record) {
+  std::string s = record.report.codes();
+  if (record.action != RecoveryAction::kNone)
+    s += std::string(" >") + actionProperties(record.action).name;
+  return s;
 }
 
 void Solver::printOutput(bool reset) const {
@@ -1370,19 +1935,73 @@ void Solver::printOutput(bool reset) const {
                 it_->pinf, it_->dinf, it_->pdgap);
   if (!options_.timeless_log) logger_.print(" %7.1f", control_.elapsed());
   if (logger_.debug(1) && !reset) {
-    const IpmIterData& data = it_->data.back();
+    const IterationRecord& record = it_->history.back();
     logger_.print(
         " %6.2f %6.2f %6.2f %6.2f %5d %5d %5c %8.1e %8.1e %8.1e %8.1e %8.1e "
-        "%8.1e %4d %4d %9.1e",
-        alpha_primal_, alpha_dual_, data.sigma_aff, data.sigma, data.correctors,
-        data.num_solves,
-        LinearSolverTypeToString((LinearSolverType)data.factorisation_used)
+        "%8.1e %4d %4d %8.1e",
+        alpha_primal_, alpha_dual_, record.sigma_aff, record.sigma,
+        record.correctors, record.num_solves,
+        LinearSolverTypeToString((LinearSolverType)record.factorisation_used)
             .front(),
-        regul_.primal, regul_.dual, data.min_theta, data.max_theta,
-        data.min_prod, data.max_prod, data.num_small_prod, data.num_large_prod,
-        data.omega);
+        controls_.baseRegP(), controls_.baseRegD(), record.min_theta,
+        record.max_theta, record.min_prod, record.max_prod,
+        record.num_small_prod, record.num_large_prod, record.bw_error);
+    logger_.print(" %8.1e %5d %5d %5d %8.1e %8.1e %8.1e %5d %5d %6d %6d %6d %s",
+                  record.cw_error, (int)record.num_dynamic_reg,
+                  (int)record.num_wrong_sign, (int)record.num_reg_dominated,
+                  record.min_pivot, record.max_pivot, record.max_reg,
+                  (int)record.num_2x2, (int)record.wrong_inertia,
+                  (int)record.num_near_free, (int)record.num_absorbed_rows,
+                  (int)record.num_absorbed_cols,
+                  issuesAndAction(record).c_str());
   }
   logger_.print("\n");
+}
+
+void Solver::printDiagnostics() const {
+  // Print the messages stored by runDiagnostics, for each iteration that has
+  // any, as
+  //    iter  codes   first message
+  //                  second message
+  if (!it_) return;
+
+  std::stringstream log_stream;
+  bool header_printed = false;
+
+  for (const IterationRecord& record : it_->history.records) {
+    const std::string& messages = record.messages;
+    if (messages.empty()) continue;
+
+    if (!header_printed) {
+      log_stream << "\nDiagnostics\n iter  issues  messages\n";
+      header_printed = true;
+    } else {
+      log_stream << '\n';
+    }
+
+    // iteration and issue codes before the first message, blanks before the
+    // others, so that the messages are aligned
+    std::string codes = record.report.codes();
+    if (codes.size() < 6) codes.resize(6, ' ');
+    const std::string first_prefix =
+        integer(record.report.iter, 5) + "  " + codes + "  ";
+    const std::string other_prefix(first_prefix.size(), ' ');
+
+    // messages are separated by newlines
+    size_t start = 0;
+    while (start < messages.size()) {
+      size_t end = messages.find('\n', start);
+      if (end == std::string::npos) end = messages.size();
+      log_stream << (start == 0 ? first_prefix : other_prefix);
+      log_stream.write(messages.data() + start, end - start);
+      log_stream << '\n';
+      start = end + 1;
+    }
+  }
+
+  if (!header_printed) return;
+  log_stream << "\nIssue codes:\n" << issueCodesLegend();
+  logger_.printInfo("%s", log_stream.str().c_str());
 }
 
 void Solver::printInfo() const {
@@ -1461,8 +2080,8 @@ void Solver::printSummary() const {
     logger_.print(" Solve                %.2f\n", info_.times[kSolveTime]);
     logger_.print(" Residual             %.2f\n",
                   info_.times[kRefinementResTime]);
-    logger_.print(" Omega                %.2f\n",
-                  info_.times[kRefinementOmegaTime]);
+    logger_.print(" Error                %.2f\n",
+                  info_.times[kRefinementErrorTime]);
     logger_.print(" Insert/split         %.2f\n",
                   info_.times[kInsertSplitTime]);
     logger_.print("\n");
@@ -1524,7 +2143,7 @@ void Solver::chooseNumberOfCorrectors() {
     // all the time, so use f/2.
     // Therefore, we want (1+k)(1+f/2) < ratio.
 
-    double thresh = ratio / (1.0 + kRefineMaxIter / 2.0) - 1;
+    double thresh = ratio / (1.0 + controls_.refine_max_iter / 2.0) - 1;
 
     info_.correctors = std::floor(thresh);
     info_.correctors = std::max(info_.correctors, (Int)1);

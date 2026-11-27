@@ -4,9 +4,9 @@
 
 namespace hipo {
 
-KktMatrix::KktMatrix(const Model& m, const Regularisation& r, Info& i,
+KktMatrix::KktMatrix(const Model& m, const SolverControls& c, Info& i,
                      const Logger& l, const Options& o)
-    : model{m}, regul{r}, info{i}, logger{l}, options{o} {}
+    : model{m}, controls{c}, info{i}, logger{l}, options{o} {}
 
 Int KktMatrix::buildASstructure() {
   // Build lower triangular structure of the augmented system.
@@ -132,7 +132,7 @@ Int KktMatrix::buildNEstructure() {
   rowsNE.clear();
 
   std::vector<Int> work(m);
-  std::atomic<Int> current_nz{0};
+  std::atomic<Int64> current_nz{0};
   std::atomic<bool> overflow{false};
 
   auto process_row = [&](Int row, std::vector<char>& is_nz,
@@ -168,12 +168,12 @@ Int KktMatrix::buildNEstructure() {
     // intersection of row with rows below finished.
 
     // if the total number of nonzeros exceeds the maximum, return error.
-    if (current_nz.load(std::memory_order_relaxed) + nz_in_col >=
-        NE_nz_limit.load(std::memory_order_relaxed)) {
+    Int64 new_nz =
+        current_nz.fetch_add(nz_in_col, std::memory_order_relaxed) + nz_in_col;
+    if (new_nz >= NE_nz_limit.load(std::memory_order_relaxed)) {
       overflow.store(true, std::memory_order_relaxed);
       return;
     }
-    current_nz.fetch_add(nz_in_col, std::memory_order_relaxed);
 
     // keep track of column counts
     work[row] = nz_in_col;
@@ -260,7 +260,7 @@ Int KktMatrix::buildNEvalues(const std::vector<double>& scaling) {
       Int corr = corr_A[el];
 
       double denom = scaling.empty() ? 1.0 : scaling[col];
-      denom += regul.primal;
+      denom += controls.regP(col);
       if (model.qp()) denom += Q.diag(col);
 
       const double mult = 1.0 / denom;
@@ -343,6 +343,15 @@ std::string KktMatrix::nla() const {
   if (isNE()) return kHipoNormalEqString;
   if (isAS()) return kHipoAugmentedString;
   return "empty";
+}
+
+void KktMatrix::staticReg(std::vector<double>& reg) const {
+  const Int n = model.n();
+  const Int m = model.m();
+  reg.clear();
+  if (isAS())
+    for (Int j = 0; j < n; ++j) reg.push_back(controls.regP(j));
+  for (Int i = 0; i < m; ++i) reg.push_back(controls.regD(i));
 }
 
 bool KktMatrix::isAS() const { return AS_ready && !NE_ready; }

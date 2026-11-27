@@ -1,12 +1,16 @@
 #include "UpLookingSolver.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include "HighsExternalApi.h"
 #include "ipm/hipo/auxiliary/Auxiliary.h"
 
 namespace hipo {
 
-UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
-                                 const Regularisation& regul,
+UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info,
+                                 IterationHistory& history,
+                                 const SolverControls& controls,
                                  const Model& model, const Control& control)
     : kkt_{kkt},
       ptr_{kkt_.isNE() ? kkt_.ptrNE : kkt_.ptrAS},
@@ -14,8 +18,8 @@ UpLookingSolver::UpLookingSolver(KktMatrix& kkt, Info& info, IpmData& data,
       val_{kkt_.isNE() ? kkt_.valNE : kkt_.valAS},
       n_{static_cast<Int>(ptr_.size() - 1)},
       info_{info},
-      data_{data},
-      regul_{regul},
+      history_{history},
+      controls_{controls},
       model_{model},
       control_{control} {}
 
@@ -55,6 +59,7 @@ Int UpLookingSolver::setup() {
   counts2Ptr(n_, ptrL_.data(), colcount.data());
 
   regularisation_.assign(n_, 0.0);
+  unreg_pivots_.assign(n_, 0.0);
 
   signs_.assign(n_, 1.0);
   if (kkt_.isAS())
@@ -94,26 +99,41 @@ Int UpLookingSolver::factor(const std::vector<Int>& ptr,
   // number of entries of L scanned since the last check of the time limit
   Int64 work = 0;
 
+  // static regularisation, in the permuted order
+  std::vector<double> static_reg;
+  kkt_.staticReg(static_reg);
+  permuteVectorInverse(static_reg, kkt_.iperm());
+
   for (Int row = 0; row < n_; ++row) {
     if (work >= kUplookTimeCheckWork) {
       work = 0;
       if (control_.timeLimitReached()) return kErrorFactorise;
     }
 
+    // diagonal entry of the original matrix, used to scale the pivot threshold
+    double orig_diag = 0.0;
+    for (Int el = ptr[row]; el < ptr[row + 1]; ++el)
+      if (rows[el] == row) {
+        orig_diag = val[el];
+        break;
+      }
+
     double d = HighsExtras::qdldl::factorRow(
-        row, ptr.data(), rows.data(), val.data(), parent_.data(),
-        ptrL_.data(), rowsL_.data(), valL_.data(), next.data(), mark.data(),
-        stack.data(), revpattern.data(), x.data(), &work);
+        row, ptr.data(), rows.data(), val.data(), parent_.data(), ptrL_.data(),
+        rowsL_.data(), valL_.data(), next.data(), mark.data(), stack.data(),
+        revpattern.data(), x.data(), &work);
 
     // diagonal entry
     double old_pivot = d;
+    unreg_pivots_[row] = d;
     if (signs_[row] > 0)
-      d += regul_.dual;
+      d += static_reg[row];
     else
-      d -= regul_.primal;
+      d -= static_reg[row];
 
-    if (d * signs_[row] < reg_threshold_) {
-      d = reg_value_ * signs_[row];
+    const double pivot_scale = std::max(1.0, std::abs(orig_diag));
+    if (d * signs_[row] < reg_threshold_ * pivot_scale) {
+      d = reg_value_ * pivot_scale * signs_[row];
     }
 
     regularisation_[row] = d - old_pivot;
@@ -212,7 +232,7 @@ Int UpLookingSolver::solveAS(const std::vector<double>& rhs_x,
   permuteVector(as_buffer_, kkt_.iperm());
   info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
-  data_.back().num_solves++;
+  history_.back().num_solves++;
 
   clock.start();
   lhs_x.assign(as_buffer_.begin(), as_buffer_.begin() + n);
@@ -232,14 +252,68 @@ Int UpLookingSolver::solveNE(const std::vector<double>& rhs,
   permuteVector(lhs, kkt_.iperm());
   info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
-  data_.back().num_solves++;
+  history_.back().num_solves++;
 
   return kOk;
 }
 
-void UpLookingSolver::getReg(std::vector<double>& reg) {
-  reg = regularisation_;
+void UpLookingSolver::getReg(std::vector<double>& Rp, std::vector<double>& Rd) {
+  const Int n = model_.n();
+  const Int m = model_.m();
+
+  std::vector<double> reg = regularisation_;
   permuteVector(reg, kkt_.iperm());
+
+  if (kkt_.isAS()) {
+    // regularisation_ is the perturbation added to the diagonal of the
+    // augmented system. In the (1,1) block, -(Theta^-1+Q+Rp), this is -Rp.
+    Rp.resize(n);
+    Rd.resize(m);
+    for (Int i = 0; i < n; ++i) Rp[i] = -reg[i];
+    for (Int i = 0; i < m; ++i) Rd[i] = reg[n + i];
+  } else {
+    assert(kkt_.isNE());
+    // Primal regularisation is added to Theta^-1 when forming the normal
+    // equations.
+    Rp.resize(n);
+    for (Int j = 0; j < n; ++j) Rp[j] = controls_.regP(j);
+    Rd = std::move(reg);
+  }
+}
+
+void UpLookingSolver::getFactorInfo(FactorInfo& info) {
+  const Int n = model_.n();
+  const Int m = model_.m();
+
+  std::vector<double> unreg_pivots = unreg_pivots_;
+  permuteVector(unreg_pivots, kkt_.iperm());
+
+  if (kkt_.isAS()) {
+    // pivots of the (1,1) block are expected to be negative
+    info.Px.resize(n);
+    info.Py.resize(m);
+    for (Int i = 0; i < n; ++i) info.Px[i] = -unreg_pivots[i];
+    for (Int i = 0; i < m; ++i) info.Py[i] = unreg_pivots[n + i];
+  } else {
+    assert(kkt_.isNE());
+    info.Px.clear();
+    info.Py = std::move(unreg_pivots);
+  }
+
+  // only 1x1 pivots; the factor stores their inverse
+  info.num_2x2 = 0;
+  info.num_pos = 0;
+  info.num_neg = 0;
+  info.num_zero = 0;
+  for (Int i = 0; i < n_; ++i) {
+    const double pivot = 1.0 / valL_[ptrL_[i]];
+    if (pivot > 1e-16)
+      ++info.num_pos;
+    else if (pivot < -1e-16)
+      ++info.num_neg;
+    else
+      ++info.num_zero;
+  }
 }
 
 }  // namespace hipo

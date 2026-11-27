@@ -6,7 +6,7 @@
 
 #include "Control.h"
 #include "Info.h"
-#include "IpmData.h"
+#include "IterationHistory.h"
 #include "KktMatrix.h"
 #include "LinearSolver.h"
 #include "Model.h"
@@ -18,9 +18,9 @@ namespace hipo {
 class FactorHighsSolver : public LinearSolver {
   FHsolver FH_;
   KktMatrix& kkt_;
-  const Regularisation& regul_;
+  const SolverControls& controls_;
   Info& info_;
-  IpmData& data_;
+  IterationHistory& history_;
   const Logger& logger_;
   const Model& model_;
   Options& options_;
@@ -46,8 +46,9 @@ class FactorHighsSolver : public LinearSolver {
 
  public:
   FactorHighsSolver(KktMatrix& kkt, Options& options, const Model& model,
-                    const Regularisation& regul, Info& info, IpmData& record,
-                    const Logger& logger, const Control& control);
+                    const SolverControls& controls, Info& info,
+                    IterationHistory& history, const Logger& logger,
+                    const Control& control);
 
   Int factorAS(const std::vector<double>& scaling) override;
   Int factorNE(const std::vector<double>& scaling) override;
@@ -62,8 +63,11 @@ class FactorHighsSolver : public LinearSolver {
   double flops() const override;
   double spops() const override;
   double nz() const override;
-  void getReg(std::vector<double>& reg) override;
+  void getReg(std::vector<double>& Rp, std::vector<double>& Rd) override;
+  void getFactorInfo(FactorInfo& info) override;
   LinearSolverType type() const override { return kFactorHighsType; }
+  bool canDropPivots() const override { return true; }
+  void dropBadPivots() override { FH_.setDropBadPivots(true); }
 };
 
 }  // namespace hipo

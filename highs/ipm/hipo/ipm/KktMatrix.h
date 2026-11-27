@@ -29,12 +29,12 @@ struct KktMatrix {
   Symbolic S;
 
   const Model& model;
-  const Regularisation& regul;
+  const SolverControls& controls;
   Info& info;
   const Logger& logger;
   const Options& options;
 
-  KktMatrix(const Model& model, const Regularisation& regul, Info& info,
+  KktMatrix(const Model& model, const SolverControls& controls, Info& info,
             const Logger& logger, const Options& options);
 
   Int buildASstructure();
@@ -51,6 +51,9 @@ struct KktMatrix {
   bool isNE() const;
   bool isAS() const;
   const std::vector<Int>& iperm() const;
+
+  // static regularisation of each pivot, in the order of the system
+  void staticReg(std::vector<double>& reg) const;
 };
 
 }  // namespace hipo

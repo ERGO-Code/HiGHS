@@ -18,14 +18,13 @@
 
 const bool dev_run = false;
 
-void runHipoTest(
-    Highs& highs, const std::string& model, const double expected_obj,
-    const HighsModelStatus& expected_model_status = HighsModelStatus::kOptimal,
-    const std::string& presolve = kHighsOnString) {
+void runHipoTest(Highs& highs, const std::string& model,
+                 const double expected_obj,
+                 const HighsModelStatus& expected_model_status =
+                     HighsModelStatus::kOptimal) {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("solver", kHipoString);
   highs.setOptionValue("timeless_log", kHighsOnString);
-  highs.setOptionValue("presolve", presolve);
 
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
   highs.readModel(filename);
@@ -36,14 +35,14 @@ void runHipoTest(
 
   if (expected_model_status == HighsModelStatus::kOptimal) {
     const double actual_obj = highs.getObjectiveValue();
-    REQUIRE(std::abs(actual_obj - expected_obj) / std::abs(expected_obj) <
-            1e-4);
+    const double scale = expected_obj == 0 ? 1.0 : std::abs(expected_obj);
+    REQUIRE(std::abs(actual_obj - expected_obj) / scale < 1e-6);
   }
 }
 
 TEST_CASE("test-hipo-afiro", "[highs_hipo]") {
   Highs highs;
-  runHipoTest(highs, "afiro.mps", -464.753);
+  runHipoTest(highs, "afiro.mps", -4.647531e+02);
   highs.resetThreadScheduler(true);
 }
 
@@ -51,7 +50,7 @@ TEST_CASE("test-hipo-deterministic", "[highs_hipo]") {
   // Test that hipo finds the exact same solution if run twice
 
   std::string model = "80bau3b.mps";
-  const double expected_obj = 9.8722e5;
+  const double expected_obj = 9.872242e5;
 
   HighsInt iter_1, iter_2;
   HighsSolution solution_1, solution_2;
@@ -80,7 +79,7 @@ TEST_CASE("test-hipo-options", "[highs_hipo]") {
   // test all combinations of options for hipo
 
   std::string model = "adlittle.mps";
-  const double expected_obj = 2.2549e5;
+  const double expected_obj = 2.2549496e5;
   Highs highs;
 
   std::vector<std::string> orders = {kHighsChooseString, kHipoMetisString,
@@ -111,26 +110,28 @@ TEST_CASE("test-hipo-options", "[highs_hipo]") {
 
 TEST_CASE("test-hipo-qp", "[highs_hipo]") {
   Highs highs;
-  runHipoTest(highs, "qptestnw.lp", -6.4500);
-  runHipoTest(highs, "qjh.lp", -5.2500);
-  runHipoTest(highs, "primal1.mps", -3.501296e-2);
+  runHipoTest(highs, "qptestnw.lp", -6.45);
+  runHipoTest(highs, "qjh.lp", -5.25);
+  runHipoTest(highs, "primal1.mps", -3.501297e-2);
   highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
   const HighsModelStatus expected_status = HighsModelStatus::kInfeasible;
   Highs highs;
-  runHipoTest(highs, "bgetam.mps", 0, expected_status, "off");
-  runHipoTest(highs, "forest6.mps", 0, expected_status, "off");
-  runHipoTest(highs, "klein1.mps", 0, expected_status, "off");
+  highs.setOptionValue("presolve", kHighsOffString);
+  runHipoTest(highs, "bgetam.mps", 0, expected_status);
+  runHipoTest(highs, "forest6.mps", 0, expected_status);
+  runHipoTest(highs, "klein1.mps", 0, expected_status);
   highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
-  const HighsModelStatus expected_status = HighsModelStatus::kOptimal;
   Highs highs;
-  runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "on");
-  runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "off");
+  highs.setOptionValue("presolve", kHighsOnString);
+  runHipoTest(highs, "perold.mps", -9.380755e+03);
+  highs.setOptionValue("presolve", kHighsOffString);
+  runHipoTest(highs, "perold.mps", -9.380755e+03);
   highs.resetThreadScheduler(true);
 }
 
@@ -257,6 +258,48 @@ TEST_CASE("issue-3749", "[highs_hipo]") {
       REQUIRE(std::abs(max_sol.row_dual[i] + min_sol.row_dual[i]) < tol);
     }
   }
+}
+
+TEST_CASE("issue-3718", "[highs_hipo]") {
+  // HiPO was stagnating, kktCheck accepted the solution anyway, but the
+  // tolerance was slightly violated.
+
+  Highs highs;
+  highs.setOptionValue("solve_relaxation", true);
+  highs.setOptionValue("run_crossover", kHighsOffString);
+  runHipoTest(highs, "3015.mps", -1.407998e+06);
+  REQUIRE(highs.getInfo().primal_dual_objective_error < 1e-7);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3736", "[highs_hipo]") {
+  // HiPO was stopping with a nan when using the uplooking factorisation.
+
+  Highs highs;
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("run_crossover", kHighsOffString);
+  highs.setOptionValue(kHipoFactorString, kHipoFactorUplooking);
+  runHipoTest(highs, "3736.mps", 8);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3746", "[highs_hipo]") {
+  // HiPO was reporting infeasible for these models
+
+  Highs highs;
+  highs.setOptionValue("presolve", kHighsOffString);
+  runHipoTest(highs, "3746-small.mps", 0);
+  runHipoTest(highs, "3746.mps", 0);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3747", "[highs_hipo]") {
+  // HiPO was not running the QP kkt check, so the optimal status was changed to
+  // unknown.
+
+  Highs highs;
+  runHipoTest(highs, "3747.mps", 1.05e11);
+  highs.resetThreadScheduler(true);
 }
 
 // A stop callback that returns nonzero stops the METIS and AMD orderings,
@@ -394,7 +437,7 @@ TEST_CASE("test-hipo-serial-blas", "[highs_hipo]") {
 
   // By default, HiPO sets the number of OpenBLAS threads to 1
   const int multiple_threads = HighsExtras::blas::openblas_set_num_threads(2);
-  runHipoTest(highs, "afiro.mps", -464.753);
+  runHipoTest(highs, "afiro.mps", -4.647531e+02);
   REQUIRE(HighsExtras::blas::openblas_set_num_threads(0) == 1);
 
   // OpenBLAS may be limited to a single thread, in which case the opt-out
@@ -405,7 +448,7 @@ TEST_CASE("test-hipo-serial-blas", "[highs_hipo]") {
     REQUIRE(HighsExtras::blas::openblas_set_num_threads(2) == multiple_threads);
     highs.setOptionValue("hipo_serial_blas", false);
     highs.clearSolver();
-    runHipoTest(highs, "afiro.mps", -464.753);
+    runHipoTest(highs, "afiro.mps", -4.647531e+02);
     REQUIRE(HighsExtras::blas::openblas_set_num_threads(0) == multiple_threads);
   }
 

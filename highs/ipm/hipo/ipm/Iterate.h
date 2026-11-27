@@ -3,8 +3,9 @@
 
 #include <vector>
 
+#include "Diagnostics.h"
 #include "Info.h"
-#include "IpmData.h"
+#include "IterationHistory.h"
 #include "LinearSolver.h"
 #include "Model.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
@@ -32,33 +33,40 @@ struct Residuals {
 struct Iterate {
   Model& model;
   Info& info;
-  IpmData data;
+  IterationHistory history;
   std::vector<double> x, xl, xu, y, zl, zu;
   Residuals res;
   NewtonDir delta;
   double pobj, dobj, pinf, dinf, pdgap;
   double mu;
-  std::vector<double> scaling;
-  double best_mu;
-  const Regularisation& regul;
-  std::vector<double> total_reg;
-  double* Rp;
-  double* Rd;
-  Residuals ires;  // residuals for iterative refinement
 
-  // statistics for stagnation
-  Int bad_iter_{};
-  double largest_dx_x_{}, largest_dy_y_{};
-  double best_pinf_ = kHighsInf, best_dinf_ = kHighsInf;
+  double compl_sum = 0.0;
+  double compl_gap = 0.0;
+
+  std::vector<double> scaling;
+  double min_mu;
+  const SolverControls& controls;
+  // regularisation used in the last factorisation, see LinearSolver::getReg
+  std::vector<double> Rp;
+  std::vector<double> Rd;
+  Residuals ires;  // residuals for iterative refinement
+  Residuals iabs;  // |6x6 matrix| * |d| for the componentwise error
+
+  double infeas_drop = 0.0;
+
+  // detectors of numerical trouble, lack of progress and divergence
+  Diagnostics diagnostics;
 
   double best_violation = kHighsInf;
+  double best_violation_magnitude = kHighsInf;
   Int best_iter = -1;
   std::vector<double> best_x, best_xl, best_xu, best_y, best_zl, best_zu;
+  double best_mu = 0.0;
 
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
   // ===================================================================================
-  Iterate(Model& model_input, Info& info_input, Regularisation& r);
+  Iterate(Model& model_input, Info& info_input, const SolverControls& c);
 
   // clear existing data
   void clearIter();
@@ -76,7 +84,8 @@ struct Iterate {
 
   // ===================================================================================
   // Compute:
-  //  mu = \sum xl(i) * zl(i) + \sum xu(j) * zu(j)
+  //  compl_sum = \sum xl(i) * zl(i) + \sum xu(j) * zu(j)
+  //  mu = compl_sum / (number of finite bounds)
   // for variables: i with a finite lower bound
   //                j with a finite upper bound
   // ===================================================================================
@@ -92,7 +101,8 @@ struct Iterate {
 
   // ===================================================================================
   // Compute convergence indicators
-  // - primal and dual objectives, and primal-dual relative gap
+  // - primal and dual objectives, primal-dual relative gap and relative
+  //   complementarity gap
   // - primal and dual infeasibilities (either scaled or unscaled)
   // - complementairy products
   // ===================================================================================
@@ -159,18 +169,24 @@ struct Iterate {
   void finalResiduals() const;
 
   // ===================================================================================
-  // Compute residual of 6x6 linear system for iterative refinement.
+  // Compute residual of 6x6 linear system for iterative refinement in ires,
+  // and |6x6 matrix| * |d| in iabs, with a single pass over A and Q.
   // ===================================================================================
-  void residuals6x6(const NewtonDir& d);
+  // iabs is computed only if compute_abs is true.
+  void residuals6x6(const NewtonDir& d, bool compute_abs);
 
   void makeStep(double alpha_primal, double alpha_dual);
 
   void saveBest(double feas_tol, double opt_tol, Int iter);
   bool resetBest(Int iter);
 
-  bool stagnation(std::stringstream& log_stream);
-
-  void getReg(LinearSolver& LS, const std::string& nla);
+  // ===================================================================================
+  // Compute infeas_drop, the infeasibility after dropping to complementarity.
+  // It is needed only to decide if crossover can start, so it is computed only
+  // if crossover is on and the iterate is primal-dual feasible and optimal.
+  // Otherwise, it is set to zero.
+  // ===================================================================================
+  void computeInfeasDrop(bool crossover_on, double feas_tol, double opt_tol);
 
   void assertConsistency(Int n, Int m) const;
 };

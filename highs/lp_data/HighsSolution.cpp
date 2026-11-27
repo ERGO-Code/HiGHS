@@ -1160,16 +1160,18 @@ bool getComplementarityViolations(const HighsLp& lp,
 
 void lpNoBasisKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                        const HighsLp& lp, const HighsSolution& solution,
-                       const HighsOptions& options,
-                       const std::string& message) {
+                       const HighsOptions& options, const std::string& message,
+                       const double max_allowed_tolerance_relative_violation) {
   HighsBasis basis;
-  lpKktCheck(model_status, info, lp, solution, basis, options, message);
+  lpKktCheck(model_status, info, lp, solution, basis, options, message,
+             max_allowed_tolerance_relative_violation);
 }
 
 void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
                 const HighsLp& lp, const HighsSolution& solution,
                 const HighsBasis& basis, const HighsOptions& options,
-                const std::string& message) {
+                const std::string& message,
+                const double max_allowed_tolerance_relative_violation) {
   if (!solution.value_valid) return;
   const bool has_dual_values = solution.dual_valid;
   const HighsLogOptions& log_options = options.log_options;
@@ -1214,7 +1216,6 @@ void lpKktCheck(HighsModelStatus& model_status, HighsInfo& info,
   double max_primal_tolerance_relative_violation = 0;
   double max_dual_tolerance_relative_violation = 0;
   double primal_dual_objective_tolerance_relative_violation = 0;
-  const double max_allowed_tolerance_relative_violation = 1e2;
   if (basis.valid) {
     if (info.num_primal_infeasibilities > 0) {
       max_primal_tolerance_relative_violation =

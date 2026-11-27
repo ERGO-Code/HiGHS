@@ -33,8 +33,8 @@ void dfsPostorder(Int node, Int& start, std::vector<Int>& head,
 Int64 getDiagStart(Int n, Int k, Int nb, Int n_blocks,
                    std::vector<Int64>& start, bool triang = false);
 Int maxDepthTree(const std::vector<Int>& parent);
-void fullFromLower(Int n, Int nz, const Int* ptrL, const Int* rowsL,
-                   std::vector<Int>& ptrF, std::vector<Int>& rowsF);
+Int fullFromLower(Int n, Int nz, const Int* ptrL, const Int* rowsL,
+                  std::vector<Int>& ptrF, std::vector<Int>& rowsF);
 double snFlops(double size, double clique_size);
 double snSpops(double clique_size);
 

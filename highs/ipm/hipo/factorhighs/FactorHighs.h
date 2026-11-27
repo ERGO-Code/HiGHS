@@ -6,6 +6,7 @@
 
 #include "CliqueStack.h"
 #include "DataCollector.h"
+#include "FactorHighsInfo.h"
 #include "FactorHighsOptions.h"
 #include "Numeric.h"
 #include "Symbolic.h"
@@ -51,21 +52,23 @@ Then, the factorization is performed as follows.
     FH.factorise(S, n, nz rows, ptr, val);
     FH.solve(x);
 
-Printing to screen is achieved using the interface in auxiliary/Logger.h.
-Use setLogger to pass the Logger object to use: FH.setLogger(&logger).
-To use printf instead, use FH.setLogger(nullptr,true).
-Logging is off by default. Use FH.setLogger(nullptr, false) to switch logging
-off.
+Logging is achieved using the interface in auxiliary/Logger.h, which prints
+through the HiGHS logging functions. Logging is off by default.
+- To use a given Logger object, call FH.setLogger(&logger). The object is not
+  owned by FHsolver and must outlive it.
+- To print to console without a Logger object, call FH.setLogger(nullptr, true).
+  Only user-level messages are printed; warnings and errors are prefixed.
+- To switch logging off, call FH.setLogger(nullptr, false).
 
 To add static regularisation when the pivots are selected, use
 setRegularisation(reg_p,reg_d) to choose values of primal and dual
 regularisation. If regularisation is already added to the matrix, ignore.
+Use setRegularisationEntries(reg,n) to give a value for each pivot instead.
 
 The expected sign of a pivot is used to determine which static regularisation to
 apply. Pivots with negative expected sign are regularised with -reg_p, pivots
 with positive expected sign are regularised with +reg_d. If the sign is unknown,
-the computed sign of the pivot is used to determine which regularisation to
-apply.
+the pivot is regularised with reg_d, in the direction of its computed sign.
 
 Notice that this sign convention corresponds to a saddle point system with
 negative (1,1) block and positive (2,2) block.
@@ -83,17 +86,20 @@ via the Symbolic object, S.iperm().
 namespace hipo {
 
 class FHsolver {
-  const Logger* logger_ = nullptr;
+  // Never nullptr. Not owned by FHsolver.
+  const Logger* logger_ = &Logger::silent();
   DataCollector data_;
   Numeric N_;
   CliqueStack serial_stack_;
-  bool local_logger_ = false;
 
  public:
   using StopCallback = FHoptions::StopCallback;
 
  private:
   FHoptions options_{};
+
+  // static regularisation of each pivot, empty if not used
+  std::vector<double> static_reg_;
 
   // Columns of factorisation, stored by supernode.
   // This memory is allocated the first time that it is used. Subsequent
@@ -124,17 +130,23 @@ class FHsolver {
   Int diagSolve(double* x, Int k = 1) const;
   Int backwardSolve(double* x, Int k = 1) const;
 
-  // If multiple factorisation are performed, call newIter() before each
-  // factorisation. This is used only to collect data for debugging, if
-  // expensive data collection is turned on at compile time.
-  void newIter();
-
   // Set values for static regularisation to be added when a pivot is selected.
   // If regularisation is already added to the matrix, ignore.
   void setRegularisation(double reg_p = 0.0, double reg_d = 0.0);
 
+  // Set static regularisation for each pivot, in the original order of the
+  // matrix: pivot j gets -reg[j] if its sign is negative, +reg[j] if positive.
+  // It replaces the values of setRegularisation, until that is called again;
+  // reg == nullptr goes back to them. With setRegularisation, pivots of
+  // unknown sign get reg_d.
+  void setRegularisationEntries(const double* reg, Int n);
+
   // Extract the regularisation values used, including static and dynamic.
   void getRegularisation(double* reg);
+
+  // Extract information about the last factorisation, see FHinfo. The inertia
+  // uses zero_tol as tolerance for zero.
+  void getInfo(FHinfo& info, double zero_tol = 1e-16) const;
 
   // Set block size for dense linear algebra
   void setBlockSize(Int nb);
@@ -145,13 +157,19 @@ class FHsolver {
   // regularisation is applied.
   void setPivoting(bool pivoting);
 
+  // With pivoting, replace a pivot that dynamic regularisation would perturb
+  // by a huge value, which drops its component of the solution. Off by
+  // default.
+  void setDropBadPivots(bool drop);
+
   void setParallel(bool tree, bool node);
   void setParallelSolve(bool forward, bool backward, bool diag);
 
-  // Pass the Logger object to be used for logging. Alternatively, printf can be
-  // used for logging, by passing a nullptr and setting use_printf to true.
+  // Pass the Logger object to be used for logging; it is not owned by FHsolver
+  // and must outlive it. If logger is nullptr, print user-level messages to
+  // console if to_console is true, or switch logging off otherwise.
   // By default, logging is off.
-  void setLogger(const Logger* logger = nullptr, bool use_printf = false);
+  void setLogger(const Logger* logger = nullptr, bool to_console = false);
   const Logger* getLogger() const { return logger_; }
 
   // Pass a callback that is checked periodically during reorderMetis,

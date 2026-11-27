@@ -15,14 +15,15 @@ namespace hipo {
 
 FactorHighsSolver::FactorHighsSolver(KktMatrix& kkt, Options& options,
                                      const Model& model,
-                                     const Regularisation& regul, Info& info,
-                                     IpmData& record, const Logger& logger,
+                                     const SolverControls& controls, Info& info,
+                                     IterationHistory& history,
+                                     const Logger& logger,
                                      const Control& control)
     : FH_{},
       kkt_{kkt},
-      regul_{regul},
+      controls_{controls},
       info_{info},
-      data_{record},
+      history_{history},
       logger_{logger},
       model_{model},
       options_{options},
@@ -47,10 +48,7 @@ void FactorHighsSolver::printAnalyseFailure(const char* message) const {
     logger_.printe("%s", message);
 }
 
-void FactorHighsSolver::clear() {
-  valid_ = false;
-  FH_.newIter();
-}
+void FactorHighsSolver::clear() { valid_ = false; }
 
 // =========================================================================
 // Analyse phase
@@ -108,7 +106,10 @@ Int FactorHighsSolver::factorAS(const std::vector<double>& scaling) {
   kkt_.buildASvalues(scaling);
 
   // set static regularisation, since it may have changed
-  FH_.setRegularisation(regul_.primal, regul_.dual);
+  std::vector<double> static_reg;
+  kkt_.staticReg(static_reg);
+  FH_.setRegularisationEntries(static_reg.data(),
+                               static_cast<Int>(static_reg.size()));
 
   Clock clock;
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsAS.data(),
@@ -128,7 +129,10 @@ Int FactorHighsSolver::factorNE(const std::vector<double>& scaling) {
   kkt_.buildNEvalues(scaling);
 
   // set static regularisation, since it may have changed
-  FH_.setRegularisation(regul_.primal, regul_.dual);
+  std::vector<double> static_reg;
+  kkt_.staticReg(static_reg);
+  FH_.setRegularisationEntries(static_reg.data(),
+                               static_cast<Int>(static_reg.size()));
 
   Clock clock;
   if (FH_.factorise(kkt_.S, kkt_.n(), kkt_.nz(), kkt_.rowsNE.data(),
@@ -165,7 +169,7 @@ Int FactorHighsSolver::solveAS(const std::vector<double>& rhs_x,
   info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
 
-  data_.back().num_solves++;
+  history_.back().num_solves++;
 
   clock.start();
   lhs_x.assign(as_buffer_.begin(), as_buffer_.begin() + n);
@@ -187,7 +191,7 @@ Int FactorHighsSolver::solveNE(const std::vector<double>& rhs,
   info_.times[kSolveTime] += clock.stop();
   info_.solve_number++;
 
-  data_.back().num_solves++;
+  history_.back().num_solves++;
 
   return kOk;
 }
@@ -285,6 +289,7 @@ Int FactorHighsSolver::chooseNla() {
     if (failure_NE) return;
     Int NE_status = analyseNE(symb_NE);
     if (NE_status) failure_NE = true;
+    if (NE_status == kErrorOverflow) overflow_NE = true;
   };
 
   auto run_analyse_AS = [&]() {
@@ -425,8 +430,11 @@ Int FactorHighsSolver::chooseOrdering(const std::vector<Int>& rows,
 
   // compute full-format matrix without diagonal entries
   std::vector<Int> full_ptr, full_rows;
-  fullFromLower(ptr.size() - 1, rows.size(), ptr.data(), rows.data(), full_ptr,
-                full_rows);
+  if (fullFromLower(ptr.size() - 1, rows.size(), ptr.data(), rows.data(),
+                    full_ptr, full_rows)) {
+    logger_.printInfo("Integer overflow forming full %s matrix\n", nla.c_str());
+    return kErrorOverflow;
+  }
   Int n = full_ptr.size() - 1;
   std::vector<Int> perm(n), iperm(n);
 
@@ -736,8 +744,54 @@ void FactorHighsSolver::printParallel() const {
 double FactorHighsSolver::flops() const { return kkt_.S.flops(); }
 double FactorHighsSolver::spops() const { return kkt_.S.spops(); }
 double FactorHighsSolver::nz() const { return (double)kkt_.S.nz(); }
-void FactorHighsSolver::getReg(std::vector<double>& reg) {
-  FH_.getRegularisation(reg.data());
+void FactorHighsSolver::getReg(std::vector<double>& Rp,
+                               std::vector<double>& Rd) {
+  const Int n = model_.n();
+  const Int m = model_.m();
+
+  if (kkt_.isAS()) {
+    // FH returns the perturbation added to the diagonal of the augmented
+    // system. In the (1,1) block, -(Theta^-1+Q+Rp), this is -Rp.
+    std::vector<double> reg(n + m);
+    FH_.getRegularisation(reg.data());
+    Rp.resize(n);
+    Rd.resize(m);
+    for (Int i = 0; i < n; ++i) Rp[i] = -reg[i];
+    for (Int i = 0; i < m; ++i) Rd[i] = reg[n + i];
+  } else {
+    assert(kkt_.isNE());
+    // Primal regularisation is added to Theta^-1 when forming the normal
+    // equations.
+    Rp.resize(n);
+    for (Int j = 0; j < n; ++j) Rp[j] = controls_.regP(j);
+    Rd.resize(m);
+    FH_.getRegularisation(Rd.data());
+  }
+}
+
+void FactorHighsSolver::getFactorInfo(FactorInfo& info) {
+  const Int n = model_.n();
+  const Int m = model_.m();
+
+  FHinfo fh_info;
+  FH_.getInfo(fh_info);
+
+  if (kkt_.isAS()) {
+    // pivots of the (1,1) block are expected to be negative
+    info.Px.resize(n);
+    info.Py.resize(m);
+    for (Int i = 0; i < n; ++i) info.Px[i] = -fh_info.unreg_pivots[i];
+    for (Int i = 0; i < m; ++i) info.Py[i] = fh_info.unreg_pivots[n + i];
+  } else {
+    assert(kkt_.isNE());
+    info.Px.clear();
+    info.Py = std::move(fh_info.unreg_pivots);
+  }
+
+  info.num_2x2 = fh_info.num_2x2;
+  info.num_pos = fh_info.num_pos;
+  info.num_neg = fh_info.num_neg;
+  info.num_zero = fh_info.num_zero;
 }
 
 }  // namespace hipo

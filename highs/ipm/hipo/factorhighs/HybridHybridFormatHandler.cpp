@@ -87,7 +87,8 @@ void HybridHybridFormatHandler::assembleFrontalMultiple(
   }
 }
 
-Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
+Int HybridHybridFormatHandler::denseFactorise(double reg_thresh,
+                                              const double* static_reg) {
   Int status;
 
   // either clique is valid, or clique is not needed
@@ -101,7 +102,8 @@ Int HybridHybridFormatHandler::denseFactorise(double reg_thresh) {
   const Int* pivot_sign = &S_->pivotSign().data()[sn_start];
 
   status = denseFactFH('H', ldf_, sn_size_, frontal_.data(), clique_ptr_,
-                       pivot_sign, reg_thresh, local_reg_.data(), swaps_.data(),
+                       pivot_sign, static_reg, reg_thresh, local_reg_.data(),
+                       local_unreg_pivots_.data(), swaps_.data(),
                        pivot_2x2_.data(), data_, FH_opt_);
 
   return status;
@@ -235,56 +237,6 @@ void HybridHybridFormatHandler::assembleChild(Int child_sn,
   HIPO_CLOCK_START(2);
   assembleClique(child_data, child_clique_size, child_sn);
   HIPO_CLOCK_STOP(2, data_, kTimeFactoriseAssembleChildrenClique);
-}
-
-void HybridHybridFormatHandler::extremeEntries() {
-#ifdef HIPO_COLLECT_EXPENSIVE_DATA
-  double minD = 1e100;
-  double maxD = 0.0;
-  double minoffD = 1e100;
-  double maxoffD = 0.0;
-
-  // number of blocks of columns
-  const Int n_blocks = (sn_size_ - 1) / nb_ + 1;
-
-  // index to access frontal
-  Int64 index{};
-
-  // go through blocks of columns for this supernode
-  for (Int j = 0; j < n_blocks; ++j) {
-    // number of columns in the block
-    const Int jb = std::min(nb_, sn_size_ - nb_ * j);
-
-    for (Int k = 0; k < jb; ++k) {
-      // off diagonal entries
-      for (Int i = 0; i < k; ++i) {
-        if (frontal_[index] != 0.0) {
-          minoffD = std::min(minoffD, std::abs(frontal_[index]));
-          maxoffD = std::max(maxoffD, std::abs(frontal_[index]));
-        }
-        index++;
-      }
-
-      // diagonal entry
-      minD = std::min(minD, std::abs(1.0 / frontal_[index]));
-      maxD = std::max(maxD, std::abs(1.0 / frontal_[index]));
-
-      index += jb - k;
-    }
-
-    const Int64 entries_left = (Int64)(ldf_ - nb_ * j - jb) * jb;
-
-    for (Int64 i = 0; i < entries_left; ++i) {
-      if (frontal_[index] != 0.0) {
-        minoffD = std::min(minoffD, std::abs(frontal_[index]));
-        maxoffD = std::max(maxoffD, std::abs(frontal_[index]));
-      }
-      index++;
-    }
-  }
-
-  data_.setExtremeEntries(minD, maxD, minoffD, maxoffD);
-#endif
 }
 
 }  // namespace hipo

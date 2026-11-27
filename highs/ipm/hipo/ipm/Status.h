@@ -19,7 +19,6 @@ enum Error {
   kErrorNan,
   kErrorNegativeComponent,
   kErrorInvalidPointer,
-  kErrorFailedAllocation,
   kErrorScheduler,
 };
 
@@ -72,7 +71,6 @@ inline std::string errorString(Error error) {
       {kErrorNan, "NaN detected"},
       {kErrorNegativeComponent, "Negative component detected"},
       {kErrorInvalidPointer, "Invalid pointer"},
-      {kErrorFailedAllocation, "Failed allocation"},
       {kErrorScheduler, "Task scheduler not initialised"},
   };
 

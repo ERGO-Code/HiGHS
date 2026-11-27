@@ -73,7 +73,7 @@ int64_t FactorHighs_getFactorNz(void* S);
 
 // Other
 void FactorHighs_symbolic_print(void* FH, void* S, HighsInt verbose);
-void FactorHighs_newIter(void* FH);
+const char* FactorHighs_version(void);
 
 #ifdef __cplusplus
 }

@@ -262,19 +262,23 @@ set(ipx_headers
   ipm/ipx/utils.h)
 
 set(hipo_sources
-    ipm/hipo/ipm/IpmData.cpp
+    ipm/hipo/ipm/IterationHistory.cpp
     ipm/hipo/ipm/FactorHighsSolver.cpp
     ipm/hipo/ipm/Control.cpp
     ipm/hipo/ipm/Iterate.cpp
     ipm/hipo/ipm/KktMatrix.cpp
     ipm/hipo/ipm/Model.cpp
     ipm/hipo/ipm/PreProcess.cpp
+    ipm/hipo/ipm/Recovery.cpp
     ipm/hipo/ipm/Refine.cpp
     ipm/hipo/ipm/Solver.cpp
+    ipm/hipo/ipm/Diagnostics.cpp
     ipm/hipo/ipm/UpLookingSolver.cpp)
 
 set(hipo_headers
-    ipm/hipo/ipm/IpmData.h
+    ipm/hipo/ipm/Centring.h
+    ipm/hipo/ipm/IterationHistory.h
+    ipm/hipo/ipm/IterationReport.h
     ipm/hipo/ipm/FactorHighsSolver.h
     ipm/hipo/ipm/Parameters.h
     ipm/hipo/ipm/Control.h
@@ -285,7 +289,9 @@ set(hipo_headers
     ipm/hipo/ipm/Model.h
     ipm/hipo/ipm/Options.h
     ipm/hipo/ipm/PreProcess.h
+    ipm/hipo/ipm/Recovery.h
     ipm/hipo/ipm/Solver.h
+    ipm/hipo/ipm/Diagnostics.h
     ipm/hipo/ipm/Status.h
     ipm/hipo/ipm/UpLookingSolver.h)
 
@@ -318,6 +324,7 @@ set(factor_highs_headers
     ipm/hipo/factorhighs/DgemmParallel.h
     ipm/hipo/factorhighs/FactorHighs_c_api.h
     ipm/hipo/factorhighs/FactorHighs.h
+    ipm/hipo/factorhighs/FactorHighsInfo.h
     ipm/hipo/factorhighs/FactorHighsOptions.h
     ipm/hipo/factorhighs/FactorHighsSettings.h
     ipm/hipo/factorhighs/Factorise.h

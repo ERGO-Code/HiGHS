@@ -16,7 +16,8 @@ namespace hipo {
 
 Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
                      const Int* ptrM, const double* valM,
-                     const FHoptions& FH_opt, const Logger* logger,
+                     const std::vector<double>& static_reg,
+                     const FHoptions& FH_opt, const Logger& logger,
                      DataCollector& data,
                      std::vector<std::vector<double>>& sn_columns,
                      CliqueStack* stack)
@@ -34,10 +35,9 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   n_ = n;
 
   if (n_ != S_.size()) {
-    if (logger_)
-      logger_->printInfo(
-          "Matrix provided to Factorise has size incompatible with symbolic "
-          "object.\n");
+    logger_.printInfo(
+        "Matrix provided to Factorise has size incompatible with symbolic "
+        "object.\n");
     return;
   }
 
@@ -56,6 +56,18 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   // This also removes any entry not in the lower triangle.
   permute(S_.iperm());
 
+  // static regularisation in the same order as the permuted matrix: the given
+  // values, or reg_p for negative pivots and reg_d for the others
+  if (!static_reg.empty()) {
+    static_reg_ = static_reg;
+    permuteVectorInverse(static_reg_, S_.iperm());
+  } else {
+    const std::vector<Int>& sign = S_.pivotSign();
+    static_reg_.resize(n_);
+    for (Int i = 0; i < n_; ++i)
+      static_reg_[i] = sign[i] < 0 ? FH_opt_.reg_p : FH_opt_.reg_d;
+  }
+
   nzM_ = ptrM_.back();
 
   // Double transpose to sort columns
@@ -73,15 +85,6 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
   next_child_reverse_ = next_child_;
   reverseLinkedList(first_child_reverse_, next_child_reverse_);
 
-  // compute largest diagonal entry in absolute value
-  max_diag_ = 0.0;
-  min_diag_ = kHighsInf;
-  for (Int col = 0; col < n_; ++col) {
-    double val = std::abs(valM_[ptrM_[col]]);
-    max_diag_ = std::max(max_diag_, val);
-    min_diag_ = std::min(min_diag_, val);
-  }
-
   // one norm of columns of M
   std::vector<double> one_norm_cols(n_, 0.0);
   for (Int col = 0; col < n_; ++col) {
@@ -92,9 +95,9 @@ Factorise::Factorise(const Symbolic& S, Int n, Int nz, const Int* rowsM,
       if (row != col) one_norm_cols[row] += std::abs(val);
     }
   }
-  M_norm1_ = *std::max_element(one_norm_cols.begin(), one_norm_cols.end());
-
-  data_.setNorms(M_norm1_, max_diag_);
+  M_norm1_ = one_norm_cols.empty() ? 0.0
+                                   : *std::max_element(one_norm_cols.begin(),
+                                                       one_norm_cols.end());
 }
 
 void Factorise::permute(const std::vector<Int>& iperm) {
@@ -146,8 +149,7 @@ void Factorise::processSupernode(Int sn) {
   if (serial) {
     bool reallocation = false;
     clique_ptr = stack_->setup(S_.cliqueSize(sn), reallocation);
-    if (reallocation && logger_)
-      logger_->printInfo("Reallocation of CliqueStack\n");
+    if (reallocation) logger_.printInfo("Reallocation of CliqueStack\n");
   }
 
   // initialise the format handler
@@ -199,8 +201,7 @@ void Factorise::processSupernode(Int sn) {
       child_clique = schur_contribution_[child_sn].data();
 
       if (!child_clique) {
-        if (logger_)
-          logger_->printInfo("Missing child supernode contribution\n");
+        logger_.printInfo("Missing child supernode contribution\n");
         flag_stop_.store(true, std::memory_order_relaxed);
         return;
       }
@@ -230,27 +231,23 @@ void Factorise::processSupernode(Int sn) {
   // ===================================================
   HIPO_CLOCK_START(2);
   // threshold for regularisation
-  // const double reg_thresh = max_diag_ * kDynamicDiagCoeff;
   const double reg_thresh = M_norm1_ * kDynamicDiagCoeff;
 
-  if (Int flag = FH->denseFactorise(reg_thresh)) {
+  if (Int flag = FH->denseFactorise(reg_thresh, &static_reg_[S_.snStart(sn)])) {
     flag_stop_.store(true, std::memory_order_relaxed);
 
-    if (logger_ && flag == kRetInvalidInput)
-      logger_->printInfo("DenseFact: invalid input\n");
-    else if (logger_ && flag == kRetInvalidPivot)
-      logger_->printInfo("DenseFact: invalid pivot\n");
+    if (flag == kRetInvalidInput)
+      logger_.printInfo("DenseFact: invalid input\n");
+    else if (flag == kRetInvalidPivot)
+      logger_.printInfo("DenseFact: invalid pivot\n");
 
     return;
   }
   HIPO_CLOCK_STOP(2, data_, kTimeFactoriseDenseFact);
 
   HIPO_CLOCK_START(2);
-  // compute largest elements in factorisation
-  FH->extremeEntries();
-
   // terminate the format handler
-  FH->terminate(schur_contribution_[sn], total_reg_, swaps_[sn],
+  FH->terminate(schur_contribution_[sn], total_reg_, unreg_pivots_, swaps_[sn],
                 pivot_2x2_[sn]);
 
   if (serial) stack_->pushWork(sn);
@@ -287,6 +284,7 @@ bool Factorise::run(Numeric& num) {
   HIPO_CLOCK_CREATE;
 
   total_reg_.assign(n_, 0.0);
+  unreg_pivots_.assign(n_, 0.0);
 
   // allocate space
   schur_contribution_.resize(S_.sn());
@@ -306,11 +304,13 @@ bool Factorise::run(Numeric& num) {
   if (flag_stop_.load(std::memory_order_relaxed)) return true;
 
   permuteVector(total_reg_, S_.iperm());
+  permuteVector(unreg_pivots_, S_.iperm());
 
   // move factorisation to numerical object
   num.S_ = &S_;
   num.sn_columns_ = &sn_columns_;
   num.total_reg_ = std::move(total_reg_);
+  num.unreg_pivots_ = std::move(unreg_pivots_);
   num.swaps_ = std::move(swaps_);
   num.pivot_2x2_ = std::move(pivot_2x2_);
   num.data_ = &data_;
