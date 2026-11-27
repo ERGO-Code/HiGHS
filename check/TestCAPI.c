@@ -2641,6 +2641,20 @@ void testFixedLp() {
   Highs_destroy(highs);
 }
 
+void testThreadScheduler() {
+  Highs_resetThreadScheduler(1);
+  assertIntValuesEqual("scheduler threads", Highs_getThreadSchedulerNumThreads(), 0);
+  void* highs = Highs_create();
+  Highs_setBoolOptionValue(highs, "output_flag", dev_run);
+  Highs_setIntOptionValue(highs, "threads", 2);
+  createBlendingLp(highs);
+  assertIntValuesEqual("run", Highs_run(highs), kHighsStatusOk);
+  assertIntValuesEqual("scheduler threads", Highs_getThreadSchedulerNumThreads(), 2);
+  Highs_destroy(highs);
+  Highs_resetThreadScheduler(1);
+  assertIntValuesEqual("scheduler threads", Highs_getThreadSchedulerNumThreads(), 0);
+}
+
 int main() {
   minimalApiIllegalLp();
   testCallback();
@@ -2666,6 +2680,7 @@ int main() {
   testDeleteRowResolveWithBasis();
   testIis();
   testFixedLp();
+  testThreadScheduler();
   return 0;
 }
 //  testSetSolution();

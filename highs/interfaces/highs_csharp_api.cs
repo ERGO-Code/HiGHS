@@ -612,6 +612,25 @@ public class HighsLpSolver : IDisposable
     [DllImport(highslibname)]
     private static extern int Highs_initializeExtras(byte[] directory, int search_if_empty);
 
+    [DllImport(highslibname)]
+    private static extern void Highs_resetThreadScheduler(int blocking);
+
+    [DllImport(highslibname)]
+    private static extern int Highs_getThreadSchedulerNumThreads();
+
+    // The scheduler belongs to the calling thread and is shared by all solvers
+    // on it. Reset it before changing the threads option.
+    public static void resetThreadScheduler(bool blocking = false)
+    {
+        Highs_resetThreadScheduler(blocking ? 1 : 0);
+    }
+
+    // Threads used by the calling thread's scheduler, or 0 if it has none
+    public static int getThreadSchedulerNumThreads()
+    {
+        return Highs_getThreadSchedulerNumThreads();
+    }
+
     // Loads highs_extras from directory, for apps where it is not next to the
     // highs library. Call before creating a solver: the first load attempt,
     // including the implicit one, fixes the result for the process.

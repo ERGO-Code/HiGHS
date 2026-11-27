@@ -1554,6 +1554,10 @@ void Highs_resetThreadScheduler(HighsInt blocking) {
   Highs::resetThreadScheduler(blocking != 0);
 }
 
+HighsInt Highs_getThreadSchedulerNumThreads(void) {
+  return Highs::getThreadSchedulerNumThreads();
+}
+
 const void* Highs_getCallbackDataOutItem(const HighsCallbackDataOut* data_out,
                                          const char* item_name) {
   // Accessor function for HighsCallbackDataOut

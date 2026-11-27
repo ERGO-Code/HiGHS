@@ -16,6 +16,7 @@
 
 #include <iostream>
 
+#include "Highs.h"
 #include "catch.hpp"
 #include "interfaces/highs_c_api.h"
 #include "matrix_multiplication.hpp"
@@ -462,4 +463,24 @@ TEST_CASE("ParallelSchedulerIsPerThread", "[parallel]") {
   // A really was reset
   REQUIRE(a.threads_after_reset == num_threads_A_second);
   REQUIRE(a.sum_after_reset == expected_sum);
+}
+
+TEST_CASE("issue-3637", "[parallel]") {
+  const std::string model_file =
+      std::string(HIGHS_DIR) + "/check/instances/flugpl.mps";
+  Highs::resetThreadScheduler(true);
+  REQUIRE(Highs::getThreadSchedulerNumThreads() == 0);
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  h.setOptionValue("threads", 2);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(Highs::getThreadSchedulerNumThreads() == 2);
+  h.setOptionValue("threads", 1);
+  REQUIRE(h.run() == HighsStatus::kError);
+  Highs::resetThreadScheduler(true);
+  REQUIRE(Highs::getThreadSchedulerNumThreads() == 0);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(Highs::getThreadSchedulerNumThreads() == 1);
+  Highs::resetThreadScheduler(true);
 }
