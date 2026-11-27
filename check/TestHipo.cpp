@@ -16,7 +16,7 @@
 #include "parallel/HighsParallel.h"
 #include "util/stringutil.h"
 
-const bool dev_run = false;
+const bool dev_run = true;
 
 void runHipoTest(
     Highs& highs, const std::string& model, const double expected_obj,
@@ -257,6 +257,19 @@ TEST_CASE("issue-3749", "[highs_hipo]") {
       REQUIRE(std::abs(max_sol.row_dual[i] + min_sol.row_dual[i]) < tol);
     }
   }
+}
+
+TEST_CASE("issue-3718", "[highs_hipo]") {
+  // HiPO was stagnating, kktCheck accepted the solution anyway, but the
+  // tolerance was slightly violated.
+
+  const HighsModelStatus expected_status = HighsModelStatus::kOptimal;
+  Highs highs;
+  highs.setOptionValue("solve_relaxation", true);
+  highs.setOptionValue("run_crossover", kHighsOffString);
+  runHipoTest(highs, "3015.mps", -1.4080e+06, expected_status);
+  REQUIRE(highs.getInfo().primal_dual_objective_error < 1e-7);
+  highs.resetThreadScheduler(true);
 }
 
 // A stop callback that returns nonzero stops the METIS and AMD orderings,
