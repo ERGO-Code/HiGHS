@@ -68,7 +68,7 @@ void Diagnostics::stagnation(const Iterate& it, Int iter, double feas_tol,
 void Diagnostics::divergence(const Iterate& it, Int iter,
                              IterationReport& report) const {
   const bool mu_is_large =
-      it.best_mu > 0.0 ? it.mu > it.best_mu * kDivergeTol : false;
+      it.min_mu > 0.0 ? it.mu > it.min_mu * kDivergeTol : false;
   const bool pobj_is_very_large =
       it.pobj < -std::max(std::abs(it.dobj) * kDivergeTol * kDivergeTol, 1.0);
   const bool dobj_is_very_large =

@@ -39,7 +39,7 @@ Iterate::Iterate(Model& model_input, Info& info_input, const SolverControls& c)
   clearIter();
   clearRes();
   clearIres();
-  best_mu = 0;
+  min_mu = 0;
 }
 
 bool Iterate::isNan() const {
@@ -82,10 +82,10 @@ void Iterate::computeMu() {
   }
   mu = compl_sum / number_finite_bounds;
 
-  if (best_mu > 0.0)
-    best_mu = std::min(best_mu, mu);
+  if (min_mu > 0.0)
+    min_mu = std::min(min_mu, mu);
   else
-    best_mu = mu;
+    min_mu = mu;
 }
 void Iterate::computeScaling() {
   scaling.assign(model.n(), 0.0);
@@ -716,6 +716,7 @@ void Iterate::saveBest(double feas_tol, double opt_tol, Int iter) {
     best_violation = violation;
     best_violation_magnitude = violation_magnitude;
     best_iter = iter;
+    best_mu = min_mu;
     model.saveBounds();
   }
 }
@@ -730,6 +731,7 @@ bool Iterate::resetBest(Int iter) {
   y = best_y;
   zl = best_zl;
   zu = best_zu;
+  min_mu = best_mu;
   model.resetBounds();
 
   computeMu();

@@ -3,11 +3,11 @@
 
 #include <vector>
 
+#include "Diagnostics.h"
 #include "Info.h"
 #include "IterationHistory.h"
 #include "LinearSolver.h"
 #include "Model.h"
-#include "Diagnostics.h"
 #include "ipm/hipo/auxiliary/IntConfig.h"
 
 namespace hipo {
@@ -44,7 +44,7 @@ struct Iterate {
   double compl_gap = 0.0;
 
   std::vector<double> scaling;
-  double best_mu;
+  double min_mu;
   const SolverControls& controls;
   // regularisation used in the last factorisation, see LinearSolver::getReg
   std::vector<double> Rp;
@@ -61,6 +61,7 @@ struct Iterate {
   double best_violation_magnitude = kHighsInf;
   Int best_iter = -1;
   std::vector<double> best_x, best_xl, best_xu, best_y, best_zl, best_zu;
+  double best_mu = 0.0;
 
   // ===================================================================================
   // Functions to construct, clear and check for nan or inf
