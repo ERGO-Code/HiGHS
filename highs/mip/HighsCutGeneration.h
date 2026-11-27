@@ -67,8 +67,11 @@ class HighsCutGeneration {
 
   bool separateLiftedMixedIntegerCover();
 
+  void tryStrongCg(double delta, bool& strongCG, double& bestefficacy);
+
   bool cmirCutGenerationHeuristic(double minEfficacy,
-                                  bool onlyInitialCMIRScale = false);
+                                  bool onlyInitialCMIRScale = false,
+                                  bool strongCg = false);
 
   double scale(double val);
 
@@ -87,7 +90,7 @@ class HighsCutGeneration {
   bool tryGenerateCut(std::vector<HighsInt>& inds, std::vector<double>& vals,
                       bool hasUnboundedInts, bool hasGeneralInts,
                       bool hasContinuous, double minEfficacy,
-                      bool onlyInitialCMIRScale = false,
+                      bool onlyInitialCMIRScale = false, bool strongCg = false,
                       bool allowRejectCut = true, bool lpSol = true);
 
  public:
