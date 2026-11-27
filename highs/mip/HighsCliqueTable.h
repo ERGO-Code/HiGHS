@@ -402,7 +402,8 @@ class HighsCliqueTable {
 
   void cleanupFixed(HighsDomain& globaldom);
 
-  // fixes the other column of each substitution with one fixed column
+  // fixes the other column of each substitution with one fixed column. the
+  // domain must be feasible and set up for propagation
   void fixSubstitutedCols(HighsDomain& globaldom);
 
   void addImplications(HighsDomain& domain, HighsInt col, HighsInt val);

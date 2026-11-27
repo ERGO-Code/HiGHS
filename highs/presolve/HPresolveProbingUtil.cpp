@@ -258,9 +258,11 @@ HPresolve::Result HPresolve::finaliseProbing(
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
 
   cliquetable.cleanupFixed(domain);
+  if (domain.infeasible()) return Result::kPrimalInfeasible;
 
   if (!firstCall) cliquetable.extractCliques(*mipsolver, false);
   cliquetable.runCliqueMerging(domain);
+  if (domain.infeasible()) return Result::kPrimalInfeasible;
 
   // apply changes from probing
 
@@ -291,10 +293,11 @@ HPresolve::Result HPresolve::finaliseProbing(
   }
   extensionvars.clear();
 
-  // apply substitutions before removing the fixed columns below, which also
-  // removes the columns of substitutions with a fixed column
-  HPRESOLVE_CHECKED_CALL(
-      applyConflictGraphSubstitutions(postsolve_stack, numVarsSubstituted));
+  // apply substitutions, and fix the other column of each clique-table
+  // substitution with one fixed column, before removing the fixed columns
+  // below, which also removes the columns of substitutions with a fixed column
+  HPRESOLVE_CHECKED_CALL(applyConflictGraphSubstitutions(
+      postsolve_stack, numVarsSubstituted, &domain));
 
   // now remove fixed columns and tighten domains
   for (HighsInt i = 0; i != model->num_col_; ++i) {
@@ -327,29 +330,41 @@ HPresolve::Result HPresolve::finaliseProbing(
 }
 
 HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
-    HighsPostsolveStack& postsolve_stack, HighsInt& numDelCol) {
-  // called by finaliseProbing before the fixed columns are removed. limits
-  // are not checked here, since rows have already been deleted by the clique
-  // table, relying on all substitutions and fixings being applied
-  HighsDomain& domain = mipsolver->mipdata_->getDomain();
+    HighsPostsolveStack& postsolve_stack, HighsInt& numDelCol,
+    HighsDomain* domain) {
+  // called
+  // - by finaliseProbing with its domain, before the fixed columns are
+  //   removed
+  // - by the main presolve loop without a domain, for substitutions inherited
+  //   by a sub-MIP or kept for a restart. the domain is neither set up for
+  //   propagation there nor up to date with the model. fixed columns have
+  //   been removed by the fast presolve loop, and skipping a substitution with
+  //   a deleted column only loses a reduction, since no rows have been deleted
+  //   relying on it
+  // limits are not checked here, since in finaliseProbing rows have already
+  // been deleted by the clique table, relying on all substitutions and fixings
+  // being applied
   HighsCliqueTable& cliquetable = mipsolver->mipdata_->cliquetable;
   HighsImplications& implications = mipsolver->mipdata_->implications;
 
-  // a fixing of one column of a clique-table substitution fixes the other
-  // one, so that it is not lost when the substitution is skipped (#3740)
-  cliquetable.fixSubstitutedCols(domain);
-  if (domain.infeasible()) return Result::kPrimalInfeasible;
+  if (domain != nullptr) {
+    // a fixing of one column of a clique-table substitution fixes the other
+    // one, so that it is not lost when the substitution is skipped (#3740)
+    cliquetable.fixSubstitutedCols(*domain);
+    if (domain->infeasible()) return Result::kPrimalInfeasible;
+  }
 
   for (const auto& substitution : implications.substitutions) {
-    // safeguard: currently no column is deleted, since the substitutions are
-    // recorded after the last shrinkProblem (in prepareProbing), and
-    // substitute deletes only substituted columns, which are not binary and
-    // hence occur in no other substitution
+    // skip substitutions with a deleted column. in finaliseProbing, no column
+    // is deleted, since the substitutions are recorded after the last
+    // shrinkProblem (in prepareProbing), and substitute deletes only
+    // substituted columns, which are not binary, are substituted at most once
+    // (colsubstituted), and hence occur in no other substitution
     if (colDeleted[substitution.substcol] || colDeleted[substitution.staycol])
       continue;
-    // keep the fixing of a fixed substituted column, which is removed after
-    // the substitutions
-    if (domain.isFixed(substitution.substcol)) continue;
+    // in finaliseProbing, keep the fixing of a fixed substituted column, which
+    // is removed by the fixed-column loop after the substitutions
+    if (domain != nullptr && domain->isFixed(substitution.substcol)) continue;
 
     ++numDelCol;
 
@@ -367,14 +382,19 @@ HPresolve::Result HPresolve::applyConflictGraphSubstitutions(
   implications.substitutions.clear();
 
   for (HighsCliqueTable::Substitution subst : cliquetable.getSubstitutions()) {
-    // safeguard: currently no column is deleted, since the substitutions are
-    // recorded after the last shrinkProblem (in prepareProbing), and a later
-    // substitution cannot refer to an earlier substituted column
+    // skip substitutions with a deleted column. in finaliseProbing, no column
+    // is deleted, since the substitutions are recorded after the last
+    // shrinkProblem (in prepareProbing), and a later substitution cannot refer
+    // to an earlier substituted column
     if (colDeleted[subst.substcol] || colDeleted[subst.replace.col]) continue;
-    // fixSubstitutedCols fixed both columns or none, so no fixing is lost
-    assert(domain.isFixed(subst.substcol) == domain.isFixed(subst.replace.col));
-    // fixed columns are removed after the substitutions
-    if (domain.isFixed(subst.substcol)) continue;
+    if (domain != nullptr) {
+      // fixSubstitutedCols (above) fixed both columns or none, so no fixing is
+      // lost
+      assert(domain->isFixed(subst.substcol) ==
+             domain->isFixed(subst.replace.col));
+      // fixed columns are removed after the substitutions
+      if (domain->isFixed(subst.substcol)) continue;
+    }
 
     double scale;
     double offset;

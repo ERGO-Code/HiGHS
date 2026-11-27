@@ -2069,6 +2069,80 @@ TEST_CASE("test-enumeration-substitution-fixing",
   HighsTaskExecutor::shutdown(true);
 }
 
+TEST_CASE("test-inherited-substitution-fixing", "[highs_test_presolve_rules]") {
+  // a sub-MIP inherits the substitutions of the clique table of its parent,
+  // and presolve applies them after the first fast presolve loop, before the
+  // domain is set up for propagation. presolve must not use the domain there
+  const HighsInt numCol = 3;
+  HighsLp lp;
+  lp.num_col_ = numCol;
+  lp.num_row_ = 1;
+  lp.sense_ = ObjSense::kMinimize;
+  lp.col_cost_ = {1.0, 1.0, 1.0};
+  lp.col_lower_.assign(numCol, 0.0);
+  lp.col_upper_.assign(numCol, 1.0);
+  lp.integrality_.assign(numCol, HighsVarType::kInteger);
+  lp.row_lower_ = {1.0};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.num_col_ = numCol;
+  lp.a_matrix_.num_row_ = lp.num_row_;
+  lp.a_matrix_.start_ = {0, 1, 2, 3};
+  lp.a_matrix_.index_ = {0, 0, 0};
+  lp.a_matrix_.value_ = {1.0, 1.0, 1.0};
+
+  highs::parallel::initialize_scheduler(1);
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.passModel(lp);
+
+  HighsCallback callback(&highs);
+  const HighsOptions& options = highs.getOptions();
+  HighsProfiling profiling;
+
+  // parent: the cliques x0 + x1 <= 1 and (1 - x0) + (1 - x1) <= 1 give the
+  // substitution x1 := 1 - x0
+  HighsSolution parentSolution;
+  HighsMipSolver parent(callback, options, lp, parentSolution);
+  parent.timer_.start();
+  profiling.initialize(parent.timer_, true, true);
+  parent.setProfiling(&profiling);
+  parent.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(parent));
+  parent.mipdata_->init();
+  parent.mipdata_->setupDomainPropagation();
+  HighsCliqueTable& parentCliques = parent.mipdata_->cliquetable;
+  std::vector<HighsCliqueTable::CliqueVar> clique = {{0, 1}, {1, 1}};
+  parentCliques.addClique(parent, clique.data(), 2);
+  clique = {{0, 0}, {1, 0}};
+  parentCliques.addClique(parent, clique.data(), 2);
+  REQUIRE(parentCliques.getSubstitutions().size() == 1);
+
+  // sub-MIP: x0 is fixed to 1, so x1 is 0
+  HighsLp submip = lp;
+  submip.col_lower_[0] = 1.0;
+  HighsSolution solution;
+  HighsMipSolver mipsolver(callback, options, submip, solution, true, 1);
+  mipsolver.timer_.start();
+  mipsolver.setProfiling(&profiling);
+  mipsolver.clqtableinit = &parentCliques;
+  mipsolver.mipdata_ =
+      std::unique_ptr<HighsMipSolverData>(new HighsMipSolverData(mipsolver));
+  mipsolver.mipdata_->init();
+
+  presolve::HighsPostsolveStack& postsolve_stack =
+      mipsolver.mipdata_->postSolveStack;
+
+  presolve::HPresolve presolve;
+  presolve.setInput(mipsolver, -1);
+  REQUIRE(presolve.okSetupPresolveDataStructures());
+  HighsModelStatus status = presolve.run(postsolve_stack);
+  REQUIRE(status != HighsModelStatus::kInfeasible);
+
+  HighsTaskExecutor::shutdown(true);
+}
+
 void solveAndCheck(const std::string& message, const HighsLp& lp, Highs& h,
                    const std::string& solver, bool use_presolve,
                    const HighsInt require_presolved_model_num_col,

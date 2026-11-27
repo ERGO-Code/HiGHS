@@ -392,7 +392,8 @@ class HPresolve {
   Result scaleMIP(HighsPostsolveStack& postsolve_stack);
 
   Result applyConflictGraphSubstitutions(HighsPostsolveStack& postsolve_stack,
-                                         HighsInt& numDelCol);
+                                         HighsInt& numDelCol,
+                                         HighsDomain* domain = nullptr);
 
   Result fastPresolveLoop(HighsPostsolveStack& postsolve_stack);
 
