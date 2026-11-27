@@ -522,7 +522,7 @@ struct HighsOptionsStruct {
   bool mip_heuristic_run_root_reduced_cost;
   bool mip_heuristic_run_zi_round;
   bool mip_heuristic_run_shifting;
-  bool mip_heuristic_run_central_rounding;
+  bool mip_find_analytic_centre;
   double mip_min_logging_interval;
   std::string mip_lp_solver;
   std::string mip_ipm_solver;
@@ -699,7 +699,7 @@ struct HighsOptionsStruct {
         mip_heuristic_run_root_reduced_cost(false),
         mip_heuristic_run_zi_round(false),
         mip_heuristic_run_shifting(false),
-        mip_heuristic_run_central_rounding(false),
+        mip_find_analytic_centre(false),
         mip_min_logging_interval(0.0),
         mip_lp_solver(""),
         mip_ipm_solver(""),
@@ -1309,10 +1309,10 @@ class HighsOptions : public HighsOptionsStruct {
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
-        "mip_heuristic_run_central_rounding",
-        "Compute the analytic centre at the root node, for fixing variables "
-        "and the central rounding heuristic",
-        advanced, &mip_heuristic_run_central_rounding, true);
+        "mip_find_analytic_centre",
+        "Compute the analytic centre at the root node. If false, centre-based "
+        "variable fixing and the central rounding heuristic are not used",
+        advanced, &mip_find_analytic_centre, true);
     records.push_back(record_bool);
 
     record_bool = new OptionRecordBool(
