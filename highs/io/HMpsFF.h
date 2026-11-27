@@ -48,7 +48,7 @@ enum class FreeFormatParserReturnCode {
 namespace free_format_parser {
 
 // private:
-using wall_clock = std::chrono::high_resolution_clock;
+using wall_clock = std::chrono::steady_clock;
 using time_point = wall_clock::time_point;
 
 double getWallTime();

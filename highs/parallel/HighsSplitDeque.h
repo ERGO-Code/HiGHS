@@ -531,7 +531,7 @@ class HighsSplitDeque {
         // from the stealer when it is finished and yield control to the
         // operating system until then.
         int numTries = HighsSchedulerConstants::kNumTryFac;
-        auto tStart = std::chrono::high_resolution_clock::now();
+        auto tStart = std::chrono::steady_clock::now();
 
         bool isFinished = popResult.second->isFinished();
 
@@ -545,7 +545,7 @@ class HighsSplitDeque {
           if (!isFinished) {
             auto numMicroSecs =
                 std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::high_resolution_clock::now() - tStart)
+                    std::chrono::steady_clock::now() - tStart)
                     .count();
 
             if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeSleep)

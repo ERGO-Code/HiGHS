@@ -206,6 +206,10 @@ struct HighsProfiling {
   HighsInt numCall(const HighsInt profiling_clock,
                    const HighsInt record_type = kChooseRecord);
   void solveCall(const std::string& model, const bool submip);
+  // Whether profiling_clock is one of the clocks being profiled
+  bool validClock(const HighsInt profiling_clock) const {
+    return profiling_clock >= 0 && profiling_clock < num_profiling_clock_;
+  }
   //  HighsInt getSepaClockIndex(const std::string& name);
 };
 
