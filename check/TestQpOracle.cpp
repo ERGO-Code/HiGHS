@@ -463,6 +463,9 @@ TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
   std::vector<double> solution;
   for (auto& solver : solvers) {
     h.setOptionValue("solver", solver);
+    // with the default tolerance, the ipm solution is accurate only to ~1e-5
+    if (solver == kHipoString)
+      h.setOptionValue("ipm_optimality_tolerance", 1e-10);
     h.run();
     if (solver == kQpAsmString) {
       REQUIRE(h.writeModel(write_model_filename) == HighsStatus::kError);
@@ -470,8 +473,8 @@ TEST_CASE("hessian-oracle-primal1", "[qp-oracle]") {
       solution = h.getSolution().col_value;
     } else {
       REQUIRE(valuesRelEqual(h.getObjectiveValue(), optimal_obective_value));
-      //REQUIRE(vectorsRelEqual(lp.num_col_, h.getSolution().col_value.data(),
-      //                        solution.data()));
+      REQUIRE(vectorsRelEqual(lp.num_col_, h.getSolution().col_value.data(),
+                              solution.data()));
     }
   }
   std::remove(write_model_filename.c_str());
