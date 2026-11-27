@@ -244,7 +244,6 @@ else()
           pdlp/cupdlp/cuda/cupdlp_cuda_kernels.cuh
           pdlp/cupdlp/cuda/cupdlp_cudalinalg.cuh
           pdlp/cupdlp/cuda/cupdlp_cudalinalg.cu
-          pdlp/cupdlp/cupdlp_cs.c
           pdlp/hipdlp/pdhg.cu)
 
         set_target_properties(highs PROPERTIES

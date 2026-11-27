@@ -66,6 +66,7 @@ test_array = [
   ['test_TestSetup', 'TestSetup.cpp'],
   ['test_TestSolverSelect', 'TestSolverSelect.cpp'],
   ['test_TestSort', 'TestSort.cpp'],
+  ['test_TestSparseGraphUtils', 'TestSparseGraphUtils.cpp'],
   ['test_TestSpecialLps', 'TestSpecialLps.cpp'],
   ['test_TestThrow', 'TestThrow.cpp'],
   ['test_TestTspSolver', 'TestTspSolver.cpp'],

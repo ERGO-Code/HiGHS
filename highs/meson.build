@@ -117,7 +117,6 @@ _incdirs += include_directories('.')
 # --------------------- Libraries
 
 _cupdlp_srcs = [
-    'pdlp/cupdlp/cupdlp_cs.c',
     'pdlp/cupdlp/cupdlp_linalg.c',
     'pdlp/cupdlp/cupdlp_proj.c',
     'pdlp/cupdlp/cupdlp_restart.c',

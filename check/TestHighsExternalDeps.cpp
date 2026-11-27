@@ -96,11 +96,13 @@ TEST_CASE("HighsExternalDeps-getThirdPartyNoticeHipo",
     REQUIRE(notice.find("blas") != std::string::npos);
     REQUIRE(notice.find("metis") != std::string::npos);
     REQUIRE(notice.find("rcm") != std::string::npos);
+    REQUIRE(notice.find("qdldl") != std::string::npos);
   } else {
     REQUIRE(notice.find("amd") == std::string::npos);
     REQUIRE(notice.find("blas") == std::string::npos);
     REQUIRE(notice.find("metis") == std::string::npos);
     REQUIRE(notice.find("rcm") == std::string::npos);
+    REQUIRE(notice.find("qdldl") == std::string::npos);
   }
 }
 
@@ -116,7 +118,8 @@ TEST_CASE("HighsExternalDeps-getMissingFeatures", "[highs_external_deps]") {
     REQUIRE((missing.find("amd") != std::string::npos ||
              missing.find("blas") != std::string::npos ||
              missing.find("metis") != std::string::npos ||
-             missing.find("rcm") != std::string::npos));
+             missing.find("rcm") != std::string::npos ||
+             missing.find("qdldl") != std::string::npos));
   }
 }
 
