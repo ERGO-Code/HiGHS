@@ -18,14 +18,13 @@
 
 const bool dev_run = true;
 
-void runHipoTest(
-    Highs& highs, const std::string& model, const double expected_obj,
-    const HighsModelStatus& expected_model_status = HighsModelStatus::kOptimal,
-    const std::string& presolve = kHighsOnString) {
+void runHipoTest(Highs& highs, const std::string& model,
+                 const double expected_obj,
+                 const HighsModelStatus& expected_model_status =
+                     HighsModelStatus::kOptimal) {
   highs.setOptionValue("output_flag", dev_run);
   highs.setOptionValue("solver", kHipoString);
   highs.setOptionValue("timeless_log", kHighsOnString);
-  highs.setOptionValue("presolve", presolve);
 
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/" + model;
   highs.readModel(filename);
@@ -120,17 +119,20 @@ TEST_CASE("test-hipo-qp", "[highs_hipo]") {
 TEST_CASE("test-hipo-infeas", "[highs_hipo]") {
   const HighsModelStatus expected_status = HighsModelStatus::kInfeasible;
   Highs highs;
-  runHipoTest(highs, "bgetam.mps", 0, expected_status, "off");
-  runHipoTest(highs, "forest6.mps", 0, expected_status, "off");
-  runHipoTest(highs, "klein1.mps", 0, expected_status, "off");
+  highs.setOptionValue("presolve", kHighsOffString);
+  runHipoTest(highs, "bgetam.mps", 0, expected_status);
+  runHipoTest(highs, "forest6.mps", 0, expected_status);
+  runHipoTest(highs, "klein1.mps", 0, expected_status);
   highs.resetThreadScheduler(true);
 }
 
 TEST_CASE("test-hipo-freevar", "[highs_hipo]") {
   const HighsModelStatus expected_status = HighsModelStatus::kOptimal;
   Highs highs;
-  runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "on");
-  runHipoTest(highs, "perold.mps", -9.381e3, expected_status, "off");
+  highs.setOptionValue("presolve", kHighsOnString);
+  runHipoTest(highs, "perold.mps", -9.381e3, expected_status);
+  highs.setOptionValue("presolve", kHighsOffString);
+  runHipoTest(highs, "perold.mps", -9.381e3, expected_status);
   highs.resetThreadScheduler(true);
 }
 
@@ -269,6 +271,18 @@ TEST_CASE("issue-3718", "[highs_hipo]") {
   highs.setOptionValue("run_crossover", kHighsOffString);
   runHipoTest(highs, "3015.mps", -1.4080e+06, expected_status);
   REQUIRE(highs.getInfo().primal_dual_objective_error < 1e-7);
+  highs.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3736", "[highs_hipo]") {
+  // HiPO was stopping with a nan when using the uplooking factorisation.
+
+  const HighsModelStatus expected_status = HighsModelStatus::kOptimal;
+  Highs highs;
+  highs.setOptionValue("presolve", kHighsOffString);
+  highs.setOptionValue("run_crossover", kHighsOffString);
+  highs.setOptionValue(kHipoFactorString, kHipoFactorUplooking);
+  runHipoTest(highs, "3736.mps", 8, expected_status);
   highs.resetThreadScheduler(true);
 }
 
