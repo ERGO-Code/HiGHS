@@ -2626,7 +2626,7 @@ HighsInt Highs_getIis(void* highs, HighsInt* iis_num_col, HighsInt* iis_num_row,
 void Highs_resetThreadScheduler(const HighsInt blocking);
 
 /**
- * Get the number of threads used by the scheduler owned by the calling thread.
+ * Get the number of threads used by the scheduler of the calling thread.
  *
  * If the `threads` option is nonzero and differs from this value,
  * `Highs_resetThreadScheduler` must be called before the next `Highs_run` or

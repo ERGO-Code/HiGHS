@@ -205,7 +205,7 @@ The call only affects the calling thread's scheduler, and is a no-op if there is
 
 #### [Changing the number of threads](@id scheduler-change-threads)
 
-`Highs::getThreadSchedulerNumThreads()` returns `N` for the calling thread's scheduler, or 0 if there is none. To solve with a different number of threads on the same thread, compare it with the new value and reset if they differ:
+`Highs::getThreadSchedulerNumThreads()` returns `N` for the calling thread's scheduler, or 0 if there is none. To solve with a different number of worker threads on the same application thread, compare it with the new value and reset if they differ:
 
 ```cpp
   const HighsInt threads = 2;

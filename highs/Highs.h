@@ -1365,8 +1365,8 @@ class Highs {
   static void resetThreadScheduler(bool blocking = false);
 
   /**
-   * @brief Returns the number of threads used by the scheduler owned by the
-   * calling thread, or 0 if the calling thread has no scheduler. If the
+   * @brief Returns the number of threads used by the scheduler of the calling
+   * thread, or 0 if the calling thread has no scheduler. If the
    * threads option is nonzero and differs from this value,
    * resetThreadScheduler() must be called before the next run() or presolve().
    * A threads option of 0 accepts a scheduler of any size.
