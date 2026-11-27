@@ -2329,7 +2329,8 @@ restart:
       if (nextprogress < smoothprogress * 1.01 &&
           (getLp().getObjective() - firstlpsolobj <=
                (rootlpsolobj - firstlpsolobj) * 1.001 ||
-           getLp().getObjective() - rootlpsolobj < 0.0001 * feastol))
+           getLp().getObjective() - rootlpsolobj <
+               0.0001 * feastol * std::max(1.0, std::abs(rootlpsolobj))))
         ++stall;
       else {
         stall = 0;
