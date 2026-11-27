@@ -16,7 +16,7 @@
 #include "parallel/HighsParallel.h"
 #include "util/stringutil.h"
 
-const bool dev_run = true;
+const bool dev_run = false;
 
 void runHipoTest(Highs& highs, const std::string& model,
                  const double expected_obj,
