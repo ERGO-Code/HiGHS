@@ -2041,30 +2041,14 @@ TEST_CASE("test-enumeration-substitution-fixing",
   presolve::HPresolve presolve;
   presolve.setInput(mipsolver, -1);
   REQUIRE(presolve.okSetupPresolveDataStructures());
-  HighsModelStatus status = presolve.run(postsolve_stack);
-  REQUIRE(status != HighsModelStatus::kInfeasible);
-
-  // enumeration presolve only makes primal reductions, so the presolved model
-  // must have exactly one feasible point as well, and it must agree with the
-  // unique feasible point of the model
-  const HighsLp& presolved = *mipsolver.model_;
-  REQUIRE(presolved.num_col_ <= numCol);
-  HighsInt numFeasible = 0;
-  std::vector<double> x(presolved.num_col_);
-  MipViolation violation;
-  HighsCDouble objective;
-  for (HighsInt point = 0; point < (HighsInt{1} << presolved.num_col_);
-       point++) {
-    for (HighsInt j = 0; j < presolved.num_col_; j++)
-      x[j] = static_cast<double>((point >> j) & 1);
-    if (!mipsolver.solutionFeasible(&presolved, x, nullptr, violation,
-                                    objective))
-      continue;
-    numFeasible++;
-    for (HighsInt j = 0; j < presolved.num_col_; j++)
-      REQUIRE(x[j] == modelSolution[postsolve_stack.getOrigColIndex(j)]);
-  }
-  REQUIRE(numFeasible == 1);
+  // enumeration presolve determines the unique feasible point, so the model
+  // is reduced to empty, and postsolve must recover the unique feasible point
+  REQUIRE(presolve.run(postsolve_stack) == HighsModelStatus::kOptimal);
+  REQUIRE(presolve.getPresolveStatus() == HighsPresolveStatus::kReducedToEmpty);
+  HighsSolution sol;
+  sol.value_valid = true;
+  postsolve_stack.undoPrimal(options, sol);
+  REQUIRE(sol.col_value == modelSolution);
 
   HighsTaskExecutor::shutdown(true);
 }
