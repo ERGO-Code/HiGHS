@@ -1564,6 +1564,8 @@ TEST_CASE("issue-3118", "[highs_test_mip_solver]") {
   std::vector<double> solution_values(lp.num_col_, 1 / M);
   highs.setSolution(2, nullptr, solution_values.data());
 
+  // The reduced MIP has bounds [1, 0] on column 1, so the start
+  // solution is trivially infeasible in the presolved space
   highs.run();
   REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
   REQUIRE(std::abs(2 / M - highs.getInfo().objective_function_value) < 1e-9);
@@ -1627,6 +1629,8 @@ TEST_CASE("issue-3118a", "[highs_test_mip_solver]") {
     std::vector<double> solution_values = {0, 1 / M};
     highs.setSolution(2, nullptr, solution_values.data());
 
+    // The reduced MIP has bounds [1, 0] on column 1, so the start
+    // solution is trivially infeasible in the presolved space
     highs.run();
     if (dev_run) highs.writeSolution("", 1);
     REQUIRE(highs.getModelStatus() == HighsModelStatus::kOptimal);
@@ -2858,6 +2862,97 @@ TEST_CASE("issue-3618", "[highs_test_mip_solver]") {
   REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
   REQUIRE(h.run() == HighsStatus::kOk);
   REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+
+  std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3726-mip", "[highs_test_mip_solver]") {
+  const std::string test_name = Catch::getResultCapture().getCurrentTestName();
+  std::string model_file = test_name + ".lp";
+  FILE* file = fopen(model_file.c_str(), "w");
+  fprintf(file, "%s",
+          "Maximize\nobj: 5 x + 4 y + 3 z\nSubject To\nc1: 2 x + 3 y + z <= "
+          "5\nc2: 4 x + y + 2 z <= 11\nc3: 3 x + 4 y + 2 z <= 8\nBounds\nx <= "
+          "2\ny <= 2\nz <= 2\n"
+          "General\nx y z\nEnd\n");
+  fclose(file);
+
+  Highs h;
+  std::string text;
+  const bool logging = dev_run;
+  auto testObjectiveBound = [&](const double objective_bound,
+                                const HighsModelStatus require_model_status) {
+    h.clearSolver();
+    std::string line =
+        highsFormatToString("%s %11.4g", text.c_str(), objective_bound);
+    if (logging) highsPrintStringAsHeading(line);
+    h.setOptionValue("objective_bound", objective_bound);
+    REQUIRE(h.run() == HighsStatus::kOk);
+    REQUIRE(h.getModelStatus() == require_model_status);
+  };
+
+  h.setOptionValue("output_flag", logging);
+  const double default_objective_bound = h.getOptions().objective_bound;
+  REQUIRE(h.readModel(model_file) == HighsStatus::kOk);
+  // objective_bound is designed for LPs, but (see #3726) solving a
+  // MIP with optimal objective 13 when objective_bound = -20 results
+  // in it being declared infeasible immediately since
+  // HighsMipSolver.cpp:206 mipdata_->getDomain().infeasible() is
+  // true!
+  //
+  // Current fix (in #3787) is just to reset objective_bound to
+  // kHighsInf if it's been changed when solving a MIP
+  //
+  // MIP as a minimization has objective f = -5 x - 4 y - 3 z
+  //
+  // Its optimal objective value is -13
+  //
+  // However, when objective_bound = -20, solving the MIP (either
+  // minimizing f or maximizing -f) results in it being declared
+  // infeasible immediately since HighsMipSolver.cpp:206
+  // mipdata_->getDomain().infeasible() is true!
+  //
+  // This is presumably because
+  // mipsolver.options_mip_->objective_bound is being used to set
+  // upper_limit and optimality_limit (in HighsMipSolverData::init())
+  // - hence it's being interpreted in the context of _primal_ bounds!
+  //
+  // The following code studies the problem as a minimization of f -
+  // because it's easier to think about! - and then the original
+  // mazimization of -f (see #3726)
+  //
+  // Note: objective_bound is designed for LPs where, in the dual
+  // simplex solver, it's used to terminate if the dual objective
+  // satisfies the bound [When the LP is a minimization, dual simplex
+  // maximizes the dual objective, so termination occurs when this
+  // exceeds the value of objective_bound - which is why the default
+  // value of objective_bound is kHighsInf.] The MIP solver uses this
+  // to avoid solving LPs to optimality if they won't yield a better
+  // primal solution than the incumbent.
+  for (HighsInt k = 0; k < 2; k++) {
+    h.clearSolver();
+    text = k == 0 ? "Solving min MIP with default objective bound of "
+                  : "Solving max MIP with default objective bound of ";
+    testObjectiveBound(default_objective_bound, HighsModelStatus::kOptimal);
+    const double optimal_objective_value = h.getObjectiveValue();
+    const double objective_bound = -20;
+    HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+    text = k == 0 ? "Solving min MIP with objective bound of "
+                  : "Solving max MIP with objective bound of ";
+    testObjectiveBound(objective_bound, require_model_status);
+
+    if (k == 1) break;
+
+    // Now negate the objecive and change the sense to maximization
+    const HighsLp& lp = h.getLp();
+    std::vector<double> cost = lp.col_cost_;
+    for (HighsInt iCol = 0; iCol < lp.num_col_; iCol++) cost[iCol] *= -1;
+    REQUIRE(h.changeColsCost(0, lp.num_col_ - 1, cost.data()) ==
+            HighsStatus::kOk);
+    REQUIRE(h.changeObjectiveSense(ObjSense::kMaximize) == HighsStatus::kOk);
+  }
 
   std::remove(model_file.c_str());
 

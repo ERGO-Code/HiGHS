@@ -187,6 +187,14 @@ bool HighsLp::okNames() const {
   return true;
 }
 
+void HighsLp::flipObjectiveAndSense() {
+  this->offset_ *= -1;
+  for (HighsInt iCol = 0; iCol < this->num_col_; iCol++)
+    this->col_cost_[iCol] *= -1;
+  this->sense_ = this->sense_ == ObjSense::kMinimize ? ObjSense::kMaximize
+                                                     : ObjSense::kMinimize;
+}
+
 void HighsLp::clear() {
   this->num_col_ = 0;
   this->num_row_ = 0;

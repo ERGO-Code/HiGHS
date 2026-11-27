@@ -423,6 +423,11 @@ HighsStatus HighsHessian::assess(const HighsOptions& options,
   return assessHessian(*this, options, col_names);
 }
 
+void HighsHessian::negate() {
+  if (this->isOracle()) this->oracle_.multiplier_ *= -1;
+  for (HighsInt iEl = 0; iEl < this->numNz(); iEl++) this->value_[iEl] *= -1;
+}
+
 HighsStatus HighsHessian::checkOracle(const HighsLogOptions& log_options,
                                       const bool exit_on_first_error) const {
   if (!this->isOracle()) {
@@ -810,11 +815,11 @@ void HessianOracle::product(const HighsInt x_num_entries,
     assert(x_num_entries > 0);
     this->call_(kHessianOracleCallTypeProduct, &x_num_entries, x_index, x_value,
                 nullptr, nullptr, hessian_x_value, this->data_);
+    this->scaleAndShift(&x_num_entries, x_index, x_value, hessian_x_value);
   } else {
     // Passed x_index as null pointer, so assume full x
     this->product(x_value, hessian_x_value);
   }
-  this->scaleAndShift(&x_num_entries, x_index, x_value, hessian_x_value);
 }
 
 void HessianOracle::scaleAndShift(const HighsInt* x_num_entries,

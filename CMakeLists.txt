@@ -91,9 +91,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   # GCC and Clang contract multiplications and additions into fused
   # multiply-adds when the target supports them (e.g. gcc 15 enables FMA by
   # default on some x86-64 platforms). GCC ignores
-  # "#pragma STDC FP_CONTRACT OFF", so the flag is required.
+  # "#pragma STDC FP_CONTRACT OFF", so the flag is required. clang-cl ignores
+  # a bare -ffp-contract=off and contracts even under /fp:precise.
+  if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    set(HIGHS_FP_CONTRACT_OFF "/clang:-ffp-contract=off")
+  else()
+    set(HIGHS_FP_CONTRACT_OFF "-ffp-contract=off")
+  endif()
   list(APPEND HIGHS_FLOATING_POINT_OPTIONS
-       "$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
+       "$<$<COMPILE_LANGUAGE:C,CXX>:${HIGHS_FP_CONTRACT_OFF}>")
 
   # on 32-bit x86, GCC and Clang use the x87 unit with 80-bit intermediate
   # results by default. SSE2 gives double arithmetic as on x86-64 (and as
@@ -245,9 +251,6 @@ if (NO_AVX512)
   message(STATUS "Build OpenBLAS without AVX512: ON")
 endif()
 
-if (HIPO AND CSHARP)
-  message(ERROR "HIPO is only available in C++. Not yet supported in C#.")
-endif()
 if (HIPO AND FORTRAN)
   message(ERROR "HIPO is only available in C++. Not yet supported in FORTRAN")
 endif()
@@ -340,6 +343,15 @@ endif()
 # loader can give one package the other's copy. GPU wheels still need libhighs.
 if (HIPO_PYTHON AND NOT DEFINED BUILD_SHARED_LIBS AND NOT (CUPDLP_GPU OR HIPDLP_GPU))
   set(BUILD_SHARED_LIBS OFF)
+endif()
+
+# With HiGHS linked statically, export only the module's entry point. Otherwise
+# another libhighs in the process (OR-Tools ships one) can take over highspy's
+# weak or interposable HiGHS symbols, e.g. HighsTaskExecutor::run_worker (#3797)
+if (HIPO_PYTHON AND DEFINED BUILD_SHARED_LIBS AND NOT BUILD_SHARED_LIBS)
+  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+  set(CMAKE_C_VISIBILITY_PRESET hidden)
+  set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 endif()
 
 if(BUILD_STATIC_EXE)
@@ -657,6 +669,10 @@ if(MSVC)
   # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/wd4018 /wd4061 /wd4100 /wd4101 /wd4127 /wd4189 /wd4244 /wd4245 /wd4267 /wd4324 /wd4365 /wd4389 /wd4456 /wd4457 /wd4458 /wd4459 /wd4514 /wd4701 /wd4820>")
   # add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:-D_CRT_SECURE_NO_WARNINGS>")
+  # MSVC 17.10+ makes std::mutex constexpr, which crashes with an access
+  # violation if an older msvcp140.dll is loaded in the process, as is common
+  # for Python extensions (#2607).
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR>")
   add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
 
   # Try to split large pdb files into objects.

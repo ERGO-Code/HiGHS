@@ -87,22 +87,15 @@ Int Numeric::backwardSolve(double* x) const {
   return kRetOk;
 }
 
-#define SOLVE_MULTIPLE(f)                                        \
-  if (k == 1)                                                    \
-    return f(x);                                                 \
-  else {                                                         \
-    highs::parallel::TaskGroup tg;                               \
-    const Int n = S_->size();                                    \
-    std::atomic<bool> fail{false};                               \
-    for (Int i = 0; i < k; ++i) {                                \
-      tg.spawn([=, &fail]() {                                    \
-        Int status = f(&x[i * n]);                               \
-        if (status) fail.store(true, std::memory_order_relaxed); \
-      });                                                        \
-    }                                                            \
-    tg.taskWait();                                               \
-    return fail;                                                 \
-  }
+// Serial: the solve handler workspace is shared, so rhs cannot run in parallel
+#define SOLVE_MULTIPLE(f)       \
+  if (k == 1) return f(x);      \
+  const Int n = S_->size();     \
+  for (Int i = 0; i < k; ++i) { \
+    Int status = f(&x[i * n]);  \
+    if (status) return status;  \
+  }                             \
+  return kRetOk;
 
 Int Numeric::solve(double* x, Int k) const { SOLVE_MULTIPLE(solve); }
 Int Numeric::forwardSolve(double* x, Int k) const {

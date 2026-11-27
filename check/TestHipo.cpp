@@ -375,6 +375,13 @@ TEST_CASE("test-hipo-linear-solver", "[highs_hipo]") {
 
   FactorHighs_setRegularisation(FH, 0.0, 0.0);
 
+  const int parallel_tree = 1, parallel_node = 1;
+  FactorHighs_setParallel(FH, parallel_tree, parallel_node);
+
+  const int parallel_forward = 1, parallel_backward = 1, parallel_diag = 1;
+  FactorHighs_setParallelSolve(FH, parallel_forward, parallel_backward,
+                               parallel_diag);
+
   // compute ordering with metis
   HighsInt perm[n];
   HighsInt metis_status = FactorHighs_reorderMetis(FH, n, nz, rows, ptr, perm);

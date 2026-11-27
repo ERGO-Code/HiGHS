@@ -378,7 +378,11 @@ class HighsTimer {
   virtual ~HighsTimer() = default;
 
   // private:
-  using wall_clock = std::chrono::high_resolution_clock;
+  //
+  // A monotonic clock is needed: the clocks are marked as running by
+  // negative start times, and elapsed times must not become negative
+  // when the system clock is set back (see #3801)
+  using wall_clock = std::chrono::steady_clock;
   using time_point = wall_clock::time_point;
 
   // Dummy positive start time for clocks - so they can be checked as

@@ -368,7 +368,7 @@ void BasicLu::logFactorization(const Int status, bool& has_logged, double& last_
 
 double basiclu_wallclock() {
   using namespace std::chrono;
-  return duration_cast<duration<double> >(high_resolution_clock::now().time_since_epoch()).count();
+  return duration_cast<duration<double> >(steady_clock::now().time_since_epoch()).count();
 }
   
 

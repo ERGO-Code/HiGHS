@@ -107,7 +107,7 @@ void freeVector(std::vector<T>& v) {
 }
 
 class Clock {
-  std::chrono::high_resolution_clock::time_point t0;
+  std::chrono::steady_clock::time_point t0;
 
  public:
   Clock();

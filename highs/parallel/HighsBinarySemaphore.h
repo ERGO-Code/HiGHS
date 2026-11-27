@@ -51,7 +51,7 @@ class HighsBinarySemaphore {
   void acquire() {
     if (try_acquire()) return;
 
-    auto tStart = std::chrono::high_resolution_clock::now();
+    auto tStart = std::chrono::steady_clock::now();
     int spinIters = HighsSchedulerConstants::kNumSpinTries;
     while (true) {
       for (int i = 0; i < spinIters; ++i) {
@@ -61,10 +61,9 @@ class HighsBinarySemaphore {
         HighsSpinMutex::yieldProcessor();
       }
 
-      auto numMicroSecs =
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              std::chrono::high_resolution_clock::now() - tStart)
-              .count();
+      auto numMicroSecs = std::chrono::duration_cast<std::chrono::microseconds>(
+                              std::chrono::steady_clock::now() - tStart)
+                              .count();
 
       if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeSleep)
         spinIters *= 2;

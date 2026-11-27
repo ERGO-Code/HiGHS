@@ -19,24 +19,27 @@
 #include "qpsolver/QpAsmWrapper.h"
 #include "simplex/HApp.h"
 #include "util/HighsSolverSelect.h"
+#include "util/HighsUndoStack.h"
 
-#define SOLVE_CATCH_CALL(Solve, SolveString)                                  \
-  do {                                                                        \
-    try {                                                                     \
-      call_status = Solve;                                                    \
-    } catch (const std::exception& exception) {                               \
-      solver_object.model_status_ =                                           \
-          handleExceptionIsOom(options.log_options, SolveString, exception)   \
-              ? HighsModelStatus::kMemoryLimit                                \
-              : HighsModelStatus::kSolveError;                                \
-      call_status = HighsStatus::kError;                                      \
-    } catch (const HighsTask::Interrupt&) {                                   \
-      highsLogDev(options.log_options, HighsLogType::kError,                  \
-                  "HighsTask interrupt when solving with %s\n", SolveString); \
-      solver_object.model_status_ = HighsModelStatus::kSolveError;            \
-      call_status = HighsStatus::kError;                                      \
-    }                                                                         \
-  } while (0)
+// Calls solve(), returning its status. Any exception is logged and
+// converted to kError, with model_status set accordingly
+template <typename Solve>
+HighsStatus solveCatchCall(const HighsLogOptions& log_options,
+                           const char* solve_string,
+                           HighsModelStatus& model_status, Solve&& solve) {
+  try {
+    return solve();
+  } catch (const std::exception& exception) {
+    model_status = handleExceptionIsOom(log_options, solve_string, exception)
+                       ? HighsModelStatus::kMemoryLimit
+                       : HighsModelStatus::kSolveError;
+  } catch (const HighsTask::Interrupt&) {
+    highsLogDev(log_options, HighsLogType::kError,
+                "HighsTask interrupt when solving with %s\n", solve_string);
+    model_status = HighsModelStatus::kSolveError;
+  }
+  return HighsStatus::kError;
+}
 
 // Automatic solver selection. When called from Highs::run,
 // solver_object.lp_ is the presolved LP (if presolve has reduced it).
@@ -189,7 +192,9 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
   // lambda for solving LP by simplex
   auto simplexSolve = [&]() -> HighsStatus {
     return_status = HighsStatus::kOk;
-    SOLVE_CATCH_CALL(solveLpSimplex(solver_object), "Simplex");
+    call_status = solveCatchCall(options.log_options, "Simplex",
+                                 solver_object.model_status_,
+                                 [&] { return solveLpSimplex(solver_object); });
     return_status = interpretCallStatus(options.log_options, call_status,
                                         return_status, "solveLpSimplex");
     if (return_status == HighsStatus::kError) return return_status;
@@ -213,12 +218,16 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
       // Use IPM to solve the LP
       if (use_hipo) {
         // Use HiPO to solve the LP
-        SOLVE_CATCH_CALL(solveLpHipo(solver_object), "HiPO(LP)");
+        call_status = solveCatchCall(
+            options.log_options, "HiPO(LP)", solver_object.model_status_,
+            [&] { return solveLpHipo(solver_object); });
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpHipo");
       } else if (use_ipx) {
         // Use IPX to solve the LP
-        SOLVE_CATCH_CALL(solveLpIpx(solver_object), "IPX");
+        call_status = solveCatchCall(options.log_options, "IPX",
+                                     solver_object.model_status_,
+                                     [&] { return solveLpIpx(solver_object); });
         return_status = interpretCallStatus(options.log_options, call_status,
                                             return_status, "solveLpIpx");
       }
@@ -226,9 +235,13 @@ HighsStatus solveLp(HighsLpSolverObject& solver_object,
       // Use cuPDLP-C or HiPDLP to solve the LP
       profiling->start(kSubSolverPdlp);
       if (options.solver == kPdlpString) {
-        SOLVE_CATCH_CALL(solveLpCupdlp(solver_object), "cuPDLP-C");
+        call_status = solveCatchCall(
+            options.log_options, "cuPDLP-C", solver_object.model_status_,
+            [&] { return solveLpCupdlp(solver_object); });
       } else {
-        SOLVE_CATCH_CALL(solveLpHiPdlp(solver_object), "HiPDLP");
+        call_status = solveCatchCall(
+            options.log_options, "HiPDLP", solver_object.model_status_,
+            [&] { return solveLpHiPdlp(solver_object); });
       }
       profiling->stop(kSubSolverPdlp);
       return_status = interpretCallStatus(options.log_options, call_status,
@@ -1008,7 +1021,9 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
     assert(!hessian.isOracle());
     // Run HiPO
     if (profiling) profiling->start(kSubSolverHipo);
-    SOLVE_CATCH_CALL(solveQpHipo(solver_object), "HiPO(QP)");
+    call_status = solveCatchCall(options.log_options, "HiPO(QP)",
+                                 solver_object.model_status_,
+                                 [&] { return solveQpHipo(solver_object); });
     if (profiling) profiling->stop(kSubSolverHipo);
     // Restore any oracle call;
     hessian.oracle_.call_ = oracle_call;
@@ -1016,7 +1031,9 @@ HighsStatus solveQp(HighsQpSolverObject& solver_object,
   } else {
     // Run the active set QP solver
     if (profiling) profiling->start(kSubSolverQpAsm);
-    SOLVE_CATCH_CALL(solveQpAsm(solver_object), "active set QP solver");
+    call_status = solveCatchCall(options.log_options, "active set QP solver",
+                                 solver_object.model_status_,
+                                 [&] { return solveQpAsm(solver_object); });
     if (profiling) profiling->stop(kSubSolverQpAsm);
   }
   HighsStatus return_status = call_status;
@@ -1091,8 +1108,8 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   HighsModelStatus& model_status = solver_object.model_status_;
 
   // Run the MIP solver
-  HighsInt log_dev_level = options.log_dev_level;
-  //  options.log_dev_level = kHighsLogDevLevelInfo;
+  HighsUndoStack options_undo;
+  //  options_undo.set(options.log_dev_level, kHighsLogDevLevelInfo);
   // Check that the model isn't row-wise
   assert(lp.a_matrix_.format_ != MatrixFormat::kRowwise);
   const bool has_semi_variables = lp.hasSemiVariables();
@@ -1104,33 +1121,30 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
                                   options.primal_feasibility_tolerance);
   }
   HighsLp& mip = has_semi_variables ? use_lp : lp;
-  // For issue-3726 unit test, the following lines ensure that solving
-  // the MIP yields HighsModelStatus::kOptimal with objecive of 13,
-  // but without them it yields HighsModelStatus::kInfeasible
-  /*
+  // For issue-3726-mip unit test, the following lines ensure that
+  // solving the MIP yields HighsModelStatus::kOptimal with objective
+  // of 13, but without them it yields HighsModelStatus::kInfeasible
+  const double objective_bound = options.objective_bound;
   if (options.objective_bound < kHighsInf) {
-    printf("HighsMipSolver objective_bound = %g: change to %g\n",
-           options.objective_bound, kHighsInf);
+    highsLogUser(
+        options.log_options, HighsLogType::kWarning,
+        "The objective_bound option is for the dual simplex solver, and is "
+        "currently interpreted incorrectly in the MIP solver\n");
+    highsLogUser(options.log_options, HighsLogType::kWarning,
+                 "Resetting the objective_bound value of %g to the default of "
+                 "%g for the duration of the MIP solve\n",
+                 options.objective_bound, kHighsInf);
     options.objective_bound = kHighsInf;
   }
-  */
   HighsMipSolver solver(callback, options, mip, solution);
   solver.setProfiling(profiling);
   profiling->start(kSubSolverMip);
-  try {
+  solveCatchCall(options.log_options, "MIP solver", solver.modelstatus_, [&] {
     solver.run();
-  } catch (const std::exception& exception) {
-    solver.modelstatus_ =
-        handleExceptionIsOom(options.log_options, "MIP solver", exception)
-            ? HighsModelStatus::kMemoryLimit
-            : HighsModelStatus::kSolveError;
-  } catch (const HighsTask::Interrupt&) {
-    highsLogDev(options.log_options, HighsLogType::kError,
-                "HighsTask interrupt when solving with MIP solver\n");
-    solver.modelstatus_ = HighsModelStatus::kSolveError;
-  }
+    return HighsStatus::kOk;
+  });
   profiling->stop(kSubSolverMip);
-  options.log_dev_level = log_dev_level;
+  options_undo.reset();
   // Set the return_status, model status and, for completeness, scaled
   // model status
   HighsStatus return_status =
@@ -1152,8 +1166,11 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
     lp.a_matrix_.productQuad(solution.row_value, solution.col_value);
     solution.value_valid = true;
   } else {
-    // There is no primal solution: should be so by default
-    assert(!solution.value_valid);
+    // There is no primal solution from the MIP solver, but it's
+    // possible that a (feasible) start solution - which is used in
+    // the constructor of HighsMipSolver, so valid - is not feasible
+    // in the reduced space, so clear it
+    solution.clear();
   }
   // Check that no modified upper bounds for semi-variables are active
   if (solution.value_valid &&
@@ -1170,13 +1187,12 @@ HighsStatus solveMip(HighsMipSolverObject& solver_object,
   // Remember to judge primal feasibility according to
   // mip_feasibility_tolerance, so take a copy of the original
   // value...
-  const double primal_feasibility_tolerance =
-      options.getMipPrimalFeasibilityTolerance();
-  options.primal_feasibility_tolerance = primal_feasibility_tolerance;
+  options_undo.set(options.primal_feasibility_tolerance,
+                   options.getMipPrimalFeasibilityTolerance());
   // NB getKktFailures sets the primal and dual solution status
   getLpKktFailures(options, lp, solution, basis, info);
   // Recover the primal feasibility tolerance
-  options.primal_feasibility_tolerance = primal_feasibility_tolerance;
+  options_undo.reset();
   // Set the MIP-specific values of info
   info.mip_node_count = solver.node_count_;
   info.mip_dual_bound = solver.dual_bound_;

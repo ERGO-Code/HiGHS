@@ -122,7 +122,7 @@ class FHsolver {
                 const Int* ptr, const double* vals);
 
   // Perform solve phase with rhs given by x, which is overwritten with the
-  // solution. Multiple rhs are supported by doing the solves in parallel.
+  // solution. Multiple rhs are supported, solved one after the other.
   Int solve(double* x, Int k = 1) const;
 
   // Perform partial solves with L, D, L^T (including permutation)

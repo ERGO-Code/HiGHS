@@ -81,6 +81,7 @@ class HighsLp {
   void setEmptyColwise(const HighsInt num_col) {
     this->a_matrix_.setEmptyColwise(num_col);
   }
+  void flipObjectiveAndSense();
   bool isColwise() const { return this->a_matrix_.isColwise(); };
   bool isRowwise() const { return this->a_matrix_.isRowwise(); };
   void ensureColwise() { this->a_matrix_.ensureColwise(); };

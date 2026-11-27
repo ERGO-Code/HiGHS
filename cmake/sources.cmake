@@ -658,6 +658,7 @@ set(highs_headers
     util/HighsSparseVectorSum.h
     util/HighsSplay.h
     util/HighsTimer.h
+    util/HighsUndoStack.h
     util/HighsUtils.h
     util/HSet.h
     util/HVector.h

@@ -14,7 +14,7 @@ public:
 
 private:
     static double toc(double start) { return read() - start; }
-    static double read() { return duration_cast<duration<double>>(high_resolution_clock::now().time_since_epoch()).count(); }
+    static double read() { return duration_cast<duration<double>>(steady_clock::now().time_since_epoch()).count(); }
     double t0_;
 public:
     double offset_;

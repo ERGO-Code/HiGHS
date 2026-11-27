@@ -43,7 +43,7 @@ class HighsMutex {
     // the lock again. We do so for some microseconds which we measure starting
     // from now.
     HighsSplitDeque* thisDeque = HighsTaskExecutor::getThisWorkerDeque();
-    auto tStart = std::chrono::high_resolution_clock::now();
+    auto tStart = std::chrono::steady_clock::now();
 
     while (true) {
       int numTries = HighsSchedulerConstants::kNumSpinTries;
@@ -55,10 +55,9 @@ class HighsMutex {
         thisDeque->yield();
       }
 
-      auto numMicroSecs =
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              std::chrono::high_resolution_clock::now() - tStart)
-              .count();
+      auto numMicroSecs = std::chrono::duration_cast<std::chrono::microseconds>(
+                              std::chrono::steady_clock::now() - tStart)
+                              .count();
 
       if (numMicroSecs < HighsSchedulerConstants::kMicroSecsBeforeGlobalSync)
         numTries *= 2;

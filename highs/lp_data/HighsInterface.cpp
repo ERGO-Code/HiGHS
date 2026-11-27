@@ -20,6 +20,7 @@
 #include "simplex/HSimplex.h"
 #include "util/HighsMatrixUtils.h"
 #include "util/HighsSort.h"
+#include "util/HighsUndoStack.h"
 
 void Highs::reportModelStats() const {
   const HighsLp& lp = this->model_.lp_;
@@ -1583,10 +1584,6 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
   // should be recovered
   std::vector<double> col_cost;
   HighsHessian hessian;
-  bool solve_relaxation;
-  std::string presolve;
-  std::string solver;
-  bool allow_unbounded_or_infeasible;
   bool solve_feasibility_problem = false;
   const bool is_qp = model_.isQp();
 
@@ -1609,11 +1606,6 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
       // solved to yield a basic solution
       col_cost = lp.col_cost_;
       if (is_qp) hessian = model_.hessian_;
-      solve_relaxation = this->options_.solve_relaxation;
-      presolve = this->options_.presolve;
-      solver = this->options_.solver;
-      allow_unbounded_or_infeasible =
-          this->options_.allow_unbounded_or_infeasible;
       solve_feasibility_problem = true;
       // Zero the costs and Hessian
       std::vector<double> zero_costs;
@@ -1632,18 +1624,15 @@ HighsStatus Highs::getDualRayInterface(bool& has_dual_ray,
         this->passHessian(zero_hessian);
       }
       //
-      this->options_.solve_relaxation = true;
-      this->options_.presolve = kHighsOffString;
-      this->options_.solver = kSimplexString;
-      this->options_.allow_unbounded_or_infeasible = false;
+      HighsUndoStack options_undo;
+      options_undo.set(this->options_.solve_relaxation, true);
+      options_undo.set(this->options_.presolve, kHighsOffString);
+      options_undo.set(this->options_.solver, kSimplexString);
+      options_undo.set(this->options_.allow_unbounded_or_infeasible, false);
       HighsStatus call_status = this->run();
       // Restore the column costs, any Hessian, the relaxation,
       // presolve and solver settings
-      this->options_.solve_relaxation = solve_relaxation;
-      this->options_.presolve = presolve;
-      this->options_.solver = solver;
-      this->options_.allow_unbounded_or_infeasible =
-          allow_unbounded_or_infeasible;
+      options_undo.reset();
 
       lp.col_cost_ = col_cost;
       if (is_qp) model_.hessian_ = hessian;
@@ -1733,10 +1722,6 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
   assert(!lp.is_moved_);
   has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
 
-  bool solve_relaxation;
-  std::string presolve;
-  std::string solver;
-  bool allow_unbounded_or_infeasible;
   bool solve_unboundedness_problem = false;
 
   if (primal_ray_value != nullptr) {
@@ -1754,24 +1739,15 @@ HighsStatus Highs::getPrimalRayInterface(bool& has_primal_ray,
       }
       highsLogUser(options_.log_options, HighsLogType::kInfo,
                    "Solving LP to try to compute primal ray\n");
-      // Save the relaxation, presolve and solver settings
-      solve_relaxation = this->options_.solve_relaxation;
-      presolve = this->options_.presolve;
-      solver = this->options_.solver;
-      allow_unbounded_or_infeasible =
-          this->options_.allow_unbounded_or_infeasible;
       solve_unboundedness_problem = true;
-      this->options_.solve_relaxation = true;
-      this->options_.presolve = kHighsOffString;
-      this->options_.solver = kSimplexString;
-      this->options_.allow_unbounded_or_infeasible = false;
+      HighsUndoStack options_undo;
+      options_undo.set(this->options_.solve_relaxation, true);
+      options_undo.set(this->options_.presolve, kHighsOffString);
+      options_undo.set(this->options_.solver, kSimplexString);
+      options_undo.set(this->options_.allow_unbounded_or_infeasible, false);
       HighsStatus call_status = this->run();
       // Restore the relaxation, presolve and solver settings
-      this->options_.solve_relaxation = solve_relaxation;
-      this->options_.presolve = presolve;
-      this->options_.solver = solver;
-      this->options_.allow_unbounded_or_infeasible =
-          allow_unbounded_or_infeasible;
+      options_undo.reset();
       if (call_status != HighsStatus::kOk) return_status = call_status;
       has_primal_ray = ekk_instance_.primal_ray_record_.index != kNoRayIndex;
       has_invert = ekk_instance_.status_.has_invert;
@@ -2070,13 +2046,13 @@ HighsStatus Highs::getIisInterface() {
     // Model is known to be infeasible, and a dual ray option is
     // chosen, but it has no INVERT, presumably because infeasibility
     // detected in presolve, so solve without presolve
-    std::string presolve = options_.presolve;
-    options_.presolve = kHighsOffString;
+    HighsUndoStack options_undo;
+    options_undo.set(options_.presolve, kHighsOffString);
 
     double simplex_time = -this->getRunTime();
     HighsInt simplex_iterations = -info_.simplex_iteration_count;
     HighsStatus run_status = this->optimizeModel();
-    options_.presolve = presolve;
+    options_undo.reset();
     simplex_time += this->getRunTime();
     simplex_iterations += info_.simplex_iteration_count;
     this->iis_.info_.update(simplex_time, simplex_iterations);
@@ -2570,15 +2546,15 @@ HighsStatus Highs::elasticityFilter(const double global_lower_penalty,
   this->iis_.clear();
   // Lambda for gathering data when solving an LP
   auto solveLp = [&]() -> HighsStatus {
-    bool output_flag = options_.output_flag;
-    options_.output_flag = false;
+    HighsUndoStack options_undo;
+    options_undo.set(options_.output_flag, false);
     double simplex_time = -this->getRunTime();
     HighsInt simplex_iterations = -info_.simplex_iteration_count;
     run_status = this->optimizeModel();
     simplex_time += this->getRunTime();
     simplex_iterations += info_.simplex_iteration_count;
     iis.info_.update(simplex_time, simplex_iterations);
-    options_.output_flag = output_flag;
+    options_undo.reset();
     return run_status;
   };
 
@@ -3183,16 +3159,15 @@ HighsStatus Highs::userScaleSolution(HighsUserScaleData& data,
   if (has_integrality)
     info_.mip_dual_bound *= (bound_scale_value * objective_scale_value);
 
-  const double primal_feasibility_tolerance =
-      options_.primal_feasibility_tolerance;
+  HighsUndoStack options_undo;
   // Remember to check primal feasibility using the tolerance used
   // when the model was solved
   if (model_.isMip() && !options_.solve_relaxation)
-    options_.primal_feasibility_tolerance =
-        options_.getMipPrimalFeasibilityTolerance();
+    options_undo.set(options_.primal_feasibility_tolerance,
+                     options_.getMipPrimalFeasibilityTolerance());
   getKktFailures(options_, model_, solution_, basis_, info_);
   // Restore the primal feasibility tolerance
-  options_.primal_feasibility_tolerance = primal_feasibility_tolerance;
+  options_undo.reset();
   return reportKktFailures(model_.lp_, options_, info_,
                            "After removing user scaling")
              ? HighsStatus::kWarning
@@ -3936,6 +3911,7 @@ HighsStatus Highs::returnFromLexicographicOptimization(
     info_.invalidateDualKkt();
     this->solution_.value_valid = true;
     this->model_.lp_.col_cost_.assign(this->model_.lp_.num_col_, 0);
+    this->model_.lp_.has_infinite_cost_ = false;
   }
   return return_status;
 }
@@ -4010,6 +3986,8 @@ HighsStatus Highs::multiobjectiveSolve() {
                               multi_linear_objective.coefficients[iCol];
     }
     lp.sense_ = ObjSense::kMinimize;
+    // The costs have changed, so determine whether any are infinite
+    lp.has_infinite_cost_ = lp.hasInfiniteCost(options_.infinite_cost);
 
     multi_objective_log =
         std::unique_ptr<std::stringstream>(new std::stringstream());
@@ -4055,6 +4033,7 @@ HighsStatus Highs::multiobjectiveSolve() {
   // Clear LP objective
   lp.offset_ = 0;
   lp.col_cost_.assign(lp.num_col_, 0);
+  lp.has_infinite_cost_ = false;
   const HighsInt original_lp_num_row = lp.num_row_;
   std::vector<HighsInt> index(lp.num_col_);
   std::vector<double> value(lp.num_col_);
@@ -4069,6 +4048,8 @@ HighsStatus Highs::multiobjectiveSolve() {
         this->multi_linear_objective_[iObj];
     lp.offset_ = linear_objective.offset;
     lp.col_cost_ = linear_objective.coefficients;
+    // The costs have changed, so determine whether any are infinite
+    lp.has_infinite_cost_ = lp.hasInfiniteCost(options_.infinite_cost);
     lp.sense_ =
         linear_objective.weight > 0 ? ObjSense::kMinimize : ObjSense::kMaximize;
     if (lp.isMip() && solution.value_valid) {
@@ -4211,8 +4192,9 @@ HighsStatus Highs::multiobjectiveSolve() {
                                              original_lp_num_row);
 }
 
-bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
-                           const HighsInfo& presolved_lp_info) const {
+bool Highs::tryPdlpCleanup(
+    HighsInt& pdlp_cleanup_iteration_limit,
+    const HighsInt presolved_lp_pdlp_iteration_count) const {
   // Primal/dual infeasibilities/residuals can be magnified in
   // postsolve after PDLP, and IPX without crossover can fail,
   // both leading to model_status_ == HighsModelStatus::kUnknown.
@@ -4265,10 +4247,10 @@ bool Highs::tryPdlpCleanup(HighsInt& pdlp_cleanup_iteration_limit,
   }
   //
   // Force PDLP to be used with an iteration limit
-  if (presolved_lp_info.pdlp_iteration_count > 0) {
+  if (presolved_lp_pdlp_iteration_count > 0) {
     // PDLP was used, so allow 10% of the iterations to clean up
     HighsInt ten_percent_pdlp_iteration_count =
-        presolved_lp_info.pdlp_iteration_count / 10;
+        presolved_lp_pdlp_iteration_count / 10;
     pdlp_cleanup_iteration_limit =
         std::max(HighsInt(10000), ten_percent_pdlp_iteration_count);
   } else {
@@ -4383,7 +4365,7 @@ HighsProfilingRecord* HighsProfiling::getHighsProfilingRecord(
 
 void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return;
+  if (!this->validClock(profiling_clock)) return;
   // For a sub-MIP, don't start the clock for anything but a
   // sub-solver
   if (this->isSubMip() && profiling_clock >= kToSubSolver) return;
@@ -4416,7 +4398,7 @@ void HighsProfiling::start(const HighsInt profiling_clock, const bool restart) {
 
 void HighsProfiling::stop(const HighsInt profiling_clock) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return;
+  if (!this->validClock(profiling_clock)) return;
   // For a sub-MIP, don't start the clock for anything but a
   // sub-solver
   if (this->isSubMip() && profiling_clock >= kToSubSolver) return;
@@ -4442,7 +4424,7 @@ void HighsProfiling::stop(const HighsInt profiling_clock) {
 double HighsProfiling::read(const HighsInt profiling_clock,
                             const HighsInt record_type) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return -kHighsInf;
+  if (!this->validClock(profiling_clock)) return -kHighsInf;
   HighsProfilingRecord* thread_record =
       this->getHighsProfilingRecord(record_type);
   // If the clock is running, work out current running time
@@ -4456,7 +4438,7 @@ double HighsProfiling::read(const HighsInt profiling_clock,
 HighsInt HighsProfiling::numCall(const HighsInt profiling_clock,
                                  const HighsInt record_type) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return -kHighsIInf;
+  if (!this->validClock(profiling_clock)) return -kHighsIInf;
   HighsProfilingRecord* thread_record =
       this->getHighsProfilingRecord(record_type);
   const HighsInt this_call_counts =
@@ -4467,7 +4449,7 @@ HighsInt HighsProfiling::numCall(const HighsInt profiling_clock,
 bool HighsProfiling::running(const HighsInt profiling_clock,
                              const HighsInt record_type) {
   assert(profiling_clock >= 0);
-  if (profiling_clock >= this->num_profiling_clock_) return false;
+  if (!this->validClock(profiling_clock)) return false;
   HighsProfilingRecord* thread_record =
       this->getHighsProfilingRecord(record_type);
   double time_start = thread_record->start_time[profiling_clock];

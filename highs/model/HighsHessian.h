@@ -62,6 +62,7 @@ class HighsHessian {
   HighsStatus trimDimensions(const HighsLogOptions& log_options);
   HighsStatus assess(const HighsOptions& options,
                      const std::string* col_names = nullptr);
+  void negate();
 };
 
 #endif

@@ -689,3 +689,70 @@ TEST_CASE("issue-3678", "[highs_data]") {
                    void*) { return HighsInt(0); };
   REQUIRE(h.passHessian(5, oracle, nullptr, nullptr) == HighsStatus::kError);
 }
+
+TEST_CASE("test-3790", "[qp-oracle]") {
+  HighsHessian triangular_hessian = getHessian5();
+  HighsHessian square_hessian = triangular_hessian.toSquare();
+  const HighsInt dim = square_hessian.dim_;
+  const double multiplier = 2;
+  const double shift = 1;
+  HighsHessian* hessian_p = &square_hessian;
+  HessianOracle oracle;
+  oracle.dim_ = dim;
+  oracle.multiplier_ = multiplier;
+  oracle.shift_ = shift;
+  oracle.call_ = oracleCallSquareHessian;
+  oracle.data_ = hessian_p;
+
+  HighsRandom random;
+  std::vector<double> value(dim, 0);
+  std::vector<HighsInt> index;
+  for (HighsInt iRow = 0; iRow < dim; iRow++) {
+    value[iRow] = random.fraction();
+    index.push_back(iRow);
+    iRow++;
+  }
+  HighsInt index_num_entries = index.size();
+
+  // Compute multiplier_*Qx + scale_*x
+  std::vector<double> result;
+  square_hessian.product(value, result);
+  for (HighsInt iRow = 0; iRow < dim; iRow++)
+    result[iRow] = multiplier * result[iRow] + shift * value[iRow];
+
+  std::vector<double> oracle_result(dim, 0);
+  auto checkResult = [&]() {
+    double norm_difference = 0;
+    for (HighsInt iRow = 0; iRow < dim; iRow++)
+      norm_difference += std::fabs(oracle_result[iRow] - result[iRow]);
+    REQUIRE(norm_difference < 1e-10);
+  };
+
+  if (dev_run)
+    highsPrintStringAsHeading("oracle.product(value, oracle_result);");
+  oracle.product(value, oracle_result);
+  checkResult();
+
+  if (dev_run)
+    highsPrintStringAsHeading(
+        "oracle.product(value.data(), oracle_result.data());");
+  oracle_result.assign(dim, 0);
+  oracle.product(value.data(), oracle_result.data());
+  checkResult();
+
+  if (dev_run)
+    highsPrintStringAsHeading(
+        "oracle.product(index_num_entries, index.data(), value.data(), "
+        "oracle_result.data());");
+  oracle_result.assign(dim, 0);
+  oracle.product(index_num_entries, index.data(), value.data(),
+                 oracle_result.data());
+  checkResult();
+
+  if (dev_run)
+    highsPrintStringAsHeading(
+        " oracle.product(dim, nullptr, value.data(), oracle_result.data());");
+  oracle_result.assign(dim, 0);
+  oracle.product(dim, nullptr, value.data(), oracle_result.data());
+  checkResult();
+}

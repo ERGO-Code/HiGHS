@@ -645,14 +645,14 @@ TEST_CASE("issue-3564", "[highs_lp_solver]") {
   h.resetThreadScheduler(true);
 }
 
-TEST_CASE("issue-3726", "[highs_lp_solver]") {
+TEST_CASE("issue-3726-lp", "[highs_lp_solver]") {
   const std::string test_name = Catch::getResultCapture().getCurrentTestName();
   std::string model_file = test_name + ".lp";
   FILE* file = fopen(model_file.c_str(), "w");
   fprintf(file, "%s",
           "Maximize\nobj: 5 x + 4 y + 3 z\nSubject To\nc1: 2 x + 3 y + z <= "
-          "5\nc2: 4 x + y + 2 z <= 11\nc3: 3 x + 4 y + 2 z <= 8\nBounds\n0 <= "
-          "x <= 10\n0 <= y <= 10\n0 <= z <= 10\n"
+          "5\nc2: 4 x + y + 2 z <= 11\nc3: 3 x + 4 y + 2 z <= 8\nBounds\nx <= "
+          "10\ny <= 10\nz <= 10\n"
           "End\n");
 
   fclose(file);
@@ -686,27 +686,6 @@ TEST_CASE("issue-3726", "[highs_lp_solver]") {
                      HighsModelStatus::kObjectiveBound);
   text = "Solving max LP with unattainable objective bound of ";
   testObjectiveBound(unattainable_objective_bound, HighsModelStatus::kOptimal);
-
-  // Now solve the problem as a MIP, with objective_bound = -20
-  //
-  // objective_bound is designed for LPs, but (see #3726) solving a
-  // MIP with optimal objective 13 when objective_bound = -20 results
-  // in it being declared infeasible immediately since
-  // HighsMipSolver.cpp:206 mipdata_->getDomain().infeasible() is
-  // true!
-  const double mip_objective_bound = -20;
-  std::vector<HighsVarType> integrality = {
-      HighsVarType::kInteger, HighsVarType::kInteger, HighsVarType::kInteger};
-  REQUIRE(h.changeColsIntegrality(0, 2, integrality.data()) ==
-          HighsStatus::kOk);
-  REQUIRE(h.writeModel(model_file) == HighsStatus::kOk);
-
-  HighsModelStatus require_model_status =
-      HighsModelStatus::kInfeasible;  // HighsModelStatus::kOptimal;
-  text = "Solving max MIP with objective bound of ";
-  testObjectiveBound(mip_objective_bound, require_model_status);
-
-  std::remove(model_file.c_str());
 
   h.resetThreadScheduler(true);
 }
@@ -751,6 +730,43 @@ TEST_CASE("issue-3715", "[highs_lp_solver]") {
     REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
   }
   std::remove(model_file.c_str());
+
+  h.resetThreadScheduler(true);
+}
+
+TEST_CASE("issue-3756", "[highs_lp_solver]") {
+  // An LP passed with mods records left from another model (as the
+  // MIP solver's LP relaxation inherits them) must not have them
+  // undone when the solve makes mods of its own
+  Highs h;
+  h.setOptionValue("output_flag", dev_run);
+  HighsLp lp;
+  lp.num_col_ = 2;
+  lp.num_row_ = 1;
+  lp.col_cost_ = {kHighsInf, 1};
+  lp.col_lower_ = {1, 0};
+  lp.col_upper_ = {3, 4};
+  lp.row_lower_ = {2};
+  lp.row_upper_ = {kHighsInf};
+  lp.a_matrix_.format_ = MatrixFormat::kColwise;
+  lp.a_matrix_.start_ = {0, 1, 2};
+  lp.a_matrix_.index_ = {0, 0};
+  lp.a_matrix_.value_ = {1, 1};
+  // Stale infinite cost record for column 1
+  lp.mods_.save_inf_cost_variable_index = {1};
+  lp.mods_.save_inf_cost_variable_cost = {5};
+  lp.mods_.save_inf_cost_variable_lower = {-1};
+  lp.mods_.save_inf_cost_variable_upper = {-1};
+  REQUIRE(h.passModel(lp) == HighsStatus::kOk);
+  REQUIRE(h.run() == HighsStatus::kOk);
+  REQUIRE(h.getModelStatus() == HighsModelStatus::kOptimal);
+  const HighsLp& incumbent_lp = h.getLp();
+  REQUIRE(incumbent_lp.col_cost_[0] == kHighsInf);
+  REQUIRE(incumbent_lp.col_lower_[0] == 1);
+  REQUIRE(incumbent_lp.col_upper_[0] == 3);
+  REQUIRE(incumbent_lp.col_cost_[1] == 1);
+  REQUIRE(incumbent_lp.col_lower_[1] == 0);
+  REQUIRE(incumbent_lp.col_upper_[1] == 4);
 
   h.resetThreadScheduler(true);
 }

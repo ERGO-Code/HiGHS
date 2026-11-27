@@ -13,6 +13,19 @@ x = h.addVariable(lb=0, ub=4)
 h.minimize(-x)
 assert abs(h.getObjectiveValue() + 4) < 1e-6
 
+# Symmetric bin packing: the MIP runs symmetry detection as a task on the worker
+# threads, which crashed when OR-Tools' HiGHS had taken over the scheduler (#3797)
+h = highspy.Highs()
+h.setOptionValue("output_flag", False)
+items, bins = range(30), range(10)
+y = {(i, b): h.addBinary() for i in items for b in bins}
+for i in items:
+    h.addConstr(sum(y[i, b] for b in bins) == 1)
+for b in bins:
+    h.addConstr(sum((7 + i % 5) * y[i, b] for i in items) <= 30)
+h.minimize(sum(b * y[i, b] for i in items for b in bins))
+assert h.getModelStatus() == highspy.HighsModelStatus.kOptimal
+
 solver = pywraplp.Solver.CreateSolver("HIGHS")
 assert solver is not None
 v = solver.NumVar(0, 4, "x")
