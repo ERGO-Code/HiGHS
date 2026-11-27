@@ -1194,7 +1194,8 @@ void HighsSparseMatrix::productQuad(vector<double>& result,
     for (HighsInt iCol = 0; iCol < this->num_col_; iCol++) {
       for (HighsInt iEl = this->start_[iCol]; iEl < this->start_[iCol + 1];
            iEl++)
-        value[this->index_[iEl]] += row[iCol] * this->value_[iEl];
+        value[this->index_[iEl]] +=
+            static_cast<HighsCDouble>(row[iCol]) * this->value_[iEl];
     }
     for (HighsInt iRow = 0; iRow < this->num_row_; iRow++)
       result[iRow] = double(value[iRow]);
@@ -1203,7 +1204,8 @@ void HighsSparseMatrix::productQuad(vector<double>& result,
       HighsCDouble value = 0.0;
       for (HighsInt iEl = this->start_[iRow]; iEl < this->start_[iRow + 1];
            iEl++)
-        value += row[this->index_[iEl]] * this->value_[iEl];
+        value += static_cast<HighsCDouble>(row[this->index_[iEl]]) *
+                 this->value_[iEl];
       result[iRow] = double(value);
     }
   }

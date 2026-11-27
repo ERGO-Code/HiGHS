@@ -168,8 +168,9 @@ static void updateOmega(double tau_const, double& omega1, double& omega2,
 }
 
 double Solver::computeComponentwiseError(const NewtonDir& delta) const {
-  // Evaluate iterative refinement progress. Based on "Solving sparse linear
-  // systems with sparse backward error", Arioli, Demmel, Duff.
+  // Evaluate iterative refinement progress, following the algorithms in
+  // "Solving sparse linear systems with sparse backward error", Arioli, Demmel,
+  // Duff.
 
   // |6x6 matrix| * |delta| is in it_->iabs, computed together with the
   // residuals in it_->residuals6x6(delta, true).

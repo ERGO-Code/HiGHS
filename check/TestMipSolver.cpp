@@ -1047,6 +1047,20 @@ TEST_CASE("zi-round-and-shifting-heuristics", "[highs_test_mip_solver]") {
   solve(highs, kHighsOnString, require_model_status, optimal_objective);
 }
 
+TEST_CASE("no-central-rounding", "[highs_test_mip_solver]") {
+  // Issue #3761: switching off central rounding means the analytic
+  // centre is not computed
+  std::string model_file = std::string(HIGHS_DIR) + "/check/instances/rgn.mps";
+
+  Highs highs;
+  highs.setOptionValue("output_flag", dev_run);
+  highs.setOptionValue("mip_heuristic_run_central_rounding", false);
+  highs.readModel(model_file);
+  const HighsModelStatus require_model_status = HighsModelStatus::kOptimal;
+  const double optimal_objective = 82.19999924;
+  solve(highs, kHighsOnString, require_model_status, optimal_objective);
+}
+
 TEST_CASE("issue-2290", "[highs_test_mip_solver]") {
   std::string filename =
       std::string(HIGHS_DIR) + "/check/instances/issue-2290.mps";

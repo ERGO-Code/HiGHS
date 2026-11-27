@@ -103,8 +103,13 @@ set(rcm_headers
   rcm/rcm.h
 )
 
+set(qdldl_sources
+  qdldl/qdldl.cpp)
+
+set(qdldl_headers
+  qdldl/qdldl.h)
+
 set(cupdlp_sources
-  pdlp/cupdlp/cupdlp_cs.c
   pdlp/cupdlp/cupdlp_linalg.c
   pdlp/cupdlp/cupdlp_proj.c
   pdlp/cupdlp/cupdlp_restart.c
@@ -114,7 +119,6 @@ set(cupdlp_sources
   pdlp/cupdlp/cupdlp_utils.c)
 
 set(cupdlp_headers
-  pdlp/cupdlp/cupdlp_cs.h
   pdlp/cupdlp/cupdlp_defs.h
   pdlp/cupdlp/cupdlp_linalg.h
   pdlp/cupdlp/cupdlp_proj.h
